@@ -1,15 +1,15 @@
 checkpoints:
   # Required if configs/train_smpl.yaml checkpoint.load_vggt_baseline=true.
   # Expected: VGGT-Omega/VGGT baseline state_dict or checkpoint containing model/state_dict/model_state_dict.
-  vggt_baseline: ""
+  vggt_baseline: "/home/zhw/lab_users/xyb/home/projects/vggt-omega/checkpoints/vggt_omega_1b_512.pt"
 
   # Optional future use; current training script does not require this checkpoint.
-  sat_hmr_smpl: ""
+  sat_hmr_smpl: "/home/zhw/xyb_space/SAT-HMR/weights/sat_hmr/sat_644.pth"
 
 assets:
   # Optional future use for SMPL mesh/joint decoding; current minimal training does not instantiate smplx.
-  smpl_model_dir: ""
-  smpl_mean_params: ""
+  smpl_model_dir: "/home/zhw/xyb_space/SAT-HMR/weights/smpl_data/smpl/"
+  smpl_mean_params: "/home/zhw/xyb_space/SAT-HMR/weights/smpl_data/smpl/smpl_mean_params.npz"
 
 datasets:
   # Required by configs/train_smpl.yaml data.root_key=datasets.bedlam_root.
@@ -19,4 +19,4 @@ datasets:
   #   <bedlam_root>/Training/<sequence>/depth/frame_*.npy   optional
   #   <bedlam_root>/Training/<sequence>/cam/frame_*.npz     optional
   #   <bedlam_root>/Test/...                                optional validation split
-  bedlam_root: ""
+  bedlam_root: "/home/zhw/xyb_space/bedlam/"
