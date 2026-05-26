@@ -8,12 +8,14 @@ __pycache__/
 venv/
 build/
 dist/
-outputs/
+outputs/vis/*.png
+outputs/vis/*.jpg
 demo_outputs/
 checkpoints/
 skyseg.onnx
 skyseg.onnx.tmp
 .references/
 *.pt
+*.pkl
 *.pth
 *.safetensors
