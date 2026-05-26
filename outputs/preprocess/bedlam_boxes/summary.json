@@ -1,0 +1,17 @@
+{
+  "dataset_root": "/home/zhw/xyb_space/bedlam/processed_bedlam",
+  "output_root": "outputs/preprocess/bedlam_boxes",
+  "splits": {
+    "Training": {
+      "total_frames": 7619,
+      "total_persons": 21852,
+      "valid_boxes": 21852,
+      "missing_boxes": 0
+    }
+  },
+  "total_frames": 7619,
+  "total_persons": 21852,
+  "valid_boxes": 21852,
+  "missing_boxes": 0,
+  "missing_examples": []
+}

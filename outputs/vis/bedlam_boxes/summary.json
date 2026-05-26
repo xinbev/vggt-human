@@ -1,0 +1,362 @@
+[
+  {
+    "valid_boxes": 3,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 3
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000000/smpl_boxes/seq_000000_0000.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000000/rgb/seq_000000_0000.png",
+    "output_path": "outputs/vis/bedlam_boxes/000_20221013_3_250_batch01hand_orbit_bigOffice_seq_000000_seq_000000_0000.jpg"
+  },
+  {
+    "valid_boxes": 3,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 3
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000010/smpl_boxes/seq_000010_0030.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000010/rgb/seq_000010_0030.png",
+    "output_path": "outputs/vis/bedlam_boxes/001_20221013_3_250_batch01hand_orbit_bigOffice_seq_000010_seq_000010_0030.jpg"
+  },
+  {
+    "valid_boxes": 2,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 2
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000020/smpl_boxes/seq_000020_0135.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000020/rgb/seq_000020_0135.png",
+    "output_path": "outputs/vis/bedlam_boxes/002_20221013_3_250_batch01hand_orbit_bigOffice_seq_000020_seq_000020_0135.jpg"
+  },
+  {
+    "valid_boxes": 3,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 3
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000031/smpl_boxes/seq_000031_0065.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000031/rgb/seq_000031_0065.png",
+    "output_path": "outputs/vis/bedlam_boxes/003_20221013_3_250_batch01hand_orbit_bigOffice_seq_000031_seq_000031_0065.jpg"
+  },
+  {
+    "valid_boxes": 3,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 3
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000041/smpl_boxes/seq_000041_0025.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000041/rgb/seq_000041_0025.png",
+    "output_path": "outputs/vis/bedlam_boxes/004_20221013_3_250_batch01hand_orbit_bigOffice_seq_000041_seq_000041_0025.jpg"
+  },
+  {
+    "valid_boxes": 3,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 3
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000051/smpl_boxes/seq_000051_0135.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000051/rgb/seq_000051_0135.png",
+    "output_path": "outputs/vis/bedlam_boxes/005_20221013_3_250_batch01hand_orbit_bigOffice_seq_000051_seq_000051_0135.jpg"
+  },
+  {
+    "valid_boxes": 3,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 3
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000062/smpl_boxes/seq_000062_0140.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000062/rgb/seq_000062_0140.png",
+    "output_path": "outputs/vis/bedlam_boxes/006_20221013_3_250_batch01hand_orbit_bigOffice_seq_000062_seq_000062_0140.jpg"
+  },
+  {
+    "valid_boxes": 2,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 2
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000073/smpl_boxes/seq_000073_0150.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000073/rgb/seq_000073_0150.png",
+    "output_path": "outputs/vis/bedlam_boxes/007_20221013_3_250_batch01hand_orbit_bigOffice_seq_000073_seq_000073_0150.jpg"
+  },
+  {
+    "valid_boxes": 3,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 3
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000085/smpl_boxes/seq_000085_0090.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000085/rgb/seq_000085_0090.png",
+    "output_path": "outputs/vis/bedlam_boxes/008_20221013_3_250_batch01hand_orbit_bigOffice_seq_000085_seq_000085_0090.jpg"
+  },
+  {
+    "valid_boxes": 3,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 3
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000097/smpl_boxes/seq_000097_0090.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000097/rgb/seq_000097_0090.png",
+    "output_path": "outputs/vis/bedlam_boxes/009_20221013_3_250_batch01hand_orbit_bigOffice_seq_000097_seq_000097_0090.jpg"
+  },
+  {
+    "valid_boxes": 3,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 3
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000109/smpl_boxes/seq_000109_0040.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000109/rgb/seq_000109_0040.png",
+    "output_path": "outputs/vis/bedlam_boxes/010_20221013_3_250_batch01hand_orbit_bigOffice_seq_000109_seq_000109_0040.jpg"
+  },
+  {
+    "valid_boxes": 3,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 3
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000121/smpl_boxes/seq_000121_0010.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000121/rgb/seq_000121_0010.png",
+    "output_path": "outputs/vis/bedlam_boxes/011_20221013_3_250_batch01hand_orbit_bigOffice_seq_000121_seq_000121_0010.jpg"
+  },
+  {
+    "valid_boxes": 3,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 3
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000130/smpl_boxes/seq_000130_0115.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000130/rgb/seq_000130_0115.png",
+    "output_path": "outputs/vis/bedlam_boxes/012_20221013_3_250_batch01hand_orbit_bigOffice_seq_000130_seq_000130_0115.jpg"
+  },
+  {
+    "valid_boxes": 3,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 3
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000141/smpl_boxes/seq_000141_0055.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000141/rgb/seq_000141_0055.png",
+    "output_path": "outputs/vis/bedlam_boxes/013_20221013_3_250_batch01hand_orbit_bigOffice_seq_000141_seq_000141_0055.jpg"
+  },
+  {
+    "valid_boxes": 3,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 3
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000151/smpl_boxes/seq_000151_0185.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000151/rgb/seq_000151_0185.png",
+    "output_path": "outputs/vis/bedlam_boxes/014_20221013_3_250_batch01hand_orbit_bigOffice_seq_000151_seq_000151_0185.jpg"
+  },
+  {
+    "valid_boxes": 3,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 3
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000163/smpl_boxes/seq_000163_0045.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000163/rgb/seq_000163_0045.png",
+    "output_path": "outputs/vis/bedlam_boxes/015_20221013_3_250_batch01hand_orbit_bigOffice_seq_000163_seq_000163_0045.jpg"
+  },
+  {
+    "valid_boxes": 3,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 3
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000173/smpl_boxes/seq_000173_0115.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000173/rgb/seq_000173_0115.png",
+    "output_path": "outputs/vis/bedlam_boxes/016_20221013_3_250_batch01hand_orbit_bigOffice_seq_000173_seq_000173_0115.jpg"
+  },
+  {
+    "valid_boxes": 3,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 3
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000184/smpl_boxes/seq_000184_0020.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000184/rgb/seq_000184_0020.png",
+    "output_path": "outputs/vis/bedlam_boxes/017_20221013_3_250_batch01hand_orbit_bigOffice_seq_000184_seq_000184_0020.jpg"
+  },
+  {
+    "valid_boxes": 3,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 3
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000194/smpl_boxes/seq_000194_0080.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000194/rgb/seq_000194_0080.png",
+    "output_path": "outputs/vis/bedlam_boxes/018_20221013_3_250_batch01hand_orbit_bigOffice_seq_000194_seq_000194_0080.jpg"
+  },
+  {
+    "valid_boxes": 3,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 3
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000204/smpl_boxes/seq_000204_0085.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000204/rgb/seq_000204_0085.png",
+    "output_path": "outputs/vis/bedlam_boxes/019_20221013_3_250_batch01hand_orbit_bigOffice_seq_000204_seq_000204_0085.jpg"
+  },
+  {
+    "valid_boxes": 3,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 3
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000216/smpl_boxes/seq_000216_0010.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000216/rgb/seq_000216_0010.png",
+    "output_path": "outputs/vis/bedlam_boxes/020_20221013_3_250_batch01hand_orbit_bigOffice_seq_000216_seq_000216_0010.jpg"
+  },
+  {
+    "valid_boxes": 2,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 2
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000227/smpl_boxes/seq_000227_0070.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000227/rgb/seq_000227_0070.png",
+    "output_path": "outputs/vis/bedlam_boxes/021_20221013_3_250_batch01hand_orbit_bigOffice_seq_000227_seq_000227_0070.jpg"
+  },
+  {
+    "valid_boxes": 2,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 2
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000239/smpl_boxes/seq_000239_0005.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000239/rgb/seq_000239_0005.png",
+    "output_path": "outputs/vis/bedlam_boxes/022_20221013_3_250_batch01hand_orbit_bigOffice_seq_000239_seq_000239_0005.jpg"
+  },
+  {
+    "valid_boxes": 3,
+    "invalid_boxes": 0,
+    "sources": {
+      "smpl_projection_vertices": 3
+    },
+    "out_of_bounds_boxes": 0,
+    "image_size": [
+      720,
+      1280
+    ],
+    "box_path": "outputs/preprocess/bedlam_boxes/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000249/smpl_boxes/seq_000249_0120.pkl",
+    "image_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000249/rgb/seq_000249_0120.png",
+    "output_path": "outputs/vis/bedlam_boxes/023_20221013_3_250_batch01hand_orbit_bigOffice_seq_000249_seq_000249_0120.jpg"
+  }
+]

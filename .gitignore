@@ -9,7 +9,7 @@ venv/
 build/
 dist/
 outputs/vis/*.png
-outputs/vis/*.jpg
+outputs/vis/*/*.jpg
 demo_outputs/
 checkpoints/
 skyseg.onnx
