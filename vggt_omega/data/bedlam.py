@@ -6,9 +6,20 @@ import numpy as np
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
-
+import sys
 from vggt_omega.data.bedlam_boxes import extract_person_id
 from vggt_omega.utils.rotation import axis_angle_to_rot6d
+import numpy
+import numpy.core
+import numpy.core.multiarray
+import numpy.core.numeric
+
+# Some BEDLAM pickle files may reference NumPy 2.x module names. Register the
+# compatibility aliases only after project imports have loaded torch, because
+# setting numpy._core before torch import can segfault in this environment.
+sys.modules.setdefault("numpy._core", numpy.core)
+sys.modules.setdefault("numpy._core.numeric", numpy.core.numeric)
+sys.modules.setdefault("numpy._core.multiarray", numpy.core.multiarray)
 
 
 class BedlamDataset(Dataset):
