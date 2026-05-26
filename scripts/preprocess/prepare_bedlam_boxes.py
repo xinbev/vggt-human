@@ -5,13 +5,25 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 from PIL import Image
-
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from vggt_omega.data.bedlam_boxes import extract_best_box, optional_smpl_projection_box, relative_sequence_name
+from vggt_omega.data.bedlam_boxes import build_smpl_model_cache, extract_best_box, optional_smpl_projection_box, relative_sequence_name
+
+import numpy
+import numpy.core
+import numpy.core.multiarray
+import numpy.core.numeric
+
+# Some BEDLAM pickle files may reference NumPy 2.x module names. Register the
+# compatibility aliases only after project imports have loaded torch, because
+# setting numpy._core before torch import can segfault in this environment.
+sys.modules.setdefault("numpy._core", numpy.core)
+sys.modules.setdefault("numpy._core.numeric", numpy.core.numeric)
+sys.modules.setdefault("numpy._core.multiarray", numpy.core.multiarray)
 
 
 def main() -> None:
@@ -19,6 +31,11 @@ def main() -> None:
     dataset_root = Path(args.dataset_root).expanduser()
     output_root = Path(args.output_root).expanduser()
     output_root.mkdir(parents=True, exist_ok=True)
+    smpl_models = None
+    if args.use_smpl_projection:
+        if not args.smpl_model_dir:
+            raise ValueError("--use-smpl-projection requires --smpl-model-dir")
+        smpl_models = build_smpl_model_cache(args.smpl_model_dir)
 
     summary: dict[str, Any] = {
         "dataset_root": str(dataset_root),
@@ -32,7 +49,7 @@ def main() -> None:
     missing_examples: list[str] = []
 
     for split in args.splits:
-        split_stats = process_split(dataset_root, output_root, split, args, missing_examples)
+        split_stats = process_split(dataset_root, output_root, split, args, missing_examples, smpl_models)
         summary["splits"][split] = split_stats
         for key in ("total_frames", "total_persons", "valid_boxes", "missing_boxes"):
             summary[key] += split_stats[key]
@@ -59,6 +76,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--require-boxes", action="store_true")
     parser.add_argument("--use-smpl-projection", action="store_true")
     parser.add_argument("--smpl-model-dir", default="")
+    parser.add_argument("--projection-source", choices=("vertices", "joints"), default="vertices")
     return parser.parse_args()
 
 
@@ -68,6 +86,7 @@ def process_split(
     split: str,
     args: argparse.Namespace,
     missing_examples: list[str],
+    smpl_models: dict[str, Any] | None,
 ) -> dict[str, int]:
     split_dir = dataset_root / split
     if not split_dir.is_dir():
@@ -85,9 +104,10 @@ def process_split(
 
         for rgb_path in sorted(path for path in rgb_dir.iterdir() if path.suffix.lower() in {".png", ".jpg", ".jpeg"}):
             smpl_path = smpl_dir / f"{rgb_path.stem}.pkl"
+            cam_path = seq_dir / "cam" / f"{rgb_path.stem}.npz"
             if not smpl_path.is_file():
                 continue
-            frame = process_frame(rgb_path, smpl_path, args, missing_examples)
+            frame = process_frame(rgb_path, smpl_path, cam_path, args, missing_examples, smpl_models)
             with (out_dir / f"{rgb_path.stem}.pkl").open("wb") as file:
                 pickle.dump(frame, file, protocol=pickle.HIGHEST_PROTOCOL)
             stats["total_frames"] += 1
@@ -97,13 +117,21 @@ def process_split(
     return stats
 
 
-def process_frame(rgb_path: Path, smpl_path: Path, args: argparse.Namespace, missing_examples: list[str]) -> dict[str, Any]:
+def process_frame(
+    rgb_path: Path,
+    smpl_path: Path,
+    cam_path: Path,
+    args: argparse.Namespace,
+    missing_examples: list[str],
+    smpl_models: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     with Image.open(rgb_path) as image:
         image_hw = (image.height, image.width)
     with smpl_path.open("rb") as file:
         persons = pickle.load(file)
     if not isinstance(persons, list):
         raise TypeError(f"SMPL annotation must be a list of person dicts: {smpl_path}")
+    intrinsics = load_intrinsics(cam_path) if args.use_smpl_projection else None
 
     out_persons = []
     for person_idx, person in enumerate(persons[: args.max_humans]):
@@ -111,7 +139,16 @@ def process_frame(rgb_path: Path, smpl_path: Path, args: argparse.Namespace, mis
             continue
         out_person = extract_best_box(person, image_hw)
         if not out_person["bbox_valid"] and args.use_smpl_projection:
-            out_person.update(optional_smpl_projection_box(person, image_hw, args.smpl_model_dir))
+            out_person.update(
+                optional_smpl_projection_box(
+                    person,
+                    image_hw,
+                    args.smpl_model_dir,
+                    intrinsics,
+                    smpl_models=smpl_models,
+                    projection_source=args.projection_source,
+                )
+            )
         if not out_person["bbox_valid"] and len(missing_examples) < 50:
             missing_examples.append(f"{smpl_path}:{person_idx}")
         out_person["person_index"] = person_idx
@@ -124,6 +161,15 @@ def process_frame(rgb_path: Path, smpl_path: Path, args: argparse.Namespace, mis
         "target_image_size": int(args.image_size),
         "persons": out_persons,
     }
+
+
+def load_intrinsics(cam_path: Path) -> np.ndarray:
+    if not cam_path.is_file():
+        raise FileNotFoundError(f"Camera file not found for SMPL projection: {cam_path}")
+    data = np.load(cam_path)
+    if "intrinsics" not in data:
+        raise ValueError(f"Camera file missing 'intrinsics': {cam_path}")
+    return np.asarray(data["intrinsics"], dtype=np.float32).reshape(3, 3)
 
 
 if __name__ == "__main__":

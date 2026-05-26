@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import builtins
+import inspect
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import torch
 
 
@@ -131,19 +134,152 @@ def extract_best_box(person: dict[str, Any], image_hw: tuple[int, int]) -> dict[
     return out
 
 
-def optional_smpl_projection_box(*args: Any, **kwargs: Any) -> dict[str, Any]:
+def build_smpl_model_cache(
+    model_dir: str | Path,
+    device: torch.device | str = "cpu",
+    genders: tuple[str, ...] = ("neutral", "male", "female"),
+) -> dict[str, Any]:
+    """Build gender-specific SMPL models used by BEDLAM projection preprocessing."""
+    _ensure_legacy_smpl_compat()
     try:
-        import smplx  # noqa: F401
+        import smplx
     except ImportError as exc:
-        raise ImportError("--use-smpl-projection requires smplx and valid SMPL/SMPL-X assets") from exc
-    raise NotImplementedError(
-        "SMPL projection bbox generation needs dataset-specific camera/body-model wiring. "
-        "Use existing bbox or 2D keypoint annotations, or implement this path for your BEDLAM schema."
+        raise ImportError("--use-smpl-projection requires the `smplx` package") from exc
+
+    root = resolve_smpl_model_dir(model_dir)
+    models: dict[str, Any] = {}
+    for gender in genders:
+        try:
+            models[gender.lower()] = smplx.create(str(root), "smpl", gender=gender, num_betas=10).to(device).eval()
+        except ModuleNotFoundError as exc:
+            if exc.name == "scipy":
+                raise ImportError(
+                    "--use-smpl-projection requires scipy because smplx loads SMPL .pkl files "
+                    "that contain scipy sparse matrices. Install scipy in the active environment."
+                ) from exc
+            raise
+    return models
+
+
+def resolve_smpl_model_dir(path: str | Path) -> Path:
+    p = Path(path).expanduser().resolve()
+    if (p / "smpl" / "SMPL_NEUTRAL.pkl").is_file():
+        return p
+    if (p / "SMPL_NEUTRAL.pkl").is_file():
+        return p.parent
+    raise FileNotFoundError(
+        "Could not locate SMPL model files under "
+        f"{p}. Expected either <dir>/smpl/SMPL_NEUTRAL.pkl or <dir>/SMPL_NEUTRAL.pkl."
     )
+
+
+def optional_smpl_projection_box(
+    person: dict[str, Any],
+    image_hw: tuple[int, int],
+    smpl_model_dir: str | Path,
+    intrinsics: Any,
+    smpl_models: dict[str, Any] | None = None,
+    projection_source: str = "vertices",
+) -> dict[str, Any]:
+    """Project a BEDLAM SMPL body to image pixels and return sidecar bbox data.
+
+    BEDLAM preprocessing stores ``smplx_transl`` in camera coordinates in this
+    project, so the frame camera extrinsic is intentionally not applied here.
+    """
+    if projection_source not in {"vertices", "joints"}:
+        raise ValueError(f"Unsupported projection_source={projection_source!r}")
+    models = smpl_models if smpl_models is not None else build_smpl_model_cache(smpl_model_dir)
+    model = _select_smpl_model(models, person)
+    device = next(model.parameters()).device
+
+    root_pose = torch.as_tensor(person["smplx_root_pose"], dtype=torch.float32, device=device).reshape(1, 3)
+    body_pose_21 = torch.as_tensor(person["smplx_body_pose"], dtype=torch.float32, device=device).reshape(21, 3)
+    betas = torch.as_tensor(person["smplx_shape"], dtype=torch.float32, device=device).reshape(-1)[:10].reshape(1, 10)
+    transl = torch.as_tensor(person["smplx_transl"], dtype=torch.float32, device=device).reshape(1, 3)
+    body_pose = torch.cat([body_pose_21, body_pose_21.new_zeros(2, 3)], dim=0).reshape(1, 69)
+
+    with torch.no_grad():
+        smpl_out = model(betas=betas, global_orient=root_pose, body_pose=body_pose, transl=transl)
+    vertices = smpl_out.vertices[0].detach().cpu().float()
+    joints = smpl_out.joints[0, :24].detach().cpu().float()
+
+    k = torch.as_tensor(intrinsics, dtype=torch.float32).reshape(3, 3)
+    bbox_points = vertices if projection_source == "vertices" else joints
+    xyxy = _projected_points_to_xyxy(bbox_points, k, image_hw)
+    repaired = repair_xyxy_box(xyxy, image_hw) if xyxy is not None else None
+    if repaired is None:
+        return {
+            "bbox_cxcywh_norm": [0.0, 0.0, 0.0, 0.0],
+            "bbox_xyxy_pixels": [0.0, 0.0, 0.0, 0.0],
+            "bbox_valid": False,
+            "bbox_source": f"smpl_projection_{projection_source}_invalid",
+        }
+
+    j2ds, j2ds_mask = _project_points(joints, k, image_hw)
+    return {
+        "bbox_cxcywh_norm": xyxy_to_cxcywh_norm(repaired, image_hw).tolist(),
+        "bbox_xyxy_pixels": repaired.tolist(),
+        "bbox_valid": True,
+        "bbox_source": f"smpl_projection_{projection_source}",
+        "j2ds": j2ds.tolist(),
+        "j2ds_mask": j2ds_mask[:, None].expand(-1, 2).contiguous().tolist(),
+    }
 
 
 def relative_sequence_name(seq_dir: Path, split_dir: Path) -> str:
     return seq_dir.relative_to(split_dir).as_posix()
+
+
+def _ensure_legacy_smpl_compat() -> None:
+    alias_map = {
+        "bool": np.bool_,
+        "int": builtins.int,
+        "float": builtins.float,
+        "complex": builtins.complex,
+        "object": builtins.object,
+        "unicode": builtins.str,
+        "str": builtins.str,
+    }
+    for name, value in alias_map.items():
+        if name not in np.__dict__:
+            setattr(np, name, value)
+    if not hasattr(inspect, "getargspec"):
+        inspect.getargspec = inspect.getfullargspec  # type: ignore[attr-defined]
+
+
+def _select_smpl_model(models: dict[str, Any], person: dict[str, Any]) -> Any:
+    gender = str(person.get("smplx_gender", "neutral")).lower()
+    if gender in models:
+        return models[gender]
+    if "neutral" in models:
+        return models["neutral"]
+    return next(iter(models.values()))
+
+
+def _projected_points_to_xyxy(points3d: torch.Tensor, intrinsics: torch.Tensor, image_hw: tuple[int, int]) -> torch.Tensor | None:
+    points2d, visible = _project_points(points3d, intrinsics, image_hw, require_in_image=False)
+    if not visible.any():
+        return None
+    coords = points2d[visible]
+    return torch.cat([coords.amin(dim=0), coords.amax(dim=0)], dim=0)
+
+
+def _project_points(
+    points3d: torch.Tensor,
+    intrinsics: torch.Tensor,
+    image_hw: tuple[int, int],
+    require_in_image: bool = True,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    h, w = image_hw
+    points = points3d.float()
+    z = points[..., 2]
+    visible = torch.isfinite(points).all(dim=-1) & (z > 1e-6)
+    normalized = points / z.clamp(min=1e-6).unsqueeze(-1)
+    points2d = torch.matmul(normalized, intrinsics.float().t())[..., :2]
+    visible = visible & torch.isfinite(points2d).all(dim=-1)
+    if require_in_image:
+        visible = visible & (points2d[..., 0] >= 0.0) & (points2d[..., 0] < float(w)) & (points2d[..., 1] >= 0.0) & (points2d[..., 1] < float(h))
+    return points2d, visible
 
 
 def _as_box_tensor(value: Any) -> torch.Tensor | None:

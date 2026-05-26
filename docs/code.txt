@@ -1,0 +1,13 @@
+#=====================数据预处理==========================
+  /home/zhw/.conda/envs/vggth/bin/python scripts/preprocess/prepare_bedlam_boxes.py \
+  --dataset-root /home/zhw/xyb_space/bedlam/processed_bedlam/ \
+  --output-root outputs/preprocess/bedlam_boxes \
+  --splits Training \
+  --image-size 518 \
+  --max-humans 20 \
+  --use-smpl-projection \
+  --smpl-model-dir /home/zhw/xyb_space/SAT-HMR/weights/smpl_data/smpl/ \
+  --projection-source vertices \
+  --require-boxes
+
+  #=====================================================
