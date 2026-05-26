@@ -7,6 +7,7 @@ import torch
 from PIL import Image
 from torch.utils.data import Dataset
 
+from vggt_omega.data.bedlam_boxes import extract_person_id
 from vggt_omega.utils.rotation import axis_angle_to_rot6d
 
 
@@ -30,9 +31,11 @@ class BedlamDataset(Dataset):
         sequence_length: int = 2,
         stride: int = 1,
         image_size: int = 518,
-        max_humans: int = 10,
+        max_humans: int = 20,
         require_smpl: bool = True,
         require_depth: bool = False,
+        boxes_root: str | Path | None = None,
+        require_boxes: bool = False,
     ) -> None:
         super().__init__()
         self.root = Path(root).expanduser()
@@ -43,6 +46,8 @@ class BedlamDataset(Dataset):
         self.max_humans = int(max_humans)
         self.require_smpl = require_smpl
         self.require_depth = require_depth
+        self.boxes_root = Path(boxes_root).expanduser() if boxes_root else None
+        self.require_boxes = require_boxes
         if self.sequence_length <= 0:
             raise ValueError(f"sequence_length must be positive, got {sequence_length}")
         if self.stride <= 0:
@@ -72,19 +77,23 @@ class BedlamDataset(Dataset):
         depths = []
         intrinsics = []
         persons_per_frame = []
+        boxes_per_frame = []
         for frame_id in selected:
             rgb_path = seq_dir / "rgb" / f"{frame_id}.png"
             depth_path = seq_dir / "depth" / f"{frame_id}.npy"
             cam_path = seq_dir / "cam" / f"{frame_id}.npz"
             smpl_path = seq_dir / "smpl" / f"{frame_id}.pkl"
+            box_path = self._box_path(seq_dir, frame_id) if self.boxes_root is not None else None
 
             image, orig_hw = _load_rgb_tensor(rgb_path, self.image_size)
             images.append(image)
             depths.append(_load_depth_tensor(depth_path, self.image_size, self.require_depth))
             intrinsics.append(_load_intrinsics(cam_path, orig_hw, self.image_size))
             persons_per_frame.append(_load_persons(smpl_path, self.require_smpl))
+            boxes_per_frame.append(_load_box_persons(box_path, self.require_boxes) if box_path is not None else None)
 
         smpl = _build_smpl_targets(persons_per_frame, self.max_humans)
+        boxes = _build_box_targets(boxes_per_frame, persons_per_frame, self.max_humans, self.require_boxes)
         return {
             "images": torch.stack(images, dim=0),
             "gt_depth": torch.stack(depths, dim=0),
@@ -93,7 +102,15 @@ class BedlamDataset(Dataset):
             "gt_betas": smpl["betas"],
             "gt_cam_trans": smpl["cam_trans"],
             "smpl_mask": smpl["smpl_mask"],
+            "gt_boxes": boxes["boxes"],
+            "boxes_mask": boxes["boxes_mask"],
+            "person_ids": boxes["person_ids"],
+            "person_id_mask": boxes["person_id_mask"],
         }
+
+    def _box_path(self, seq_dir: Path, frame_id: str) -> Path:
+        sequence_name = seq_dir.relative_to(self.root / self.split)
+        return self.boxes_root / self.split / sequence_name / "smpl_boxes" / f"{frame_id}.pkl"
 
 
 def bedlam_collate_fn(batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
@@ -177,6 +194,19 @@ def _load_persons(path: Path, require_smpl: bool) -> list[dict[str, Any]]:
     return persons
 
 
+def _load_box_persons(path: Path, require_boxes: bool) -> list[dict[str, Any]] | None:
+    if not path.is_file():
+        if require_boxes:
+            raise FileNotFoundError(f"Preprocessed bbox annotation not found: {path}. Run scripts/preprocess/prepare_bedlam_boxes.py first.")
+        return None
+    with path.open("rb") as file:
+        data = pickle.load(file)
+    persons = data.get("persons") if isinstance(data, dict) else None
+    if not isinstance(persons, list):
+        raise TypeError(f"Preprocessed bbox annotation must contain a persons list: {path}")
+    return persons
+
+
 def _build_smpl_targets(persons_per_frame: list[list[dict[str, Any]]], max_humans: int) -> dict[str, torch.Tensor]:
     pose_frames = []
     beta_frames = []
@@ -201,6 +231,55 @@ def _build_smpl_targets(persons_per_frame: list[list[dict[str, Any]]], max_human
         "betas": torch.stack(beta_frames, dim=0),
         "cam_trans": torch.stack(trans_frames, dim=0),
         "smpl_mask": torch.stack(mask_frames, dim=0),
+    }
+
+
+def _build_box_targets(
+    boxes_per_frame: list[list[dict[str, Any]] | None],
+    persons_per_frame: list[list[dict[str, Any]]],
+    max_humans: int,
+    require_boxes: bool,
+) -> dict[str, torch.Tensor]:
+    box_frames = []
+    box_mask_frames = []
+    person_id_frames = []
+    person_id_mask_frames = []
+    for frame_idx, persons in enumerate(persons_per_frame):
+        boxes = torch.zeros(max_humans, 4, dtype=torch.float32)
+        boxes_mask = torch.zeros(max_humans, dtype=torch.bool)
+        person_ids = torch.full((max_humans,), -1, dtype=torch.long)
+        person_id_mask = torch.zeros(max_humans, dtype=torch.bool)
+        box_persons = boxes_per_frame[frame_idx]
+        for person_idx, person in enumerate(persons[:max_humans]):
+            if box_persons is not None and person_idx < len(box_persons):
+                box_person = box_persons[person_idx]
+                if bool(box_person.get("bbox_valid", False)):
+                    boxes[person_idx] = torch.as_tensor(box_person["bbox_cxcywh_norm"], dtype=torch.float32).reshape(4).clamp(0.0, 1.0)
+                    boxes_mask[person_idx] = True
+                person_id = box_person.get("person_id", -1)
+                person_id_valid = bool(box_person.get("person_id_valid", False))
+                if person_id_valid:
+                    person_ids[person_idx] = int(person_id)
+                    person_id_mask[person_idx] = True
+            else:
+                person_id, person_id_valid = extract_person_id(person)
+                if person_id_valid:
+                    person_ids[person_idx] = person_id
+                    person_id_mask[person_idx] = True
+            if require_boxes and not boxes_mask[person_idx]:
+                raise ValueError(
+                    "Valid SMPL person is missing a preprocessed bbox. "
+                    "Run scripts/preprocess/prepare_bedlam_boxes.py with usable bbox/j2d annotations."
+                )
+        box_frames.append(boxes)
+        box_mask_frames.append(boxes_mask)
+        person_id_frames.append(person_ids)
+        person_id_mask_frames.append(person_id_mask)
+    return {
+        "boxes": torch.stack(box_frames, dim=0),
+        "boxes_mask": torch.stack(box_mask_frames, dim=0),
+        "person_ids": torch.stack(person_id_frames, dim=0),
+        "person_id_mask": torch.stack(person_id_mask_frames, dim=0),
     }
 
 

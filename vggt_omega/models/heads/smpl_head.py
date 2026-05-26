@@ -2,6 +2,7 @@ import copy
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from vggt_omega.models.token_layout import AggregatorTokenLayout
 from vggt_omega.utils.rotation import rot6d_to_axis_angle
@@ -44,6 +45,9 @@ class SMPLRegressionHead(nn.Module):
         mean_pose_6d: torch.Tensor | None = None,
         mean_shape: torch.Tensor | None = None,
         return_aux: bool = False,
+        predict_boxes: bool = False,
+        predict_id_embed: bool = False,
+        id_embed_dim: int = 256,
     ) -> None:
         super().__init__()
         if num_layers <= 0:
@@ -53,6 +57,8 @@ class SMPLRegressionHead(nn.Module):
         self.num_joints = num_joints
         self.num_betas = num_betas
         self.return_aux = return_aux
+        self.predict_boxes = predict_boxes
+        self.predict_id_embed = predict_id_embed
         pose_dim = num_joints * 6
 
         self.norm = nn.LayerNorm(dim_in, eps=1e-5)
@@ -60,6 +66,20 @@ class SMPLRegressionHead(nn.Module):
         self.shape_heads = _get_clones(MLP(dim_in, hidden_dim, num_betas, mlp_layers), num_layers)
         self.cam_heads = _get_clones(MLP(dim_in, hidden_dim, 3, mlp_layers), num_layers)
         self.conf_heads = _get_clones(MLP(dim_in, hidden_dim, 1, mlp_layers), num_layers)
+        if predict_boxes:
+            self.box_heads = _get_clones(MLP(dim_in, hidden_dim, 4, mlp_layers), num_layers)
+        else:
+            self.box_heads = None
+        if predict_id_embed:
+            id_hidden_dim = max(hidden_dim // 2, 1)
+            self.id_embed_head = nn.Sequential(
+                nn.Linear(dim_in, id_hidden_dim),
+                nn.GELU(),
+                nn.LayerNorm(id_hidden_dim),
+                nn.Linear(id_hidden_dim, id_embed_dim),
+            )
+        else:
+            self.id_embed_head = None
 
         if mean_pose_6d is None:
             mean_pose_6d = _identity_pose_6d(num_joints)
@@ -89,16 +109,23 @@ class SMPLRegressionHead(nn.Module):
             "pred_confs": [],
             "pred_cam": [],
         }
+        if self.predict_boxes:
+            aux_outputs["pred_boxes"] = []
 
         pred_cam = None
         pred_confs = None
         pred_poses = None
+        pred_boxes = None
+        last_hidden = None
         for layer_idx in range(self.num_layers):
             hidden = self.norm(hidden_states[layer_idx].float())
+            last_hidden = hidden
             pose_6d = pose_6d + self.pose_heads[layer_idx](hidden)
             shape = shape + self.shape_heads[layer_idx](hidden)
             pred_cam = self.cam_heads[layer_idx](hidden)
             pred_confs = torch.sigmoid(self.conf_heads[layer_idx](hidden))
+            if self.box_heads is not None:
+                pred_boxes = torch.sigmoid(self.box_heads[layer_idx](hidden))
             pred_poses = rot6d_to_axis_angle(pose_6d)
 
             aux_outputs["pred_poses"].append(pred_poses)
@@ -106,6 +133,8 @@ class SMPLRegressionHead(nn.Module):
             aux_outputs["pred_betas"].append(shape)
             aux_outputs["pred_confs"].append(pred_confs)
             aux_outputs["pred_cam"].append(pred_cam)
+            if pred_boxes is not None:
+                aux_outputs["pred_boxes"].append(pred_boxes)
 
         if pred_poses is None or pred_cam is None or pred_confs is None:
             raise RuntimeError("SMPLRegressionHead produced no predictions")
@@ -117,6 +146,12 @@ class SMPLRegressionHead(nn.Module):
             "pred_confs": pred_confs,
             "pred_cam": pred_cam,
         }
+        if pred_boxes is not None:
+            outputs["pred_boxes"] = pred_boxes
+        if self.id_embed_head is not None:
+            if last_hidden is None:
+                raise RuntimeError("SMPLRegressionHead produced no hidden states for ID embeddings")
+            outputs["pred_id_embed"] = F.normalize(self.id_embed_head(last_hidden), dim=-1)
         if self.return_aux:
             outputs["aux_outputs"] = {key: torch.stack(values, dim=0) for key, values in aux_outputs.items()}
         return outputs
@@ -132,6 +167,9 @@ class AggregatorSMPLHead(nn.Module):
         return_aux: bool = False,
         mean_pose_6d: torch.Tensor | None = None,
         mean_shape: torch.Tensor | None = None,
+        predict_boxes: bool = False,
+        predict_id_embed: bool = False,
+        id_embed_dim: int = 256,
     ) -> None:
         super().__init__()
         if len(intermediate_layer_idx) != num_layers:
@@ -144,6 +182,9 @@ class AggregatorSMPLHead(nn.Module):
             mean_pose_6d=mean_pose_6d,
             mean_shape=mean_shape,
             return_aux=return_aux,
+            predict_boxes=predict_boxes,
+            predict_id_embed=predict_id_embed,
+            id_embed_dim=id_embed_dim,
         )
 
     def forward(

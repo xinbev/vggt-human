@@ -1,6 +1,6 @@
 experiment:
-  name: smpl_query_bedlam
-  output_dir: outputs/train/smpl_query_bedlam
+  name: smpl_hungarian_20q
+  output_dir: outputs/train/smpl_hungarian_20q
   seed: 42
 
 data:
@@ -11,7 +11,9 @@ data:
   sequence_length: 2
   stride: 1
   image_size: 518
-  max_humans: 10
+  max_humans: 20
+  boxes_root_key: datasets.bedlam_boxes_root
+  require_boxes: true
   require_smpl: true
   require_depth: false
   num_workers: 4
@@ -24,7 +26,13 @@ model:
   enable_depth: false
   enable_alignment: false
   enable_smpl: true
-  num_smpl_queries: 10
+  num_smpl_queries: 20
+  freeze_aggregator: true
+  freeze_aggregator_forward: false
+  train_smpl_query_token: true
+  predict_boxes: true
+  predict_id_embed: true
+  id_embed_dim: 256
 
 checkpoint:
   resume: ""
@@ -42,8 +50,19 @@ optim:
   val_interval: 1
 
 loss:
+  type: hungarian
   pose_weight: 1.0
   betas_weight: 0.1
   cam_weight: 0.1
   conf_weight: 1.0
-  depth_weight: 0.0
+  bbox_weight: 5.0
+  giou_weight: 2.0
+  id_weight: 0.0
+  id_temperature: 0.07
+
+matching:
+  enabled: true
+  cost_conf: 1.0
+  cost_bbox: 5.0
+  cost_giou: 2.0
+  cost_kpts: 0.0

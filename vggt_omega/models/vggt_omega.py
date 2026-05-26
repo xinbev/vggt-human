@@ -27,6 +27,10 @@ class VGGTOmega(nn.Module):
         num_smpl_queries: int = 0,
         smpl_num_layers: int = 4,
         smpl_intermediate_layer_idx: tuple[int, ...] = (4, 11, 17, 23),
+        smpl_predict_boxes: bool = False,
+        smpl_predict_id_embed: bool = False,
+        smpl_id_embed_dim: int = 256,
+        freeze_aggregator_forward: bool = False,
     ) -> None:
         super().__init__()
         if enable_smpl and num_smpl_queries <= 0:
@@ -37,6 +41,7 @@ class VGGTOmega(nn.Module):
             embed_dim=embed_dim,
             num_smpl_queries=num_smpl_queries if enable_smpl else 0,
         )
+        self.freeze_aggregator_forward = freeze_aggregator_forward
         _warn_if_rope_not_max(self.aggregator)
         self.camera_head = CameraHead(dim_in=2 * embed_dim) if enable_camera else None
         self.dense_head = DenseHead(dim_in=2 * embed_dim, patch_size=patch_size) if enable_depth else None
@@ -46,6 +51,9 @@ class VGGTOmega(nn.Module):
                 dim_in=2 * embed_dim,
                 num_layers=smpl_num_layers,
                 intermediate_layer_idx=smpl_intermediate_layer_idx,
+                predict_boxes=smpl_predict_boxes,
+                predict_id_embed=smpl_predict_id_embed,
+                id_embed_dim=smpl_id_embed_dim,
             )
             if enable_smpl
             else None
@@ -57,7 +65,11 @@ class VGGTOmega(nn.Module):
 
         amp_dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
         with torch.autocast(device_type="cuda", dtype=amp_dtype):
-            aggregated_tokens_list, token_layout = self.aggregator(images)
+            if self.freeze_aggregator_forward:
+                with torch.no_grad():
+                    aggregated_tokens_list, token_layout = self.aggregator(images)
+            else:
+                aggregated_tokens_list, token_layout = self.aggregator(images)
 
         final_tokens = aggregated_tokens_list[-1]
         if final_tokens is None:

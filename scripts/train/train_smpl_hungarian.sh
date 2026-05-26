@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+REPO_ROOT="/home/zhw/lab_users/xyb/home/projects/vggt-omega"
+BEDLAM_ROOT="/home/zhw/xyb_space/bedlam"
+PREPROCESSED_ROOT="${REPO_ROOT}/outputs/preprocess/bedlam_boxes"
+PATH_CONFIG="${REPO_ROOT}/configs/path.yaml"
+TRAIN_CONFIG="${REPO_ROOT}/configs/train_smpl.yaml"
+CUDA_VISIBLE_DEVICES_VALUE="6"
+export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
+
+VGGT_CKPT="${REPO_ROOT}/checkpoints/vggt_omega_1b_512.pt"
+OUTPUT_DIR="${REPO_ROOT}/outputs/train/smpl_hungarian_20q"
+
+EPOCHS="10"
+LR="1e-4"
+MAX_HUMANS="20"
+NUM_VIEWS="2"
+
+cd "${REPO_ROOT}"
+mkdir -p "${OUTPUT_DIR}"
+
+[[ -f "${PATH_CONFIG}" ]] || { echo "[ERROR] Missing path config: ${PATH_CONFIG}" >&2; exit 1; }
+[[ -f "${TRAIN_CONFIG}" ]] || { echo "[ERROR] Missing train config: ${TRAIN_CONFIG}" >&2; exit 1; }
+[[ -d "${BEDLAM_ROOT}" ]] || { echo "[ERROR] Missing BEDLAM root: ${BEDLAM_ROOT}" >&2; exit 1; }
+[[ -d "${PREPROCESSED_ROOT}" ]] || { echo "[ERROR] Missing preprocessed boxes: ${PREPROCESSED_ROOT}" >&2; exit 1; }
+[[ -f "${VGGT_CKPT}" ]] || { echo "[ERROR] Missing VGGT checkpoint: ${VGGT_CKPT}" >&2; exit 1; }
+
+echo "========== SMPL Hungarian 20Q =========="
+echo "BEDLAM      : ${BEDLAM_ROOT}"
+echo "Boxes       : ${PREPROCESSED_ROOT}"
+echo "Output      : ${OUTPUT_DIR}"
+echo "Epochs      : ${EPOCHS}"
+echo "LR          : ${LR}"
+echo "Max humans  : ${MAX_HUMANS}"
+echo "Num views   : ${NUM_VIEWS}"
+
+CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_smpl.py \
+  --path-config "${PATH_CONFIG}" \
+  --train-config "${TRAIN_CONFIG}" \
+  --override "checkpoints.vggt_baseline=${VGGT_CKPT}" \
+  --override "datasets.bedlam_root=${BEDLAM_ROOT}" \
+  --override "datasets.bedlam_boxes_root=${PREPROCESSED_ROOT}" \
+  --override "experiment.output_dir=${OUTPUT_DIR}" \
+  --override "data.sequence_length=${NUM_VIEWS}" \
+  --override "data.max_humans=${MAX_HUMANS}" \
+  --override "data.require_boxes=true" \
+  --override "model.num_smpl_queries=${MAX_HUMANS}" \
+  --override "model.freeze_aggregator=true" \
+  --override "model.train_smpl_query_token=true" \
+  --override "model.predict_boxes=true" \
+  --override "model.predict_id_embed=true" \
+  --override "matching.enabled=true" \
+  --override "optim.epochs=${EPOCHS}" \
+  --override "optim.lr=${LR}" \
+  --override "optim.batch_size=1" \
+  --override "optim.log_interval=20"
+
+echo "========== SMPL Hungarian finished =========="
+echo "Last checkpoint: ${OUTPUT_DIR}/checkpoint_latest.pt"

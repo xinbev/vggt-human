@@ -16,7 +16,7 @@ if str(ROOT) not in sys.path:
 
 from vggt_omega.data import BedlamDataset, bedlam_collate_fn
 from vggt_omega.models import VGGTOmega
-from vggt_omega.training import SMPLSlotLoss
+from vggt_omega.training import HungarianSMPLLoss, HungarianSMPLMatcher, SMPLSlotLoss
 from vggt_omega.training.config import deep_update, load_yaml_config, require_path
 
 
@@ -25,6 +25,7 @@ def main() -> None:
     path_config = load_yaml_config(args.path_config)
     train_config = load_yaml_config(args.train_config)
     config = deep_update(path_config, train_config)
+    config = apply_overrides(config, args.override)
 
     seed = int(config.get("experiment", {}).get("seed", 42))
     set_seed(seed)
@@ -42,10 +43,14 @@ def main() -> None:
             print(f"[warn] validation split skipped: {exc}")
 
     model = build_model(config).to(device)
-    load_initial_checkpoint(model, config, path_config, device)
-    criterion = SMPLSlotLoss(**config["loss"]).to(device)
+    load_initial_checkpoint(model, config, device)
+    apply_freeze_policy(model, config)
+    criterion = build_criterion(config).to(device)
+    trainable_params = [param for param in model.parameters() if param.requires_grad]
+    if not trainable_params:
+        raise RuntimeError("No trainable parameters after applying freeze policy")
     optimizer = torch.optim.AdamW(
-        [param for param in model.parameters() if param.requires_grad],
+        trainable_params,
         lr=float(config["optim"]["lr"]),
         weight_decay=float(config["optim"].get("weight_decay", 0.0)),
     )
@@ -80,12 +85,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--path-config", default="configs/path.yaml")
     parser.add_argument("--train-config", default="configs/train_smpl.yaml")
     parser.add_argument("--device", default="")
+    parser.add_argument("--override", action="append", default=[], help="Override config values with dotted.key=value")
     return parser.parse_args()
 
 
 def build_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoader:
     data_cfg = config["data"]
     root = require_path(config, data_cfg.get("root_key", "datasets.bedlam_root"))
+    boxes_root = None
+    if data_cfg.get("boxes_root_key"):
+        boxes_root = require_path(config, data_cfg["boxes_root_key"], allow_empty=not bool(data_cfg.get("require_boxes", False)))
     dataset = BedlamDataset(
         root=root,
         split=split,
@@ -95,6 +104,8 @@ def build_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoade
         max_humans=int(data_cfg["max_humans"]),
         require_smpl=bool(data_cfg.get("require_smpl", True)),
         require_depth=bool(data_cfg.get("require_depth", False)),
+        boxes_root=boxes_root,
+        require_boxes=bool(data_cfg.get("require_boxes", False)),
     )
     return DataLoader(
         dataset,
@@ -109,7 +120,7 @@ def build_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoade
 
 def build_model(config: dict[str, Any]) -> VGGTOmega:
     model_cfg = config["model"]
-    if int(model_cfg["num_smpl_queries"]) != int(config["data"]["max_humans"]):
+    if config.get("loss", {}).get("type", "slot") != "hungarian" and int(model_cfg["num_smpl_queries"]) != int(config["data"]["max_humans"]):
         raise ValueError("model.num_smpl_queries must equal data.max_humans for slot-aligned SMPLSlotLoss")
     return VGGTOmega(
         patch_size=int(model_cfg["patch_size"]),
@@ -119,14 +130,52 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         enable_alignment=bool(model_cfg.get("enable_alignment", False)),
         enable_smpl=bool(model_cfg.get("enable_smpl", True)),
         num_smpl_queries=int(model_cfg["num_smpl_queries"]),
+        smpl_predict_boxes=bool(model_cfg.get("predict_boxes", False)),
+        smpl_predict_id_embed=bool(model_cfg.get("predict_id_embed", False)),
+        smpl_id_embed_dim=int(model_cfg.get("id_embed_dim", 256)),
+        freeze_aggregator_forward=bool(model_cfg.get("freeze_aggregator_forward", False)),
     )
 
 
-def load_initial_checkpoint(model: torch.nn.Module, config: dict[str, Any], path_config: dict[str, Any], device: torch.device) -> None:
+def build_criterion(config: dict[str, Any]) -> torch.nn.Module:
+    loss_cfg = dict(config.get("loss", {}))
+    loss_type = str(loss_cfg.pop("type", "slot"))
+    if loss_type == "hungarian":
+        match_cfg = config.get("matching", {})
+        matcher = HungarianSMPLMatcher(
+            cost_conf=float(match_cfg.get("cost_conf", 1.0)),
+            cost_bbox=float(match_cfg.get("cost_bbox", 5.0)),
+            cost_giou=float(match_cfg.get("cost_giou", 2.0)),
+            cost_kpts=float(match_cfg.get("cost_kpts", 0.0)),
+            j2ds_norm_scale=float(config.get("data", {}).get("image_size", 518)),
+            require_boxes=bool(config.get("data", {}).get("require_boxes", True)),
+            require_j2ds=False,
+        )
+        return HungarianSMPLLoss(matcher=matcher, **loss_cfg)
+    if loss_type == "slot":
+        return SMPLSlotLoss(**loss_cfg)
+    raise ValueError(f"Unsupported loss.type: {loss_type}")
+
+
+def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
+    model_cfg = config.get("model", {})
+    if not bool(model_cfg.get("freeze_aggregator", False)):
+        return
+    aggregator = getattr(model, "aggregator", None)
+    if aggregator is None:
+        return
+    aggregator.eval()
+    for _, param in aggregator.named_parameters():
+        param.requires_grad = False
+    if bool(model_cfg.get("train_smpl_query_token", False)) and hasattr(aggregator, "smpl_query_token"):
+        aggregator.smpl_query_token.requires_grad = True
+
+
+def load_initial_checkpoint(model: torch.nn.Module, config: dict[str, Any], device: torch.device) -> None:
     ckpt_cfg = config.get("checkpoint", {})
     if not ckpt_cfg.get("load_vggt_baseline", False):
         return
-    checkpoint_path = require_path(path_config, "checkpoints.vggt_baseline", allow_empty=False)
+    checkpoint_path = require_path(config, "checkpoints.vggt_baseline", allow_empty=False)
     checkpoint = torch.load(checkpoint_path, map_location=device)
     state_dict = extract_state_dict(checkpoint)
     missing, unexpected = model.load_state_dict(state_dict, strict=bool(ckpt_cfg.get("strict", False)))
@@ -163,7 +212,7 @@ def _strip_module_prefix(state_dict: dict[str, torch.Tensor]) -> dict[str, torch
 
 def train_one_epoch(
     model: torch.nn.Module,
-    criterion: SMPLSlotLoss,
+    criterion: torch.nn.Module,
     optimizer: torch.optim.Optimizer,
     loader: DataLoader,
     device: torch.device,
@@ -172,6 +221,7 @@ def train_one_epoch(
     config: dict[str, Any],
 ) -> int:
     model.train()
+    apply_freeze_policy(model, config)
     log_interval = int(config["optim"].get("log_interval", 10))
     grad_clip_norm = float(config["optim"].get("grad_clip_norm", 0.0))
     for step, batch in enumerate(loader):
@@ -194,7 +244,7 @@ def train_one_epoch(
 
 
 @torch.no_grad()
-def validate(model: torch.nn.Module, criterion: SMPLSlotLoss, loader: DataLoader, device: torch.device, epoch: int) -> None:
+def validate(model: torch.nn.Module, criterion: torch.nn.Module, loader: DataLoader, device: torch.device, epoch: int) -> None:
     model.eval()
     totals: dict[str, float] = {}
     count = 0
@@ -210,6 +260,42 @@ def validate(model: torch.nn.Module, criterion: SMPLSlotLoss, loader: DataLoader
 
 def move_to_device(batch: dict[str, torch.Tensor], device: torch.device) -> dict[str, torch.Tensor]:
     return {key: value.to(device, non_blocking=True) for key, value in batch.items()}
+
+
+def apply_overrides(config: dict[str, Any], overrides: list[str]) -> dict[str, Any]:
+    updated = dict(config)
+    for item in overrides:
+        if "=" not in item:
+            raise ValueError(f"Override must have key=value format, got: {item}")
+        dotted_key, raw_value = item.split("=", 1)
+        cursor = updated
+        parts = dotted_key.split(".")
+        for part in parts[:-1]:
+            child = cursor.get(part)
+            if not isinstance(child, dict):
+                child = {}
+                cursor[part] = child
+            cursor = child
+        cursor[parts[-1]] = parse_override_value(raw_value)
+    return updated
+
+
+def parse_override_value(value: str) -> Any:
+    lowered = value.lower()
+    if lowered == "true":
+        return True
+    if lowered == "false":
+        return False
+    if lowered in {"none", "null", "~"}:
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        pass
+    try:
+        return float(value)
+    except ValueError:
+        return value
 
 
 def format_log(prefix: str, epoch: int, step: int, steps: int, global_step: int, losses: dict[str, Any]) -> str:
