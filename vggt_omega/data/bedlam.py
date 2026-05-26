@@ -100,7 +100,8 @@ class BedlamDataset(Dataset):
             "K_scal3r": torch.stack(intrinsics, dim=0),
             "gt_pose_6d": smpl["pose_6d"],
             "gt_betas": smpl["betas"],
-            "gt_cam_trans": smpl["cam_trans"],
+            "gt_transl_cam": smpl["transl_cam"],
+            "gt_cam_trans": smpl["transl_cam"],
             "smpl_mask": smpl["smpl_mask"],
             "gt_boxes": boxes["boxes"],
             "boxes_mask": boxes["boxes_mask"],
@@ -210,26 +211,26 @@ def _load_box_persons(path: Path, require_boxes: bool) -> list[dict[str, Any]] |
 def _build_smpl_targets(persons_per_frame: list[list[dict[str, Any]]], max_humans: int) -> dict[str, torch.Tensor]:
     pose_frames = []
     beta_frames = []
-    trans_frames = []
+    transl_cam_frames = []
     mask_frames = []
     for persons in persons_per_frame:
         poses = torch.zeros(max_humans, 144, dtype=torch.float32)
         betas = torch.zeros(max_humans, 10, dtype=torch.float32)
-        cam_trans = torch.zeros(max_humans, 3, dtype=torch.float32)
+        transl_cam = torch.zeros(max_humans, 3, dtype=torch.float32)
         mask = torch.zeros(max_humans, dtype=torch.bool)
         for person_idx, person in enumerate(persons[:max_humans]):
             poses[person_idx] = _person_pose_6d(person)
             betas[person_idx] = torch.as_tensor(person["smplx_shape"], dtype=torch.float32).reshape(-1)[:10]
-            cam_trans[person_idx] = torch.as_tensor(person["smplx_transl"], dtype=torch.float32).reshape(3)
+            transl_cam[person_idx] = torch.as_tensor(person["smplx_transl"], dtype=torch.float32).reshape(3)
             mask[person_idx] = True
         pose_frames.append(poses)
         beta_frames.append(betas)
-        trans_frames.append(cam_trans)
+        transl_cam_frames.append(transl_cam)
         mask_frames.append(mask)
     return {
         "pose_6d": torch.stack(pose_frames, dim=0),
         "betas": torch.stack(beta_frames, dim=0),
-        "cam_trans": torch.stack(trans_frames, dim=0),
+        "transl_cam": torch.stack(transl_cam_frames, dim=0),
         "smpl_mask": torch.stack(mask_frames, dim=0),
     }
 

@@ -7,7 +7,7 @@ data:
   dataset: bedlam
   root_key: datasets.bedlam_root
   train_split: Training
-  val_split: Test
+  val_split: ""
   sequence_length: 2
   stride: 1
   image_size: 518
@@ -53,7 +53,7 @@ loss:
   type: hungarian
   pose_weight: 1.0
   betas_weight: 0.1
-  cam_weight: 0.1
+  transl_cam_weight: 0.1
   conf_weight: 1.0
   bbox_weight: 5.0
   giou_weight: 2.0

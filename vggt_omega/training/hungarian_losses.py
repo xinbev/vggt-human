@@ -13,7 +13,8 @@ class HungarianSMPLLoss(nn.Module):
         matcher: HungarianSMPLMatcher,
         pose_weight: float = 1.0,
         betas_weight: float = 0.1,
-        cam_weight: float = 0.1,
+        transl_cam_weight: float = 0.1,
+        cam_weight: float | None = None,
         conf_weight: float = 1.0,
         bbox_weight: float = 5.0,
         giou_weight: float = 2.0,
@@ -24,7 +25,7 @@ class HungarianSMPLLoss(nn.Module):
         self.matcher = matcher
         self.pose_weight = pose_weight
         self.betas_weight = betas_weight
-        self.cam_weight = cam_weight
+        self.transl_cam_weight = transl_cam_weight if cam_weight is None else cam_weight
         self.conf_weight = conf_weight
         self.bbox_weight = bbox_weight
         self.giou_weight = giou_weight
@@ -41,7 +42,7 @@ class HungarianSMPLLoss(nn.Module):
         pred_boxes = _flatten_prediction(_require_prediction(predictions, "pred_boxes"), unframed_ndim=3)
         pred_pose = _flatten_prediction(_require_prediction(predictions, "pred_pose_6d"), unframed_ndim=3)
         pred_betas = _flatten_prediction(_require_prediction(predictions, "pred_betas"), unframed_ndim=3)
-        pred_cam = _flatten_prediction(_require_prediction(predictions, "pred_cam"), unframed_ndim=3)
+        pred_transl_cam = _flatten_prediction(_require_prediction(predictions, "pred_transl_cam"), unframed_ndim=3)
         pred_id_embed = predictions.get("pred_id_embed")
         flat_id_embed = _flatten_prediction(pred_id_embed, unframed_ndim=3) if pred_id_embed is not None else None
 
@@ -58,7 +59,7 @@ class HungarianSMPLLoss(nn.Module):
         matched = _collect_matches(indices, targets, pred_confs.device)
         if matched["frame_idx"].numel() == 0:
             zero = pred_confs.sum() * 0.0
-            losses.update({"loss_bbox": zero, "loss_giou": zero, "loss_pose": zero, "loss_betas": zero, "loss_cam": zero, "loss_id": zero})
+            losses.update({"loss_bbox": zero, "loss_giou": zero, "loss_pose": zero, "loss_betas": zero, "loss_transl_cam": zero, "loss_id": zero})
         else:
             frame_idx = matched["frame_idx"]
             src_idx = matched["src_idx"]
@@ -69,7 +70,10 @@ class HungarianSMPLLoss(nn.Module):
             losses["loss_pose"] = F.l1_loss(pred_pose[frame_idx, src_idx], matched["pose_6d"].to(dtype=pred_pose.dtype))
             beta_diff = (pred_betas[frame_idx, src_idx] - matched["betas"].to(dtype=pred_betas.dtype)).abs()
             losses["loss_betas"] = (beta_diff * self.betas_dim_weight.to(dtype=pred_betas.dtype, device=pred_betas.device)).mean()
-            losses["loss_cam"] = F.l1_loss(pred_cam[frame_idx, src_idx], matched["cam_trans"].to(dtype=pred_cam.dtype))
+            losses["loss_transl_cam"] = F.l1_loss(
+                pred_transl_cam[frame_idx, src_idx],
+                matched["transl_cam"].to(dtype=pred_transl_cam.dtype),
+            )
             losses["loss_id"] = self._identity_loss(flat_id_embed, frame_idx, src_idx, matched)
 
         losses["loss_total"] = (
@@ -78,7 +82,7 @@ class HungarianSMPLLoss(nn.Module):
             + self.giou_weight * losses["loss_giou"]
             + self.pose_weight * losses["loss_pose"]
             + self.betas_weight * losses["loss_betas"]
-            + self.cam_weight * losses["loss_cam"]
+            + self.transl_cam_weight * losses["loss_transl_cam"]
             + self.id_weight * losses["loss_id"]
         )
         return losses
@@ -116,7 +120,7 @@ def flatten_smpl_targets(batch: dict[str, torch.Tensor], device: torch.device) -
     gt_boxes = batch["gt_boxes"].to(device=device)
     gt_pose = batch["gt_pose_6d"].to(device=device)
     gt_betas = batch["gt_betas"].to(device=device)
-    gt_cam = batch["gt_cam_trans"].to(device=device)
+    gt_transl_cam = batch.get("gt_transl_cam", batch["gt_cam_trans"]).to(device=device)
     person_ids = batch.get("person_ids")
     person_id_mask = batch.get("person_id_mask")
     if person_ids is not None:
@@ -133,7 +137,7 @@ def flatten_smpl_targets(batch: dict[str, torch.Tensor], device: torch.device) -
                 "boxes": gt_boxes[batch_idx, frame_idx, valid],
                 "pose_6d": gt_pose[batch_idx, frame_idx, valid],
                 "betas": gt_betas[batch_idx, frame_idx, valid],
-                "cam_trans": gt_cam[batch_idx, frame_idx, valid],
+                "transl_cam": gt_transl_cam[batch_idx, frame_idx, valid],
             }
             if person_ids is not None and person_id_mask is not None:
                 target["person_ids"] = person_ids[batch_idx, frame_idx, valid]
@@ -148,7 +152,7 @@ def flatten_smpl_targets(batch: dict[str, torch.Tensor], device: torch.device) -
 def _collect_matches(indices, targets: list[dict[str, torch.Tensor]], device: torch.device) -> dict[str, torch.Tensor]:
     frame_indices = []
     src_indices = []
-    target_parts: dict[str, list[torch.Tensor]] = {"boxes": [], "pose_6d": [], "betas": [], "cam_trans": [], "person_ids": [], "person_id_mask": []}
+    target_parts: dict[str, list[torch.Tensor]] = {"boxes": [], "pose_6d": [], "betas": [], "transl_cam": [], "person_ids": [], "person_id_mask": []}
     for frame_idx, (src_idx, tgt_idx) in enumerate(indices):
         if src_idx.numel() == 0:
             continue

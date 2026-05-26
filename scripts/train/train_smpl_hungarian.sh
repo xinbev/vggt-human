@@ -3,7 +3,7 @@
 set -euo pipefail
 
 REPO_ROOT="/home/zhw/lab_users/xyb/home/projects/vggt-omega"
-BEDLAM_ROOT="/home/zhw/xyb_space/bedlam"
+BEDLAM_ROOT="/home/zhw/xyb_space/bedlam/processed_bedlam"
 PREPROCESSED_ROOT="${REPO_ROOT}/outputs/preprocess/bedlam_boxes"
 PATH_CONFIG="${REPO_ROOT}/configs/path.yaml"
 TRAIN_CONFIG="${REPO_ROOT}/configs/train_smpl.yaml"
@@ -44,6 +44,7 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_
   --override "datasets.bedlam_boxes_root=${PREPROCESSED_ROOT}" \
   --override "experiment.output_dir=${OUTPUT_DIR}" \
   --override "data.sequence_length=${NUM_VIEWS}" \
+  --override "data.val_split=" \
   --override "data.max_humans=${MAX_HUMANS}" \
   --override "data.require_boxes=true" \
   --override "model.num_smpl_queries=${MAX_HUMANS}" \

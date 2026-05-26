@@ -64,7 +64,7 @@ class SMPLRegressionHead(nn.Module):
         self.norm = nn.LayerNorm(dim_in, eps=1e-5)
         self.pose_heads = _get_clones(MLP(dim_in, hidden_dim, pose_dim, mlp_layers), num_layers)
         self.shape_heads = _get_clones(MLP(dim_in, hidden_dim, num_betas, mlp_layers), num_layers)
-        self.cam_heads = _get_clones(MLP(dim_in, hidden_dim, 3, mlp_layers), num_layers)
+        self.transl_cam_heads = _get_clones(MLP(dim_in, hidden_dim, 3, mlp_layers), num_layers)
         self.conf_heads = _get_clones(MLP(dim_in, hidden_dim, 1, mlp_layers), num_layers)
         if predict_boxes:
             self.box_heads = _get_clones(MLP(dim_in, hidden_dim, 4, mlp_layers), num_layers)
@@ -107,12 +107,12 @@ class SMPLRegressionHead(nn.Module):
             "pred_pose_6d": [],
             "pred_betas": [],
             "pred_confs": [],
-            "pred_cam": [],
+            "pred_transl_cam": [],
         }
         if self.predict_boxes:
             aux_outputs["pred_boxes"] = []
 
-        pred_cam = None
+        pred_transl_cam = None
         pred_confs = None
         pred_poses = None
         pred_boxes = None
@@ -122,7 +122,7 @@ class SMPLRegressionHead(nn.Module):
             last_hidden = hidden
             pose_6d = pose_6d + self.pose_heads[layer_idx](hidden)
             shape = shape + self.shape_heads[layer_idx](hidden)
-            pred_cam = self.cam_heads[layer_idx](hidden)
+            pred_transl_cam = self.transl_cam_heads[layer_idx](hidden)
             pred_confs = torch.sigmoid(self.conf_heads[layer_idx](hidden))
             if self.box_heads is not None:
                 pred_boxes = torch.sigmoid(self.box_heads[layer_idx](hidden))
@@ -132,11 +132,11 @@ class SMPLRegressionHead(nn.Module):
             aux_outputs["pred_pose_6d"].append(pose_6d)
             aux_outputs["pred_betas"].append(shape)
             aux_outputs["pred_confs"].append(pred_confs)
-            aux_outputs["pred_cam"].append(pred_cam)
+            aux_outputs["pred_transl_cam"].append(pred_transl_cam)
             if pred_boxes is not None:
                 aux_outputs["pred_boxes"].append(pred_boxes)
 
-        if pred_poses is None or pred_cam is None or pred_confs is None:
+        if pred_poses is None or pred_transl_cam is None or pred_confs is None:
             raise RuntimeError("SMPLRegressionHead produced no predictions")
 
         outputs: dict[str, torch.Tensor | dict[str, torch.Tensor]] = {
@@ -144,7 +144,9 @@ class SMPLRegressionHead(nn.Module):
             "pred_pose_6d": pose_6d,
             "pred_betas": shape,
             "pred_confs": pred_confs,
-            "pred_cam": pred_cam,
+            "pred_transl_cam": pred_transl_cam,
+            # Temporary alias for older callers/checkpoints. New code should use pred_transl_cam.
+            "pred_cam": pred_transl_cam,
         }
         if pred_boxes is not None:
             outputs["pred_boxes"] = pred_boxes
