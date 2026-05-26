@@ -45,30 +45,32 @@ class CameraHead(nn.Module):
     def forward(
         self,
         aggregated_tokens_list: list[torch.Tensor | None],
-        patch_token_start: int,
+        patch_token_start: int | None = None,
+        token_layout=None,
     ) -> torch.Tensor:
         tokens = aggregated_tokens_list[-1]
         if tokens is None:
             raise ValueError("Aggregator did not cache the final layer, which CameraHead needs.")
         batch_size, num_frames, num_tokens, _ = tokens.shape
 
-        if patch_token_start is None:
-            raise ValueError("patch_token_start is required for CameraHead")
-        if patch_token_start > num_tokens:
-            raise ValueError(f"patch_token_start ({patch_token_start}) exceeds token length ({num_tokens})")
+        camera_register_end = token_layout.register_end if token_layout is not None else patch_token_start
+        if camera_register_end is None:
+            raise ValueError("patch_token_start or token_layout is required for CameraHead")
+        if camera_register_end > num_tokens:
+            raise ValueError(f"camera/register end ({camera_register_end}) exceeds token length ({num_tokens})")
 
         if tokens.dtype != torch.float32:
             tokens = tokens.float()
 
-        camera_and_register_tokens = tokens[:, :, :patch_token_start]
+        camera_and_register_tokens = tokens[:, :, :camera_register_end]
         camera_and_register_tokens = self.token_norm(camera_and_register_tokens)
 
-        camera_and_register_tokens = camera_and_register_tokens.reshape(batch_size, num_frames * patch_token_start, -1)
+        camera_and_register_tokens = camera_and_register_tokens.reshape(batch_size, num_frames * camera_register_end, -1)
         rope_sincos = None
         for block in self.trunk:
             camera_and_register_tokens = block(camera_and_register_tokens, rope_sincos)
 
-        camera_and_register_tokens = camera_and_register_tokens.reshape(batch_size, num_frames, patch_token_start, -1)
+        camera_and_register_tokens = camera_and_register_tokens.reshape(batch_size, num_frames, camera_register_end, -1)
         camera_tokens = self.trunk_norm(camera_and_register_tokens[:, :, 0])
         return _apply_camera_activation(self.camera_branch(camera_tokens))
 

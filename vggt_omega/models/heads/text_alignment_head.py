@@ -48,23 +48,25 @@ class TextAlignmentHead(nn.Module):
     def forward(
         self,
         aggregated_tokens_list: list[torch.Tensor | None],
-        patch_token_start: int,
+        patch_token_start: int | None = None,
+        token_layout=None,
     ) -> dict[str, torch.Tensor]:
         tokens = aggregated_tokens_list[-1]
         if tokens is None:
             raise ValueError("Aggregator did not cache the final layer, which TextAlignmentHead needs.")
-        if patch_token_start is None:
-            raise ValueError("patch_token_start is required for TextAlignmentHead")
-        if patch_token_start > tokens.shape[2]:
-            raise ValueError(f"patch_token_start ({patch_token_start}) exceeds token length ({tokens.shape[2]})")
+        camera_register_end = token_layout.register_end if token_layout is not None else patch_token_start
+        if camera_register_end is None:
+            raise ValueError("patch_token_start or token_layout is required for TextAlignmentHead")
+        if camera_register_end > tokens.shape[2]:
+            raise ValueError(f"camera/register end ({camera_register_end}) exceeds token length ({tokens.shape[2]})")
 
         if tokens.dtype != torch.float32:
             tokens = tokens.float()
 
         batch_size, num_frames, _, _ = tokens.shape
-        camera_and_register_tokens = tokens[:, :, :patch_token_start]
+        camera_and_register_tokens = tokens[:, :, :camera_register_end]
         camera_and_register_tokens = self.token_norm(camera_and_register_tokens)
-        camera_and_register_tokens = camera_and_register_tokens.reshape(batch_size, num_frames * patch_token_start, -1)
+        camera_and_register_tokens = camera_and_register_tokens.reshape(batch_size, num_frames * camera_register_end, -1)
 
         language_token = self.language_token.expand(batch_size, -1, -1)
         readout_tokens = torch.cat([language_token, camera_and_register_tokens], dim=1)

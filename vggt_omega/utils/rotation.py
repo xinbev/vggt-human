@@ -128,3 +128,83 @@ def standardize_quaternion(quaternions: torch.Tensor) -> torch.Tensor:
         Standardized quaternions as tensor of shape (..., 4).
     """
     return torch.where(quaternions[..., 3:4] < 0, -quaternions, quaternions)
+
+
+def rot6d_to_rotmat(rot_6d: torch.Tensor) -> torch.Tensor:
+    """Convert 6D rotation representation to rotation matrices."""
+    if rot_6d.shape[-1] != 6:
+        raise ValueError(f"Expected last dimension 6 for rot_6d, got {rot_6d.shape}")
+
+    a1 = rot_6d[..., 0:3]
+    a2 = rot_6d[..., 3:6]
+    b1 = F.normalize(a1, dim=-1)
+    b2 = F.normalize(a2 - (b1 * a2).sum(dim=-1, keepdim=True) * b1, dim=-1)
+    b3 = torch.cross(b1, b2, dim=-1)
+    return torch.stack((b1, b2, b3), dim=-2)
+
+
+def axis_angle_to_rotmat(axis_angle: torch.Tensor) -> torch.Tensor:
+    """Convert axis-angle rotations to rotation matrices."""
+    if axis_angle.shape[-1] != 3:
+        raise ValueError(f"Expected axis-angle last dimension 3, got {axis_angle.shape}")
+    angles = torch.norm(axis_angle, p=2, dim=-1, keepdim=True)
+    axis = axis_angle / angles.clamp(min=1e-8)
+    x, y, z = axis.unbind(-1)
+    zeros = torch.zeros_like(x)
+    skew = torch.stack(
+        (
+            zeros,
+            -z,
+            y,
+            z,
+            zeros,
+            -x,
+            -y,
+            x,
+            zeros,
+        ),
+        dim=-1,
+    ).reshape(axis_angle.shape[:-1] + (3, 3))
+    eye = torch.eye(3, dtype=axis_angle.dtype, device=axis_angle.device).expand(axis_angle.shape[:-1] + (3, 3))
+    sin = torch.sin(angles)[..., None]
+    cos = torch.cos(angles)[..., None]
+    rotmat = eye + sin * skew + (1.0 - cos) * torch.matmul(skew, skew)
+    return torch.where((angles[..., None] < 1e-8), eye, rotmat)
+
+
+def axis_angle_to_rot6d(axis_angle: torch.Tensor) -> torch.Tensor:
+    """Convert axis-angle rotations to 6D rotation representation."""
+    rotmat = axis_angle_to_rotmat(axis_angle)
+    return rotmat[..., :2, :].reshape(axis_angle.shape[:-1] + (6,))
+
+
+def rotation_matrix_to_axis_angle(rotation_matrix: torch.Tensor) -> torch.Tensor:
+    """Convert rotation matrices to axis-angle vectors."""
+    return quaternion_to_axis_angle(mat_to_quat(rotation_matrix))
+
+
+def rot6d_to_axis_angle(rot_6d: torch.Tensor) -> torch.Tensor:
+    """Convert 6D rotations with shape (..., J * 6) or (..., 6) to axis-angle."""
+    if rot_6d.shape[-1] % 6 != 0:
+        raise ValueError(f"Expected last dimension divisible by 6 for rot_6d, got {rot_6d.shape}")
+
+    leading_shape = rot_6d.shape[:-1]
+    num_rotations = rot_6d.shape[-1] // 6
+    rotmat = rot6d_to_rotmat(rot_6d.reshape(*leading_shape, num_rotations, 6))
+    axis_angle = rotation_matrix_to_axis_angle(rotmat)
+    return axis_angle.reshape(*leading_shape, num_rotations * 3)
+
+
+def quaternion_to_axis_angle(quaternions: torch.Tensor) -> torch.Tensor:
+    """Convert scalar-last quaternions to axis-angle vectors."""
+    if quaternions.shape[-1] != 4:
+        raise ValueError(f"Expected quaternions with last dimension 4, got {quaternions.shape}")
+
+    norms = torch.norm(quaternions[..., :3], p=2, dim=-1, keepdim=True)
+    half_angles = torch.atan2(norms, quaternions[..., 3:4])
+    angles = 2.0 * half_angles
+    small_angles = angles.abs() < 1e-6
+    sin_half_angles_over_angles = torch.empty_like(angles)
+    sin_half_angles_over_angles[~small_angles] = torch.sin(half_angles[~small_angles]) / angles[~small_angles]
+    sin_half_angles_over_angles[small_angles] = 0.5 - (angles[small_angles] * angles[small_angles]) / 48.0
+    return quaternions[..., :3] / sin_half_angles_over_angles

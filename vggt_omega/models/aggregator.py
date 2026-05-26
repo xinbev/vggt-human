@@ -9,6 +9,7 @@ import torch.nn as nn
 
 from vggt_omega.models.layers import Mlp, RopePositionEmbedding, SelfAttentionBlock
 from vggt_omega.models.layers.vision_transformer import DinoVisionTransformer
+from vggt_omega.models.token_layout import AggregatorTokenLayout
 
 
 _RESNET_MEAN = [0.485, 0.456, 0.406]
@@ -26,10 +27,13 @@ class Aggregator(nn.Module):
         num_heads: int = 16,
         mlp_ratio: float = 4.0,
         num_register_tokens: int = 16,
+        num_smpl_queries: int = 0,
         register_attention_block_indices: list[int] = [2, 6, 9, 14, 20],
         cached_layer_indices: tuple[int, ...] = (4, 11, 17, 23),
     ) -> None:
         super().__init__()
+        if num_smpl_queries < 0:
+            raise ValueError(f"num_smpl_queries must be non-negative, got {num_smpl_queries}")
 
         self.patch_embed = _build_patch_embed(patch_size=patch_size, embed_dim=embed_dim)
         self.rope_embed = RopePositionEmbedding(
@@ -80,7 +84,17 @@ class Aggregator(nn.Module):
         self.cached_layer_indices = set(cached_layer_indices)
         self.camera_token = nn.Parameter(torch.empty(1, 2, 1, embed_dim))
         self.register_token = nn.Parameter(torch.empty(1, 2, num_register_tokens, embed_dim))
-        self.patch_token_start = 1 + num_register_tokens
+        self.smpl_query_token = nn.Parameter(torch.empty(1, 2, num_smpl_queries, embed_dim))
+        self.token_layout = AggregatorTokenLayout(
+            camera_start=0,
+            camera_end=1,
+            register_start=1,
+            register_end=1 + num_register_tokens,
+            smpl_start=1 + num_register_tokens,
+            smpl_end=1 + num_register_tokens + num_smpl_queries,
+            patch_start=1 + num_register_tokens + num_smpl_queries,
+        )
+        self.patch_token_start = self.token_layout.patch_start
 
         self.inter_frame_attention_types = ["global"] * depth
         for idx in register_attention_block_indices:
@@ -96,11 +110,12 @@ class Aggregator(nn.Module):
     def init_weights(self) -> None:
         nn.init.normal_(self.camera_token, std=1e-3)
         nn.init.normal_(self.register_token, std=1e-3)
+        nn.init.normal_(self.smpl_query_token, std=1e-3)
 
     def forward(
         self,
         images: torch.Tensor,
-    ) -> tuple[list[torch.Tensor | None], int]:
+    ) -> tuple[list[torch.Tensor | None], AggregatorTokenLayout]:
         batch_size, num_frames, num_channels, height, width = images.shape
         if num_channels != 3:
             raise ValueError(f"Expected 3 input channels, got {num_channels}")
@@ -110,12 +125,13 @@ class Aggregator(nn.Module):
 
         camera_token = slice_expand_and_flatten(self.camera_token, batch_size, num_frames)
         register_token = slice_expand_and_flatten(self.register_token, batch_size, num_frames)
+        smpl_query_token = slice_expand_and_flatten(self.smpl_query_token, batch_size, num_frames)
 
         patch_tokens = self.patch_embed(images)
         if isinstance(patch_tokens, dict):
             patch_tokens = patch_tokens["x_norm_patchtokens"]
 
-        tokens = torch.cat([camera_token, register_token, patch_tokens], dim=1)
+        tokens = torch.cat([camera_token, register_token, smpl_query_token, patch_tokens], dim=1)
         _, num_tokens, embed_dim = tokens.shape
 
         patch_grid_size = (height // self.patch_size, width // self.patch_size)
@@ -151,7 +167,7 @@ class Aggregator(nn.Module):
             else:
                 outputs.append(None)
 
-        return outputs, self.patch_token_start
+        return outputs, self.token_layout
 
     def _run_frame_block(
         self,
@@ -187,8 +203,8 @@ class Aggregator(nn.Module):
         if attention_type != "register":
             raise ValueError(f"Unknown inter-frame attention type: {attention_type}")
 
-        patch_token_start = self.patch_token_start
-        camera_and_register_tokens = tokens[:, :, :patch_token_start].reshape(
+        patch_token_start = self.token_layout.patch_start
+        context_tokens = tokens[:, :, :patch_token_start].reshape(
             batch_size,
             num_frames * patch_token_start,
             embed_dim,
@@ -199,10 +215,10 @@ class Aggregator(nn.Module):
             embed_dim,
         )
 
-        camera_and_register_tokens = self.inter_frame_blocks[block_idx](camera_and_register_tokens, None)
-        tokens = torch.cat([camera_and_register_tokens, patch_tokens], dim=1)
+        context_tokens = self.inter_frame_blocks[block_idx](context_tokens, None)
+        tokens = torch.cat([context_tokens, patch_tokens], dim=1)
 
-        camera_and_register_tokens = tokens[:, : num_frames * patch_token_start].view(
+        context_tokens = tokens[:, : num_frames * patch_token_start].view(
             batch_size,
             num_frames,
             patch_token_start,
@@ -214,7 +230,7 @@ class Aggregator(nn.Module):
             num_tokens - patch_token_start,
             embed_dim,
         )
-        return torch.cat([camera_and_register_tokens, patch_tokens], dim=2)
+        return torch.cat([context_tokens, patch_tokens], dim=2)
 
 
 def _build_patch_embed(patch_size: int, embed_dim: int) -> DinoVisionTransformer:

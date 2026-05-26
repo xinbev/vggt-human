@@ -1,0 +1,259 @@
+import argparse
+import json
+import math
+import random
+import sys
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import torch
+from torch.utils.data import DataLoader
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from vggt_omega.data import BedlamDataset, bedlam_collate_fn
+from vggt_omega.models import VGGTOmega
+from vggt_omega.training import SMPLSlotLoss
+from vggt_omega.training.config import deep_update, load_yaml_config, require_path
+
+
+def main() -> None:
+    args = parse_args()
+    path_config = load_yaml_config(args.path_config)
+    train_config = load_yaml_config(args.train_config)
+    config = deep_update(path_config, train_config)
+
+    seed = int(config.get("experiment", {}).get("seed", 42))
+    set_seed(seed)
+    device = torch.device(args.device if args.device else ("cuda" if torch.cuda.is_available() else "cpu"))
+    output_dir = Path(config["experiment"]["output_dir"])
+    output_dir.mkdir(parents=True, exist_ok=True)
+    save_json(config, output_dir / "resolved_config.json")
+
+    train_loader = build_loader(config, split=config["data"]["train_split"], shuffle=True)
+    val_loader = None
+    if config["data"].get("val_split"):
+        try:
+            val_loader = build_loader(config, split=config["data"]["val_split"], shuffle=False)
+        except FileNotFoundError as exc:
+            print(f"[warn] validation split skipped: {exc}")
+
+    model = build_model(config).to(device)
+    load_initial_checkpoint(model, config, path_config, device)
+    criterion = SMPLSlotLoss(**config["loss"]).to(device)
+    optimizer = torch.optim.AdamW(
+        [param for param in model.parameters() if param.requires_grad],
+        lr=float(config["optim"]["lr"]),
+        weight_decay=float(config["optim"].get("weight_decay", 0.0)),
+    )
+
+    start_epoch = 0
+    global_step = 0
+    resume_path = str(config.get("checkpoint", {}).get("resume", "") or "")
+    if resume_path:
+        start_epoch, global_step = resume_training_checkpoint(model, optimizer, resume_path, device)
+
+    epochs = int(config["optim"]["epochs"])
+    for epoch in range(start_epoch, epochs):
+        global_step = train_one_epoch(
+            model=model,
+            criterion=criterion,
+            optimizer=optimizer,
+            loader=train_loader,
+            device=device,
+            epoch=epoch,
+            global_step=global_step,
+            config=config,
+        )
+        if val_loader is not None and (epoch + 1) % int(config["optim"].get("val_interval", 1)) == 0:
+            validate(model, criterion, val_loader, device, epoch)
+        if (epoch + 1) % int(config["optim"].get("save_interval", 1)) == 0:
+            save_checkpoint(model, optimizer, epoch + 1, global_step, config, output_dir / f"checkpoint_epoch_{epoch + 1:04d}.pt")
+            save_checkpoint(model, optimizer, epoch + 1, global_step, config, output_dir / "checkpoint_latest.pt")
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Train VGGT-Omega SMPL query head on BEDLAM-style data")
+    parser.add_argument("--path-config", default="configs/path.yaml")
+    parser.add_argument("--train-config", default="configs/train_smpl.yaml")
+    parser.add_argument("--device", default="")
+    return parser.parse_args()
+
+
+def build_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoader:
+    data_cfg = config["data"]
+    root = require_path(config, data_cfg.get("root_key", "datasets.bedlam_root"))
+    dataset = BedlamDataset(
+        root=root,
+        split=split,
+        sequence_length=int(data_cfg["sequence_length"]),
+        stride=int(data_cfg["stride"]),
+        image_size=int(data_cfg["image_size"]),
+        max_humans=int(data_cfg["max_humans"]),
+        require_smpl=bool(data_cfg.get("require_smpl", True)),
+        require_depth=bool(data_cfg.get("require_depth", False)),
+    )
+    return DataLoader(
+        dataset,
+        batch_size=int(config["optim"]["batch_size"]),
+        shuffle=shuffle,
+        num_workers=int(data_cfg.get("num_workers", 0)),
+        pin_memory=bool(data_cfg.get("pin_memory", True)),
+        collate_fn=bedlam_collate_fn,
+        drop_last=shuffle,
+    )
+
+
+def build_model(config: dict[str, Any]) -> VGGTOmega:
+    model_cfg = config["model"]
+    if int(model_cfg["num_smpl_queries"]) != int(config["data"]["max_humans"]):
+        raise ValueError("model.num_smpl_queries must equal data.max_humans for slot-aligned SMPLSlotLoss")
+    return VGGTOmega(
+        patch_size=int(model_cfg["patch_size"]),
+        embed_dim=int(model_cfg["embed_dim"]),
+        enable_camera=bool(model_cfg.get("enable_camera", False)),
+        enable_depth=bool(model_cfg.get("enable_depth", False)),
+        enable_alignment=bool(model_cfg.get("enable_alignment", False)),
+        enable_smpl=bool(model_cfg.get("enable_smpl", True)),
+        num_smpl_queries=int(model_cfg["num_smpl_queries"]),
+    )
+
+
+def load_initial_checkpoint(model: torch.nn.Module, config: dict[str, Any], path_config: dict[str, Any], device: torch.device) -> None:
+    ckpt_cfg = config.get("checkpoint", {})
+    if not ckpt_cfg.get("load_vggt_baseline", False):
+        return
+    checkpoint_path = require_path(path_config, "checkpoints.vggt_baseline", allow_empty=False)
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    state_dict = extract_state_dict(checkpoint)
+    missing, unexpected = model.load_state_dict(state_dict, strict=bool(ckpt_cfg.get("strict", False)))
+    print(f"[ckpt] loaded baseline: {checkpoint_path}")
+    print(f"[ckpt] missing={len(missing)} unexpected={len(unexpected)}")
+
+
+def resume_training_checkpoint(
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+    checkpoint_path: str,
+    device: torch.device,
+) -> tuple[int, int]:
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    model.load_state_dict(checkpoint["model"], strict=True)
+    optimizer.load_state_dict(checkpoint["optimizer"])
+    print(f"[ckpt] resumed training: {checkpoint_path}")
+    return int(checkpoint.get("epoch", 0)), int(checkpoint.get("global_step", 0))
+
+
+def extract_state_dict(checkpoint: Any) -> dict[str, torch.Tensor]:
+    if isinstance(checkpoint, dict):
+        for key in ("model", "state_dict", "model_state_dict"):
+            if key in checkpoint and isinstance(checkpoint[key], dict):
+                return _strip_module_prefix(checkpoint[key])
+    if isinstance(checkpoint, dict) and all(isinstance(value, torch.Tensor) for value in checkpoint.values()):
+        return _strip_module_prefix(checkpoint)
+    raise ValueError("Could not find a model state_dict in checkpoint")
+
+
+def _strip_module_prefix(state_dict: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
+    return {key.removeprefix("module."): value for key, value in state_dict.items()}
+
+
+def train_one_epoch(
+    model: torch.nn.Module,
+    criterion: SMPLSlotLoss,
+    optimizer: torch.optim.Optimizer,
+    loader: DataLoader,
+    device: torch.device,
+    epoch: int,
+    global_step: int,
+    config: dict[str, Any],
+) -> int:
+    model.train()
+    log_interval = int(config["optim"].get("log_interval", 10))
+    grad_clip_norm = float(config["optim"].get("grad_clip_norm", 0.0))
+    for step, batch in enumerate(loader):
+        batch = move_to_device(batch, device)
+        optimizer.zero_grad(set_to_none=True)
+        predictions = model(batch["images"])
+        losses = criterion(predictions, batch)
+        loss = losses["loss_total"]
+        if not torch.isfinite(loss):
+            raise FloatingPointError(f"Non-finite loss at epoch={epoch + 1}, step={step}: {loss.item()}")
+        loss.backward()
+        if grad_clip_norm > 0:
+            torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip_norm)
+        optimizer.step()
+
+        global_step += 1
+        if global_step % log_interval == 0:
+            print(format_log("train", epoch, step, len(loader), global_step, losses))
+    return global_step
+
+
+@torch.no_grad()
+def validate(model: torch.nn.Module, criterion: SMPLSlotLoss, loader: DataLoader, device: torch.device, epoch: int) -> None:
+    model.eval()
+    totals: dict[str, float] = {}
+    count = 0
+    for batch in loader:
+        batch = move_to_device(batch, device)
+        losses = criterion(model(batch["images"]), batch)
+        for key, value in losses.items():
+            totals[key] = totals.get(key, 0.0) + float(value.detach().cpu())
+        count += 1
+    averaged = {key: value / max(count, 1) for key, value in totals.items()}
+    print(format_log("val", epoch, 0, len(loader), 0, averaged))
+
+
+def move_to_device(batch: dict[str, torch.Tensor], device: torch.device) -> dict[str, torch.Tensor]:
+    return {key: value.to(device, non_blocking=True) for key, value in batch.items()}
+
+
+def format_log(prefix: str, epoch: int, step: int, steps: int, global_step: int, losses: dict[str, Any]) -> str:
+    loss_items = []
+    for key, value in losses.items():
+        scalar = float(value.detach().cpu()) if isinstance(value, torch.Tensor) else float(value)
+        if math.isfinite(scalar):
+            loss_items.append(f"{key}={scalar:.6f}")
+    return f"[{prefix}] epoch={epoch + 1} step={step + 1}/{steps} global_step={global_step} " + " ".join(loss_items)
+
+
+def save_checkpoint(
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+    epoch: int,
+    global_step: int,
+    config: dict[str, Any],
+    path: Path,
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(
+        {
+            "model": model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "epoch": epoch,
+            "global_step": global_step,
+            "config": config,
+        },
+        path,
+    )
+    print(f"[ckpt] saved: {path}")
+
+
+def set_seed(seed: int) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+
+def save_json(data: dict[str, Any], path: Path) -> None:
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+if __name__ == "__main__":
+    main()
