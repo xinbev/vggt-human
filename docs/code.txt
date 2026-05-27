@@ -11,3 +11,14 @@
   --require-boxes
 
   #=====================================================
+  CUDA_VISIBLE_DEVICES=6   /home/zhw/.conda/envs/vggth/bin/python scripts/vis/visualize_smpl_inference.py \
+  --image /home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000000/rgb/seq_000000_0000.png \
+  --checkpoint outputs/train/smpl_projected_bbox_20q/checkpoint_latest.pt \
+  --baseline-checkpoint /home/zhw/lab_users/xyb/home/projects/vggt-omega/checkpoints/vggt_omega_1b_512.pt \
+  --smpl-model-dir /home/zhw/xyb_space/SAT-HMR/weights/smpl_data/ \
+  --path-config configs/path.yaml \
+  --train-config configs/train_smpl_projected_bbox.yaml \
+  --output-dir outputs/vis/smpl_projected_bbox_vggt_camera \
+  --conf-threshold 0.25 \
+  --top-k 20 \
+  --draw-smpl-joints
