@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-REPO_ROOT="/home/zhw/lab_users/xyb/home/projects/vggt-omega"
+REPO_ROOT="/home/zhw/lab_users/xyb/home/projects/vggt-human"
 BEDLAM_ROOT="/home/zhw/xyb_space/bedlam/processed_bedlam"
 PREPROCESSED_ROOT="${REPO_ROOT}/outputs/preprocess/bedlam_boxes"
 PATH_CONFIG="${REPO_ROOT}/configs/path.yaml"
@@ -10,7 +10,9 @@ TRAIN_CONFIG="${REPO_ROOT}/configs/train_smpl.yaml"
 CUDA_VISIBLE_DEVICES_VALUE="6"
 export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
 
-VGGT_CKPT="${REPO_ROOT}/checkpoints/vggt_omega_1b_512.pt"
+# VGGT_CKPT="${REPO_ROOT}/checkpoints/vggt_omega_1b_512.pt"
+VGGT_CKPT="/home/zhw/lab_users/xyb/home/projects/vggt-omega/checkpoints/vggt_omega_1b_512.pt"
+
 OUTPUT_DIR="${REPO_ROOT}/outputs/train/smpl_hungarian_20q"
 
 EPOCHS="10"
