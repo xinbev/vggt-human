@@ -65,7 +65,8 @@
 5. 重要假设应记录在配置、脚本或实验说明附近。
 6. 大改动应尽量拆成可验证的小步骤。
 7. 训练代码要整理成 shell 脚本启动方式，放置在 `scripts/train/` 目录下，输出到 `outputs/train/`。
-8. 可视化脚本放置在 `scripts/vis/` 目录下，输出到 `outputs/vis/`。
+8. 可视化脚本要整理成 shell 脚本启动方式放置在 `scripts/vis/` 目录下，输出到 `outputs/vis/`。
+9. sh脚本的实现参考`.reference\stage2_body_j2d1e-4.sh`这个的风格
 
 ## 依赖管理
 
