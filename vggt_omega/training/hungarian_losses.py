@@ -4,7 +4,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from vggt_omega.models.smpl_layer import SMPLLayer
 from vggt_omega.training.smpl_matcher import HungarianSMPLMatcher, cxcywh_to_xyxy, generalized_box_iou
+from vggt_omega.utils.pose_enc import encoding_to_camera
 
 
 class HungarianSMPLLoss(nn.Module):
@@ -20,6 +22,14 @@ class HungarianSMPLLoss(nn.Module):
         giou_weight: float = 2.0,
         id_weight: float = 0.0,
         id_temperature: float = 0.07,
+        conf_loss_type: str = "bce",
+        conf_focal_alpha: float = 0.25,
+        conf_focal_gamma: float = 2.0,
+        projected_bbox_weight: float = 0.0,
+        projected_giou_weight: float = 0.0,
+        use_vggt_camera_projection: bool = False,
+        smpl_model_dir: str = "",
+        projection_image_size: int = 518,
     ) -> None:
         super().__init__()
         self.matcher = matcher
@@ -31,6 +41,19 @@ class HungarianSMPLLoss(nn.Module):
         self.giou_weight = giou_weight
         self.id_weight = id_weight
         self.id_temperature = id_temperature
+        self.conf_loss_type = conf_loss_type
+        self.conf_focal_alpha = conf_focal_alpha
+        self.conf_focal_gamma = conf_focal_gamma
+        self.projected_bbox_weight = projected_bbox_weight
+        self.projected_giou_weight = projected_giou_weight
+        self.use_vggt_camera_projection = use_vggt_camera_projection
+        self.smpl_model_dir = smpl_model_dir
+        self.projection_image_size = projection_image_size
+        self._smpl_layer: SMPLLayer | None = None
+        if self.conf_loss_type not in {"bce", "focal"}:
+            raise ValueError(f"Unsupported conf_loss_type: {self.conf_loss_type}")
+        if self._uses_projected_bbox and not self.smpl_model_dir:
+            raise ValueError("Projected SMPL bbox loss requires loss.smpl_model_dir or assets.smpl_model_dir")
         self.register_buffer(
             "betas_dim_weight",
             torch.tensor([2.56, 1.28, 0.64, 0.64, 0.32, 0.32, 0.32, 0.32, 0.32, 0.32]).view(1, 10),
@@ -54,12 +77,26 @@ class HungarianSMPLLoss(nn.Module):
         for frame_idx, (src_idx, _) in enumerate(indices):
             if src_idx.numel() > 0:
                 conf_target[frame_idx, src_idx, 0] = 1.0
-        losses["loss_conf"] = F.binary_cross_entropy(pred_confs.clamp(1e-6, 1.0 - 1e-6), conf_target)
+        losses["loss_conf"] = self._confidence_loss(pred_confs, conf_target)
 
         matched = _collect_matches(indices, targets, pred_confs.device)
+        losses.update(_confidence_metrics(pred_confs, conf_target, indices, targets))
         if matched["frame_idx"].numel() == 0:
             zero = pred_confs.sum() * 0.0
-            losses.update({"loss_bbox": zero, "loss_giou": zero, "loss_pose": zero, "loss_betas": zero, "loss_transl_cam": zero, "loss_id": zero})
+            losses.update(
+                {
+                    "loss_bbox": zero,
+                    "loss_giou": zero,
+                    "loss_pose": zero,
+                    "loss_betas": zero,
+                    "loss_transl_cam": zero,
+                    "loss_id": zero,
+                    "loss_projected_bbox": zero,
+                    "loss_projected_giou": zero,
+                    "metric_bbox_iou_mean": zero.detach(),
+                    "metric_projected_bbox_iou_mean": zero.detach(),
+                }
+            )
         else:
             frame_idx = matched["frame_idx"]
             src_idx = matched["src_idx"]
@@ -67,6 +104,7 @@ class HungarianSMPLLoss(nn.Module):
             losses["loss_bbox"] = F.l1_loss(pred_boxes[frame_idx, src_idx], target_boxes)
             giou = generalized_box_iou(cxcywh_to_xyxy(pred_boxes[frame_idx, src_idx]), cxcywh_to_xyxy(target_boxes))
             losses["loss_giou"] = (1.0 - giou.diag()).mean()
+            losses["metric_bbox_iou_mean"] = _box_iou_diag(cxcywh_to_xyxy(pred_boxes[frame_idx, src_idx]), cxcywh_to_xyxy(target_boxes)).detach().mean()
             losses["loss_pose"] = F.l1_loss(pred_pose[frame_idx, src_idx], matched["pose_6d"].to(dtype=pred_pose.dtype))
             beta_diff = (pred_betas[frame_idx, src_idx] - matched["betas"].to(dtype=pred_betas.dtype)).abs()
             losses["loss_betas"] = (beta_diff * self.betas_dim_weight.to(dtype=pred_betas.dtype, device=pred_betas.device)).mean()
@@ -75,6 +113,8 @@ class HungarianSMPLLoss(nn.Module):
                 matched["transl_cam"].to(dtype=pred_transl_cam.dtype),
             )
             losses["loss_id"] = self._identity_loss(flat_id_embed, frame_idx, src_idx, matched)
+            projected = self._projected_bbox_losses(predictions, pred_betas, pred_transl_cam, frame_idx, src_idx, target_boxes)
+            losses.update(projected)
 
         losses["loss_total"] = (
             self.conf_weight * losses["loss_conf"]
@@ -84,8 +124,70 @@ class HungarianSMPLLoss(nn.Module):
             + self.betas_weight * losses["loss_betas"]
             + self.transl_cam_weight * losses["loss_transl_cam"]
             + self.id_weight * losses["loss_id"]
+            + self.projected_bbox_weight * losses["loss_projected_bbox"]
+            + self.projected_giou_weight * losses["loss_projected_giou"]
         )
         return losses
+
+    @property
+    def _uses_projected_bbox(self) -> bool:
+        return self.use_vggt_camera_projection and (self.projected_bbox_weight != 0.0 or self.projected_giou_weight != 0.0)
+
+    def _confidence_loss(self, pred_confs: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        pred_confs = pred_confs.clamp(1e-6, 1.0 - 1e-6)
+        if self.conf_loss_type == "bce":
+            return F.binary_cross_entropy(pred_confs, target)
+        ce = F.binary_cross_entropy(pred_confs, target, reduction="none")
+        p_t = pred_confs * target + (1.0 - pred_confs) * (1.0 - target)
+        alpha_t = self.conf_focal_alpha * target + (1.0 - self.conf_focal_alpha) * (1.0 - target)
+        return (alpha_t * (1.0 - p_t).pow(self.conf_focal_gamma) * ce).mean()
+
+    def _projected_bbox_losses(
+        self,
+        predictions: dict[str, torch.Tensor],
+        pred_betas: torch.Tensor,
+        pred_transl_cam: torch.Tensor,
+        frame_idx: torch.Tensor,
+        src_idx: torch.Tensor,
+        target_boxes: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        if not self._uses_projected_bbox:
+            zero = pred_betas.sum() * 0.0
+            return {
+                "loss_projected_bbox": zero,
+                "loss_projected_giou": zero,
+                "metric_projected_bbox_iou_mean": zero.detach(),
+            }
+        if "pose_enc" not in predictions or "pred_poses" not in predictions:
+            raise ValueError("Projected SMPL bbox loss requires model outputs pose_enc and pred_poses; set model.enable_camera=true")
+
+        pred_poses = _flatten_prediction(_require_prediction(predictions, "pred_poses"), unframed_ndim=3)
+        pose_enc = _require_prediction(predictions, "pose_enc")
+        intrinsics = _flatten_intrinsics(pose_enc, self.projection_image_size)
+        smpl = self._get_smpl_layer(pred_betas.device)
+
+        poses = pred_poses[frame_idx, src_idx].reshape(-1, 72)
+        betas = pred_betas[frame_idx, src_idx]
+        transl_cam = pred_transl_cam[frame_idx, src_idx]
+        _, joints = smpl(poses.float(), betas.float())
+        joints_cam = joints[:, :24].to(dtype=pred_betas.dtype) + transl_cam[:, None, :]
+        projected = _project_points(joints_cam, intrinsics[frame_idx].to(dtype=joints_cam.dtype))
+        projected_boxes = _points_to_normalized_cxcywh(projected, self.projection_image_size)
+        projected_boxes = projected_boxes.to(dtype=target_boxes.dtype)
+
+        giou = generalized_box_iou(cxcywh_to_xyxy(projected_boxes), cxcywh_to_xyxy(target_boxes))
+        return {
+            "loss_projected_bbox": F.l1_loss(projected_boxes, target_boxes),
+            "loss_projected_giou": (1.0 - giou.diag()).mean(),
+            "metric_projected_bbox_iou_mean": _box_iou_diag(cxcywh_to_xyxy(projected_boxes), cxcywh_to_xyxy(target_boxes)).detach().mean(),
+        }
+
+    def _get_smpl_layer(self, device: torch.device) -> SMPLLayer:
+        if self._smpl_layer is None:
+            self._smpl_layer = SMPLLayer(self.smpl_model_dir).to(device=device).eval()
+            for param in self._smpl_layer.parameters():
+                param.requires_grad = False
+        return self._smpl_layer
 
     def _identity_loss(
         self,
@@ -166,6 +268,77 @@ def _collect_matches(indices, targets: list[dict[str, torch.Tensor]], device: to
     out = {"frame_idx": torch.cat(frame_indices), "src_idx": torch.cat(src_indices)}
     out.update({key: torch.cat(values) for key, values in target_parts.items()})
     return out
+
+
+def _confidence_metrics(
+    pred_confs: torch.Tensor,
+    conf_target: torch.Tensor,
+    indices,
+    targets: list[dict[str, torch.Tensor]],
+) -> dict[str, torch.Tensor]:
+    with torch.no_grad():
+        pos_mask = conf_target.bool()
+        neg_mask = ~pos_mask
+        pos_mean = pred_confs[pos_mask].mean() if pos_mask.any() else pred_confs.new_zeros(())
+        neg_mean = pred_confs[neg_mask].mean() if neg_mask.any() else pred_confs.new_zeros(())
+        num_targets = sum(_target_count(target) for target in targets)
+        num_matched = sum(int(src_idx.numel()) for src_idx, _ in indices)
+        return {
+            "metric_num_targets": pred_confs.new_tensor(float(num_targets)),
+            "metric_num_matched": pred_confs.new_tensor(float(num_matched)),
+            "metric_conf_pos_mean": pos_mean.detach(),
+            "metric_conf_neg_mean": neg_mean.detach(),
+            "metric_conf_gap": (pos_mean - neg_mean).detach(),
+            "metric_pred_count_025": (pred_confs >= 0.25).to(dtype=pred_confs.dtype).sum(dim=(1, 2)).mean().detach(),
+            "metric_pred_count_030": (pred_confs >= 0.30).to(dtype=pred_confs.dtype).sum(dim=(1, 2)).mean().detach(),
+            "metric_pred_count_050": (pred_confs >= 0.50).to(dtype=pred_confs.dtype).sum(dim=(1, 2)).mean().detach(),
+        }
+
+
+def _target_count(target: dict[str, torch.Tensor]) -> int:
+    boxes = target.get("boxes")
+    if boxes is not None:
+        return int(boxes.shape[0])
+    return 0
+
+
+def _flatten_intrinsics(pose_enc: torch.Tensor, image_size: int) -> torch.Tensor:
+    if pose_enc.ndim == 2:
+        pose_enc = pose_enc[:, None]
+    _, intrinsics = encoding_to_camera(pose_enc, image_size_hw=(image_size, image_size), build_intrinsics=True)
+    if intrinsics is None:
+        raise RuntimeError("encoding_to_camera did not return intrinsics")
+    return intrinsics.reshape(-1, 3, 3)
+
+
+def _project_points(points_cam: torch.Tensor, intrinsics: torch.Tensor) -> torch.Tensor:
+    z = points_cam[..., 2].clamp(min=1e-6)
+    x = intrinsics[:, None, 0, 0] * points_cam[..., 0] / z + intrinsics[:, None, 0, 2]
+    y = intrinsics[:, None, 1, 1] * points_cam[..., 1] / z + intrinsics[:, None, 1, 2]
+    return torch.stack([x, y], dim=-1)
+
+
+def _points_to_normalized_cxcywh(points: torch.Tensor, image_size: int) -> torch.Tensor:
+    points = torch.nan_to_num(points, nan=0.0, posinf=float(image_size), neginf=0.0)
+    points = points.clamp(min=0.0, max=float(image_size))
+    xy_min = points.amin(dim=1)
+    xy_max = points.amax(dim=1)
+    center = 0.5 * (xy_min + xy_max) / float(image_size)
+    size = (xy_max - xy_min) / float(image_size)
+    return torch.cat([center, size.clamp(min=1e-6)], dim=-1).clamp(min=0.0, max=1.0)
+
+
+def _box_iou_diag(boxes1: torch.Tensor, boxes2: torch.Tensor) -> torch.Tensor:
+    lt = torch.maximum(boxes1[:, :2], boxes2[:, :2])
+    rb = torch.minimum(boxes1[:, 2:], boxes2[:, 2:])
+    wh = (rb - lt).clamp(min=0)
+    inter = wh[:, 0] * wh[:, 1]
+    union = box_area_diag(boxes1) + box_area_diag(boxes2) - inter
+    return inter / union.clamp(min=1e-6)
+
+
+def box_area_diag(boxes: torch.Tensor) -> torch.Tensor:
+    return (boxes[:, 2] - boxes[:, 0]).clamp(min=0) * (boxes[:, 3] - boxes[:, 1]).clamp(min=0)
 
 
 def _flatten_prediction(tensor: torch.Tensor | None, unframed_ndim: int) -> torch.Tensor | None:

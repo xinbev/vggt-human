@@ -1,6 +1,6 @@
 experiment:
-  name: smpl_hungarian_20q
-  output_dir: outputs/train/smpl_hungarian_20q
+  name: smpl_projected_bbox_20q
+  output_dir: outputs/train/smpl_projected_bbox_20q
   seed: 42
 
 data:
@@ -22,7 +22,7 @@ data:
 model:
   patch_size: 16
   embed_dim: 1024
-  enable_camera: false
+  enable_camera: true
   enable_depth: false
   enable_alignment: false
   enable_smpl: true
@@ -32,18 +32,20 @@ model:
   freeze_aggregator_forward: false
   train_smpl_query_token: true
   predict_boxes: true
-  predict_id_embed: true
+  predict_id_embed: false
   id_embed_dim: 256
 
 checkpoint:
-  resume: ""
+  resume: outputs/train/smpl_hungarian_20q/checkpoint_latest.pt
   load_vggt_baseline: true
   strict: false
+  resume_strict: false
+  resume_optimizer: false
 
 optim:
   batch_size: 1
-  epochs: 10
-  lr: 0.0001
+  epochs: 15
+  lr: 0.00005
   weight_decay: 0.05
   grad_clip_norm: 1.0
   log_interval: 10
@@ -55,15 +57,15 @@ loss:
   pose_weight: 1.0
   betas_weight: 0.1
   transl_cam_weight: 0.1
-  conf_weight: 1.0
-  conf_loss_type: bce
+  conf_weight: 2.0
+  conf_loss_type: focal
   conf_focal_alpha: 0.25
   conf_focal_gamma: 2.0
   bbox_weight: 5.0
   giou_weight: 2.0
-  projected_bbox_weight: 0.0
-  projected_giou_weight: 0.0
-  use_vggt_camera_projection: false
+  projected_bbox_weight: 1.0
+  projected_giou_weight: 1.0
+  use_vggt_camera_projection: true
   id_weight: 0.0
   id_temperature: 0.07
 

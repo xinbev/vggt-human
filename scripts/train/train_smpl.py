@@ -59,7 +59,7 @@ def main() -> None:
     global_step = 0
     resume_path = str(config.get("checkpoint", {}).get("resume", "") or "")
     if resume_path:
-        start_epoch, global_step = resume_training_checkpoint(model, optimizer, resume_path, device)
+        start_epoch, global_step = resume_training_checkpoint(model, optimizer, resume_path, device, config)
 
     epochs = int(config["optim"]["epochs"])
     for epoch in range(start_epoch, epochs):
@@ -141,6 +141,12 @@ def build_criterion(config: dict[str, Any]) -> torch.nn.Module:
     loss_cfg = dict(config.get("loss", {}))
     loss_type = str(loss_cfg.pop("type", "slot"))
     if loss_type == "hungarian":
+        if "smpl_model_dir" not in loss_cfg:
+            smpl_model_dir = config.get("assets", {}).get("smpl_model_dir")
+            if smpl_model_dir:
+                loss_cfg["smpl_model_dir"] = smpl_model_dir
+        if "projection_image_size" not in loss_cfg:
+            loss_cfg["projection_image_size"] = int(config.get("data", {}).get("image_size", 518))
         match_cfg = config.get("matching", {})
         matcher = HungarianSMPLMatcher(
             cost_conf=float(match_cfg.get("cost_conf", 1.0)),
@@ -159,6 +165,11 @@ def build_criterion(config: dict[str, Any]) -> torch.nn.Module:
 
 def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
     model_cfg = config.get("model", {})
+    camera_head = getattr(model, "camera_head", None)
+    if camera_head is not None and bool(model_cfg.get("freeze_camera_head", False)):
+        camera_head.eval()
+        for _, param in camera_head.named_parameters():
+            param.requires_grad = False
     if not bool(model_cfg.get("freeze_aggregator", False)):
         return
     aggregator = getattr(model, "aggregator", None)
@@ -188,11 +199,19 @@ def resume_training_checkpoint(
     optimizer: torch.optim.Optimizer,
     checkpoint_path: str,
     device: torch.device,
+    config: dict[str, Any],
 ) -> tuple[int, int]:
     checkpoint = torch.load(checkpoint_path, map_location=device)
-    model.load_state_dict(checkpoint["model"], strict=True)
-    optimizer.load_state_dict(checkpoint["optimizer"])
-    print(f"[ckpt] resumed training: {checkpoint_path}")
+    state_dict = extract_state_dict(checkpoint)
+    ckpt_cfg = config.get("checkpoint", {})
+    strict = bool(ckpt_cfg.get("resume_strict", True))
+    missing, unexpected = model.load_state_dict(state_dict, strict=strict)
+    if bool(ckpt_cfg.get("resume_optimizer", True)):
+        if "optimizer" not in checkpoint:
+            raise ValueError(f"Checkpoint has no optimizer state: {checkpoint_path}")
+        optimizer.load_state_dict(checkpoint["optimizer"])
+    print(f"[ckpt] resumed model: {checkpoint_path}")
+    print(f"[ckpt] resume_missing={len(missing)} resume_unexpected={len(unexpected)} strict={strict}")
     return int(checkpoint.get("epoch", 0)), int(checkpoint.get("global_step", 0))
 
 
