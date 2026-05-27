@@ -7,7 +7,30 @@ from typing import Any
 import numpy as np
 import torch
 from PIL import Image, ImageDraw, ImageFont
+#==============================================================================
+# Compatibility patch for old chumpy on Python 3.11+
+import inspect
+from collections import namedtuple
 
+if not hasattr(inspect, "getargspec"):
+    ArgSpec = namedtuple("ArgSpec", "args varargs keywords defaults")
+
+    def getargspec(func):
+        spec = inspect.getfullargspec(func)
+        return ArgSpec(spec.args, spec.varargs, spec.varkw, spec.defaults)
+
+    inspect.getargspec = getargspec
+import numpy as np
+
+if not hasattr(np, "bool"):
+    np.bool = bool
+if not hasattr(np, "int"):
+    np.int = int
+if not hasattr(np, "float"):
+    np.float = float
+if not hasattr(np, "complex"):
+    np.complex = complex
+#==============================================================================
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))

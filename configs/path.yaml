@@ -8,7 +8,7 @@ checkpoints:
 
 assets:
   # Optional future use for SMPL mesh/joint decoding; current minimal training does not instantiate smplx.
-  smpl_model_dir: "/home/zhw/xyb_space/SAT-HMR/weights/smpl_data/smpl/"
+  smpl_model_dir: "/home/zhw/xyb_space/SAT-HMR/weights/smpl_data/"
   smpl_mean_params: "/home/zhw/xyb_space/SAT-HMR/weights/smpl_data/smpl/smpl_mean_params.npz"
 
 datasets:

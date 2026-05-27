@@ -2,8 +2,24 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
+#================================
+import numpy as np
+_LEGACY_NUMPY_ALIASES = {
+    "bool": bool,
+    "int": int,
+    "float": float,
+    "complex": complex,
+    "object": object,
+    "unicode": str,
+    "str": str,
+}
 
-
+for name, value in _LEGACY_NUMPY_ALIASES.items():
+    try:
+        getattr(np, name)
+    except AttributeError:
+        setattr(np, name, value)
+#================================
 class SMPLLayer(nn.Module):
     """Project-local SMPL wrapper for visualization and geometry checks.
 

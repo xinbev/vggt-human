@@ -12,7 +12,7 @@ CUDA_VISIBLE_DEVICES_VALUE="6"
 export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
 
 VGGT_CKPT="/home/zhw/lab_users/xyb/home/projects/vggt-omega/checkpoints/vggt_omega_1b_512.pt"
-SMPL_MODEL_DIR="/home/zhw/xyb_space/SAT-HMR/weights/smpl_data/smpl/"
+SMPL_MODEL_DIR="/home/zhw/xyb_space/SAT-HMR/weights/smpl_data/"
 SMPL_CKPT="${REPO_ROOT}/outputs/train/smpl_hungarian_20q/checkpoint_latest.pt"
 IMAGE_PATH="${BEDLAM_ROOT}/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000000/rgb/seq_000000_0000.png"
 OUTPUT_DIR="${REPO_ROOT}/outputs/vis/smpl_inference_vggt_camera"
