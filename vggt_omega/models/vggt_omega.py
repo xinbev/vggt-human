@@ -31,6 +31,7 @@ class VGGTOmega(nn.Module):
         smpl_predict_id_embed: bool = False,
         smpl_id_embed_dim: int = 256,
         smpl_return_aux: bool = False,
+        smpl_query_box_prior: bool = False,
         freeze_aggregator_forward: bool = False,
     ) -> None:
         super().__init__()
@@ -41,6 +42,7 @@ class VGGTOmega(nn.Module):
             patch_size=patch_size,
             embed_dim=embed_dim,
             num_smpl_queries=num_smpl_queries if enable_smpl else 0,
+            smpl_query_box_prior=smpl_query_box_prior if enable_smpl else False,
         )
         self.freeze_aggregator_forward = freeze_aggregator_forward
         _warn_if_rope_not_max(self.aggregator)
@@ -61,7 +63,12 @@ class VGGTOmega(nn.Module):
             else None
         )
 
-    def forward(self, images: torch.Tensor) -> dict[str, torch.Tensor]:
+    def forward(
+        self,
+        images: torch.Tensor,
+        smpl_query_boxes: torch.Tensor | None = None,
+        smpl_query_boxes_mask: torch.Tensor | None = None,
+    ) -> dict[str, torch.Tensor]:
         if len(images.shape) == 4:
             images = images.unsqueeze(0)
 
@@ -69,9 +76,9 @@ class VGGTOmega(nn.Module):
         with torch.autocast(device_type="cuda", dtype=amp_dtype):
             if self.freeze_aggregator_forward:
                 with torch.no_grad():
-                    aggregated_tokens_list, token_layout = self.aggregator(images)
+                    aggregated_tokens_list, token_layout = self.aggregator(images, smpl_query_boxes, smpl_query_boxes_mask)
             else:
-                aggregated_tokens_list, token_layout = self.aggregator(images)
+                aggregated_tokens_list, token_layout = self.aggregator(images, smpl_query_boxes, smpl_query_boxes_mask)
 
         final_tokens = aggregated_tokens_list[-1]
         if final_tokens is None:

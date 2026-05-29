@@ -157,6 +157,7 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         smpl_predict_id_embed=bool(model_cfg.get("predict_id_embed", False)),
         smpl_id_embed_dim=int(model_cfg.get("id_embed_dim", 256)),
         smpl_return_aux=bool(model_cfg.get("smpl_return_aux", False)),
+        smpl_query_box_prior=bool(model_cfg.get("smpl_query_box_prior", False)),
         freeze_aggregator_forward=bool(model_cfg.get("freeze_aggregator_forward", False)),
     )
 
@@ -270,7 +271,7 @@ def train_one_epoch(
     for step, batch in enumerate(loader):
         batch = move_to_device(batch, device)
         optimizer.zero_grad(set_to_none=True)
-        predictions = model(batch["images"])
+        predictions = forward_model(model, batch, config)
         losses = criterion(predictions, batch)
         loss = losses["loss_total"]
         if not torch.isfinite(loss):
@@ -293,7 +294,7 @@ def validate(model: torch.nn.Module, criterion: torch.nn.Module, loader: DataLoa
     count = 0
     for batch in loader:
         batch = move_to_device(batch, device)
-        losses = criterion(model(batch["images"]), batch)
+        losses = criterion(forward_model(model, batch, config), batch)
         for key, value in losses.items():
             totals[key] = totals.get(key, 0.0) + float(value.detach().cpu())
         count += 1
@@ -303,6 +304,16 @@ def validate(model: torch.nn.Module, criterion: torch.nn.Module, loader: DataLoa
 
 def move_to_device(batch: dict[str, torch.Tensor], device: torch.device) -> dict[str, torch.Tensor]:
     return {key: value.to(device, non_blocking=True) for key, value in batch.items()}
+
+
+def forward_model(model: torch.nn.Module, batch: dict[str, torch.Tensor], config: dict[str, Any]) -> dict[str, torch.Tensor]:
+    if not bool(config.get("model", {}).get("smpl_query_box_prior", False)):
+        return model(batch["images"])
+    return model(
+        batch["images"],
+        smpl_query_boxes=batch.get("gt_boxes"),
+        smpl_query_boxes_mask=batch.get("boxes_mask"),
+    )
 
 
 def apply_overrides(config: dict[str, Any], overrides: list[str]) -> dict[str, Any]:
