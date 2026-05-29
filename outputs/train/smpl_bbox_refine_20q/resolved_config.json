@@ -1,0 +1,92 @@
+{
+  "checkpoints": {
+    "vggt_baseline": "/home/zhw/lab_users/xyb/home/projects/vggt-omega/checkpoints/vggt_omega_1b_512.pt",
+    "sat_hmr_smpl": "/home/zhw/xyb_space/SAT-HMR/weights/sat_hmr/sat_644.pth"
+  },
+  "assets": {
+    "smpl_model_dir": "/home/zhw/xyb_space/SAT-HMR/weights/smpl_data/",
+    "smpl_mean_params": "/home/zhw/xyb_space/SAT-HMR/weights/smpl_data/smpl/smpl_mean_params.npz"
+  },
+  "datasets": {
+    "bedlam_root": "/home/zhw/xyb_space/bedlam/processed_bedlam",
+    "bedlam_boxes_root": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/bedlam_boxes"
+  },
+  "experiment": {
+    "name": "smpl_bbox_refine_20q",
+    "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_bbox_refine_20q",
+    "seed": 42
+  },
+  "data": {
+    "dataset": "bedlam",
+    "root_key": "datasets.bedlam_root",
+    "train_split": "Training",
+    "val_split": "",
+    "sequence_length": 2,
+    "stride": 1,
+    "image_size": 518,
+    "max_humans": 20,
+    "boxes_root_key": "datasets.bedlam_boxes_root",
+    "require_boxes": true,
+    "require_smpl": true,
+    "require_depth": false,
+    "num_workers": 4,
+    "pin_memory": true
+  },
+  "model": {
+    "patch_size": 16,
+    "embed_dim": 1024,
+    "enable_camera": true,
+    "enable_depth": false,
+    "enable_alignment": false,
+    "enable_smpl": true,
+    "num_smpl_queries": 20,
+    "freeze_aggregator": true,
+    "freeze_camera_head": true,
+    "freeze_aggregator_forward": false,
+    "train_smpl_query_token": true,
+    "predict_boxes": true,
+    "predict_id_embed": false,
+    "id_embed_dim": 256
+  },
+  "checkpoint": {
+    "resume": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_projected_bbox_20q/checkpoint_latest.pt",
+    "load_vggt_baseline": true,
+    "strict": false,
+    "resume_strict": false,
+    "resume_optimizer": false
+  },
+  "optim": {
+    "batch_size": 1,
+    "epochs": 25,
+    "lr": 2e-05,
+    "weight_decay": 0.05,
+    "grad_clip_norm": 1.0,
+    "log_interval": 20,
+    "save_interval": 1,
+    "val_interval": 1
+  },
+  "loss": {
+    "type": "hungarian",
+    "pose_weight": 0.5,
+    "betas_weight": 0.05,
+    "transl_cam_weight": 0.05,
+    "conf_weight": 1.5,
+    "conf_loss_type": "focal",
+    "conf_focal_alpha": 0.75,
+    "conf_focal_gamma": 2.0,
+    "bbox_weight": 10.0,
+    "giou_weight": 4.0,
+    "projected_bbox_weight": 0.25,
+    "projected_giou_weight": 0.25,
+    "use_vggt_camera_projection": true,
+    "id_weight": 0.0,
+    "id_temperature": 0.07
+  },
+  "matching": {
+    "enabled": true,
+    "cost_conf": 0.25,
+    "cost_bbox": 8.0,
+    "cost_giou": 4.0,
+    "cost_kpts": 0.0
+  }
+}
