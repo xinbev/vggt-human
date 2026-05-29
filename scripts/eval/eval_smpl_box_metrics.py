@@ -29,7 +29,8 @@ def main() -> None:
     load_training_checkpoint(model, Path(args.checkpoint).expanduser(), device)
     model.eval()
 
-    metrics = evaluate(model, loader, device, args.conf_threshold, args.iou_threshold)
+    conf_thresholds = sorted({float(args.conf_threshold), *[float(value) for value in args.conf_thresholds]})
+    metrics = evaluate(model, loader, device, conf_thresholds, args.conf_threshold, args.iou_threshold, args.eval_nms, args.nms_iou_threshold)
     output_path = output_dir / "smpl_box_metrics.json"
     output_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
     print(json.dumps({"output_json": str(output_path), **metrics}, indent=2))
@@ -44,7 +45,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", default="")
     parser.add_argument("--max-samples", type=int, default=200)
     parser.add_argument("--conf-threshold", type=float, default=0.30)
+    parser.add_argument("--conf-thresholds", type=float, nargs="+", default=[0.25, 0.30, 0.40, 0.50])
     parser.add_argument("--iou-threshold", type=float, default=0.50)
+    parser.add_argument("--eval-nms", action="store_true")
+    parser.add_argument("--nms-iou-threshold", type=float, default=0.50)
     parser.add_argument("--baseline-checkpoint", default="")
     parser.add_argument("--override", action="append", default=[])
     return parser.parse_args()
@@ -90,15 +94,24 @@ def load_training_checkpoint(model: torch.nn.Module, checkpoint_path: Path, devi
 
 
 @torch.no_grad()
-def evaluate(model: torch.nn.Module, loader: DataLoader, device: torch.device, conf_threshold: float, iou_threshold: float) -> dict[str, float]:
+def evaluate(
+    model: torch.nn.Module,
+    loader: DataLoader,
+    device: torch.device,
+    conf_thresholds: list[float],
+    primary_conf_threshold: float,
+    iou_threshold: float,
+    eval_nms: bool,
+    nms_iou_threshold: float,
+) -> dict[str, float]:
+    conf_thresholds = sorted({float(value) for value in conf_thresholds})
     totals = {
         "num_frames": 0.0,
         "num_gt": 0.0,
-        "num_pred_conf": 0.0,
-        "num_true_positive": 0.0,
-        "num_recalled_gt": 0.0,
         "best_gt_iou_sum": 0.0,
-        "duplicate_predictions": 0.0,
+        "recall_topk": {3: 0.0, 5: 0.0, 10: 0.0, 20: 0.0},
+        "thresholds": {threshold: _empty_threshold_counts() for threshold in conf_thresholds},
+        "nms_thresholds": {threshold: _empty_threshold_counts() for threshold in conf_thresholds},
     }
     for batch in loader:
         batch = {key: value.to(device, non_blocking=True) for key, value in batch.items()}
@@ -111,37 +124,50 @@ def evaluate(model: torch.nn.Module, loader: DataLoader, device: torch.device, c
             gt = gt_boxes[frame_idx, gt_mask[frame_idx]].clamp(0.0, 1.0)
             totals["num_frames"] += 1.0
             totals["num_gt"] += float(gt.shape[0])
+            for threshold in conf_thresholds:
+                selected = pred_confs[frame_idx] >= threshold
+                if gt.numel() == 0:
+                    totals["thresholds"][threshold]["num_pred"] += float(selected.sum().item())
+                    if eval_nms:
+                        nms_selected = _nms_keep_mask(pred_boxes[frame_idx], pred_confs[frame_idx], threshold, nms_iou_threshold)
+                        totals["nms_thresholds"][threshold]["num_pred"] += float(nms_selected.sum().item())
+                    continue
             if gt.numel() == 0:
-                totals["num_pred_conf"] += float((pred_confs[frame_idx] >= conf_threshold).sum().item())
                 continue
             iou = pairwise_iou(cxcywh_to_xyxy(pred_boxes[frame_idx].clamp(0.0, 1.0)), cxcywh_to_xyxy(gt))
             best_gt_iou = iou.max(dim=0).values
             totals["best_gt_iou_sum"] += float(best_gt_iou.sum().item())
-            totals["num_recalled_gt"] += float((best_gt_iou >= iou_threshold).sum().item())
-            selected = pred_confs[frame_idx] >= conf_threshold
-            totals["num_pred_conf"] += float(selected.sum().item())
-            if selected.any():
-                selected_iou = iou[selected]
-                best_pred_iou, best_pred_gt = selected_iou.max(dim=1)
-                true_positive = best_pred_iou >= iou_threshold
-                totals["num_true_positive"] += float(true_positive.sum().item())
-                if true_positive.any():
-                    counts = torch.bincount(best_pred_gt[true_positive], minlength=gt.shape[0])
-                    totals["duplicate_predictions"] += float((counts - 1).clamp(min=0).sum().item())
+            for top_k in totals["recall_topk"]:
+                topk_best = _best_gt_iou_from_topk(pred_boxes[frame_idx], pred_confs[frame_idx], gt, top_k)
+                totals["recall_topk"][top_k] += float((topk_best >= iou_threshold).sum().item())
+            for threshold in conf_thresholds:
+                selected = pred_confs[frame_idx] >= threshold
+                _add_counts(totals["thresholds"][threshold], _count_threshold_metrics(iou, selected, iou_threshold))
+                if eval_nms:
+                    nms_selected = _nms_keep_mask(pred_boxes[frame_idx], pred_confs[frame_idx], threshold, nms_iou_threshold)
+                    _add_counts(totals["nms_thresholds"][threshold], _count_threshold_metrics(iou, nms_selected, iou_threshold))
 
     num_gt = max(totals["num_gt"], 1.0)
-    num_pred = max(totals["num_pred_conf"], 1.0)
-    return {
+    metrics: dict[str, float] = {
         "num_frames": totals["num_frames"],
         "num_gt": totals["num_gt"],
-        "num_pred_conf": totals["num_pred_conf"],
-        "box_recall_iou50_top20": totals["num_recalled_gt"] / num_gt,
-        "box_precision_iou50_conf030": totals["num_true_positive"] / num_pred,
         "mean_best_gt_iou": totals["best_gt_iou_sum"] / num_gt,
-        "duplicate_predictions_per_gt": totals["duplicate_predictions"] / num_gt,
-        "conf_threshold": float(conf_threshold),
+        "conf_threshold": float(primary_conf_threshold),
         "iou_threshold": float(iou_threshold),
     }
+    for top_k, value in totals["recall_topk"].items():
+        metrics[f"box_recall_iou50_top{top_k}"] = value / num_gt
+    for threshold, counts in totals["thresholds"].items():
+        _write_threshold_metrics(metrics, counts, threshold, num_gt, prefix="")
+    primary_counts = totals["thresholds"].get(primary_conf_threshold, _closest_threshold_entry(totals["thresholds"], primary_conf_threshold))
+    metrics["num_pred_conf"] = primary_counts["num_pred"]
+    metrics["duplicate_predictions_per_gt"] = primary_counts["duplicate_predictions"] / num_gt
+    legacy_counts = totals["thresholds"].get(0.30, _closest_threshold_entry(totals["thresholds"], 0.30))
+    metrics["box_precision_iou50_conf030"] = legacy_counts["true_positive"] / max(legacy_counts["num_pred"], 1.0)
+    if eval_nms:
+        for threshold, counts in totals["nms_thresholds"].items():
+            _write_threshold_metrics(metrics, counts, threshold, num_gt, prefix="nms_")
+    return metrics
 
 
 def pairwise_iou(boxes1: torch.Tensor, boxes2: torch.Tensor) -> torch.Tensor:
@@ -153,6 +179,80 @@ def pairwise_iou(boxes1: torch.Tensor, boxes2: torch.Tensor) -> torch.Tensor:
     area2 = box_area(boxes2)
     union = area1[:, None] + area2[None] - inter
     return inter / union.clamp(min=1e-6)
+
+
+def _empty_threshold_counts() -> dict[str, float]:
+    return {"num_pred": 0.0, "true_positive": 0.0, "duplicate_predictions": 0.0}
+
+
+def _add_counts(total: dict[str, float], increment: dict[str, float]) -> None:
+    for key, value in increment.items():
+        total[key] += value
+
+
+def _count_threshold_metrics(iou: torch.Tensor, selected: torch.Tensor, iou_threshold: float) -> dict[str, float]:
+    counts = _empty_threshold_counts()
+    counts["num_pred"] = float(selected.sum().item())
+    if not selected.any():
+        return counts
+    selected_iou = iou[selected]
+    best_pred_iou, best_pred_gt = selected_iou.max(dim=1)
+    true_positive = best_pred_iou >= iou_threshold
+    counts["true_positive"] = float(true_positive.sum().item())
+    if true_positive.any():
+        gt_counts = torch.bincount(best_pred_gt[true_positive], minlength=iou.shape[1])
+        counts["duplicate_predictions"] = float((gt_counts - 1).clamp(min=0).sum().item())
+    return counts
+
+
+def _best_gt_iou_from_topk(pred_boxes: torch.Tensor, pred_confs: torch.Tensor, gt: torch.Tensor, top_k: int) -> torch.Tensor:
+    order = pred_confs.argsort(descending=True)
+    keep = order[: min(top_k, order.numel())]
+    if keep.numel() == 0:
+        return pred_boxes.new_zeros((gt.shape[0],))
+    iou = pairwise_iou(cxcywh_to_xyxy(pred_boxes[keep].clamp(0.0, 1.0)), cxcywh_to_xyxy(gt))
+    return iou.max(dim=0).values
+
+
+def _nms_keep_mask(pred_boxes: torch.Tensor, pred_confs: torch.Tensor, threshold: float, nms_iou_threshold: float) -> torch.Tensor:
+    selected = pred_confs >= threshold
+    if not selected.any():
+        return selected
+    selected_indices = selected.nonzero(as_tuple=False).squeeze(1)
+    boxes = pred_boxes[selected_indices].clamp(0.0, 1.0)
+    scores = pred_confs[selected_indices]
+    order = scores.argsort(descending=True)
+    kept_local = []
+    while order.numel() > 0:
+        current = order[0]
+        kept_local.append(current)
+        if order.numel() == 1:
+            break
+        rest = order[1:]
+        current_box = boxes[current : current + 1]
+        iou = pairwise_iou(cxcywh_to_xyxy(current_box), cxcywh_to_xyxy(boxes[rest]))[0]
+        order = rest[iou <= nms_iou_threshold]
+    keep = torch.zeros_like(selected)
+    keep[selected_indices[torch.stack(kept_local)]] = True
+    return keep
+
+
+def _write_threshold_metrics(metrics: dict[str, float], counts: dict[str, float], threshold: float, num_gt: float, prefix: str) -> None:
+    key = _format_threshold_key(threshold)
+    metrics[f"{prefix}num_pred_conf{key}"] = counts["num_pred"]
+    metrics[f"{prefix}box_precision_iou50_conf{key}"] = counts["true_positive"] / max(counts["num_pred"], 1.0)
+    metrics[f"{prefix}duplicate_predictions_per_gt_conf{key}"] = counts["duplicate_predictions"] / num_gt
+
+
+def _format_threshold_key(threshold: float) -> str:
+    return f"{int(round(float(threshold) * 100)):03d}"
+
+
+def _closest_threshold_entry(entries: dict[float, dict[str, float]], threshold: float) -> dict[str, float]:
+    if not entries:
+        return _empty_threshold_counts()
+    key = min(entries, key=lambda value: abs(value - threshold))
+    return entries[key]
 
 
 def box_area(boxes: torch.Tensor) -> torch.Tensor:

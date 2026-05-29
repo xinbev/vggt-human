@@ -30,6 +30,7 @@ class VGGTOmega(nn.Module):
         smpl_predict_boxes: bool = False,
         smpl_predict_id_embed: bool = False,
         smpl_id_embed_dim: int = 256,
+        smpl_return_aux: bool = False,
         freeze_aggregator_forward: bool = False,
     ) -> None:
         super().__init__()
@@ -54,6 +55,7 @@ class VGGTOmega(nn.Module):
                 predict_boxes=smpl_predict_boxes,
                 predict_id_embed=smpl_predict_id_embed,
                 id_embed_dim=smpl_id_embed_dim,
+                return_aux=smpl_return_aux,
             )
             if enable_smpl
             else None

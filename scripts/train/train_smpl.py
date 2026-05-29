@@ -156,6 +156,7 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         smpl_predict_boxes=bool(model_cfg.get("predict_boxes", False)),
         smpl_predict_id_embed=bool(model_cfg.get("predict_id_embed", False)),
         smpl_id_embed_dim=int(model_cfg.get("id_embed_dim", 256)),
+        smpl_return_aux=bool(model_cfg.get("smpl_return_aux", False)),
         freeze_aggregator_forward=bool(model_cfg.get("freeze_aggregator_forward", False)),
     )
 
