@@ -1,5 +1,6 @@
 import argparse
 import json
+import pickle
 import sys
 from pathlib import Path
 from typing import Any
@@ -69,8 +70,13 @@ def main() -> None:
     image_path = Path(args.image).expanduser()
     input_size = int(config["data"].get("image_size", args.image_size))
     image_tensor, orig_image = load_image(image_path, input_size)
+    prior_boxes, prior_mask = load_gt_box_prior(image_path, config, args, device) if args.use_gt_box_prior else (None, None)
     with torch.no_grad():
-        predictions = model(image_tensor.to(device))
+        predictions = model(
+            image_tensor.to(device),
+            smpl_query_boxes=prior_boxes,
+            smpl_query_boxes_mask=prior_mask,
+        )
     results = collect_predictions(predictions, orig_image.size, args.conf_threshold, args.top_k)
     if args.draw_smpl_joints:
         add_projected_smpl_joints(results, predictions, config, args, orig_image.size, input_size, device)
@@ -78,7 +84,18 @@ def main() -> None:
     out_image = output_dir / f"{image_path.stem}_smpl_predictions.jpg"
     out_json = output_dir / f"{image_path.stem}_smpl_predictions.json"
     draw_predictions(orig_image, results, out_image)
-    out_json.write_text(json.dumps({"image": str(image_path), "checkpoint": str(args.checkpoint), "predictions": results}, indent=2), encoding="utf-8")
+    out_json.write_text(
+        json.dumps(
+            {
+                "image": str(image_path),
+                "checkpoint": str(args.checkpoint),
+                "use_gt_box_prior": bool(args.use_gt_box_prior),
+                "predictions": results,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
     print(json.dumps({"output_image": str(out_image), "output_json": str(out_json), "num_predictions": len(results)}, indent=2))
 
 
@@ -94,6 +111,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--conf-threshold", type=float, default=0.25)
     parser.add_argument("--top-k", type=int, default=20)
     parser.add_argument("--draw-smpl-joints", action="store_true", help="Decode SMPL and draw projected joints")
+    parser.add_argument("--use-gt-box-prior", action="store_true", help="Load BEDLAM GT/preprocessed boxes for oracle query priors")
     parser.add_argument("--smpl-model-dir", default="", help="Override assets.smpl_model_dir")
     parser.add_argument("--baseline-checkpoint", default="", help="Override checkpoints.vggt_baseline for loading VGGT camera head")
     parser.add_argument("--override", action="append", default=[], help="Override config values with dotted.key=value")
@@ -151,6 +169,49 @@ def load_image(path: Path, image_size: int) -> tuple[torch.Tensor, Image.Image]:
     arr = np.asarray(resized, dtype=np.float32) / 255.0
     tensor = torch.from_numpy(arr).permute(2, 0, 1).contiguous().unsqueeze(0).unsqueeze(0)
     return tensor, image
+
+
+def load_gt_box_prior(
+    image_path: Path,
+    config: dict[str, Any],
+    args: argparse.Namespace,
+    device: torch.device,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    data_cfg = config.get("data", {})
+    max_humans = int(data_cfg.get("max_humans", config.get("model", {}).get("num_smpl_queries", 20)))
+    boxes_root = require_path(config, data_cfg.get("boxes_root_key", "datasets.bedlam_boxes_root"), allow_empty=False)
+    dataset_root = require_path(config, data_cfg.get("root_key", "datasets.bedlam_root"), allow_empty=False)
+    split = str(data_cfg.get("train_split", "Training"))
+    box_path = _bedlam_box_path(image_path, Path(dataset_root), Path(boxes_root), split)
+    boxes = torch.zeros(1, 1, max_humans, 4, dtype=torch.float32, device=device)
+    mask = torch.zeros(1, 1, max_humans, dtype=torch.bool, device=device)
+    with box_path.open("rb") as file:
+        data = pickle.load(file)
+    persons = data.get("persons") if isinstance(data, dict) else None
+    if not isinstance(persons, list):
+        raise TypeError(f"Preprocessed bbox annotation must contain a persons list: {box_path}")
+    for person_idx, person in enumerate(persons[:max_humans]):
+        if bool(person.get("bbox_valid", False)):
+            boxes[0, 0, person_idx] = torch.as_tensor(person["bbox_cxcywh_norm"], dtype=torch.float32, device=device).reshape(4).clamp(0.0, 1.0)
+            mask[0, 0, person_idx] = True
+    return boxes, mask
+
+
+def _bedlam_box_path(image_path: Path, dataset_root: Path, boxes_root: Path, split: str) -> Path:
+    image_path = image_path.resolve()
+    rgb_dir = image_path.parent
+    if rgb_dir.name != "rgb":
+        raise ValueError(f"--use-gt-box-prior expects a BEDLAM rgb image path, got: {image_path}")
+    sequence_dir = rgb_dir.parent
+    split_root = (dataset_root / split).resolve()
+    try:
+        sequence_rel = sequence_dir.resolve().relative_to(split_root)
+    except ValueError as exc:
+        raise ValueError(f"Image path is not under BEDLAM split root {split_root}: {image_path}") from exc
+    box_path = boxes_root / split / sequence_rel / "smpl_boxes" / f"{image_path.stem}.pkl"
+    if not box_path.is_file():
+        raise FileNotFoundError(f"GT box prior file not found: {box_path}")
+    return box_path
 
 
 def collect_predictions(

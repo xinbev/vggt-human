@@ -30,7 +30,17 @@ def main() -> None:
     model.eval()
 
     conf_thresholds = sorted({float(args.conf_threshold), *[float(value) for value in args.conf_thresholds]})
-    metrics = evaluate(model, loader, device, conf_thresholds, args.conf_threshold, args.iou_threshold, args.eval_nms, args.nms_iou_threshold)
+    metrics = evaluate(
+        model,
+        loader,
+        device,
+        conf_thresholds,
+        args.conf_threshold,
+        args.iou_threshold,
+        args.eval_nms,
+        args.nms_iou_threshold,
+        args.use_gt_box_prior,
+    )
     output_path = output_dir / "smpl_box_metrics.json"
     output_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
     print(json.dumps({"output_json": str(output_path), **metrics}, indent=2))
@@ -49,6 +59,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--iou-threshold", type=float, default=0.50)
     parser.add_argument("--eval-nms", action="store_true")
     parser.add_argument("--nms-iou-threshold", type=float, default=0.50)
+    parser.add_argument("--use-gt-box-prior", action="store_true", help="Pass dataset GT boxes as oracle SMPL query priors")
     parser.add_argument("--baseline-checkpoint", default="")
     parser.add_argument("--override", action="append", default=[])
     return parser.parse_args()
@@ -103,6 +114,7 @@ def evaluate(
     iou_threshold: float,
     eval_nms: bool,
     nms_iou_threshold: float,
+    use_gt_box_prior: bool,
 ) -> dict[str, float]:
     conf_thresholds = sorted({float(value) for value in conf_thresholds})
     totals = {
@@ -115,7 +127,7 @@ def evaluate(
     }
     for batch in loader:
         batch = {key: value.to(device, non_blocking=True) for key, value in batch.items()}
-        predictions = model(batch["images"])
+        predictions = _forward_model(model, batch, use_gt_box_prior)
         pred_boxes = predictions["pred_boxes"].detach().float().reshape(-1, predictions["pred_boxes"].shape[-2], 4)
         pred_confs = predictions["pred_confs"].detach().float().reshape(-1, predictions["pred_confs"].shape[-2])
         gt_boxes = batch["gt_boxes"].float().reshape(-1, batch["gt_boxes"].shape[-2], 4)
@@ -154,6 +166,7 @@ def evaluate(
         "mean_best_gt_iou": totals["best_gt_iou_sum"] / num_gt,
         "conf_threshold": float(primary_conf_threshold),
         "iou_threshold": float(iou_threshold),
+        "use_gt_box_prior": bool(use_gt_box_prior),
     }
     for top_k, value in totals["recall_topk"].items():
         metrics[f"box_recall_iou50_top{top_k}"] = value / num_gt
@@ -168,6 +181,16 @@ def evaluate(
         for threshold, counts in totals["nms_thresholds"].items():
             _write_threshold_metrics(metrics, counts, threshold, num_gt, prefix="nms_")
     return metrics
+
+
+def _forward_model(model: torch.nn.Module, batch: dict[str, torch.Tensor], use_gt_box_prior: bool) -> dict[str, torch.Tensor]:
+    if not use_gt_box_prior:
+        return model(batch["images"])
+    return model(
+        batch["images"],
+        smpl_query_boxes=batch["gt_boxes"],
+        smpl_query_boxes_mask=batch["boxes_mask"],
+    )
 
 
 def pairwise_iou(boxes1: torch.Tensor, boxes2: torch.Tensor) -> torch.Tensor:
