@@ -131,7 +131,7 @@ class Aggregator(nn.Module):
         images: torch.Tensor,
         smpl_query_boxes: torch.Tensor | None = None,
         smpl_query_boxes_mask: torch.Tensor | None = None,
-    ) -> tuple[list[torch.Tensor | None], AggregatorTokenLayout]:
+    ) -> tuple[list[torch.Tensor | None], AggregatorTokenLayout, torch.Tensor | None]:
         batch_size, num_frames, num_channels, height, width = images.shape
         if num_channels != 3:
             raise ValueError(f"Expected 3 input channels, got {num_channels}")
@@ -142,11 +142,19 @@ class Aggregator(nn.Module):
         camera_token = slice_expand_and_flatten(self.camera_token, batch_size, num_frames)
         register_token = slice_expand_and_flatten(self.register_token, batch_size, num_frames)
         smpl_query_token = slice_expand_and_flatten(self.smpl_query_token, batch_size, num_frames)
+        smpl_reference_boxes = self._build_smpl_reference_boxes(
+            batch_size,
+            num_frames,
+            smpl_query_token.device,
+            smpl_query_token.dtype,
+            smpl_query_boxes,
+            smpl_query_boxes_mask,
+        )
         smpl_query_token = self._add_smpl_box_prior(
             smpl_query_token,
             batch_size,
             num_frames,
-            smpl_query_boxes,
+            smpl_reference_boxes,
             smpl_query_boxes_mask,
         )
 
@@ -190,44 +198,62 @@ class Aggregator(nn.Module):
             else:
                 outputs.append(None)
 
-        return outputs, self.token_layout
+        return outputs, self.token_layout, smpl_reference_boxes
+
+    def _build_smpl_reference_boxes(
+        self,
+        batch_size: int,
+        num_frames: int,
+        device: torch.device,
+        dtype: torch.dtype,
+        smpl_query_boxes: torch.Tensor | None,
+        smpl_query_boxes_mask: torch.Tensor | None,
+    ) -> torch.Tensor | None:
+        if self.num_smpl_queries == 0:
+            return None
+        if smpl_query_boxes is None:
+            if self.smpl_fallback_boxes is None:
+                return None
+            return self.smpl_fallback_boxes.to(device=device, dtype=dtype).expand(batch_size, num_frames, -1, -1)
+        if smpl_query_boxes.shape[:3] != (batch_size, num_frames, self.num_smpl_queries):
+            raise ValueError(
+                "smpl_query_boxes must have shape "
+                f"(B, S, {self.num_smpl_queries}, 4), got {smpl_query_boxes.shape}"
+            )
+        boxes = smpl_query_boxes.to(device=device, dtype=dtype).clamp(0.0, 1.0)
+        fallback = (
+            self.smpl_fallback_boxes.to(device=device, dtype=dtype).expand(batch_size, num_frames, -1, -1)
+            if self.smpl_fallback_boxes is not None
+            else torch.zeros_like(boxes)
+        )
+        if smpl_query_boxes_mask is None:
+            mask = torch.ones(batch_size, num_frames, self.num_smpl_queries, dtype=torch.bool, device=device)
+        else:
+            mask = smpl_query_boxes_mask.to(device=device).bool()
+            if mask.shape != (batch_size, num_frames, self.num_smpl_queries):
+                raise ValueError(
+                    "smpl_query_boxes_mask must have shape "
+                    f"(B, S, {self.num_smpl_queries}), got {mask.shape}"
+                )
+        return torch.where(mask[..., None], boxes, fallback)
 
     def _add_smpl_box_prior(
         self,
         smpl_query_token: torch.Tensor,
         batch_size: int,
         num_frames: int,
-        smpl_query_boxes: torch.Tensor | None,
+        smpl_reference_boxes: torch.Tensor | None,
         smpl_query_boxes_mask: torch.Tensor | None,
     ) -> torch.Tensor:
         if self.smpl_box_prior_embed is None or self.num_smpl_queries == 0:
             return smpl_query_token
-        if smpl_query_boxes is None:
-            if self.smpl_fallback_boxes is None:
-                return smpl_query_token
-            boxes = self.smpl_fallback_boxes.expand(batch_size, num_frames, -1, -1)
+        if smpl_reference_boxes is None:
+            return smpl_query_token
+        boxes = smpl_reference_boxes.to(device=smpl_query_token.device, dtype=smpl_query_token.dtype).clamp(0.0, 1.0)
+        if smpl_query_boxes_mask is None:
             mask = torch.zeros(batch_size, num_frames, self.num_smpl_queries, dtype=torch.bool, device=boxes.device)
         else:
-            if smpl_query_boxes.shape[:3] != (batch_size, num_frames, self.num_smpl_queries):
-                raise ValueError(
-                    "smpl_query_boxes must have shape "
-                    f"(B, S, {self.num_smpl_queries}, 4), got {smpl_query_boxes.shape}"
-                )
-            boxes = smpl_query_boxes.to(device=smpl_query_token.device, dtype=smpl_query_token.dtype).clamp(0.0, 1.0)
-            if self.smpl_fallback_boxes is not None:
-                fallback = self.smpl_fallback_boxes.to(device=boxes.device, dtype=boxes.dtype).expand(batch_size, num_frames, -1, -1)
-            else:
-                fallback = torch.zeros_like(boxes)
-            if smpl_query_boxes_mask is None:
-                mask = torch.ones(batch_size, num_frames, self.num_smpl_queries, dtype=torch.bool, device=boxes.device)
-            else:
-                mask = smpl_query_boxes_mask.to(device=boxes.device).bool()
-                if mask.shape != (batch_size, num_frames, self.num_smpl_queries):
-                    raise ValueError(
-                        "smpl_query_boxes_mask must have shape "
-                        f"(B, S, {self.num_smpl_queries}), got {mask.shape}"
-                    )
-            boxes = torch.where(mask[..., None], boxes, fallback)
+            mask = smpl_query_boxes_mask.to(device=boxes.device).bool()
         prior_input = torch.cat([boxes, mask[..., None].to(dtype=boxes.dtype)], dim=-1)
         prior_embed = self.smpl_box_prior_embed(prior_input).reshape(batch_size * num_frames, self.num_smpl_queries, -1)
         return smpl_query_token + prior_embed.to(dtype=smpl_query_token.dtype)

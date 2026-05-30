@@ -46,6 +46,7 @@ class SMPLRegressionHead(nn.Module):
         mean_shape: torch.Tensor | None = None,
         return_aux: bool = False,
         predict_boxes: bool = False,
+        bbox_mode: str = "direct",
         predict_id_embed: bool = False,
         id_embed_dim: int = 256,
     ) -> None:
@@ -58,7 +59,10 @@ class SMPLRegressionHead(nn.Module):
         self.num_betas = num_betas
         self.return_aux = return_aux
         self.predict_boxes = predict_boxes
+        self.bbox_mode = bbox_mode
         self.predict_id_embed = predict_id_embed
+        if self.bbox_mode not in {"direct", "reference_residual"}:
+            raise ValueError(f"Unsupported bbox_mode: {self.bbox_mode}")
         pose_dim = num_joints * 6
 
         self.norm = nn.LayerNorm(dim_in, eps=1e-5)
@@ -67,9 +71,15 @@ class SMPLRegressionHead(nn.Module):
         self.transl_cam_heads = _get_clones(MLP(dim_in, hidden_dim, 3, mlp_layers), num_layers)
         self.conf_heads = _get_clones(MLP(dim_in, hidden_dim, 1, mlp_layers), num_layers)
         if predict_boxes:
-            self.box_heads = _get_clones(MLP(dim_in, hidden_dim, 4, mlp_layers), num_layers)
+            if self.bbox_mode == "direct":
+                self.box_heads = _get_clones(MLP(dim_in, hidden_dim, 4, mlp_layers), num_layers)
+                self.box_delta_heads = None
+            else:
+                self.box_heads = None
+                self.box_delta_heads = _get_clones(MLP(dim_in, hidden_dim, 4, mlp_layers), num_layers)
         else:
             self.box_heads = None
+            self.box_delta_heads = None
         if predict_id_embed:
             id_hidden_dim = max(hidden_dim // 2, 1)
             self.id_embed_head = nn.Sequential(
@@ -93,12 +103,24 @@ class SMPLRegressionHead(nn.Module):
         self.register_buffer("mean_pose_6d", mean_pose_6d.reshape(1, 1, pose_dim).float(), persistent=False)
         self.register_buffer("mean_shape", mean_shape.reshape(1, 1, num_betas).float(), persistent=False)
 
-    def forward(self, hidden_states: torch.Tensor) -> dict[str, torch.Tensor | dict[str, torch.Tensor]]:
+    def forward(
+        self,
+        hidden_states: torch.Tensor,
+        reference_boxes: torch.Tensor | None = None,
+    ) -> dict[str, torch.Tensor | dict[str, torch.Tensor]]:
         if hidden_states.ndim != 4:
             raise ValueError(f"Expected hidden_states shape (L, B, Q, C), got {hidden_states.shape}")
         num_layers, batch_size, num_queries, _ = hidden_states.shape
         if num_layers != self.num_layers:
             raise ValueError(f"Expected {self.num_layers} hidden-state layers, got {num_layers}")
+        if self.bbox_mode == "reference_residual":
+            if reference_boxes is None:
+                raise ValueError("bbox_mode='reference_residual' requires reference_boxes")
+            if reference_boxes.shape != (batch_size, num_queries, 4):
+                raise ValueError(f"Expected reference_boxes shape {(batch_size, num_queries, 4)}, got {reference_boxes.shape}")
+            current_reference = reference_boxes.to(device=hidden_states.device, dtype=hidden_states.dtype).clamp(1e-4, 1.0 - 1e-4)
+        else:
+            current_reference = None
 
         pose_6d = self.mean_pose_6d.to(dtype=hidden_states.dtype, device=hidden_states.device).expand(batch_size, num_queries, -1)
         shape = self.mean_shape.to(dtype=hidden_states.dtype, device=hidden_states.device).expand(batch_size, num_queries, -1)
@@ -126,6 +148,12 @@ class SMPLRegressionHead(nn.Module):
             pred_confs = torch.sigmoid(self.conf_heads[layer_idx](hidden))
             if self.box_heads is not None:
                 pred_boxes = torch.sigmoid(self.box_heads[layer_idx](hidden))
+            elif self.box_delta_heads is not None:
+                if current_reference is None:
+                    raise RuntimeError("reference_residual bbox head missing current_reference")
+                delta = self.box_delta_heads[layer_idx](hidden)
+                pred_boxes = torch.sigmoid(inverse_sigmoid(current_reference) + delta)
+                current_reference = pred_boxes.detach().clamp(1e-4, 1.0 - 1e-4)
             pred_poses = rot6d_to_axis_angle(pose_6d)
 
             aux_outputs["pred_poses"].append(pred_poses)
@@ -170,6 +198,7 @@ class AggregatorSMPLHead(nn.Module):
         mean_pose_6d: torch.Tensor | None = None,
         mean_shape: torch.Tensor | None = None,
         predict_boxes: bool = False,
+        bbox_mode: str = "direct",
         predict_id_embed: bool = False,
         id_embed_dim: int = 256,
     ) -> None:
@@ -185,6 +214,7 @@ class AggregatorSMPLHead(nn.Module):
             mean_shape=mean_shape,
             return_aux=return_aux,
             predict_boxes=predict_boxes,
+            bbox_mode=bbox_mode,
             predict_id_embed=predict_id_embed,
             id_embed_dim=id_embed_dim,
         )
@@ -193,6 +223,7 @@ class AggregatorSMPLHead(nn.Module):
         self,
         aggregated_tokens_list: list[torch.Tensor | None],
         token_layout: AggregatorTokenLayout,
+        reference_boxes: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor | dict[str, torch.Tensor]]:
         if token_layout.num_smpl_queries <= 0:
             raise ValueError("AggregatorSMPLHead requires token_layout with at least one SMPL query")
@@ -207,7 +238,10 @@ class AggregatorSMPLHead(nn.Module):
             smpl_tokens = tokens[:, :, token_layout.smpl_start : token_layout.smpl_end]
             hidden_states.append(smpl_tokens.reshape(batch_size * num_frames, token_layout.num_smpl_queries, dim))
 
-        regression_outputs = self.regression_head(torch.stack(hidden_states, dim=0))
+        flat_reference_boxes = None
+        if reference_boxes is not None:
+            flat_reference_boxes = reference_boxes.reshape(batch_size * num_frames, token_layout.num_smpl_queries, 4)
+        regression_outputs = self.regression_head(torch.stack(hidden_states, dim=0), reference_boxes=flat_reference_boxes)
         if batch_size is None or num_frames is None:
             raise RuntimeError("AggregatorSMPLHead produced no hidden states")
 
@@ -231,3 +265,8 @@ class AggregatorSMPLHead(nn.Module):
 def _identity_pose_6d(num_joints: int) -> torch.Tensor:
     identity_6d = torch.tensor([1.0, 0.0, 0.0, 0.0, 1.0, 0.0])
     return identity_6d.repeat(num_joints)
+
+
+def inverse_sigmoid(x: torch.Tensor, eps: float = 1e-4) -> torch.Tensor:
+    x = x.clamp(min=eps, max=1.0 - eps)
+    return torch.log(x / (1.0 - x))

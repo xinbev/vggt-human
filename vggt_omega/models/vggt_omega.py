@@ -28,6 +28,7 @@ class VGGTOmega(nn.Module):
         smpl_num_layers: int = 4,
         smpl_intermediate_layer_idx: tuple[int, ...] = (4, 11, 17, 23),
         smpl_predict_boxes: bool = False,
+        smpl_bbox_mode: str = "direct",
         smpl_predict_id_embed: bool = False,
         smpl_id_embed_dim: int = 256,
         smpl_return_aux: bool = False,
@@ -55,6 +56,7 @@ class VGGTOmega(nn.Module):
                 num_layers=smpl_num_layers,
                 intermediate_layer_idx=smpl_intermediate_layer_idx,
                 predict_boxes=smpl_predict_boxes,
+                bbox_mode=smpl_bbox_mode,
                 predict_id_embed=smpl_predict_id_embed,
                 id_embed_dim=smpl_id_embed_dim,
                 return_aux=smpl_return_aux,
@@ -76,9 +78,9 @@ class VGGTOmega(nn.Module):
         with torch.autocast(device_type="cuda", dtype=amp_dtype):
             if self.freeze_aggregator_forward:
                 with torch.no_grad():
-                    aggregated_tokens_list, token_layout = self.aggregator(images, smpl_query_boxes, smpl_query_boxes_mask)
+                    aggregated_tokens_list, token_layout, smpl_reference_boxes = self.aggregator(images, smpl_query_boxes, smpl_query_boxes_mask)
             else:
-                aggregated_tokens_list, token_layout = self.aggregator(images, smpl_query_boxes, smpl_query_boxes_mask)
+                aggregated_tokens_list, token_layout, smpl_reference_boxes = self.aggregator(images, smpl_query_boxes, smpl_query_boxes_mask)
 
         final_tokens = aggregated_tokens_list[-1]
         if final_tokens is None:
@@ -116,6 +118,7 @@ class VGGTOmega(nn.Module):
                     self.smpl_head(
                         aggregated_tokens_list,
                         token_layout=token_layout,
+                        reference_boxes=smpl_reference_boxes,
                     )
                 )
 

@@ -97,7 +97,7 @@ def main() -> None:
             config=config,
         )
         if val_loader is not None and (epoch + 1) % int(config["optim"].get("val_interval", 1)) == 0:
-            validate(model, criterion, val_loader, device, epoch)
+            validate(model, criterion, val_loader, device, epoch, config)
         if (epoch + 1) % int(config["optim"].get("save_interval", 1)) == 0:
             save_checkpoint(model, optimizer, epoch + 1, global_step, config, output_dir / f"checkpoint_epoch_{epoch + 1:04d}.pt")
             save_checkpoint(model, optimizer, epoch + 1, global_step, config, output_dir / "checkpoint_latest.pt")
@@ -154,6 +154,7 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         enable_smpl=bool(model_cfg.get("enable_smpl", True)),
         num_smpl_queries=int(model_cfg["num_smpl_queries"]),
         smpl_predict_boxes=bool(model_cfg.get("predict_boxes", False)),
+        smpl_bbox_mode=str(model_cfg.get("smpl_bbox_mode", "direct")),
         smpl_predict_id_embed=bool(model_cfg.get("predict_id_embed", False)),
         smpl_id_embed_dim=int(model_cfg.get("id_embed_dim", 256)),
         smpl_return_aux=bool(model_cfg.get("smpl_return_aux", False)),
@@ -288,7 +289,14 @@ def train_one_epoch(
 
 
 @torch.no_grad()
-def validate(model: torch.nn.Module, criterion: torch.nn.Module, loader: DataLoader, device: torch.device, epoch: int) -> None:
+def validate(
+    model: torch.nn.Module,
+    criterion: torch.nn.Module,
+    loader: DataLoader,
+    device: torch.device,
+    epoch: int,
+    config: dict[str, Any],
+) -> None:
     model.eval()
     totals: dict[str, float] = {}
     count = 0
