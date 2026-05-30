@@ -15,7 +15,7 @@ SMPL_MODEL_DIR="/home/zhw/xyb_space/SAT-HMR/weights/smpl_data/"
 RESUME_CKPT="${REPO_ROOT}/outputs/train/smpl_conf_quality_aux_20q/checkpoint_latest.pt"
 OUTPUT_DIR="${REPO_ROOT}/outputs/train/smpl_gt_box_prior_20q"
 
-EPOCHS="20"
+EPOCHS="40"
 LR="2e-5"
 MAX_HUMANS="20"
 NUM_VIEWS="2"
