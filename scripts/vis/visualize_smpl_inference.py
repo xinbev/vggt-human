@@ -40,6 +40,7 @@ from scripts.train.train_smpl import apply_overrides, build_model, load_yaml_con
 from vggt_omega.models.smpl_layer import SMPLLayer
 from vggt_omega.training.config import deep_update, require_path
 from vggt_omega.utils.pose_enc import encoding_to_camera
+from vggt_omega.utils.rotation import axis_angle_to_rot6d, rot6d_to_axis_angle
 
 
 COLORS = [
@@ -88,6 +89,8 @@ def main() -> None:
     results = collect_predictions(predictions, orig_image.size, args.conf_threshold, args.top_k)
     if args.draw_smpl_joints:
         add_projected_smpl_joints(results, predictions, config, args, orig_image.size, input_size, device)
+    if args.draw_gt_smpl_joints:
+        add_projected_gt_smpl_joints(results, image_path, predictions, config, args, orig_image.size, input_size, device)
 
     out_image = output_dir / f"{image_path.stem}_smpl_predictions.jpg"
     out_json = output_dir / f"{image_path.stem}_smpl_predictions.json"
@@ -122,6 +125,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--conf-threshold", type=float, default=0.25)
     parser.add_argument("--top-k", type=int, default=20)
     parser.add_argument("--draw-smpl-joints", action="store_true", help="Decode SMPL and draw projected joints")
+    parser.add_argument("--draw-gt-smpl-joints", action="store_true", help="Draw GT SMPL joints for BEDLAM images")
     parser.add_argument("--use-gt-box-prior", action="store_true", help="Load BEDLAM GT/preprocessed boxes for oracle query priors")
     parser.add_argument("--gt-box-prior-center-noise", type=float, default=0.0, help="Uniform cx/cy noise range for GT box priors, normalized units")
     parser.add_argument("--gt-box-prior-size-noise", type=float, default=0.0, help="Uniform relative w/h noise range for GT box priors")
@@ -338,6 +342,87 @@ def add_projected_smpl_joints(
         item["vggt_camera_from_world"] = extrinsics[0, 0].detach().cpu().tolist()
 
 
+def add_projected_gt_smpl_joints(
+    results: list[dict[str, Any]],
+    image_path: Path,
+    predictions: dict[str, torch.Tensor],
+    config: dict[str, Any],
+    args: argparse.Namespace,
+    image_size: tuple[int, int],
+    input_size: int,
+    device: torch.device,
+) -> None:
+    if not results:
+        return
+    smpl_model_dir = args.smpl_model_dir or str(config.get("assets", {}).get("smpl_model_dir", ""))
+    if not smpl_model_dir:
+        raise ValueError("SMPL model dir is required. Set assets.smpl_model_dir or pass --smpl-model-dir")
+    gt = load_gt_smpl_for_image(image_path, config, args, device)
+    if gt["poses_6d"].numel() == 0:
+        return
+    smpl = SMPLLayer(smpl_model_dir).to(device).eval()
+    poses = rot6d_to_axis_angle(gt["poses_6d"]).reshape(-1, 72)
+    with torch.no_grad():
+        _, joints = smpl(poses, gt["betas"])
+    joints_cam = joints + gt["transl_cam"][:, None, :]
+    extrinsics, intrinsics = encoding_to_camera(predictions["pose_enc"], image_size_hw=(input_size, input_size), build_intrinsics=True)
+    intrinsics_0 = intrinsics[0, 0].to(device=device, dtype=joints_cam.dtype)
+    joints_2d_input = project_points(joints_cam, intrinsics_0)
+    in_front = joints_cam[..., 2] > 1e-4
+    width, height = image_size
+    scale = joints_2d_input.new_tensor([float(width) / float(input_size), float(height) / float(input_size)])
+    joints_2d = joints_2d_input * scale
+    in_image = (
+        in_front
+        & (joints_2d[..., 0] >= 0)
+        & (joints_2d[..., 0] < float(width))
+        & (joints_2d[..., 1] >= 0)
+        & (joints_2d[..., 1] < float(height))
+    )
+    for item in results:
+        query_idx = int(item["query_index"])
+        if query_idx >= joints_2d.shape[0]:
+            continue
+        item["gt_projected_joints_2d"] = joints_2d[query_idx].detach().cpu().tolist()
+        item["gt_projected_joints_mask"] = in_image[query_idx].detach().cpu().tolist()
+
+
+def load_gt_smpl_for_image(
+    image_path: Path,
+    config: dict[str, Any],
+    args: argparse.Namespace,
+    device: torch.device,
+) -> dict[str, torch.Tensor]:
+    data_cfg = config.get("data", {})
+    max_humans = int(data_cfg.get("max_humans", config.get("model", {}).get("num_smpl_queries", 20)))
+    dataset_root = Path(require_path(config, data_cfg.get("root_key", "datasets.bedlam_root"), allow_empty=False))
+    split = str(data_cfg.get("train_split", "Training"))
+    image_path = image_path.resolve()
+    rgb_dir = image_path.parent
+    if rgb_dir.name != "rgb":
+        raise ValueError(f"--draw-gt-smpl-joints expects a BEDLAM rgb image path, got: {image_path}")
+    smpl_path = rgb_dir.parent / "smpl" / f"{image_path.stem}.pkl"
+    if not smpl_path.is_file():
+        raise FileNotFoundError(f"GT SMPL annotation not found: {smpl_path}")
+    with smpl_path.open("rb") as file:
+        persons = pickle.load(file)
+    if not isinstance(persons, list):
+        raise TypeError(f"SMPL annotation must be a list: {smpl_path}")
+    poses = torch.zeros(max_humans, 144, dtype=torch.float32, device=device)
+    betas = torch.zeros(max_humans, 10, dtype=torch.float32, device=device)
+    transl_cam = torch.zeros(max_humans, 3, dtype=torch.float32, device=device)
+    for person_idx, person in enumerate(persons[:max_humans]):
+        root_pose = torch.as_tensor(person["smplx_root_pose"], dtype=torch.float32, device=device).reshape(1, 3)
+        body_pose = torch.as_tensor(person["smplx_body_pose"], dtype=torch.float32, device=device).reshape(21, 3)
+        aa_22 = torch.cat([root_pose, body_pose], dim=0)
+        pose_6d_22 = axis_angle_to_rot6d(aa_22).reshape(22, 6)
+        identity_6d = torch.tensor([[1.0, 0.0, 0.0, 0.0, 1.0, 0.0]], dtype=torch.float32, device=device).expand(2, -1)
+        poses[person_idx] = torch.cat([pose_6d_22, identity_6d], dim=0).reshape(144)
+        betas[person_idx] = torch.as_tensor(person["smplx_shape"], dtype=torch.float32, device=device).reshape(-1)[:10]
+        transl_cam[person_idx] = torch.as_tensor(person["smplx_transl"], dtype=torch.float32, device=device).reshape(3)
+    return {"poses_6d": poses, "betas": betas, "transl_cam": transl_cam}
+
+
 def project_points(
     points_cam: torch.Tensor,
     intrinsics: torch.Tensor,
@@ -371,12 +456,26 @@ def draw_projected_joints(draw: ImageDraw.ImageDraw, pred: dict[str, Any], color
     joints = pred.get("projected_joints_2d")
     masks = pred.get("projected_joints_mask")
     if not isinstance(joints, list) or not isinstance(masks, list):
-        return
+        joints = []
+        masks = []
+    _draw_joint_points(draw, joints, masks, color, radius=3)
+    gt_joints = pred.get("gt_projected_joints_2d")
+    gt_masks = pred.get("gt_projected_joints_mask")
+    if isinstance(gt_joints, list) and isinstance(gt_masks, list):
+        _draw_joint_points(draw, gt_joints, gt_masks, (255, 255, 255), radius=2)
+
+
+def _draw_joint_points(
+    draw: ImageDraw.ImageDraw,
+    joints: list[Any],
+    masks: list[Any],
+    color: tuple[int, int, int],
+    radius: int,
+) -> None:
     for joint_idx, xy in enumerate(joints[:24]):
         if joint_idx >= len(masks) or not masks[joint_idx]:
             continue
         x, y = float(xy[0]), float(xy[1])
-        radius = 3
         draw.ellipse([x - radius, y - radius, x + radius, y + radius], fill=color, outline=(0, 0, 0))
 
 

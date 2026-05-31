@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from vggt_omega.models.smpl_layer import SMPLLayer
 from vggt_omega.training.smpl_matcher import HungarianSMPLMatcher, cxcywh_to_xyxy, generalized_box_iou
 from vggt_omega.utils.pose_enc import encoding_to_camera
+from vggt_omega.utils.rotation import rot6d_to_axis_angle
 
 
 class HungarianSMPLLoss(nn.Module):
@@ -34,6 +35,8 @@ class HungarianSMPLLoss(nn.Module):
         aux_conf_weight: float | None = None,
         aux_bbox_weight: float | None = None,
         aux_giou_weight: float | None = None,
+        joints3d_weight: float = 0.0,
+        projected_joints2d_weight: float = 0.0,
         projected_bbox_weight: float = 0.0,
         projected_giou_weight: float = 0.0,
         projected_bbox_source: str = "joints",
@@ -63,6 +66,8 @@ class HungarianSMPLLoss(nn.Module):
         self.aux_conf_weight = conf_weight if aux_conf_weight is None else aux_conf_weight
         self.aux_bbox_weight = bbox_weight if aux_bbox_weight is None else aux_bbox_weight
         self.aux_giou_weight = giou_weight if aux_giou_weight is None else aux_giou_weight
+        self.joints3d_weight = joints3d_weight
+        self.projected_joints2d_weight = projected_joints2d_weight
         self.projected_bbox_weight = projected_bbox_weight
         self.projected_giou_weight = projected_giou_weight
         self.projected_bbox_source = projected_bbox_source
@@ -118,8 +123,12 @@ class HungarianSMPLLoss(nn.Module):
                     "loss_betas": zero,
                     "loss_transl_cam": zero,
                     "loss_id": zero,
+                    "loss_joints3d": zero,
+                    "loss_projected_joints2d": zero,
                     "loss_projected_bbox": zero,
                     "loss_projected_giou": zero,
+                    "metric_joints3d_l1": zero.detach(),
+                    "metric_projected_joints2d_l1": zero.detach(),
                     "metric_bbox_iou_mean": zero.detach(),
                     "metric_projected_bbox_iou_mean": zero.detach(),
                     "metric_conf_target_pos_mean": zero.detach(),
@@ -148,6 +157,8 @@ class HungarianSMPLLoss(nn.Module):
                 matched["transl_cam"].to(dtype=pred_transl_cam.dtype),
             )
             losses["loss_id"] = self._identity_loss(flat_id_embed, frame_idx, src_idx, matched)
+            joint_losses = self._smpl_joint_losses(predictions, pred_betas, pred_transl_cam, frame_idx, src_idx, matched)
+            losses.update(joint_losses)
             projected = self._projected_bbox_losses(predictions, pred_betas, pred_transl_cam, frame_idx, src_idx, target_boxes)
             losses.update(projected)
 
@@ -159,6 +170,8 @@ class HungarianSMPLLoss(nn.Module):
             + self.betas_weight * losses["loss_betas"]
             + self.transl_cam_weight * losses["loss_transl_cam"]
             + self.id_weight * losses["loss_id"]
+            + self.joints3d_weight * losses["loss_joints3d"]
+            + self.projected_joints2d_weight * losses["loss_projected_joints2d"]
             + self.projected_bbox_weight * losses["loss_projected_bbox"]
             + self.projected_giou_weight * losses["loss_projected_giou"]
             + self.duplicate_conf_weight * losses["loss_duplicate_conf"]
@@ -348,6 +361,65 @@ class HungarianSMPLLoss(nn.Module):
             "loss_projected_bbox": F.l1_loss(projected_boxes, target_boxes),
             "loss_projected_giou": (1.0 - giou.diag()).mean(),
             "metric_projected_bbox_iou_mean": _box_iou_diag(cxcywh_to_xyxy(projected_boxes), cxcywh_to_xyxy(target_boxes)).detach().mean(),
+        }
+
+    def _smpl_joint_losses(
+        self,
+        predictions: dict[str, torch.Tensor],
+        pred_betas: torch.Tensor,
+        pred_transl_cam: torch.Tensor,
+        frame_idx: torch.Tensor,
+        src_idx: torch.Tensor,
+        matched: dict[str, torch.Tensor],
+    ) -> dict[str, torch.Tensor]:
+        if self.joints3d_weight == 0.0 and self.projected_joints2d_weight == 0.0:
+            zero = pred_betas.sum() * 0.0
+            return {
+                "loss_joints3d": zero,
+                "loss_projected_joints2d": zero,
+                "metric_joints3d_l1": zero.detach(),
+                "metric_projected_joints2d_l1": zero.detach(),
+            }
+        if not self.smpl_model_dir:
+            raise ValueError("SMPL joint losses require loss.smpl_model_dir or assets.smpl_model_dir")
+        if "pred_poses" not in predictions:
+            raise ValueError("SMPL joint losses require model output pred_poses")
+
+        pred_poses = _flatten_prediction(_require_prediction(predictions, "pred_poses"), unframed_ndim=3)
+        pred_poses_matched = pred_poses[frame_idx, src_idx].reshape(-1, 72)
+        pred_betas_matched = pred_betas[frame_idx, src_idx]
+        pred_transl = pred_transl_cam[frame_idx, src_idx]
+        gt_poses = rot6d_to_axis_angle(matched["pose_6d"].to(device=pred_betas.device, dtype=pred_betas.dtype)).reshape(-1, 72)
+        gt_betas = matched["betas"].to(device=pred_betas.device, dtype=pred_betas.dtype)
+        gt_transl = matched["transl_cam"].to(device=pred_betas.device, dtype=pred_betas.dtype)
+
+        smpl = self._get_smpl_layer(pred_betas.device)
+        _, pred_joints = smpl(pred_poses_matched.float(), pred_betas_matched.float())
+        _, gt_joints = smpl(gt_poses.float(), gt_betas.float())
+        pred_joints_cam = pred_joints[:, :24].to(dtype=pred_betas.dtype) + pred_transl[:, None, :]
+        gt_joints_cam = gt_joints[:, :24].to(dtype=pred_betas.dtype) + gt_transl[:, None, :]
+        joints3d_l1 = F.l1_loss(pred_joints_cam, gt_joints_cam)
+
+        if self.projected_joints2d_weight == 0.0:
+            zero = pred_betas.sum() * 0.0
+            projected_l1 = zero
+        else:
+            if "pose_enc" not in predictions:
+                raise ValueError("Projected joint loss requires model output pose_enc; set model.enable_camera=true")
+            intrinsics = _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), self.projection_image_size)
+            pred_2d = _project_points(pred_joints_cam, intrinsics[frame_idx].to(dtype=pred_joints_cam.dtype)) / float(self.projection_image_size)
+            gt_2d = _project_points(gt_joints_cam, intrinsics[frame_idx].to(dtype=gt_joints_cam.dtype)) / float(self.projection_image_size)
+            valid = (pred_joints_cam[..., 2] > 1e-4) & (gt_joints_cam[..., 2] > 1e-4)
+            if valid.any():
+                projected_l1 = F.l1_loss(pred_2d[valid], gt_2d[valid])
+            else:
+                projected_l1 = pred_betas.sum() * 0.0
+
+        return {
+            "loss_joints3d": joints3d_l1,
+            "loss_projected_joints2d": projected_l1,
+            "metric_joints3d_l1": joints3d_l1.detach(),
+            "metric_projected_joints2d_l1": projected_l1.detach(),
         }
 
     def _get_smpl_layer(self, device: torch.device) -> SMPLLayer:
