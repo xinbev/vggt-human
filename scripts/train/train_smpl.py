@@ -317,11 +317,46 @@ def move_to_device(batch: dict[str, torch.Tensor], device: torch.device) -> dict
 def forward_model(model: torch.nn.Module, batch: dict[str, torch.Tensor], config: dict[str, Any]) -> dict[str, torch.Tensor]:
     if not bool(config.get("model", {}).get("smpl_query_box_prior", False)):
         return model(batch["images"])
+    boxes = batch.get("gt_boxes")
+    mask = batch.get("boxes_mask")
+    if model.training:
+        prior_cfg = config.get("training_prior", {})
+        if prior_cfg:
+            boxes, mask = make_noisy_box_prior(
+                boxes,
+                mask,
+                center_noise=float(prior_cfg.get("center_noise", 0.0)),
+                size_noise=float(prior_cfg.get("size_noise", 0.0)),
+                drop_prob=float(prior_cfg.get("drop_prob", 0.0)),
+            )
     return model(
         batch["images"],
-        smpl_query_boxes=batch.get("gt_boxes"),
-        smpl_query_boxes_mask=batch.get("boxes_mask"),
+        smpl_query_boxes=boxes,
+        smpl_query_boxes_mask=mask,
     )
+
+
+def make_noisy_box_prior(
+    boxes: torch.Tensor | None,
+    mask: torch.Tensor | None,
+    center_noise: float,
+    size_noise: float,
+    drop_prob: float,
+) -> tuple[torch.Tensor | None, torch.Tensor | None]:
+    if boxes is None or mask is None:
+        return boxes, mask
+    noisy = boxes.clone()
+    prior_mask = mask.bool().clone()
+    if center_noise > 0:
+        center_delta = noisy[..., :2].new_empty(noisy[..., :2].shape).uniform_(-center_noise, center_noise)
+        noisy[..., :2] = noisy[..., :2] + center_delta * prior_mask[..., None].to(dtype=noisy.dtype)
+    if size_noise > 0:
+        size_scale = noisy[..., 2:].new_empty(noisy[..., 2:].shape).uniform_(1.0 - size_noise, 1.0 + size_noise)
+        noisy[..., 2:] = noisy[..., 2:] * torch.where(prior_mask[..., None], size_scale, torch.ones_like(size_scale))
+    if drop_prob > 0:
+        keep = torch.rand(prior_mask.shape, device=prior_mask.device) >= drop_prob
+        prior_mask = prior_mask & keep
+    return noisy.clamp(0.0, 1.0), prior_mask
 
 
 def apply_overrides(config: dict[str, Any], overrides: list[str]) -> dict[str, Any]:
