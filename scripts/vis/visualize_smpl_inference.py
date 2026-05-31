@@ -71,6 +71,14 @@ def main() -> None:
     input_size = int(config["data"].get("image_size", args.image_size))
     image_tensor, orig_image = load_image(image_path, input_size)
     prior_boxes, prior_mask = load_gt_box_prior(image_path, config, args, device) if args.use_gt_box_prior else (None, None)
+    if prior_boxes is not None and prior_mask is not None:
+        prior_boxes, prior_mask = make_noisy_gt_box_prior(
+            prior_boxes,
+            prior_mask,
+            args.gt_box_prior_center_noise,
+            args.gt_box_prior_size_noise,
+            args.gt_box_prior_drop_prob,
+        )
     with torch.no_grad():
         predictions = model(
             image_tensor.to(device),
@@ -90,6 +98,9 @@ def main() -> None:
                 "image": str(image_path),
                 "checkpoint": str(args.checkpoint),
                 "use_gt_box_prior": bool(args.use_gt_box_prior),
+                "gt_box_prior_center_noise": float(args.gt_box_prior_center_noise),
+                "gt_box_prior_size_noise": float(args.gt_box_prior_size_noise),
+                "gt_box_prior_drop_prob": float(args.gt_box_prior_drop_prob),
                 "predictions": results,
             },
             indent=2,
@@ -112,6 +123,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--top-k", type=int, default=20)
     parser.add_argument("--draw-smpl-joints", action="store_true", help="Decode SMPL and draw projected joints")
     parser.add_argument("--use-gt-box-prior", action="store_true", help="Load BEDLAM GT/preprocessed boxes for oracle query priors")
+    parser.add_argument("--gt-box-prior-center-noise", type=float, default=0.0, help="Uniform cx/cy noise range for GT box priors, normalized units")
+    parser.add_argument("--gt-box-prior-size-noise", type=float, default=0.0, help="Uniform relative w/h noise range for GT box priors")
+    parser.add_argument("--gt-box-prior-drop-prob", type=float, default=0.0, help="Probability of dropping a valid GT box prior")
     parser.add_argument("--smpl-model-dir", default="", help="Override assets.smpl_model_dir")
     parser.add_argument("--baseline-checkpoint", default="", help="Override checkpoints.vggt_baseline for loading VGGT camera head")
     parser.add_argument("--override", action="append", default=[], help="Override config values with dotted.key=value")
@@ -195,6 +209,27 @@ def load_gt_box_prior(
             boxes[0, 0, person_idx] = torch.as_tensor(person["bbox_cxcywh_norm"], dtype=torch.float32, device=device).reshape(4).clamp(0.0, 1.0)
             mask[0, 0, person_idx] = True
     return boxes, mask
+
+
+def make_noisy_gt_box_prior(
+    boxes: torch.Tensor,
+    mask: torch.Tensor,
+    center_noise: float,
+    size_noise: float,
+    drop_prob: float,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    noisy = boxes.clone()
+    prior_mask = mask.bool().clone()
+    if center_noise > 0:
+        center_delta = noisy[..., :2].new_empty(noisy[..., :2].shape).uniform_(-center_noise, center_noise)
+        noisy[..., :2] = noisy[..., :2] + center_delta * prior_mask[..., None].to(dtype=noisy.dtype)
+    if size_noise > 0:
+        size_scale = noisy[..., 2:].new_empty(noisy[..., 2:].shape).uniform_(1.0 - size_noise, 1.0 + size_noise)
+        noisy[..., 2:] = noisy[..., 2:] * torch.where(prior_mask[..., None], size_scale, torch.ones_like(size_scale))
+    if drop_prob > 0:
+        keep = torch.rand(prior_mask.shape, device=prior_mask.device) >= drop_prob
+        prior_mask = prior_mask & keep
+    return noisy.clamp(0.0, 1.0), prior_mask
 
 
 def _bedlam_box_path(image_path: Path, dataset_root: Path, boxes_root: Path, split: str) -> Path:

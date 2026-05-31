@@ -40,6 +40,9 @@ def main() -> None:
         args.eval_nms,
         args.nms_iou_threshold,
         args.use_gt_box_prior,
+        args.gt_box_prior_center_noise,
+        args.gt_box_prior_size_noise,
+        args.gt_box_prior_drop_prob,
     )
     output_path = output_dir / "smpl_box_metrics.json"
     output_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
@@ -60,6 +63,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--eval-nms", action="store_true")
     parser.add_argument("--nms-iou-threshold", type=float, default=0.50)
     parser.add_argument("--use-gt-box-prior", action="store_true", help="Pass dataset GT boxes as oracle SMPL query priors")
+    parser.add_argument("--gt-box-prior-center-noise", type=float, default=0.0, help="Uniform cx/cy noise range for GT box priors, normalized units")
+    parser.add_argument("--gt-box-prior-size-noise", type=float, default=0.0, help="Uniform relative w/h noise range for GT box priors")
+    parser.add_argument("--gt-box-prior-drop-prob", type=float, default=0.0, help="Probability of dropping a valid GT box prior")
     parser.add_argument("--baseline-checkpoint", default="")
     parser.add_argument("--override", action="append", default=[])
     return parser.parse_args()
@@ -115,6 +121,9 @@ def evaluate(
     eval_nms: bool,
     nms_iou_threshold: float,
     use_gt_box_prior: bool,
+    prior_center_noise: float,
+    prior_size_noise: float,
+    prior_drop_prob: float,
 ) -> dict[str, float]:
     conf_thresholds = sorted({float(value) for value in conf_thresholds})
     totals = {
@@ -127,7 +136,7 @@ def evaluate(
     }
     for batch in loader:
         batch = {key: value.to(device, non_blocking=True) for key, value in batch.items()}
-        predictions = _forward_model(model, batch, use_gt_box_prior)
+        predictions = _forward_model(model, batch, use_gt_box_prior, prior_center_noise, prior_size_noise, prior_drop_prob)
         pred_boxes = predictions["pred_boxes"].detach().float().reshape(-1, predictions["pred_boxes"].shape[-2], 4)
         pred_confs = predictions["pred_confs"].detach().float().reshape(-1, predictions["pred_confs"].shape[-2])
         gt_boxes = batch["gt_boxes"].float().reshape(-1, batch["gt_boxes"].shape[-2], 4)
@@ -167,6 +176,9 @@ def evaluate(
         "conf_threshold": float(primary_conf_threshold),
         "iou_threshold": float(iou_threshold),
         "use_gt_box_prior": bool(use_gt_box_prior),
+        "gt_box_prior_center_noise": float(prior_center_noise),
+        "gt_box_prior_size_noise": float(prior_size_noise),
+        "gt_box_prior_drop_prob": float(prior_drop_prob),
     }
     for top_k, value in totals["recall_topk"].items():
         metrics[f"box_recall_iou50_top{top_k}"] = value / num_gt
@@ -183,14 +195,49 @@ def evaluate(
     return metrics
 
 
-def _forward_model(model: torch.nn.Module, batch: dict[str, torch.Tensor], use_gt_box_prior: bool) -> dict[str, torch.Tensor]:
+def _forward_model(
+    model: torch.nn.Module,
+    batch: dict[str, torch.Tensor],
+    use_gt_box_prior: bool,
+    prior_center_noise: float,
+    prior_size_noise: float,
+    prior_drop_prob: float,
+) -> dict[str, torch.Tensor]:
     if not use_gt_box_prior:
         return model(batch["images"])
+    prior_boxes, prior_mask = _make_noisy_gt_box_prior(
+        batch["gt_boxes"],
+        batch["boxes_mask"],
+        prior_center_noise,
+        prior_size_noise,
+        prior_drop_prob,
+    )
     return model(
         batch["images"],
-        smpl_query_boxes=batch["gt_boxes"],
-        smpl_query_boxes_mask=batch["boxes_mask"],
+        smpl_query_boxes=prior_boxes,
+        smpl_query_boxes_mask=prior_mask,
     )
+
+
+def _make_noisy_gt_box_prior(
+    boxes: torch.Tensor,
+    mask: torch.Tensor,
+    center_noise: float,
+    size_noise: float,
+    drop_prob: float,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    noisy = boxes.clone()
+    prior_mask = mask.bool().clone()
+    if center_noise > 0:
+        center_delta = noisy[..., :2].new_empty(noisy[..., :2].shape).uniform_(-center_noise, center_noise)
+        noisy[..., :2] = noisy[..., :2] + center_delta * prior_mask[..., None].to(dtype=noisy.dtype)
+    if size_noise > 0:
+        size_scale = noisy[..., 2:].new_empty(noisy[..., 2:].shape).uniform_(1.0 - size_noise, 1.0 + size_noise)
+        noisy[..., 2:] = noisy[..., 2:] * torch.where(prior_mask[..., None], size_scale, torch.ones_like(size_scale))
+    if drop_prob > 0:
+        keep = torch.rand(prior_mask.shape, device=prior_mask.device) >= drop_prob
+        prior_mask = prior_mask & keep
+    return noisy.clamp(0.0, 1.0), prior_mask
 
 
 def pairwise_iou(boxes1: torch.Tensor, boxes2: torch.Tensor) -> torch.Tensor:
