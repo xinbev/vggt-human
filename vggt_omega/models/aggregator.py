@@ -29,6 +29,8 @@ class Aggregator(nn.Module):
         num_register_tokens: int = 16,
         num_smpl_queries: int = 0,
         smpl_query_box_prior: bool = False,
+        smpl_query_patch_pool: bool = False,
+        smpl_query_patch_pool_expand: float = 0.10,
         register_attention_block_indices: list[int] = [2, 6, 9, 14, 20],
         cached_layer_indices: tuple[int, ...] = (4, 11, 17, 23),
     ) -> None:
@@ -84,6 +86,8 @@ class Aggregator(nn.Module):
         self.patch_size = patch_size
         self.num_smpl_queries = num_smpl_queries
         self.smpl_query_box_prior = smpl_query_box_prior
+        self.smpl_query_patch_pool = smpl_query_patch_pool
+        self.smpl_query_patch_pool_expand = smpl_query_patch_pool_expand
         self.cached_layer_indices = set(cached_layer_indices)
         self.camera_token = nn.Parameter(torch.empty(1, 2, 1, embed_dim))
         self.register_token = nn.Parameter(torch.empty(1, 2, num_register_tokens, embed_dim))
@@ -99,6 +103,15 @@ class Aggregator(nn.Module):
         else:
             self.smpl_box_prior_embed = None
             self.smpl_fallback_boxes = None
+        if smpl_query_patch_pool and num_smpl_queries > 0:
+            self.smpl_patch_pool_embed = nn.Sequential(
+                nn.Linear(embed_dim * 2 + 6, embed_dim),
+                nn.GELU(),
+                nn.LayerNorm(embed_dim),
+                nn.Linear(embed_dim, embed_dim),
+            )
+        else:
+            self.smpl_patch_pool_embed = None
         self.token_layout = AggregatorTokenLayout(
             camera_start=0,
             camera_end=1,
@@ -150,6 +163,11 @@ class Aggregator(nn.Module):
             smpl_query_boxes,
             smpl_query_boxes_mask,
         )
+
+        patch_tokens = self.patch_embed(images)
+        if isinstance(patch_tokens, dict):
+            patch_tokens = patch_tokens["x_norm_patchtokens"]
+
         smpl_query_token = self._add_smpl_box_prior(
             smpl_query_token,
             batch_size,
@@ -157,10 +175,16 @@ class Aggregator(nn.Module):
             smpl_reference_boxes,
             smpl_query_boxes_mask,
         )
-
-        patch_tokens = self.patch_embed(images)
-        if isinstance(patch_tokens, dict):
-            patch_tokens = patch_tokens["x_norm_patchtokens"]
+        smpl_query_token = self._add_smpl_patch_pool_prior(
+            smpl_query_token,
+            patch_tokens,
+            batch_size,
+            num_frames,
+            height,
+            width,
+            smpl_reference_boxes,
+            smpl_query_boxes_mask,
+        )
 
         tokens = torch.cat([camera_token, register_token, smpl_query_token, patch_tokens], dim=1)
         _, num_tokens, embed_dim = tokens.shape
@@ -257,6 +281,88 @@ class Aggregator(nn.Module):
         prior_input = torch.cat([boxes, mask[..., None].to(dtype=boxes.dtype)], dim=-1)
         prior_embed = self.smpl_box_prior_embed(prior_input).reshape(batch_size * num_frames, self.num_smpl_queries, -1)
         return smpl_query_token + prior_embed.to(dtype=smpl_query_token.dtype)
+
+    def _add_smpl_patch_pool_prior(
+        self,
+        smpl_query_token: torch.Tensor,
+        patch_tokens: torch.Tensor,
+        batch_size: int,
+        num_frames: int,
+        height: int,
+        width: int,
+        smpl_reference_boxes: torch.Tensor | None,
+        smpl_query_boxes_mask: torch.Tensor | None,
+    ) -> torch.Tensor:
+        if self.smpl_patch_pool_embed is None or self.num_smpl_queries == 0:
+            return smpl_query_token
+        if smpl_reference_boxes is None:
+            return smpl_query_token
+        boxes = smpl_reference_boxes.to(device=patch_tokens.device, dtype=patch_tokens.dtype).clamp(0.0, 1.0)
+        if smpl_query_boxes_mask is None:
+            prior_mask = torch.zeros(batch_size, num_frames, self.num_smpl_queries, dtype=torch.bool, device=patch_tokens.device)
+        else:
+            prior_mask = smpl_query_boxes_mask.to(device=patch_tokens.device).bool()
+        pooled = self._pool_box_patch_tokens(
+            patch_tokens,
+            boxes.reshape(batch_size * num_frames, self.num_smpl_queries, 4),
+            prior_mask.reshape(batch_size * num_frames, self.num_smpl_queries),
+            height,
+            width,
+        )
+        prior_embed = self.smpl_patch_pool_embed(pooled).to(dtype=smpl_query_token.dtype)
+        return smpl_query_token + prior_embed
+
+    def _pool_box_patch_tokens(
+        self,
+        patch_tokens: torch.Tensor,
+        boxes: torch.Tensor,
+        prior_mask: torch.Tensor,
+        height: int,
+        width: int,
+    ) -> torch.Tensor:
+        patch_grid_size = (height // self.patch_size, width // self.patch_size)
+        if patch_tokens.shape[1] != patch_grid_size[0] * patch_grid_size[1]:
+            raise ValueError(
+                "patch_tokens length does not match image patch grid: "
+                f"got {patch_tokens.shape[1]}, expected {patch_grid_size[0] * patch_grid_size[1]}"
+            )
+        mask = self._patch_box_mask(boxes, prior_mask, patch_grid_size)
+        mask_f = mask.to(dtype=patch_tokens.dtype)
+        selected = mask_f.sum(dim=-1, keepdim=True)
+        has_selected = selected.squeeze(-1) > 0
+        valid = prior_mask & has_selected
+
+        mean_pool = torch.einsum("bqp,bpc->bqc", mask_f, patch_tokens) / selected.clamp(min=1.0)
+        min_value = torch.finfo(patch_tokens.dtype).min
+        max_pool = patch_tokens[:, None].masked_fill(~mask[..., None], min_value).amax(dim=2)
+        zeros = torch.zeros_like(mean_pool)
+        mean_pool = torch.where(valid[..., None], mean_pool, zeros)
+        max_pool = torch.where(valid[..., None], max_pool, zeros)
+
+        area = (boxes[..., 2] * boxes[..., 3]).clamp(0.0, 1.0)
+        meta = torch.cat([boxes, valid[..., None].to(dtype=boxes.dtype), area[..., None]], dim=-1)
+        meta = torch.where(valid[..., None], meta, torch.zeros_like(meta))
+        return torch.cat([mean_pool, max_pool, meta.to(dtype=patch_tokens.dtype)], dim=-1)
+
+    def _patch_box_mask(
+        self,
+        boxes: torch.Tensor,
+        prior_mask: torch.Tensor,
+        patch_grid_size: tuple[int, int],
+    ) -> torch.Tensor:
+        grid_h, grid_w = patch_grid_size
+        ys = (torch.arange(grid_h, device=boxes.device, dtype=boxes.dtype) + 0.5) / float(grid_h)
+        xs = (torch.arange(grid_w, device=boxes.device, dtype=boxes.dtype) + 0.5) / float(grid_w)
+        yy, xx = torch.meshgrid(ys, xs, indexing="ij")
+        centers = torch.stack([xx.reshape(-1), yy.reshape(-1)], dim=-1)
+
+        cxcy = boxes[..., :2]
+        wh = (boxes[..., 2:] * (1.0 + float(self.smpl_query_patch_pool_expand))).clamp(0.0, 1.0)
+        top_left = cxcy - 0.5 * wh
+        bottom_right = cxcy + 0.5 * wh
+        inside = (centers[:, 0] >= top_left[..., 0, None]) & (centers[:, 0] <= bottom_right[..., 0, None])
+        inside = inside & (centers[:, 1] >= top_left[..., 1, None]) & (centers[:, 1] <= bottom_right[..., 1, None])
+        return inside & prior_mask[..., None]
 
     def _run_frame_block(
         self,

@@ -159,6 +159,8 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         smpl_id_embed_dim=int(model_cfg.get("id_embed_dim", 256)),
         smpl_return_aux=bool(model_cfg.get("smpl_return_aux", False)),
         smpl_query_box_prior=bool(model_cfg.get("smpl_query_box_prior", False)),
+        smpl_query_patch_pool=bool(model_cfg.get("smpl_query_patch_pool", False)),
+        smpl_query_patch_pool_expand=float(model_cfg.get("smpl_query_patch_pool_expand", 0.10)),
         freeze_aggregator_forward=bool(model_cfg.get("freeze_aggregator_forward", False)),
     )
 
@@ -206,6 +208,14 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
         param.requires_grad = False
     if bool(model_cfg.get("train_smpl_query_token", False)) and hasattr(aggregator, "smpl_query_token"):
         aggregator.smpl_query_token.requires_grad = True
+    if bool(model_cfg.get("train_smpl_box_prior_embed", False)) and getattr(aggregator, "smpl_box_prior_embed", None) is not None:
+        aggregator.smpl_box_prior_embed.train()
+        for param in aggregator.smpl_box_prior_embed.parameters():
+            param.requires_grad = True
+    if bool(model_cfg.get("train_smpl_patch_pool_embed", False)) and getattr(aggregator, "smpl_patch_pool_embed", None) is not None:
+        aggregator.smpl_patch_pool_embed.train()
+        for param in aggregator.smpl_patch_pool_embed.parameters():
+            param.requires_grad = True
 
 
 def load_initial_checkpoint(model: torch.nn.Module, config: dict[str, Any], device: torch.device) -> None:

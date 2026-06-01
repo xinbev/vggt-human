@@ -91,6 +91,9 @@ def main() -> None:
         add_projected_smpl_joints(results, predictions, config, args, orig_image.size, input_size, device)
     if args.draw_gt_smpl_joints:
         add_projected_gt_smpl_joints(results, image_path, predictions, config, args, orig_image.size, input_size, device)
+    ply_files = []
+    if args.export_ply:
+        ply_files = export_prediction_gt_ply(results, image_path, predictions, config, args, output_dir, device)
 
     out_image = output_dir / f"{image_path.stem}_smpl_predictions.jpg"
     out_json = output_dir / f"{image_path.stem}_smpl_predictions.json"
@@ -104,6 +107,7 @@ def main() -> None:
                 "gt_box_prior_center_noise": float(args.gt_box_prior_center_noise),
                 "gt_box_prior_size_noise": float(args.gt_box_prior_size_noise),
                 "gt_box_prior_drop_prob": float(args.gt_box_prior_drop_prob),
+                "ply_files": ply_files,
                 "predictions": results,
             },
             indent=2,
@@ -132,6 +136,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gt-box-prior-drop-prob", type=float, default=0.0, help="Probability of dropping a valid GT box prior")
     parser.add_argument("--smpl-model-dir", default="", help="Override assets.smpl_model_dir")
     parser.add_argument("--baseline-checkpoint", default="", help="Override checkpoints.vggt_baseline for loading VGGT camera head")
+    parser.add_argument("--export-ply", action="store_true", help="Export selected predicted and GT SMPL 3D point clouds")
+    parser.add_argument("--ply-top-k", type=int, default=3, help="Maximum ranked predictions to export as PLY")
+    parser.add_argument("--ply-use-vertices", action="store_true", help="Also export SMPL mesh PLY files; joints are always exported")
     parser.add_argument("--override", action="append", default=[], help="Override config values with dotted.key=value")
     return parser.parse_args()
 
@@ -303,23 +310,13 @@ def add_projected_smpl_joints(
 ) -> None:
     if not results:
         return
-    smpl_model_dir = args.smpl_model_dir or str(config.get("assets", {}).get("smpl_model_dir", ""))
-    if not smpl_model_dir:
-        raise ValueError("SMPL model dir is required. Set assets.smpl_model_dir or pass --smpl-model-dir")
     for key in ("pose_enc", "pred_poses", "pred_betas", "pred_transl_cam"):
         if key not in predictions:
             raise ValueError(f"SMPL projection requires model output {key}")
 
-    query_indices = [int(item["query_index"]) for item in results]
-    index_tensor = torch.as_tensor(query_indices, dtype=torch.long, device=device)
-    poses = predictions["pred_poses"][0, 0, index_tensor].detach()
-    betas = predictions["pred_betas"][0, 0, index_tensor].detach()
-    transl_cam = predictions["pred_transl_cam"][0, 0, index_tensor].detach()
-
-    smpl = SMPLLayer(smpl_model_dir).to(device).eval()
-    with torch.no_grad():
-        _, joints = smpl(poses.reshape(-1, 72), betas)
-    joints_cam = joints + transl_cam[:, None, :]
+    smpl_model_dir = require_smpl_model_dir(config, args)
+    pred_points = decode_pred_smpl_points(results, predictions, smpl_model_dir, device)
+    joints_cam = pred_points["joints"]
     extrinsics, intrinsics = encoding_to_camera(predictions["pose_enc"], image_size_hw=(input_size, input_size), build_intrinsics=True)
     intrinsics_0 = intrinsics[0, 0].to(device=device, dtype=joints_cam.dtype)
     joints_2d_input = project_points(joints_cam, intrinsics_0)
@@ -354,17 +351,14 @@ def add_projected_gt_smpl_joints(
 ) -> None:
     if not results:
         return
-    smpl_model_dir = args.smpl_model_dir or str(config.get("assets", {}).get("smpl_model_dir", ""))
-    if not smpl_model_dir:
-        raise ValueError("SMPL model dir is required. Set assets.smpl_model_dir or pass --smpl-model-dir")
-    gt = load_gt_smpl_for_image(image_path, config, args, device)
-    if gt["poses_6d"].numel() == 0:
+    smpl_model_dir = require_smpl_model_dir(config, args)
+    try:
+        gt_points = decode_gt_smpl_points(image_path, config, args, smpl_model_dir, device)
+    except (FileNotFoundError, ValueError):
+        gt_points = None
+    if gt_points is None:
         return
-    smpl = SMPLLayer(smpl_model_dir).to(device).eval()
-    poses = rot6d_to_axis_angle(gt["poses_6d"]).reshape(-1, 72)
-    with torch.no_grad():
-        _, joints = smpl(poses, gt["betas"])
-    joints_cam = joints + gt["transl_cam"][:, None, :]
+    joints_cam = gt_points["joints"]
     extrinsics, intrinsics = encoding_to_camera(predictions["pose_enc"], image_size_hw=(input_size, input_size), build_intrinsics=True)
     intrinsics_0 = intrinsics[0, 0].to(device=device, dtype=joints_cam.dtype)
     joints_2d_input = project_points(joints_cam, intrinsics_0)
@@ -385,6 +379,195 @@ def add_projected_gt_smpl_joints(
             continue
         item["gt_projected_joints_2d"] = joints_2d[query_idx].detach().cpu().tolist()
         item["gt_projected_joints_mask"] = in_image[query_idx].detach().cpu().tolist()
+
+
+def require_smpl_model_dir(config: dict[str, Any], args: argparse.Namespace) -> str:
+    smpl_model_dir = args.smpl_model_dir or str(config.get("assets", {}).get("smpl_model_dir", ""))
+    if not smpl_model_dir:
+        raise ValueError("SMPL model dir is required. Set assets.smpl_model_dir or pass --smpl-model-dir")
+    return smpl_model_dir
+
+
+def decode_pred_smpl_points(
+    results: list[dict[str, Any]],
+    predictions: dict[str, torch.Tensor],
+    smpl_model_dir: str,
+    device: torch.device,
+) -> dict[str, torch.Tensor]:
+    query_indices = [int(item["query_index"]) for item in results]
+    if not query_indices:
+        empty = torch.empty(0, 0, 3, device=device)
+        return {"vertices": empty, "joints": empty, "query_indices": torch.empty(0, dtype=torch.long, device=device)}
+    index_tensor = torch.as_tensor(query_indices, dtype=torch.long, device=device)
+    poses = predictions["pred_poses"][0, 0, index_tensor].detach()
+    betas = predictions["pred_betas"][0, 0, index_tensor].detach()
+    transl_cam = predictions["pred_transl_cam"][0, 0, index_tensor].detach()
+
+    smpl = SMPLLayer(smpl_model_dir).to(device).eval()
+    with torch.no_grad():
+        vertices, joints = smpl(poses.reshape(-1, 72), betas)
+    return {
+        "vertices": vertices + transl_cam[:, None, :],
+        "joints": joints + transl_cam[:, None, :],
+        "faces": torch.as_tensor(smpl.faces, dtype=torch.long, device=device),
+        "query_indices": index_tensor,
+    }
+
+
+def decode_gt_smpl_points(
+    image_path: Path,
+    config: dict[str, Any],
+    args: argparse.Namespace,
+    smpl_model_dir: str,
+    device: torch.device,
+) -> dict[str, torch.Tensor] | None:
+    gt = load_gt_smpl_for_image(image_path, config, args, device)
+    if gt["poses_6d"].numel() == 0:
+        return None
+    smpl = SMPLLayer(smpl_model_dir).to(device).eval()
+    poses = rot6d_to_axis_angle(gt["poses_6d"]).reshape(-1, 72)
+    with torch.no_grad():
+        vertices, joints = smpl(poses, gt["betas"])
+    return {
+        "vertices": vertices + gt["transl_cam"][:, None, :],
+        "joints": joints + gt["transl_cam"][:, None, :],
+        "faces": torch.as_tensor(smpl.faces, dtype=torch.long, device=device),
+    }
+
+
+def export_prediction_gt_ply(
+    results: list[dict[str, Any]],
+    image_path: Path,
+    predictions: dict[str, torch.Tensor],
+    config: dict[str, Any],
+    args: argparse.Namespace,
+    output_dir: Path,
+    device: torch.device,
+) -> list[str]:
+    selected = results[: max(int(args.ply_top_k), 0)]
+    if not selected:
+        return []
+    for key in ("pred_poses", "pred_betas", "pred_transl_cam"):
+        if key not in predictions:
+            raise ValueError(f"PLY export requires model output {key}")
+
+    smpl_model_dir = require_smpl_model_dir(config, args)
+    pred_points = decode_pred_smpl_points(selected, predictions, smpl_model_dir, device)
+    try:
+        gt_points = decode_gt_smpl_points(image_path, config, args, smpl_model_dir, device)
+    except (FileNotFoundError, ValueError):
+        gt_points = None
+    written: list[str] = []
+    pred_color = (255, 64, 64)
+    gt_color = (64, 255, 128)
+
+    for local_idx, item in enumerate(selected):
+        rank = int(item["rank"])
+        query_idx = int(item["query_index"])
+        prefix = output_dir / f"{image_path.stem}_rank{rank:02d}_q{query_idx}"
+
+        pred_joints = pred_points["joints"][local_idx].detach().cpu().numpy()
+        pred_joints_path = prefix.with_name(f"{prefix.name}_pred_joints.ply")
+        write_ply_points(pred_joints_path, pred_joints, pred_color)
+        written.append(str(pred_joints_path))
+
+        if gt_points is not None and query_idx < gt_points["joints"].shape[0]:
+            gt_joints = gt_points["joints"][query_idx].detach().cpu().numpy()
+            gt_joints_path = prefix.with_name(f"{prefix.name}_gt_joints.ply")
+            write_ply_points(gt_joints_path, gt_joints, gt_color)
+            written.append(str(gt_joints_path))
+
+            combined_path = prefix.with_name(f"{prefix.name}_pred_gt_joints.ply")
+            combined_points = np.concatenate([pred_joints, gt_joints], axis=0)
+            combined_colors = np.concatenate(
+                [
+                    np.tile(np.asarray(pred_color, dtype=np.uint8), (pred_joints.shape[0], 1)),
+                    np.tile(np.asarray(gt_color, dtype=np.uint8), (gt_joints.shape[0], 1)),
+                ],
+                axis=0,
+            )
+            write_ply_points(combined_path, combined_points, combined_colors)
+            written.append(str(combined_path))
+
+        if bool(args.ply_use_vertices):
+            pred_vertices = pred_points["vertices"][local_idx].detach().cpu().numpy()
+            pred_faces = pred_points["faces"].detach().cpu().numpy()
+            pred_vertices_path = prefix.with_name(f"{prefix.name}_pred_mesh.ply")
+            write_ply_mesh(pred_vertices_path, pred_vertices, pred_faces, pred_color)
+            written.append(str(pred_vertices_path))
+            if gt_points is not None and query_idx < gt_points["vertices"].shape[0]:
+                gt_vertices = gt_points["vertices"][query_idx].detach().cpu().numpy()
+                gt_faces = gt_points["faces"].detach().cpu().numpy()
+                gt_vertices_path = prefix.with_name(f"{prefix.name}_gt_mesh.ply")
+                write_ply_mesh(gt_vertices_path, gt_vertices, gt_faces, gt_color)
+                written.append(str(gt_vertices_path))
+
+    return written
+
+
+def write_ply_points(path: Path, points: np.ndarray, colors: np.ndarray | tuple[int, int, int]) -> None:
+    points = np.asarray(points, dtype=np.float32).reshape(-1, 3)
+    finite = np.isfinite(points).all(axis=1)
+    points = points[finite]
+    if isinstance(colors, tuple):
+        color_arr = np.tile(np.asarray(colors, dtype=np.uint8).reshape(1, 3), (points.shape[0], 1))
+    else:
+        color_arr = np.asarray(colors, dtype=np.uint8).reshape(-1, 3)[finite]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as file:
+        file.write("ply\n")
+        file.write("format ascii 1.0\n")
+        file.write(f"element vertex {points.shape[0]}\n")
+        file.write("property float x\n")
+        file.write("property float y\n")
+        file.write("property float z\n")
+        file.write("property uchar red\n")
+        file.write("property uchar green\n")
+        file.write("property uchar blue\n")
+        file.write("end_header\n")
+        for point, color in zip(points, color_arr, strict=True):
+            file.write(
+                f"{float(point[0]):.7f} {float(point[1]):.7f} {float(point[2]):.7f} "
+                f"{int(color[0])} {int(color[1])} {int(color[2])}\n"
+            )
+
+
+def write_ply_mesh(path: Path, vertices: np.ndarray, faces: np.ndarray, colors: np.ndarray | tuple[int, int, int]) -> None:
+    vertices = np.asarray(vertices, dtype=np.float32).reshape(-1, 3)
+    faces = np.asarray(faces, dtype=np.int64).reshape(-1, 3)
+    finite = np.isfinite(vertices).all(axis=1)
+    if not finite.all():
+        index_map = -np.ones(vertices.shape[0], dtype=np.int64)
+        index_map[finite] = np.arange(int(finite.sum()), dtype=np.int64)
+        valid_faces = finite[faces].all(axis=1)
+        faces = index_map[faces[valid_faces]]
+        vertices = vertices[finite]
+    if isinstance(colors, tuple):
+        color_arr = np.tile(np.asarray(colors, dtype=np.uint8).reshape(1, 3), (vertices.shape[0], 1))
+    else:
+        color_arr = np.asarray(colors, dtype=np.uint8).reshape(-1, 3)
+        color_arr = color_arr[finite] if color_arr.shape[0] == finite.shape[0] else color_arr
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as file:
+        file.write("ply\n")
+        file.write("format ascii 1.0\n")
+        file.write(f"element vertex {vertices.shape[0]}\n")
+        file.write("property float x\n")
+        file.write("property float y\n")
+        file.write("property float z\n")
+        file.write("property uchar red\n")
+        file.write("property uchar green\n")
+        file.write("property uchar blue\n")
+        file.write(f"element face {faces.shape[0]}\n")
+        file.write("property list uchar int vertex_indices\n")
+        file.write("end_header\n")
+        for vertex, color in zip(vertices, color_arr, strict=True):
+            file.write(
+                f"{float(vertex[0]):.7f} {float(vertex[1]):.7f} {float(vertex[2]):.7f} "
+                f"{int(color[0])} {int(color[1])} {int(color[2])}\n"
+            )
+        for face in faces:
+            file.write(f"3 {int(face[0])} {int(face[1])} {int(face[2])}\n")
 
 
 def load_gt_smpl_for_image(

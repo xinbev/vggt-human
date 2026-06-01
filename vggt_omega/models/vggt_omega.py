@@ -33,6 +33,8 @@ class VGGTOmega(nn.Module):
         smpl_id_embed_dim: int = 256,
         smpl_return_aux: bool = False,
         smpl_query_box_prior: bool = False,
+        smpl_query_patch_pool: bool = False,
+        smpl_query_patch_pool_expand: float = 0.10,
         freeze_aggregator_forward: bool = False,
     ) -> None:
         super().__init__()
@@ -44,6 +46,8 @@ class VGGTOmega(nn.Module):
             embed_dim=embed_dim,
             num_smpl_queries=num_smpl_queries if enable_smpl else 0,
             smpl_query_box_prior=smpl_query_box_prior if enable_smpl else False,
+            smpl_query_patch_pool=smpl_query_patch_pool if enable_smpl else False,
+            smpl_query_patch_pool_expand=smpl_query_patch_pool_expand,
         )
         self.freeze_aggregator_forward = freeze_aggregator_forward
         _warn_if_rope_not_max(self.aggregator)
