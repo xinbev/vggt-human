@@ -104,8 +104,8 @@ for IMAGE_PATH in "${VIS_IMAGES[@]}"; do
     --draw-smpl-joints \
     --draw-gt-smpl-joints \
     --export-ply \
+    --export-scene-ply \
     --ply-top-k "${PLY_TOP_K}" \
-    --ply-use-vertices \
     --baseline-checkpoint "${VGGT_CKPT}" \
     --smpl-model-dir "${SMPL_MODEL_DIR}" \
     --override "datasets.bedlam_root=${BEDLAM_ROOT}" \
@@ -126,8 +126,8 @@ for IMAGE_PATH in "${VIS_IMAGES[@]}"; do
     --draw-smpl-joints \
     --draw-gt-smpl-joints \
     --export-ply \
+    --export-scene-ply \
     --ply-top-k "${PLY_TOP_K}" \
-    --ply-use-vertices \
     --baseline-checkpoint "${VGGT_CKPT}" \
     --smpl-model-dir "${SMPL_MODEL_DIR}" \
     --override "datasets.bedlam_root=${BEDLAM_ROOT}" \

@@ -63,6 +63,8 @@ def main() -> None:
 
     config = load_config(args)
     config["model"]["enable_camera"] = True
+    if args.export_scene_ply:
+        config["model"]["enable_depth"] = True
     model = build_model(config).to(device)
     load_vggt_baseline_for_camera(model, config, device)
     load_training_checkpoint(model, Path(args.checkpoint).expanduser(), device)
@@ -94,6 +96,8 @@ def main() -> None:
     ply_files = []
     if args.export_ply:
         ply_files = export_prediction_gt_ply(results, image_path, predictions, config, args, output_dir, device)
+    if args.export_scene_ply:
+        ply_files.extend(export_scene_ply(results, image_tensor, image_path, predictions, config, args, output_dir, input_size, device))
 
     out_image = output_dir / f"{image_path.stem}_smpl_predictions.jpg"
     out_json = output_dir / f"{image_path.stem}_smpl_predictions.json"
@@ -136,9 +140,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gt-box-prior-drop-prob", type=float, default=0.0, help="Probability of dropping a valid GT box prior")
     parser.add_argument("--smpl-model-dir", default="", help="Override assets.smpl_model_dir")
     parser.add_argument("--baseline-checkpoint", default="", help="Override checkpoints.vggt_baseline for loading VGGT camera head")
-    parser.add_argument("--export-ply", action="store_true", help="Export selected predicted and GT SMPL 3D point clouds")
-    parser.add_argument("--ply-top-k", type=int, default=3, help="Maximum ranked predictions to export as PLY")
-    parser.add_argument("--ply-use-vertices", action="store_true", help="Also export SMPL mesh PLY files; joints are always exported")
+    parser.add_argument("--export-ply", action="store_true", help="Export one multi-person SMPL mesh PLY per image")
+    parser.add_argument("--export-scene-ply", action="store_true", help="Export VGGT dense environment point cloud with predicted SMPL meshes")
+    parser.add_argument("--ply-top-k", type=int, default=3, help="Maximum ranked predictions to include in mesh PLY exports")
+    parser.add_argument("--ply-use-vertices", action="store_true", help="Deprecated; mesh export is always enabled when --export-ply is set")
     parser.add_argument("--override", action="append", default=[], help="Override config values with dotted.key=value")
     return parser.parse_args()
 
@@ -458,51 +463,73 @@ def export_prediction_gt_ply(
     except (FileNotFoundError, ValueError):
         gt_points = None
     written: list[str] = []
-    pred_color = (255, 64, 64)
-    gt_color = (64, 255, 128)
 
-    for local_idx, item in enumerate(selected):
-        rank = int(item["rank"])
-        query_idx = int(item["query_index"])
-        prefix = output_dir / f"{image_path.stem}_rank{rank:02d}_q{query_idx}"
+    pred_meshes = [pred_points["vertices"][idx].detach().cpu().numpy() for idx in range(len(selected))]
+    pred_faces = pred_points["faces"].detach().cpu().numpy()
+    pred_colors = [COLORS[idx % len(COLORS)] for idx in range(len(pred_meshes))]
+    pred_path = output_dir / f"{image_path.stem}_pred_mesh_top{len(pred_meshes):02d}.ply"
+    write_ply_meshes(pred_path, pred_meshes, pred_faces, pred_colors)
+    written.append(str(pred_path))
 
-        pred_joints = pred_points["joints"][local_idx].detach().cpu().numpy()
-        pred_joints_path = prefix.with_name(f"{prefix.name}_pred_joints.ply")
-        write_ply_points(pred_joints_path, pred_joints, pred_color)
-        written.append(str(pred_joints_path))
+    if gt_points is not None:
+        gt_meshes = []
+        gt_colors = []
+        for idx, item in enumerate(selected):
+            query_idx = int(item["query_index"])
+            if query_idx >= gt_points["vertices"].shape[0]:
+                continue
+            gt_meshes.append(gt_points["vertices"][query_idx].detach().cpu().numpy())
+            gt_colors.append(COLORS[idx % len(COLORS)])
+        if gt_meshes:
+            gt_faces = gt_points["faces"].detach().cpu().numpy()
+            gt_path = output_dir / f"{image_path.stem}_gt_mesh_top{len(gt_meshes):02d}.ply"
+            write_ply_meshes(gt_path, gt_meshes, gt_faces, gt_colors)
+            written.append(str(gt_path))
 
-        if gt_points is not None and query_idx < gt_points["joints"].shape[0]:
-            gt_joints = gt_points["joints"][query_idx].detach().cpu().numpy()
-            gt_joints_path = prefix.with_name(f"{prefix.name}_gt_joints.ply")
-            write_ply_points(gt_joints_path, gt_joints, gt_color)
-            written.append(str(gt_joints_path))
-
-            combined_path = prefix.with_name(f"{prefix.name}_pred_gt_joints.ply")
-            combined_points = np.concatenate([pred_joints, gt_joints], axis=0)
-            combined_colors = np.concatenate(
-                [
-                    np.tile(np.asarray(pred_color, dtype=np.uint8), (pred_joints.shape[0], 1)),
-                    np.tile(np.asarray(gt_color, dtype=np.uint8), (gt_joints.shape[0], 1)),
-                ],
-                axis=0,
+            combined_path = output_dir / f"{image_path.stem}_pred_gt_mesh_top{len(pred_meshes):02d}.ply"
+            write_ply_meshes(
+                combined_path,
+                pred_meshes + gt_meshes,
+                pred_faces,
+                [(255, 64, 64)] * len(pred_meshes) + [(64, 255, 128)] * len(gt_meshes),
             )
-            write_ply_points(combined_path, combined_points, combined_colors)
             written.append(str(combined_path))
 
-        if bool(args.ply_use_vertices):
-            pred_vertices = pred_points["vertices"][local_idx].detach().cpu().numpy()
-            pred_faces = pred_points["faces"].detach().cpu().numpy()
-            pred_vertices_path = prefix.with_name(f"{prefix.name}_pred_mesh.ply")
-            write_ply_mesh(pred_vertices_path, pred_vertices, pred_faces, pred_color)
-            written.append(str(pred_vertices_path))
-            if gt_points is not None and query_idx < gt_points["vertices"].shape[0]:
-                gt_vertices = gt_points["vertices"][query_idx].detach().cpu().numpy()
-                gt_faces = gt_points["faces"].detach().cpu().numpy()
-                gt_vertices_path = prefix.with_name(f"{prefix.name}_gt_mesh.ply")
-                write_ply_mesh(gt_vertices_path, gt_vertices, gt_faces, gt_color)
-                written.append(str(gt_vertices_path))
-
     return written
+
+
+def export_scene_ply(
+    results: list[dict[str, Any]],
+    image_tensor: torch.Tensor,
+    image_path: Path,
+    predictions: dict[str, torch.Tensor],
+    config: dict[str, Any],
+    args: argparse.Namespace,
+    output_dir: Path,
+    input_size: int,
+    device: torch.device,
+) -> list[str]:
+    selected = results[: max(int(args.ply_top_k), 0)]
+    if not selected:
+        return []
+    for key in ("depth", "pose_enc", "pred_poses", "pred_betas", "pred_transl_cam"):
+        if key not in predictions:
+            raise ValueError(f"Scene PLY export requires model output {key}")
+
+    smpl_model_dir = require_smpl_model_dir(config, args)
+    pred_points = decode_pred_smpl_points(selected, predictions, smpl_model_dir, device)
+    env_points, env_colors = dense_depth_to_camera_points(
+        predictions["depth"][0, 0].detach(),
+        predictions["pose_enc"],
+        image_tensor[0, 0].detach(),
+        input_size,
+    )
+    meshes = [pred_points["vertices"][idx].detach().cpu().numpy() for idx in range(len(selected))]
+    mesh_colors = [COLORS[idx % len(COLORS)] for idx in range(len(meshes))]
+    faces = pred_points["faces"].detach().cpu().numpy()
+    path = output_dir / f"{image_path.stem}_scene_vggt_points_smpl_mesh.ply"
+    write_ply_scene(path, env_points, env_colors, meshes, faces, mesh_colors)
+    return [str(path)]
 
 
 def write_ply_points(path: Path, points: np.ndarray, colors: np.ndarray | tuple[int, int, int]) -> None:
@@ -530,6 +557,134 @@ def write_ply_points(path: Path, points: np.ndarray, colors: np.ndarray | tuple[
                 f"{float(point[0]):.7f} {float(point[1]):.7f} {float(point[2]):.7f} "
                 f"{int(color[0])} {int(color[1])} {int(color[2])}\n"
             )
+
+
+def dense_depth_to_camera_points(
+    depth: torch.Tensor,
+    pose_enc: torch.Tensor,
+    image_tensor: torch.Tensor,
+    input_size: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    if depth.ndim == 3 and depth.shape[-1] == 1:
+        depth = depth[..., 0]
+    if depth.ndim != 2:
+        raise ValueError(f"Expected depth shape (H, W) or (H, W, 1), got {tuple(depth.shape)}")
+    _, intrinsics = encoding_to_camera(pose_enc, image_size_hw=(input_size, input_size), build_intrinsics=True)
+    intrinsics_0 = intrinsics[0, 0].to(device=depth.device, dtype=depth.dtype)
+    height, width = depth.shape
+    ys, xs = torch.meshgrid(
+        torch.arange(height, device=depth.device, dtype=depth.dtype),
+        torch.arange(width, device=depth.device, dtype=depth.dtype),
+        indexing="ij",
+    )
+    z = depth.clamp(min=1e-6)
+    x = (xs - intrinsics_0[0, 2]) / intrinsics_0[0, 0] * z
+    y = (ys - intrinsics_0[1, 2]) / intrinsics_0[1, 1] * z
+    points = torch.stack([x, y, z], dim=-1)
+    colors = (image_tensor.permute(1, 2, 0).clamp(0.0, 1.0) * 255.0).to(dtype=torch.uint8)
+    mask = torch.isfinite(points).all(dim=-1) & (z > 1e-6)
+    return points[mask].detach().cpu().numpy(), colors[mask].detach().cpu().numpy()
+
+
+def write_ply_meshes(
+    path: Path,
+    meshes: list[np.ndarray],
+    faces: np.ndarray,
+    colors: list[tuple[int, int, int]],
+) -> None:
+    vertices_parts = []
+    colors_parts = []
+    faces_parts = []
+    face_template = np.asarray(faces, dtype=np.int64).reshape(-1, 3)
+    offset = 0
+    for mesh_idx, vertices in enumerate(meshes):
+        clean_vertices, clean_faces, clean_colors = prepare_mesh_arrays(
+            vertices,
+            face_template,
+            colors[mesh_idx % len(colors)],
+        )
+        vertices_parts.append(clean_vertices)
+        colors_parts.append(clean_colors)
+        faces_parts.append(clean_faces + offset)
+        offset += clean_vertices.shape[0]
+    vertices_all = np.concatenate(vertices_parts, axis=0) if vertices_parts else np.empty((0, 3), dtype=np.float32)
+    colors_all = np.concatenate(colors_parts, axis=0) if colors_parts else np.empty((0, 3), dtype=np.uint8)
+    faces_all = np.concatenate(faces_parts, axis=0) if faces_parts else np.empty((0, 3), dtype=np.int64)
+    write_ply_vertices_faces(path, vertices_all, colors_all, faces_all)
+
+
+def write_ply_scene(
+    path: Path,
+    env_points: np.ndarray,
+    env_colors: np.ndarray,
+    meshes: list[np.ndarray],
+    faces: np.ndarray,
+    mesh_colors: list[tuple[int, int, int]],
+) -> None:
+    vertices_parts = [np.asarray(env_points, dtype=np.float32).reshape(-1, 3)]
+    colors_parts = [np.asarray(env_colors, dtype=np.uint8).reshape(-1, 3)]
+    faces_parts = []
+    face_template = np.asarray(faces, dtype=np.int64).reshape(-1, 3)
+    offset = vertices_parts[0].shape[0]
+    for mesh_idx, mesh in enumerate(meshes):
+        clean_vertices, clean_faces, clean_colors = prepare_mesh_arrays(
+            mesh,
+            face_template,
+            mesh_colors[mesh_idx % len(mesh_colors)],
+        )
+        vertices_parts.append(clean_vertices)
+        colors_parts.append(clean_colors)
+        faces_parts.append(clean_faces + offset)
+        offset += clean_vertices.shape[0]
+    vertices_all = np.concatenate(vertices_parts, axis=0)
+    colors_all = np.concatenate(colors_parts, axis=0)
+    faces_all = np.concatenate(faces_parts, axis=0) if faces_parts else np.empty((0, 3), dtype=np.int64)
+    write_ply_vertices_faces(path, vertices_all, colors_all, faces_all)
+
+
+def prepare_mesh_arrays(
+    vertices: np.ndarray,
+    faces: np.ndarray,
+    color: tuple[int, int, int],
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    vertices = np.asarray(vertices, dtype=np.float32).reshape(-1, 3)
+    faces = np.asarray(faces, dtype=np.int64).reshape(-1, 3)
+    finite = np.isfinite(vertices).all(axis=1)
+    if not finite.all():
+        index_map = -np.ones(vertices.shape[0], dtype=np.int64)
+        index_map[finite] = np.arange(int(finite.sum()), dtype=np.int64)
+        valid_faces = finite[faces].all(axis=1)
+        faces = index_map[faces[valid_faces]]
+        vertices = vertices[finite]
+    color_arr = np.tile(np.asarray(color, dtype=np.uint8).reshape(1, 3), (vertices.shape[0], 1))
+    return vertices, faces, color_arr
+
+
+def write_ply_vertices_faces(path: Path, vertices: np.ndarray, colors: np.ndarray, faces: np.ndarray) -> None:
+    vertices = np.asarray(vertices, dtype=np.float32).reshape(-1, 3)
+    colors = np.asarray(colors, dtype=np.uint8).reshape(-1, 3)
+    faces = np.asarray(faces, dtype=np.int64).reshape(-1, 3)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as file:
+        file.write("ply\n")
+        file.write("format ascii 1.0\n")
+        file.write(f"element vertex {vertices.shape[0]}\n")
+        file.write("property float x\n")
+        file.write("property float y\n")
+        file.write("property float z\n")
+        file.write("property uchar red\n")
+        file.write("property uchar green\n")
+        file.write("property uchar blue\n")
+        file.write(f"element face {faces.shape[0]}\n")
+        file.write("property list uchar int vertex_indices\n")
+        file.write("end_header\n")
+        for vertex, color in zip(vertices, colors, strict=True):
+            file.write(
+                f"{float(vertex[0]):.7f} {float(vertex[1]):.7f} {float(vertex[2]):.7f} "
+                f"{int(color[0])} {int(color[1])} {int(color[2])}\n"
+            )
+        for face in faces:
+            file.write(f"3 {int(face[0])} {int(face[1])} {int(face[2])}\n")
 
 
 def write_ply_mesh(path: Path, vertices: np.ndarray, faces: np.ndarray, colors: np.ndarray | tuple[int, int, int]) -> None:
