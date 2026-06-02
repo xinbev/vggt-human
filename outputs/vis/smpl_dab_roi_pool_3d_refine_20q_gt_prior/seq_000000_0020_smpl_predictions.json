@@ -9,6 +9,7 @@
     "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_pred_mesh_top03.ply",
     "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_gt_mesh_top03.ply",
     "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_pred_gt_mesh_top03.ply",
+    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_vggt_depth_mesh.ply",
     "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_scene_vggt_points_smpl_mesh.ply"
   ],
   "predictions": [
