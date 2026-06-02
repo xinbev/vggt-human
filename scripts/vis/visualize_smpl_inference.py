@@ -519,7 +519,7 @@ def export_scene_ply(
 
     smpl_model_dir = require_smpl_model_dir(config, args)
     pred_points = decode_pred_smpl_points(selected, predictions, smpl_model_dir, device)
-    env_points, env_colors = dense_depth_to_camera_points(
+    env_vertices, env_colors, env_faces = dense_depth_to_camera_mesh(
         predictions["depth"][0, 0].detach(),
         predictions["pose_enc"],
         image_tensor[0, 0].detach(),
@@ -528,9 +528,11 @@ def export_scene_ply(
     meshes = [pred_points["vertices"][idx].detach().cpu().numpy() for idx in range(len(selected))]
     mesh_colors = [COLORS[idx % len(COLORS)] for idx in range(len(meshes))]
     faces = pred_points["faces"].detach().cpu().numpy()
+    env_path = output_dir / f"{image_path.stem}_vggt_depth_mesh.ply"
+    write_ply_vertices_faces(env_path, env_vertices, env_colors, env_faces)
     path = output_dir / f"{image_path.stem}_scene_vggt_points_smpl_mesh.ply"
-    write_ply_scene(path, env_points, env_colors, meshes, faces, mesh_colors)
-    return [str(path)]
+    write_ply_scene(path, env_vertices, env_colors, env_faces, meshes, faces, mesh_colors)
+    return [str(env_path), str(path)]
 
 
 def write_ply_points(path: Path, points: np.ndarray, colors: np.ndarray | tuple[int, int, int]) -> None:
@@ -560,12 +562,12 @@ def write_ply_points(path: Path, points: np.ndarray, colors: np.ndarray | tuple[
             )
 
 
-def dense_depth_to_camera_points(
+def dense_depth_to_camera_mesh(
     depth: torch.Tensor,
     pose_enc: torch.Tensor,
     image_tensor: torch.Tensor,
     input_size: int,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     if depth.ndim == 3 and depth.shape[-1] == 1:
         depth = depth[..., 0]
     if depth.ndim != 2:
@@ -592,7 +594,51 @@ def dense_depth_to_camera_points(
         )[0]
     colors = (image_tensor.permute(1, 2, 0).clamp(0.0, 1.0) * 255.0).to(dtype=torch.uint8)
     mask = torch.isfinite(points).all(dim=-1) & (z > 1e-6)
-    return points[mask].detach().cpu().numpy(), colors[mask].detach().cpu().numpy()
+    points_np = points.detach().cpu().numpy()
+    colors_np = colors.detach().cpu().numpy()
+    depth_np = z.detach().cpu().numpy()
+    mask_np = mask.detach().cpu().numpy()
+    return depth_grid_to_surface_mesh(points_np, colors_np, depth_np, mask_np)
+
+
+def depth_grid_to_surface_mesh(
+    points: np.ndarray,
+    colors: np.ndarray,
+    depth: np.ndarray,
+    mask: np.ndarray,
+    depth_edge_rtol: float = 0.05,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    height, width = depth.shape
+    index_map = -np.ones((height, width), dtype=np.int64)
+    index_map[mask] = np.arange(int(mask.sum()), dtype=np.int64)
+    vertices = np.asarray(points[mask], dtype=np.float32).reshape(-1, 3)
+    vertex_colors = np.asarray(colors[mask], dtype=np.uint8).reshape(-1, 3)
+
+    cell_mask = mask[:-1, :-1] & mask[:-1, 1:] & mask[1:, :-1] & mask[1:, 1:]
+    d00 = depth[:-1, :-1]
+    d01 = depth[:-1, 1:]
+    d10 = depth[1:, :-1]
+    d11 = depth[1:, 1:]
+    dmax = np.maximum.reduce([d00, d01, d10, d11])
+    dmin = np.minimum.reduce([d00, d01, d10, d11])
+    dmean = (d00 + d01 + d10 + d11) * 0.25
+    cell_mask &= ((dmax - dmin) / np.maximum(np.abs(dmean), 1e-6)) <= depth_edge_rtol
+
+    ys, xs = np.nonzero(cell_mask)
+    if ys.size == 0:
+        return vertices, vertex_colors, np.empty((0, 3), dtype=np.int64)
+    i00 = index_map[ys, xs]
+    i01 = index_map[ys, xs + 1]
+    i10 = index_map[ys + 1, xs]
+    i11 = index_map[ys + 1, xs + 1]
+    faces = np.concatenate(
+        [
+            np.stack([i00, i10, i01], axis=1),
+            np.stack([i10, i11, i01], axis=1),
+        ],
+        axis=0,
+    )
+    return vertices, vertex_colors, faces.astype(np.int64, copy=False)
 
 
 def write_ply_meshes(
@@ -624,15 +670,16 @@ def write_ply_meshes(
 
 def write_ply_scene(
     path: Path,
-    env_points: np.ndarray,
+    env_vertices: np.ndarray,
     env_colors: np.ndarray,
+    env_faces: np.ndarray,
     meshes: list[np.ndarray],
     faces: np.ndarray,
     mesh_colors: list[tuple[int, int, int]],
 ) -> None:
-    vertices_parts = [np.asarray(env_points, dtype=np.float32).reshape(-1, 3)]
+    vertices_parts = [np.asarray(env_vertices, dtype=np.float32).reshape(-1, 3)]
     colors_parts = [np.asarray(env_colors, dtype=np.uint8).reshape(-1, 3)]
-    faces_parts = []
+    faces_parts = [np.asarray(env_faces, dtype=np.int64).reshape(-1, 3)]
     face_template = np.asarray(faces, dtype=np.int64).reshape(-1, 3)
     offset = vertices_parts[0].shape[0]
     for mesh_idx, mesh in enumerate(meshes):
