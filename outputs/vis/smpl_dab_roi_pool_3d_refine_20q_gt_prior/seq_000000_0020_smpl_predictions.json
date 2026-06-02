@@ -6,21 +6,10 @@
   "gt_box_prior_size_noise": 0.0,
   "gt_box_prior_drop_prob": 0.0,
   "ply_files": [
-    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_rank00_q2_pred_joints.ply",
-    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_rank00_q2_gt_joints.ply",
-    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_rank00_q2_pred_gt_joints.ply",
-    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_rank00_q2_pred_mesh.ply",
-    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_rank00_q2_gt_mesh.ply",
-    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_rank01_q1_pred_joints.ply",
-    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_rank01_q1_gt_joints.ply",
-    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_rank01_q1_pred_gt_joints.ply",
-    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_rank01_q1_pred_mesh.ply",
-    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_rank01_q1_gt_mesh.ply",
-    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_rank02_q0_pred_joints.ply",
-    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_rank02_q0_gt_joints.ply",
-    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_rank02_q0_pred_gt_joints.ply",
-    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_rank02_q0_pred_mesh.ply",
-    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_rank02_q0_gt_mesh.ply"
+    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_pred_mesh_top03.ply",
+    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_gt_mesh_top03.ply",
+    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_pred_gt_mesh_top03.ply",
+    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_dab_roi_pool_3d_refine_20q_gt_prior/seq_000000_0020_scene_vggt_points_smpl_mesh.ply"
   ],
   "predictions": [
     {
