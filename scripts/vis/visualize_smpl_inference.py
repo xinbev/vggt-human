@@ -581,6 +581,7 @@ def dense_depth_to_camera_points(
     x = (xs - intrinsics_0[0, 2]) / intrinsics_0[0, 0] * z
     y = (ys - intrinsics_0[1, 2]) / intrinsics_0[1, 1] * z
     points = torch.stack([x, y, z], dim=-1)
+    image_tensor = image_tensor.to(device=depth.device)
     colors = (image_tensor.permute(1, 2, 0).clamp(0.0, 1.0) * 255.0).to(dtype=torch.uint8)
     mask = torch.isfinite(points).all(dim=-1) & (z > 1e-6)
     return points[mask].detach().cpu().numpy(), colors[mask].detach().cpu().numpy()
