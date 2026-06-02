@@ -7,6 +7,7 @@ from typing import Any
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from PIL import Image, ImageDraw, ImageFont
 #==============================================================================
 # Compatibility patch for old chumpy on Python 3.11+
@@ -582,6 +583,13 @@ def dense_depth_to_camera_points(
     y = (ys - intrinsics_0[1, 2]) / intrinsics_0[1, 1] * z
     points = torch.stack([x, y, z], dim=-1)
     image_tensor = image_tensor.to(device=depth.device)
+    if image_tensor.shape[-2:] != (height, width):
+        image_tensor = F.interpolate(
+            image_tensor[None],
+            size=(height, width),
+            mode="bilinear",
+            align_corners=False,
+        )[0]
     colors = (image_tensor.permute(1, 2, 0).clamp(0.0, 1.0) * 255.0).to(dtype=torch.uint8)
     mask = torch.isfinite(points).all(dim=-1) & (z > 1e-6)
     return points[mask].detach().cpu().numpy(), colors[mask].detach().cpu().numpy()
