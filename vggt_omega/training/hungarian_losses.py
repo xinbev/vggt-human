@@ -40,6 +40,16 @@ class HungarianSMPLLoss(nn.Module):
         use_vggt_camera_projection: bool = False,
         smpl_model_dir: str = "",
         projection_image_size: int = 518,
+        scene_depth_z_weight: float = 0.0,
+        scene_chamfer_weight: float = 0.0,
+        scene_alignment_intrinsics_source: str = "predicted",
+        scene_alignment_point_source: str = "vertices",
+        scene_alignment_max_depth_points: int = 256,
+        scene_alignment_max_smpl_points: int = 256,
+        scene_alignment_bbox_expand: float = 0.05,
+        scene_alignment_depth_conf_min: float = 0.0,
+        scene_alignment_robust_quantile: float = 0.85,
+        scene_alignment_detach_depth: bool = True,
     ) -> None:
         super().__init__()
         self.matcher = matcher
@@ -69,6 +79,16 @@ class HungarianSMPLLoss(nn.Module):
         self.use_vggt_camera_projection = use_vggt_camera_projection
         self.smpl_model_dir = smpl_model_dir
         self.projection_image_size = projection_image_size
+        self.scene_depth_z_weight = scene_depth_z_weight
+        self.scene_chamfer_weight = scene_chamfer_weight
+        self.scene_alignment_intrinsics_source = scene_alignment_intrinsics_source
+        self.scene_alignment_point_source = scene_alignment_point_source
+        self.scene_alignment_max_depth_points = scene_alignment_max_depth_points
+        self.scene_alignment_max_smpl_points = scene_alignment_max_smpl_points
+        self.scene_alignment_bbox_expand = scene_alignment_bbox_expand
+        self.scene_alignment_depth_conf_min = scene_alignment_depth_conf_min
+        self.scene_alignment_robust_quantile = scene_alignment_robust_quantile
+        self.scene_alignment_detach_depth = scene_alignment_detach_depth
         self._smpl_layer: SMPLLayer | None = None
         if self.conf_loss_type not in {"bce", "focal"}:
             raise ValueError(f"Unsupported conf_loss_type: {self.conf_loss_type}")
@@ -78,6 +98,12 @@ class HungarianSMPLLoss(nn.Module):
             raise ValueError(f"Unsupported projected_bbox_source: {self.projected_bbox_source}")
         if self._uses_projected_bbox and not self.smpl_model_dir:
             raise ValueError("Projected SMPL bbox loss requires loss.smpl_model_dir or assets.smpl_model_dir")
+        if self.scene_alignment_intrinsics_source not in {"predicted", "gt"}:
+            raise ValueError(f"Unsupported scene_alignment_intrinsics_source: {self.scene_alignment_intrinsics_source}")
+        if self.scene_alignment_point_source not in {"vertices", "joints"}:
+            raise ValueError(f"Unsupported scene_alignment_point_source: {self.scene_alignment_point_source}")
+        if self._uses_scene_alignment and not self.smpl_model_dir:
+            raise ValueError("Scene alignment loss requires loss.smpl_model_dir or assets.smpl_model_dir")
         self.register_buffer(
             "betas_dim_weight",
             torch.tensor([2.56, 1.28, 0.64, 0.64, 0.32, 0.32, 0.32, 0.32, 0.32, 0.32]).view(1, 10),
@@ -120,8 +146,13 @@ class HungarianSMPLLoss(nn.Module):
                     "loss_id": zero,
                     "loss_projected_bbox": zero,
                     "loss_projected_giou": zero,
+                    "loss_scene_depth_z": zero,
+                    "loss_scene_chamfer": zero,
                     "metric_bbox_iou_mean": zero.detach(),
                     "metric_projected_bbox_iou_mean": zero.detach(),
+                    "metric_scene_depth_z_l1": zero.detach(),
+                    "metric_scene_chamfer": zero.detach(),
+                    "metric_scene_valid_pairs": zero.detach(),
                     "metric_conf_target_pos_mean": zero.detach(),
                     "metric_conf_target_pos_min": zero.detach(),
                     "metric_conf_target_pos_max": zero.detach(),
@@ -150,6 +181,7 @@ class HungarianSMPLLoss(nn.Module):
             losses["loss_id"] = self._identity_loss(flat_id_embed, frame_idx, src_idx, matched)
             projected = self._projected_bbox_losses(predictions, pred_betas, pred_transl_cam, frame_idx, src_idx, target_boxes)
             losses.update(projected)
+            losses.update(self._scene_alignment_losses(predictions, batch, pred_betas, pred_transl_cam, frame_idx, src_idx, target_boxes))
 
         losses["loss_total"] = (
             self.conf_weight * losses["loss_conf"]
@@ -161,6 +193,8 @@ class HungarianSMPLLoss(nn.Module):
             + self.id_weight * losses["loss_id"]
             + self.projected_bbox_weight * losses["loss_projected_bbox"]
             + self.projected_giou_weight * losses["loss_projected_giou"]
+            + self.scene_depth_z_weight * losses["loss_scene_depth_z"]
+            + self.scene_chamfer_weight * losses["loss_scene_chamfer"]
             + self.duplicate_conf_weight * losses["loss_duplicate_conf"]
             + self.aux_weight * losses["loss_aux_total"]
         )
@@ -169,6 +203,10 @@ class HungarianSMPLLoss(nn.Module):
     @property
     def _uses_projected_bbox(self) -> bool:
         return self.use_vggt_camera_projection and (self.projected_bbox_weight != 0.0 or self.projected_giou_weight != 0.0)
+
+    @property
+    def _uses_scene_alignment(self) -> bool:
+        return self.scene_depth_z_weight != 0.0 or self.scene_chamfer_weight != 0.0
 
     def _confidence_loss(self, pred_confs: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         pred_confs = pred_confs.clamp(1e-6, 1.0 - 1e-6)
@@ -350,6 +388,187 @@ class HungarianSMPLLoss(nn.Module):
             "metric_projected_bbox_iou_mean": _box_iou_diag(cxcywh_to_xyxy(projected_boxes), cxcywh_to_xyxy(target_boxes)).detach().mean(),
         }
 
+    def _scene_alignment_losses(
+        self,
+        predictions: dict[str, torch.Tensor],
+        batch: dict[str, torch.Tensor],
+        pred_betas: torch.Tensor,
+        pred_transl_cam: torch.Tensor,
+        frame_idx: torch.Tensor,
+        src_idx: torch.Tensor,
+        target_boxes: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        if not self._uses_scene_alignment:
+            zero = pred_betas.sum() * 0.0
+            return {
+                "loss_scene_depth_z": zero,
+                "loss_scene_chamfer": zero,
+                "metric_scene_depth_z_l1": zero.detach(),
+                "metric_scene_chamfer": zero.detach(),
+                "metric_scene_valid_pairs": zero.detach(),
+            }
+        if "depth" not in predictions or "pred_poses" not in predictions:
+            raise ValueError("Scene alignment loss requires model outputs depth and pred_poses; set model.enable_depth=true")
+
+        pred_poses = _flatten_prediction(_require_prediction(predictions, "pred_poses"), unframed_ndim=3)
+        depth = _flatten_depth(_require_prediction(predictions, "depth"))
+        depth_conf = predictions.get("depth_conf")
+        flat_depth_conf = _flatten_depth_conf(depth_conf) if depth_conf is not None else None
+        if self.scene_alignment_detach_depth:
+            depth = depth.detach()
+            flat_depth_conf = flat_depth_conf.detach() if flat_depth_conf is not None else None
+
+        image_size = (int(depth.shape[-2]), int(depth.shape[-1]))
+        intrinsics = self._scene_intrinsics(predictions, batch, pred_betas.dtype, pred_betas.device, image_size)
+        smpl = self._get_smpl_layer(pred_betas.device)
+        poses = pred_poses[frame_idx, src_idx].reshape(-1, 72)
+        betas = pred_betas[frame_idx, src_idx]
+        transl_cam = pred_transl_cam[frame_idx, src_idx]
+        vertices, joints = smpl(poses.float(), betas.float())
+        smpl_points_all = self._sample_smpl_points(vertices, joints, self.scene_alignment_max_smpl_points).to(dtype=pred_betas.dtype)
+        smpl_points_all = smpl_points_all + transl_cam[:, None, :]
+
+        depth_z_parts = []
+        chamfer_parts = []
+        valid_pairs = pred_betas.new_zeros(())
+        for match_idx in range(frame_idx.numel()):
+            flat_frame = frame_idx[match_idx]
+            smpl_points = smpl_points_all[match_idx]
+            valid_smpl = smpl_points[:, 2] > 1e-6
+            smpl_points = smpl_points[valid_smpl]
+            if smpl_points.numel() == 0:
+                continue
+
+            K = intrinsics[flat_frame].to(dtype=smpl_points.dtype)
+            projected_uv = _project_points(smpl_points[None], K[None])[0]
+            sampled_depth, valid_uv = self._grid_sample_depth_at_projected_points(depth[flat_frame], projected_uv)
+            valid_depth = valid_uv & (sampled_depth > 1e-6)
+            if valid_depth.any():
+                z_diff = (smpl_points[valid_depth, 2] - sampled_depth[valid_depth].to(dtype=smpl_points.dtype)).abs()
+                depth_z_parts.append(_trimmed_mean(z_diff, self.scene_alignment_robust_quantile))
+
+            depth_points = self._sample_depth_points_from_box(
+                depth[flat_frame],
+                K,
+                target_boxes[match_idx],
+                image_size,
+                self.scene_alignment_max_depth_points,
+                flat_depth_conf[flat_frame] if flat_depth_conf is not None else None,
+            )
+            if depth_points.numel() == 0:
+                continue
+            chamfer_parts.append(_robust_chamfer(smpl_points, depth_points.to(dtype=smpl_points.dtype), self.scene_alignment_robust_quantile))
+            valid_pairs = valid_pairs + 1.0
+
+        zero = pred_betas.sum() * 0.0
+        loss_depth_z = torch.stack(depth_z_parts).mean() if depth_z_parts else zero
+        loss_chamfer = torch.stack(chamfer_parts).mean() if chamfer_parts else zero
+        return {
+            "loss_scene_depth_z": loss_depth_z,
+            "loss_scene_chamfer": loss_chamfer,
+            "metric_scene_depth_z_l1": loss_depth_z.detach(),
+            "metric_scene_chamfer": loss_chamfer.detach(),
+            "metric_scene_valid_pairs": valid_pairs.detach(),
+        }
+
+    def _scene_intrinsics(
+        self,
+        predictions: dict[str, torch.Tensor],
+        batch: dict[str, torch.Tensor],
+        dtype: torch.dtype,
+        device: torch.device,
+        image_size: tuple[int, int],
+    ) -> torch.Tensor:
+        if self.scene_alignment_intrinsics_source == "predicted":
+            if "pose_enc" not in predictions:
+                raise ValueError("Predicted scene alignment intrinsics require model output pose_enc; set model.enable_camera=true")
+            intrinsics = _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), image_size[0])
+            return intrinsics.to(device=device, dtype=dtype)
+        if "K_scal3r" not in batch:
+            raise ValueError("GT scene alignment intrinsics require batch key K_scal3r")
+        K = batch["K_scal3r"].to(device=device, dtype=dtype)
+        if K.ndim == 4:
+            return K.reshape(-1, 3, 3)
+        if K.ndim == 3:
+            return K
+        raise ValueError(f"Expected K_scal3r with shape [B,S,3,3] or [F,3,3], got {K.shape}")
+
+    def _sample_depth_points_from_box(
+        self,
+        depth: torch.Tensor,
+        intrinsics: torch.Tensor,
+        box_cxcywh: torch.Tensor,
+        image_size: tuple[int, int],
+        max_points: int,
+        depth_conf: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        height, width = image_size
+        box_xyxy = cxcywh_to_xyxy(box_cxcywh[None].clamp(0.0, 1.0))[0]
+        expand_x = self.scene_alignment_bbox_expand * box_cxcywh[2].clamp(min=0.0)
+        expand_y = self.scene_alignment_bbox_expand * box_cxcywh[3].clamp(min=0.0)
+        x0 = ((box_xyxy[0] - expand_x) * width).clamp(0.0, float(width - 1))
+        y0 = ((box_xyxy[1] - expand_y) * height).clamp(0.0, float(height - 1))
+        x1 = ((box_xyxy[2] + expand_x) * width).clamp(0.0, float(width - 1))
+        y1 = ((box_xyxy[3] + expand_y) * height).clamp(0.0, float(height - 1))
+        if bool((x1 <= x0).item()) or bool((y1 <= y0).item()):
+            return depth.new_empty(0, 3)
+
+        max_points = max(1, int(max_points))
+        side = max(1, int(max_points**0.5))
+        base = torch.linspace(0.0, 1.0, side, device=depth.device, dtype=depth.dtype)
+        xs = x0 + (x1 - x0) * base
+        ys = y0 + (y1 - y0) * base
+        yy, xx = torch.meshgrid(ys, xs, indexing="ij")
+        uv = torch.stack([xx.reshape(-1), yy.reshape(-1)], dim=-1)
+        if uv.shape[0] > max_points:
+            uv = uv[:max_points]
+        xi = uv[:, 0].round().long().clamp(0, width - 1)
+        yi = uv[:, 1].round().long().clamp(0, height - 1)
+        z = depth[yi, xi]
+        valid = z > 1e-6
+        if depth_conf is not None and self.scene_alignment_depth_conf_min > 0.0:
+            valid = valid & (depth_conf[yi, xi] >= self.scene_alignment_depth_conf_min)
+        if not valid.any():
+            return depth.new_empty(0, 3)
+        uv = uv[valid]
+        z = z[valid]
+        fx = intrinsics[0, 0].clamp(min=1e-6)
+        fy = intrinsics[1, 1].clamp(min=1e-6)
+        cx = intrinsics[0, 2]
+        cy = intrinsics[1, 2]
+        x = (uv[:, 0] - cx) * z / fx
+        y = (uv[:, 1] - cy) * z / fy
+        return torch.stack([x, y, z], dim=-1)
+
+    def _sample_smpl_points(
+        self,
+        vertices: torch.Tensor,
+        joints: torch.Tensor,
+        max_points: int,
+    ) -> torch.Tensor:
+        points = joints[:, :24] if self.scene_alignment_point_source == "joints" else vertices
+        max_points = max(1, int(max_points))
+        if points.shape[1] <= max_points:
+            return points
+        indices = torch.linspace(0, points.shape[1] - 1, max_points, device=points.device).round().long()
+        return points[:, indices]
+
+    def _grid_sample_depth_at_projected_points(self, depth: torch.Tensor, projected_uv: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        height, width = depth.shape
+        valid = (
+            (projected_uv[:, 0] >= 0.0)
+            & (projected_uv[:, 0] <= float(width - 1))
+            & (projected_uv[:, 1] >= 0.0)
+            & (projected_uv[:, 1] <= float(height - 1))
+        )
+        if projected_uv.numel() == 0:
+            return depth.new_empty(0), valid
+        x = projected_uv[:, 0] / max(width - 1, 1) * 2.0 - 1.0
+        y = projected_uv[:, 1] / max(height - 1, 1) * 2.0 - 1.0
+        grid = torch.stack([x, y], dim=-1).view(1, -1, 1, 2)
+        samples = F.grid_sample(depth.view(1, 1, height, width), grid, mode="bilinear", padding_mode="zeros", align_corners=True)
+        return samples.view(-1), valid
+
     def _get_smpl_layer(self, device: torch.device) -> SMPLLayer:
         if self._smpl_layer is None:
             self._smpl_layer = SMPLLayer(self.smpl_model_dir).to(device=device).eval()
@@ -491,6 +710,23 @@ def _confidence_metrics(
         }
 
 
+def _robust_chamfer(points_a: torch.Tensor, points_b: torch.Tensor, quantile: float) -> torch.Tensor:
+    if points_a.numel() == 0 or points_b.numel() == 0:
+        return (points_a.sum() + points_b.sum()) * 0.0
+    distances = torch.cdist(points_a[None], points_b[None], p=2)[0]
+    a_to_b = distances.min(dim=1).values
+    b_to_a = distances.min(dim=0).values
+    return 0.5 * (_trimmed_mean(a_to_b, quantile) + _trimmed_mean(b_to_a, quantile))
+
+
+def _trimmed_mean(values: torch.Tensor, quantile: float) -> torch.Tensor:
+    if values.numel() == 0:
+        return values.sum() * 0.0
+    keep_ratio = float(max(0.0, min(1.0, quantile)))
+    keep = max(1, min(values.numel(), int(torch.ceil(values.new_tensor(keep_ratio * values.numel())).item())))
+    return values.sort().values[:keep].mean()
+
+
 def _target_count(target: dict[str, torch.Tensor]) -> int:
     boxes = target.get("boxes")
     if boxes is not None:
@@ -505,6 +741,31 @@ def _flatten_intrinsics(pose_enc: torch.Tensor, image_size: int) -> torch.Tensor
     if intrinsics is None:
         raise RuntimeError("encoding_to_camera did not return intrinsics")
     return intrinsics.reshape(-1, 3, 3)
+
+
+def _flatten_depth(depth: torch.Tensor) -> torch.Tensor:
+    if depth.ndim == 5:
+        if depth.shape[-1] != 1:
+            raise ValueError(f"Expected depth last dim to be 1, got {depth.shape}")
+        return depth[..., 0].reshape(depth.shape[0] * depth.shape[1], depth.shape[2], depth.shape[3])
+    if depth.ndim == 4:
+        if depth.shape[-1] == 1:
+            return depth[..., 0]
+        if depth.shape[1] == 1:
+            return depth[:, 0]
+    if depth.ndim == 3:
+        return depth
+    raise ValueError(f"Expected depth with shape [B,S,H,W,1], [F,H,W,1], [F,1,H,W], or [F,H,W], got {depth.shape}")
+
+
+def _flatten_depth_conf(depth_conf: torch.Tensor | None) -> torch.Tensor | None:
+    if depth_conf is None:
+        return None
+    if depth_conf.ndim == 4:
+        return depth_conf.reshape(depth_conf.shape[0] * depth_conf.shape[1], depth_conf.shape[2], depth_conf.shape[3])
+    if depth_conf.ndim == 3:
+        return depth_conf
+    raise ValueError(f"Expected depth_conf with shape [B,S,H,W] or [F,H,W], got {depth_conf.shape}")
 
 
 def _project_points(points_cam: torch.Tensor, intrinsics: torch.Tensor) -> torch.Tensor:

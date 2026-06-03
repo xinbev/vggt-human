@@ -196,6 +196,11 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
         camera_head.eval()
         for _, param in camera_head.named_parameters():
             param.requires_grad = False
+    dense_head = getattr(model, "dense_head", None)
+    if dense_head is not None and bool(model_cfg.get("freeze_dense_head", False)):
+        dense_head.eval()
+        for _, param in dense_head.named_parameters():
+            param.requires_grad = False
     if not bool(model_cfg.get("freeze_aggregator", False)):
         return
     aggregator = getattr(model, "aggregator", None)
@@ -206,6 +211,14 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
         param.requires_grad = False
     if bool(model_cfg.get("train_smpl_query_token", False)) and hasattr(aggregator, "smpl_query_token"):
         aggregator.smpl_query_token.requires_grad = True
+    if bool(model_cfg.get("train_smpl_box_prior_embed", False)):
+        smpl_box_prior_embed = getattr(aggregator, "smpl_box_prior_embed", None)
+        if smpl_box_prior_embed is not None:
+            for _, param in smpl_box_prior_embed.named_parameters():
+                param.requires_grad = True
+        smpl_fallback_boxes = getattr(aggregator, "smpl_fallback_boxes", None)
+        if smpl_fallback_boxes is not None:
+            smpl_fallback_boxes.requires_grad = True
 
 
 def load_initial_checkpoint(model: torch.nn.Module, config: dict[str, Any], device: torch.device) -> None:
