@@ -88,6 +88,19 @@ def main() -> None:
     results = collect_predictions(predictions, orig_image.size, args.conf_threshold, args.top_k)
     if args.draw_smpl_joints:
         add_projected_smpl_joints(results, predictions, config, args, orig_image.size, input_size, device)
+    ply_outputs = {}
+    if args.export_ply:
+        ply_outputs = export_ply_outputs(
+            results,
+            predictions,
+            config,
+            args,
+            image_tensor,
+            input_size,
+            output_dir,
+            image_path.stem,
+            device,
+        )
 
     out_image = output_dir / f"{image_path.stem}_smpl_predictions.jpg"
     out_json = output_dir / f"{image_path.stem}_smpl_predictions.json"
@@ -101,13 +114,14 @@ def main() -> None:
                 "gt_box_prior_center_noise": float(args.gt_box_prior_center_noise),
                 "gt_box_prior_size_noise": float(args.gt_box_prior_size_noise),
                 "gt_box_prior_drop_prob": float(args.gt_box_prior_drop_prob),
+                "ply_outputs": ply_outputs,
                 "predictions": results,
             },
             indent=2,
         ),
         encoding="utf-8",
     )
-    print(json.dumps({"output_image": str(out_image), "output_json": str(out_json), "num_predictions": len(results)}, indent=2))
+    print(json.dumps({"output_image": str(out_image), "output_json": str(out_json), "ply_outputs": ply_outputs, "num_predictions": len(results)}, indent=2))
 
 
 def parse_args() -> argparse.Namespace:
@@ -128,6 +142,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gt-box-prior-drop-prob", type=float, default=0.0, help="Probability of dropping a valid GT box prior")
     parser.add_argument("--smpl-model-dir", default="", help="Override assets.smpl_model_dir")
     parser.add_argument("--baseline-checkpoint", default="", help="Override checkpoints.vggt_baseline for loading VGGT camera head")
+    parser.add_argument("--export-ply", action="store_true", help="Export predicted SMPL meshes and VGGT depth point cloud as PLY files")
+    parser.add_argument("--ply-coordinate-frame", choices=("camera", "world"), default="camera", help="Coordinate frame for exported PLY geometry")
+    parser.add_argument("--ply-max-depth-points", type=int, default=300000, help="Maximum VGGT depth points to export")
+    parser.add_argument("--ply-depth-conf-percentile", type=float, default=20.0, help="Keep depth points above this confidence percentile")
+    parser.add_argument("--ply-depth-conf-min", type=float, default=1e-5, help="Minimum absolute depth confidence for exported points")
+    parser.add_argument("--ply-filter-depth-edges", action="store_true", help="Drop depth pixels near local depth discontinuities before PLY export")
+    parser.add_argument("--ply-depth-edge-rtol", type=float, default=0.03, help="Relative depth jump threshold for --ply-filter-depth-edges")
     parser.add_argument("--override", action="append", default=[], help="Override config values with dotted.key=value")
     return parser.parse_args()
 
@@ -346,6 +367,206 @@ def project_points(
     x = intrinsics[0, 0] * points_cam[..., 0] / z + intrinsics[0, 2]
     y = intrinsics[1, 1] * points_cam[..., 1] / z + intrinsics[1, 2]
     return torch.stack([x, y], dim=-1)
+
+
+def export_ply_outputs(
+    results: list[dict[str, Any]],
+    predictions: dict[str, torch.Tensor],
+    config: dict[str, Any],
+    args: argparse.Namespace,
+    image_tensor: torch.Tensor,
+    input_size: int,
+    output_dir: Path,
+    output_stem: str,
+    device: torch.device,
+) -> dict[str, Any]:
+    if "pose_enc" not in predictions:
+        raise ValueError("PLY export requires model output pose_enc; set model.enable_camera=true")
+    extrinsics, intrinsics = encoding_to_camera(predictions["pose_enc"], image_size_hw=(input_size, input_size), build_intrinsics=True)
+    camera_from_world = extrinsics[0, 0].detach().cpu().numpy()
+
+    outputs: dict[str, Any] = {
+        "coordinate_frame": args.ply_coordinate_frame,
+        "camera_from_world": camera_from_world.tolist(),
+    }
+
+    depth_vertices = np.empty((0, 3), dtype=np.float32)
+    depth_colors = np.empty((0, 3), dtype=np.uint8)
+    if "depth" in predictions:
+        depth_vertices, depth_colors = depth_to_point_cloud(
+            predictions["depth"][0, 0].detach().cpu().numpy(),
+            predictions.get("depth_conf")[0, 0].detach().cpu().numpy() if predictions.get("depth_conf") is not None else None,
+            intrinsics[0, 0].detach().cpu().numpy(),
+            image_tensor[0, 0].detach().cpu().numpy(),
+            max_points=args.ply_max_depth_points,
+            conf_percentile=args.ply_depth_conf_percentile,
+            conf_min=args.ply_depth_conf_min,
+            filter_depth_edges=args.ply_filter_depth_edges,
+            depth_edge_rtol=args.ply_depth_edge_rtol,
+        )
+        if args.ply_coordinate_frame == "world":
+            depth_vertices = camera_to_world_points(depth_vertices, camera_from_world)
+        depth_path = output_dir / f"{output_stem}_depth_points_{args.ply_coordinate_frame}.ply"
+        write_point_cloud_ply(depth_path, depth_vertices, depth_colors)
+        outputs["depth_points_ply"] = str(depth_path)
+        outputs["num_depth_points"] = int(depth_vertices.shape[0])
+
+    smpl_vertices = np.empty((0, 3), dtype=np.float32)
+    smpl_colors = np.empty((0, 3), dtype=np.uint8)
+    smpl_faces = np.empty((0, 3), dtype=np.int64)
+    if results:
+        smpl_vertices, smpl_colors, smpl_faces = decode_smpl_meshes_for_results(results, predictions, config, args, device)
+        if args.ply_coordinate_frame == "world":
+            smpl_vertices = camera_to_world_points(smpl_vertices, camera_from_world)
+        smpl_path = output_dir / f"{output_stem}_smpl_meshes_{args.ply_coordinate_frame}.ply"
+        write_mesh_ply(smpl_path, smpl_vertices, smpl_colors, smpl_faces)
+        outputs["smpl_meshes_ply"] = str(smpl_path)
+        outputs["num_smpl_vertices"] = int(smpl_vertices.shape[0])
+        outputs["num_smpl_faces"] = int(smpl_faces.shape[0])
+
+    if depth_vertices.size or smpl_vertices.size:
+        combined_path = output_dir / f"{output_stem}_scene_smpl_{args.ply_coordinate_frame}.ply"
+        combined_vertices = np.concatenate([depth_vertices, smpl_vertices], axis=0)
+        combined_colors = np.concatenate([depth_colors, smpl_colors], axis=0)
+        write_point_cloud_ply(combined_path, combined_vertices, combined_colors)
+        outputs["combined_ply"] = str(combined_path)
+
+    return outputs
+
+
+def depth_to_point_cloud(
+    depth: np.ndarray,
+    depth_conf: np.ndarray | None,
+    intrinsics: np.ndarray,
+    image_chw: np.ndarray,
+    max_points: int,
+    conf_percentile: float,
+    conf_min: float,
+    filter_depth_edges: bool,
+    depth_edge_rtol: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    depth_2d = np.asarray(depth, dtype=np.float32)
+    if depth_2d.ndim == 3 and depth_2d.shape[-1] == 1:
+        depth_2d = depth_2d[..., 0]
+    if depth_2d.ndim != 2:
+        raise ValueError(f"Expected depth shape [H,W] or [H,W,1], got {depth.shape}")
+
+    height, width = depth_2d.shape
+    yy, xx = np.meshgrid(np.arange(height, dtype=np.float32), np.arange(width, dtype=np.float32), indexing="ij")
+    z = depth_2d
+    valid = np.isfinite(z) & (z > 1e-6)
+    if depth_conf is not None:
+        conf = np.asarray(depth_conf, dtype=np.float32)
+        if conf.ndim == 3 and conf.shape[-1] == 1:
+            conf = conf[..., 0]
+        valid &= np.isfinite(conf) & (conf > float(conf_min))
+        if np.any(valid) and conf_percentile > 0:
+            valid &= conf >= np.percentile(conf[valid], float(conf_percentile))
+    if filter_depth_edges:
+        valid &= ~depth_edge_mask(depth_2d, rtol=depth_edge_rtol)
+
+    fx = max(float(intrinsics[0, 0]), 1e-6)
+    fy = max(float(intrinsics[1, 1]), 1e-6)
+    cx = float(intrinsics[0, 2])
+    cy = float(intrinsics[1, 2])
+    vertices = np.stack([(xx - cx) * z / fx, (yy - cy) * z / fy, z], axis=-1)[valid]
+
+    image_hwc = np.transpose(image_chw, (1, 2, 0))
+    colors = (image_hwc.clip(0.0, 1.0) * 255.0).astype(np.uint8)[valid]
+    if max_points > 0 and vertices.shape[0] > max_points:
+        indices = np.linspace(0, vertices.shape[0] - 1, int(max_points)).astype(np.int64)
+        vertices = vertices[indices]
+        colors = colors[indices]
+    return vertices.astype(np.float32), colors
+
+
+def depth_edge_mask(depth: np.ndarray, rtol: float = 0.03, kernel_size: int = 3) -> np.ndarray:
+    pad = kernel_size // 2
+    padded = np.pad(depth, ((pad, pad), (pad, pad)), mode="edge")
+    depth_max = np.full_like(depth, -np.inf)
+    depth_min = np.full_like(depth, np.inf)
+    for y in range(kernel_size):
+        for x in range(kernel_size):
+            window = padded[y : y + depth.shape[0], x : x + depth.shape[1]]
+            depth_max = np.maximum(depth_max, window)
+            depth_min = np.minimum(depth_min, window)
+    return (depth_max - depth_min) / np.maximum(np.abs(depth), 1e-6) > float(rtol)
+
+
+def decode_smpl_meshes_for_results(
+    results: list[dict[str, Any]],
+    predictions: dict[str, torch.Tensor],
+    config: dict[str, Any],
+    args: argparse.Namespace,
+    device: torch.device,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    smpl_model_dir = args.smpl_model_dir or str(config.get("assets", {}).get("smpl_model_dir", ""))
+    if not smpl_model_dir:
+        raise ValueError("SMPL model dir is required for PLY export. Set assets.smpl_model_dir or pass --smpl-model-dir")
+    for key in ("pred_poses", "pred_betas", "pred_transl_cam"):
+        if key not in predictions:
+            raise ValueError(f"SMPL PLY export requires model output {key}")
+
+    query_indices = [int(item["query_index"]) for item in results]
+    index_tensor = torch.as_tensor(query_indices, dtype=torch.long, device=device)
+    poses = predictions["pred_poses"][0, 0, index_tensor].detach()
+    betas = predictions["pred_betas"][0, 0, index_tensor].detach()
+    transl_cam = predictions["pred_transl_cam"][0, 0, index_tensor].detach()
+
+    smpl = SMPLLayer(smpl_model_dir).to(device).eval()
+    with torch.no_grad():
+        vertices, _ = smpl(poses.reshape(-1, 72), betas)
+    vertices = vertices + transl_cam[:, None, :]
+
+    faces = np.asarray(smpl.faces, dtype=np.int64)
+    mesh_vertices = []
+    mesh_colors = []
+    mesh_faces = []
+    vertex_offset = 0
+    for result_idx, item in enumerate(results):
+        color = np.asarray(COLORS[result_idx % len(COLORS)], dtype=np.uint8)
+        person_vertices = vertices[result_idx].detach().cpu().numpy().astype(np.float32)
+        mesh_vertices.append(person_vertices)
+        mesh_colors.append(np.tile(color[None], (person_vertices.shape[0], 1)))
+        mesh_faces.append(faces + vertex_offset)
+        item["smpl_mesh_vertex_count"] = int(person_vertices.shape[0])
+        item["smpl_mesh_face_count"] = int(faces.shape[0])
+        vertex_offset += int(person_vertices.shape[0])
+    return np.concatenate(mesh_vertices, axis=0), np.concatenate(mesh_colors, axis=0), np.concatenate(mesh_faces, axis=0)
+
+
+def camera_to_world_points(points_cam: np.ndarray, camera_from_world: np.ndarray) -> np.ndarray:
+    if points_cam.size == 0:
+        return points_cam.astype(np.float32)
+    rotation = camera_from_world[:3, :3]
+    translation = camera_from_world[:3, 3]
+    return ((points_cam - translation[None]) @ rotation).astype(np.float32)
+
+
+def write_point_cloud_ply(path: Path, vertices: np.ndarray, colors: np.ndarray) -> None:
+    write_mesh_ply(path, vertices, colors, np.empty((0, 3), dtype=np.int64))
+
+
+def write_mesh_ply(path: Path, vertices: np.ndarray, colors: np.ndarray, faces: np.ndarray) -> None:
+    vertices = np.asarray(vertices, dtype=np.float32).reshape(-1, 3)
+    colors = np.asarray(colors, dtype=np.uint8).reshape(-1, 3)
+    faces = np.asarray(faces, dtype=np.int64).reshape(-1, 3)
+    if colors.shape[0] != vertices.shape[0]:
+        raise ValueError(f"PLY colors must match vertices, got vertices={vertices.shape} colors={colors.shape}")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="ascii", newline="\n") as file:
+        file.write("ply\n")
+        file.write("format ascii 1.0\n")
+        file.write(f"element vertex {vertices.shape[0]}\n")
+        file.write("property float x\nproperty float y\nproperty float z\n")
+        file.write("property uchar red\nproperty uchar green\nproperty uchar blue\n")
+        file.write(f"element face {faces.shape[0]}\n")
+        file.write("property list uchar int vertex_indices\n")
+        file.write("end_header\n")
+        for vertex, color in zip(vertices, colors, strict=True):
+            file.write(f"{vertex[0]:.7g} {vertex[1]:.7g} {vertex[2]:.7g} {int(color[0])} {int(color[1])} {int(color[2])}\n")
+        for face in faces:
+            file.write(f"3 {int(face[0])} {int(face[1])} {int(face[2])}\n")
 
 
 def draw_predictions(image: Image.Image, predictions: list[dict[str, Any]], output_path: Path) -> None:
