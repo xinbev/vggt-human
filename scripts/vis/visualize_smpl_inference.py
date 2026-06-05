@@ -452,6 +452,14 @@ def depth_to_point_cloud(
         raise ValueError(f"Expected depth shape [H,W] or [H,W,1], got {depth.shape}")
 
     height, width = depth_2d.shape
+    source_height, source_width = int(image_chw.shape[1]), int(image_chw.shape[2])
+    intrinsics = np.asarray(intrinsics, dtype=np.float32).copy()
+    if (source_height, source_width) != (height, width):
+        intrinsics[0, 0] *= float(width) / float(source_width)
+        intrinsics[0, 2] *= float(width) / float(source_width)
+        intrinsics[1, 1] *= float(height) / float(source_height)
+        intrinsics[1, 2] *= float(height) / float(source_height)
+
     yy, xx = np.meshgrid(np.arange(height, dtype=np.float32), np.arange(width, dtype=np.float32), indexing="ij")
     z = depth_2d
     valid = np.isfinite(z) & (z > 1e-6)
@@ -471,13 +479,22 @@ def depth_to_point_cloud(
     cy = float(intrinsics[1, 2])
     vertices = np.stack([(xx - cx) * z / fx, (yy - cy) * z / fy, z], axis=-1)[valid]
 
-    image_hwc = np.transpose(image_chw, (1, 2, 0))
+    image_hwc = resize_image_chw_to_hwc(image_chw, height, width)
     colors = (image_hwc.clip(0.0, 1.0) * 255.0).astype(np.uint8)[valid]
     if max_points > 0 and vertices.shape[0] > max_points:
         indices = np.linspace(0, vertices.shape[0] - 1, int(max_points)).astype(np.int64)
         vertices = vertices[indices]
         colors = colors[indices]
     return vertices.astype(np.float32), colors
+
+
+def resize_image_chw_to_hwc(image_chw: np.ndarray, height: int, width: int) -> np.ndarray:
+    image_hwc = np.transpose(np.asarray(image_chw, dtype=np.float32), (1, 2, 0))
+    if image_hwc.shape[:2] == (height, width):
+        return image_hwc
+    image_u8 = (image_hwc.clip(0.0, 1.0) * 255.0).astype(np.uint8)
+    resized = Image.fromarray(image_u8, mode="RGB").resize((width, height), Image.BILINEAR)
+    return np.asarray(resized, dtype=np.float32) / 255.0
 
 
 def depth_edge_mask(depth: np.ndarray, rtol: float = 0.03, kernel_size: int = 3) -> np.ndarray:

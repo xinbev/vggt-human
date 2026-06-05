@@ -15,9 +15,7 @@ _LEGACY_NUMPY_ALIASES = {
 }
 
 for name, value in _LEGACY_NUMPY_ALIASES.items():
-    try:
-        getattr(np, name)
-    except AttributeError:
+    if name not in np.__dict__:
         setattr(np, name, value)
 #================================
 class SMPLLayer(nn.Module):
