@@ -16,13 +16,13 @@ VGGT_CKPT="${VGGT_CKPT:-/home/zhw/lab_users/xyb/home/projects/vggt-omega/checkpo
 SMPL_MODEL_DIR="${SMPL_MODEL_DIR:-/home/zhw/xyb_space/SAT-HMR/weights/smpl_data/}"
 SMPL_CKPT="${SMPL_CKPT:-${REPO_ROOT}/outputs/train/smpl_scene_align_20q/checkpoint_latest.pt}"
 IMAGE_PATH="${IMAGE_PATH:-}"
-OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/outputs/vis/smpl_scene_align_20q_ply}"
+OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/outputs/vis/smpl_scene_align_20q_env_smpl_ply}"
 
 CONF_THRESHOLD="${CONF_THRESHOLD:-0.25}"
 TOP_K="${TOP_K:-20}"
 PLY_COORDINATE_FRAME="${PLY_COORDINATE_FRAME:-camera}"
-PLY_MAX_DEPTH_POINTS="${PLY_MAX_DEPTH_POINTS:-300000}"
-PLY_DEPTH_CONF_PERCENTILE="${PLY_DEPTH_CONF_PERCENTILE:-20}"
+PLY_MAX_DEPTH_POINTS="${PLY_MAX_DEPTH_POINTS:-0}"
+PLY_DEPTH_CONF_PERCENTILE="${PLY_DEPTH_CONF_PERCENTILE:-0}"
 
 cd "${REPO_ROOT}"
 mkdir -p "${OUTPUT_DIR}"
@@ -66,13 +66,11 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" "${PYTHON_BIN}" scripts/vis
   --export-ply \
   --ply-coordinate-frame "${PLY_COORDINATE_FRAME}" \
   --ply-max-depth-points "${PLY_MAX_DEPTH_POINTS}" \
-  --ply-depth-conf-percentile "${PLY_DEPTH_CONF_PERCENTILE}" \
-  --ply-filter-depth-edges
+  --ply-depth-conf-percentile "${PLY_DEPTH_CONF_PERCENTILE}"
 
 IMAGE_STEM="$(basename "${IMAGE_PATH%.*}")"
 echo "========== SMPL Scene Alignment PLY visualization finished =========="
 echo "Output image : ${OUTPUT_DIR}/${IMAGE_STEM}_smpl_predictions.jpg"
 echo "Output json  : ${OUTPUT_DIR}/${IMAGE_STEM}_smpl_predictions.json"
-echo "Depth PLY    : ${OUTPUT_DIR}/${IMAGE_STEM}_depth_points_${PLY_COORDINATE_FRAME}.ply"
+echo "Env PLY      : ${OUTPUT_DIR}/${IMAGE_STEM}_environment_points_${PLY_COORDINATE_FRAME}.ply"
 echo "SMPL PLY     : ${OUTPUT_DIR}/${IMAGE_STEM}_smpl_meshes_${PLY_COORDINATE_FRAME}.ply"
-echo "Combined PLY : ${OUTPUT_DIR}/${IMAGE_STEM}_scene_smpl_${PLY_COORDINATE_FRAME}.ply"

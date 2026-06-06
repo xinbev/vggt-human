@@ -144,8 +144,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--baseline-checkpoint", default="", help="Override checkpoints.vggt_baseline for loading VGGT camera head")
     parser.add_argument("--export-ply", action="store_true", help="Export predicted SMPL meshes and VGGT depth point cloud as PLY files")
     parser.add_argument("--ply-coordinate-frame", choices=("camera", "world"), default="camera", help="Coordinate frame for exported PLY geometry")
-    parser.add_argument("--ply-max-depth-points", type=int, default=300000, help="Maximum VGGT depth points to export")
-    parser.add_argument("--ply-depth-conf-percentile", type=float, default=20.0, help="Keep depth points above this confidence percentile")
+    parser.add_argument("--ply-max-depth-points", type=int, default=0, help="Maximum VGGT depth points to export; 0 keeps all valid points")
+    parser.add_argument("--ply-depth-conf-percentile", type=float, default=0.0, help="Keep depth points above this confidence percentile; 0 disables percentile filtering")
     parser.add_argument("--ply-depth-conf-min", type=float, default=1e-5, help="Minimum absolute depth confidence for exported points")
     parser.add_argument("--ply-filter-depth-edges", action="store_true", help="Drop depth pixels near local depth discontinuities before PLY export")
     parser.add_argument("--ply-depth-edge-rtol", type=float, default=0.03, help="Relative depth jump threshold for --ply-filter-depth-edges")
@@ -406,10 +406,10 @@ def export_ply_outputs(
         )
         if args.ply_coordinate_frame == "world":
             depth_vertices = camera_to_world_points(depth_vertices, camera_from_world)
-        depth_path = output_dir / f"{output_stem}_depth_points_{args.ply_coordinate_frame}.ply"
+        depth_path = output_dir / f"{output_stem}_environment_points_{args.ply_coordinate_frame}.ply"
         write_point_cloud_ply(depth_path, depth_vertices, depth_colors)
-        outputs["depth_points_ply"] = str(depth_path)
-        outputs["num_depth_points"] = int(depth_vertices.shape[0])
+        outputs["environment_points_ply"] = str(depth_path)
+        outputs["num_environment_points"] = int(depth_vertices.shape[0])
 
     smpl_vertices = np.empty((0, 3), dtype=np.float32)
     smpl_colors = np.empty((0, 3), dtype=np.uint8)
@@ -423,13 +423,6 @@ def export_ply_outputs(
         outputs["smpl_meshes_ply"] = str(smpl_path)
         outputs["num_smpl_vertices"] = int(smpl_vertices.shape[0])
         outputs["num_smpl_faces"] = int(smpl_faces.shape[0])
-
-    if depth_vertices.size or smpl_vertices.size:
-        combined_path = output_dir / f"{output_stem}_scene_smpl_{args.ply_coordinate_frame}.ply"
-        combined_vertices = np.concatenate([depth_vertices, smpl_vertices], axis=0)
-        combined_colors = np.concatenate([depth_colors, smpl_colors], axis=0)
-        write_point_cloud_ply(combined_path, combined_vertices, combined_colors)
-        outputs["combined_ply"] = str(combined_path)
 
     return outputs
 
