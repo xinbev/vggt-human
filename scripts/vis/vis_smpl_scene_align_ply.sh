@@ -20,6 +20,7 @@ OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/outputs/vis/smpl_scene_align_20q_env_smpl
 
 CONF_THRESHOLD="${CONF_THRESHOLD:-0.25}"
 TOP_K="${TOP_K:-20}"
+USE_GT_BOX_PRIOR="${USE_GT_BOX_PRIOR:-true}"
 PLY_COORDINATE_FRAME="${PLY_COORDINATE_FRAME:-camera}"
 PLY_MAX_DEPTH_POINTS="${PLY_MAX_DEPTH_POINTS:-0}"
 PLY_DEPTH_CONF_PERCENTILE="${PLY_DEPTH_CONF_PERCENTILE:-0}"
@@ -50,7 +51,13 @@ echo "Train config: ${TRAIN_CONFIG}"
 echo "Output      : ${OUTPUT_DIR}"
 echo "Confidence  : ${CONF_THRESHOLD}"
 echo "Top-K       : ${TOP_K}"
+echo "GT prior    : ${USE_GT_BOX_PRIOR}"
 echo "PLY frame   : ${PLY_COORDINATE_FRAME}"
+
+GT_PRIOR_ARGS=()
+if [[ "${USE_GT_BOX_PRIOR}" == "true" ]]; then
+  GT_PRIOR_ARGS+=(--use-gt-box-prior)
+fi
 
 CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" "${PYTHON_BIN}" scripts/vis/visualize_smpl_inference.py \
   --image "${IMAGE_PATH}" \
@@ -66,7 +73,8 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" "${PYTHON_BIN}" scripts/vis
   --export-ply \
   --ply-coordinate-frame "${PLY_COORDINATE_FRAME}" \
   --ply-max-depth-points "${PLY_MAX_DEPTH_POINTS}" \
-  --ply-depth-conf-percentile "${PLY_DEPTH_CONF_PERCENTILE}"
+  --ply-depth-conf-percentile "${PLY_DEPTH_CONF_PERCENTILE}" \
+  "${GT_PRIOR_ARGS[@]}"
 
 IMAGE_STEM="$(basename "${IMAGE_PATH%.*}")"
 echo "========== SMPL Scene Alignment PLY visualization finished =========="
