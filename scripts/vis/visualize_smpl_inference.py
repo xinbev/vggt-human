@@ -102,6 +102,9 @@ def main() -> None:
         scene_export = export_scene_ply(results, image_tensor, image_path, predictions, config, args, output_dir, input_size, device)
         ply_files.extend(scene_export["ply_files"])
         scene_alignment = scene_export.get("scene_alignment")
+        hsi_scene_alignment = scene_export.get("hsi_scene_alignment")
+    else:
+        hsi_scene_alignment = None
 
     out_image = output_dir / f"{image_path.stem}_smpl_predictions.jpg"
     out_json = output_dir / f"{image_path.stem}_smpl_predictions.json"
@@ -117,6 +120,7 @@ def main() -> None:
                 "gt_box_prior_drop_prob": float(args.gt_box_prior_drop_prob),
                 "ply_files": ply_files,
                 "scene_alignment": scene_alignment,
+                "hsi_scene_alignment": hsi_scene_alignment,
                 "predictions": results,
             },
             indent=2,
@@ -158,6 +162,9 @@ def parse_args() -> argparse.Namespace:
         help="Use BEDLAM GT SMPL vertices as oracle scale anchors when available",
     )
     parser.add_argument("--ply-top-k", type=int, default=3, help="Maximum ranked predictions to include in mesh PLY exports")
+    parser.add_argument("--use-hsi-refined", action="store_true", help="Use HSI refined SMPL outputs when available")
+    parser.add_argument("--export-hsi-comparison", action="store_true", help="Export base and HSI refined mesh comparison PLYs")
+    parser.add_argument("--hsi-align-scene", action="store_true", help="Export scene mesh from HSI affine depth s*depth+b")
     parser.add_argument("--ply-use-vertices", action="store_true", help="Deprecated; mesh export is always enabled when --export-ply is set")
     parser.add_argument("--override", action="append", default=[], help="Override config values with dotted.key=value")
     return parser.parse_args()
@@ -413,15 +420,19 @@ def decode_pred_smpl_points(
     predictions: dict[str, torch.Tensor],
     smpl_model_dir: str,
     device: torch.device,
+    use_hsi_refined: bool = False,
 ) -> dict[str, torch.Tensor]:
     query_indices = [int(item["query_index"]) for item in results]
     if not query_indices:
         empty = torch.empty(0, 0, 3, device=device)
         return {"vertices": empty, "joints": empty, "query_indices": torch.empty(0, dtype=torch.long, device=device)}
     index_tensor = torch.as_tensor(query_indices, dtype=torch.long, device=device)
-    poses = predictions["pred_poses"][0, 0, index_tensor].detach()
-    betas = predictions["pred_betas"][0, 0, index_tensor].detach()
-    transl_cam = predictions["pred_transl_cam"][0, 0, index_tensor].detach()
+    pose_key = "hsi_refined_pred_poses" if use_hsi_refined and "hsi_refined_pred_poses" in predictions else "pred_poses"
+    betas_key = "hsi_refined_pred_betas" if use_hsi_refined and "hsi_refined_pred_betas" in predictions else "pred_betas"
+    transl_key = "hsi_refined_pred_transl_cam" if use_hsi_refined and "hsi_refined_pred_transl_cam" in predictions else "pred_transl_cam"
+    poses = predictions[pose_key][0, 0, index_tensor].detach()
+    betas = predictions[betas_key][0, 0, index_tensor].detach()
+    transl_cam = predictions[transl_key][0, 0, index_tensor].detach()
 
     smpl = SMPLLayer(smpl_model_dir).to(device).eval()
     with torch.no_grad():
@@ -473,6 +484,9 @@ def export_prediction_gt_ply(
 
     smpl_model_dir = require_smpl_model_dir(config, args)
     pred_points = decode_pred_smpl_points(selected, predictions, smpl_model_dir, device)
+    hsi_points = None
+    if args.export_hsi_comparison and "hsi_refined_pred_poses" in predictions:
+        hsi_points = decode_pred_smpl_points(selected, predictions, smpl_model_dir, device, use_hsi_refined=True)
     try:
         gt_points = decode_gt_smpl_points(image_path, config, args, smpl_model_dir, device)
     except (FileNotFoundError, ValueError):
@@ -485,6 +499,11 @@ def export_prediction_gt_ply(
     pred_path = output_dir / f"{image_path.stem}_pred_mesh_top{len(pred_meshes):02d}.ply"
     write_ply_meshes(pred_path, pred_meshes, pred_faces, pred_colors)
     written.append(str(pred_path))
+    if hsi_points is not None:
+        hsi_meshes = [hsi_points["vertices"][idx].detach().cpu().numpy() for idx in range(len(selected))]
+        hsi_path = output_dir / f"{image_path.stem}_hsi_refined_mesh_top{len(hsi_meshes):02d}.ply"
+        write_ply_meshes(hsi_path, hsi_meshes, hsi_points["faces"].detach().cpu().numpy(), pred_colors)
+        written.append(str(hsi_path))
 
     if gt_points is not None:
         gt_meshes = []
@@ -526,13 +545,13 @@ def export_scene_ply(
 ) -> dict[str, Any]:
     selected = results[: max(int(args.ply_top_k), 0)]
     if not selected:
-        return {"ply_files": [], "scene_alignment": None}
+        return {"ply_files": [], "scene_alignment": None, "hsi_scene_alignment": None}
     for key in ("depth", "pose_enc", "pred_poses", "pred_betas", "pred_transl_cam"):
         if key not in predictions:
             raise ValueError(f"Scene PLY export requires model output {key}")
 
     smpl_model_dir = require_smpl_model_dir(config, args)
-    pred_points = decode_pred_smpl_points(selected, predictions, smpl_model_dir, device)
+    pred_points = decode_pred_smpl_points(selected, predictions, smpl_model_dir, device, use_hsi_refined=bool(args.use_hsi_refined))
     depth = predictions["depth"][0, 0].detach()
     env_vertices_raw, env_colors, env_faces = dense_depth_to_camera_mesh(
         depth,
@@ -541,6 +560,7 @@ def export_scene_ply(
         input_size,
     )
     scene_alignment = None
+    hsi_scene_alignment = None
     env_vertices = env_vertices_raw
     if args.align_scene_to_smpl:
         anchor_vertices = pred_points["vertices"].detach()
@@ -573,6 +593,25 @@ def export_scene_ply(
         scale = float(scene_alignment["scale"])
         if bool(scene_alignment["applied"]):
             env_vertices = np.asarray(env_vertices_raw, dtype=np.float32) * scale
+    hsi_env_vertices = None
+    hsi_env_colors = None
+    hsi_env_faces = None
+    if args.hsi_align_scene and "hsi_scene_scale" in predictions and "hsi_scene_depth_bias" in predictions:
+        hsi_scale = float(predictions["hsi_scene_scale"][0, 0].detach().float().reshape(-1)[0].cpu())
+        hsi_bias = float(predictions["hsi_scene_depth_bias"][0, 0].detach().float().reshape(-1)[0].cpu())
+        hsi_depth = depth * depth.new_tensor(hsi_scale) + depth.new_tensor(hsi_bias)
+        hsi_env_vertices, hsi_env_colors, hsi_env_faces = dense_depth_to_camera_mesh(
+            hsi_depth,
+            predictions["pose_enc"],
+            image_tensor[0, 0].detach(),
+            input_size,
+        )
+        hsi_scene_alignment = {
+            "method": "hsi_affine_depth",
+            "applied": True,
+            "scale": hsi_scale,
+            "depth_bias": hsi_bias,
+        }
     meshes = [pred_points["vertices"][idx].detach().cpu().numpy() for idx in range(len(selected))]
     mesh_colors = [COLORS[idx % len(COLORS)] for idx in range(len(meshes))]
     faces = pred_points["faces"].detach().cpu().numpy()
@@ -583,11 +622,19 @@ def export_scene_ply(
         aligned_env_path = output_dir / f"{image_path.stem}_vggt_depth_mesh_smpl_aligned.ply"
         write_ply_vertices_faces(aligned_env_path, env_vertices, env_colors, env_faces)
         written.append(str(aligned_env_path))
+    if hsi_env_vertices is not None and hsi_env_colors is not None and hsi_env_faces is not None:
+        hsi_env_path = output_dir / f"{image_path.stem}_vggt_depth_mesh_hsi_aligned.ply"
+        write_ply_vertices_faces(hsi_env_path, hsi_env_vertices, hsi_env_colors, hsi_env_faces)
+        written.append(str(hsi_env_path))
     suffix = "scene_vggt_points_smpl_aligned_mesh" if args.align_scene_to_smpl else "scene_vggt_points_smpl_mesh"
     path = output_dir / f"{image_path.stem}_{suffix}.ply"
     write_ply_scene(path, env_vertices, env_colors, env_faces, meshes, faces, mesh_colors)
     written.append(str(path))
-    return {"ply_files": written, "scene_alignment": scene_alignment}
+    if hsi_env_vertices is not None and hsi_env_colors is not None and hsi_env_faces is not None:
+        hsi_scene_path = output_dir / f"{image_path.stem}_scene_vggt_points_hsi_aligned_mesh.ply"
+        write_ply_scene(hsi_scene_path, hsi_env_vertices, hsi_env_colors, hsi_env_faces, meshes, faces, mesh_colors)
+        written.append(str(hsi_scene_path))
+    return {"ply_files": written, "scene_alignment": scene_alignment, "hsi_scene_alignment": hsi_scene_alignment}
 
 
 def estimate_scene_to_smpl_scale(

@@ -161,6 +161,15 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         smpl_query_box_prior=bool(model_cfg.get("smpl_query_box_prior", False)),
         smpl_query_patch_pool=bool(model_cfg.get("smpl_query_patch_pool", False)),
         smpl_query_patch_pool_expand=float(model_cfg.get("smpl_query_patch_pool_expand", 0.10)),
+        enable_hsi_refine=bool(model_cfg.get("enable_hsi_refine", False)),
+        hsi_hidden_dim=int(model_cfg.get("hsi_hidden_dim", 512)),
+        hsi_num_layers=int(model_cfg.get("hsi_num_layers", 5)),
+        hsi_num_heads=int(model_cfg.get("hsi_num_heads", 8)),
+        hsi_num_iters=int(model_cfg.get("hsi_num_iters", 3)),
+        hsi_scene_window=int(model_cfg.get("hsi_scene_window", 3)),
+        smpl_model_dir=str(config.get("assets", {}).get("smpl_model_dir", "")),
+        image_size=int(config.get("data", {}).get("image_size", 518)),
+        freeze_dense_head=bool(model_cfg.get("freeze_dense_head", False)),
         freeze_aggregator_forward=bool(model_cfg.get("freeze_aggregator_forward", False)),
     )
 
@@ -197,6 +206,11 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
     if camera_head is not None and bool(model_cfg.get("freeze_camera_head", False)):
         camera_head.eval()
         for _, param in camera_head.named_parameters():
+            param.requires_grad = False
+    dense_head = getattr(model, "dense_head", None)
+    if dense_head is not None and bool(model_cfg.get("freeze_dense_head", False)):
+        dense_head.eval()
+        for _, param in dense_head.named_parameters():
             param.requires_grad = False
     if not bool(model_cfg.get("freeze_aggregator", False)):
         return

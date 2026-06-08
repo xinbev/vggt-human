@@ -43,6 +43,15 @@ class HungarianSMPLLoss(nn.Module):
         use_vggt_camera_projection: bool = False,
         smpl_model_dir: str = "",
         projection_image_size: int = 518,
+        hsi_pose_weight: float = 0.0,
+        hsi_betas_weight: float = 0.0,
+        hsi_transl_cam_weight: float = 0.0,
+        hsi_joints3d_weight: float = 0.0,
+        hsi_projected_joints2d_weight: float = 0.0,
+        hsi_depth_teacher_weight: float = 0.0,
+        hsi_anchor_depth_weight: float = 0.0,
+        hsi_contact_weight: float = 0.0,
+        hsi_contact_threshold: float = 0.08,
     ) -> None:
         super().__init__()
         self.matcher = matcher
@@ -74,6 +83,15 @@ class HungarianSMPLLoss(nn.Module):
         self.use_vggt_camera_projection = use_vggt_camera_projection
         self.smpl_model_dir = smpl_model_dir
         self.projection_image_size = projection_image_size
+        self.hsi_pose_weight = hsi_pose_weight
+        self.hsi_betas_weight = hsi_betas_weight
+        self.hsi_transl_cam_weight = hsi_transl_cam_weight
+        self.hsi_joints3d_weight = hsi_joints3d_weight
+        self.hsi_projected_joints2d_weight = hsi_projected_joints2d_weight
+        self.hsi_depth_teacher_weight = hsi_depth_teacher_weight
+        self.hsi_anchor_depth_weight = hsi_anchor_depth_weight
+        self.hsi_contact_weight = hsi_contact_weight
+        self.hsi_contact_threshold = hsi_contact_threshold
         self._smpl_layer: SMPLLayer | None = None
         if self.conf_loss_type not in {"bce", "focal"}:
             raise ValueError(f"Unsupported conf_loss_type: {self.conf_loss_type}")
@@ -136,6 +154,7 @@ class HungarianSMPLLoss(nn.Module):
                     "metric_conf_target_pos_max": zero.detach(),
                 }
             )
+            losses.update(self._zero_hsi_losses(predictions))
         else:
             frame_idx = matched["frame_idx"]
             src_idx = matched["src_idx"]
@@ -161,6 +180,7 @@ class HungarianSMPLLoss(nn.Module):
             losses.update(joint_losses)
             projected = self._projected_bbox_losses(predictions, pred_betas, pred_transl_cam, frame_idx, src_idx, target_boxes)
             losses.update(projected)
+            losses.update(self._hsi_refined_losses(predictions, batch, frame_idx, src_idx, matched))
 
         losses["loss_total"] = (
             self.conf_weight * losses["loss_conf"]
@@ -176,6 +196,14 @@ class HungarianSMPLLoss(nn.Module):
             + self.projected_giou_weight * losses["loss_projected_giou"]
             + self.duplicate_conf_weight * losses["loss_duplicate_conf"]
             + self.aux_weight * losses["loss_aux_total"]
+            + self.hsi_pose_weight * losses["loss_hsi_pose"]
+            + self.hsi_betas_weight * losses["loss_hsi_betas"]
+            + self.hsi_transl_cam_weight * losses["loss_hsi_transl_cam"]
+            + self.hsi_joints3d_weight * losses["loss_hsi_joints3d"]
+            + self.hsi_projected_joints2d_weight * losses["loss_hsi_projected_joints2d"]
+            + self.hsi_depth_teacher_weight * losses["loss_hsi_depth_teacher"]
+            + self.hsi_anchor_depth_weight * losses["loss_hsi_anchor_depth"]
+            + self.hsi_contact_weight * losses["loss_hsi_contact"]
         )
         return losses
 
@@ -429,6 +457,137 @@ class HungarianSMPLLoss(nn.Module):
                 param.requires_grad = False
         return self._smpl_layer
 
+    def _zero_hsi_losses(self, predictions: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
+        anchor = next((value for value in predictions.values() if isinstance(value, torch.Tensor)), None)
+        if anchor is None:
+            anchor = torch.zeros(())
+        zero = anchor.sum() * 0.0
+        return {
+            "loss_hsi_pose": zero,
+            "loss_hsi_betas": zero,
+            "loss_hsi_transl_cam": zero,
+            "loss_hsi_joints3d": zero,
+            "loss_hsi_projected_joints2d": zero,
+            "loss_hsi_depth_teacher": zero,
+            "loss_hsi_anchor_depth": zero,
+            "loss_hsi_contact": zero,
+            "metric_hsi_joints3d_l1": zero.detach(),
+            "metric_hsi_anchor_depth_l1": zero.detach(),
+            "metric_hsi_depth_teacher_l1": zero.detach(),
+            "metric_hsi_contact_pos_frac": zero.detach(),
+        }
+
+    def _hsi_refined_losses(
+        self,
+        predictions: dict[str, torch.Tensor],
+        batch: dict[str, torch.Tensor],
+        frame_idx: torch.Tensor,
+        src_idx: torch.Tensor,
+        matched: dict[str, torch.Tensor],
+    ) -> dict[str, torch.Tensor]:
+        if "hsi_refined_pred_pose_6d" not in predictions:
+            return self._zero_hsi_losses(predictions)
+        refined_pose6d = _flatten_prediction(_require_prediction(predictions, "hsi_refined_pred_pose_6d"), unframed_ndim=3)
+        refined_poses = _flatten_prediction(_require_prediction(predictions, "hsi_refined_pred_poses"), unframed_ndim=3)
+        refined_betas = _flatten_prediction(_require_prediction(predictions, "hsi_refined_pred_betas"), unframed_ndim=3)
+        refined_transl = _flatten_prediction(_require_prediction(predictions, "hsi_refined_pred_transl_cam"), unframed_ndim=3)
+
+        pred_pose = refined_pose6d[frame_idx, src_idx]
+        pred_betas = refined_betas[frame_idx, src_idx]
+        pred_transl = refined_transl[frame_idx, src_idx]
+        target_pose = matched["pose_6d"].to(device=pred_pose.device, dtype=pred_pose.dtype)
+        target_betas = matched["betas"].to(device=pred_betas.device, dtype=pred_betas.dtype)
+        target_transl = matched["transl_cam"].to(device=pred_transl.device, dtype=pred_transl.dtype)
+
+        losses: dict[str, torch.Tensor] = {
+            "loss_hsi_pose": F.l1_loss(pred_pose, target_pose),
+            "loss_hsi_betas": F.l1_loss(pred_betas, target_betas),
+            "loss_hsi_transl_cam": F.l1_loss(pred_transl, target_transl),
+        }
+        smpl = self._get_smpl_layer(pred_betas.device)
+        pred_aa = refined_poses[frame_idx, src_idx].reshape(-1, 72)
+        gt_aa = rot6d_to_axis_angle(target_pose).reshape(-1, 72)
+        _, pred_joints = smpl(pred_aa.float(), pred_betas.float())
+        _, gt_joints = smpl(gt_aa.float(), target_betas.float())
+        pred_joints_cam = pred_joints[:, :24].to(dtype=pred_betas.dtype) + pred_transl[:, None, :]
+        gt_joints_cam = gt_joints[:, :24].to(dtype=pred_betas.dtype) + target_transl[:, None, :]
+        losses["loss_hsi_joints3d"] = F.l1_loss(pred_joints_cam, gt_joints_cam)
+        losses["metric_hsi_joints3d_l1"] = losses["loss_hsi_joints3d"].detach()
+
+        if "pose_enc" in predictions:
+            intrinsics = _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), self.projection_image_size)
+            pred_2d = _project_points(pred_joints_cam, intrinsics[frame_idx].to(dtype=pred_joints_cam.dtype)) / float(self.projection_image_size)
+            gt_2d = _project_points(gt_joints_cam, intrinsics[frame_idx].to(dtype=gt_joints_cam.dtype)) / float(self.projection_image_size)
+            valid = (pred_joints_cam[..., 2] > 1e-4) & (gt_joints_cam[..., 2] > 1e-4)
+            losses["loss_hsi_projected_joints2d"] = F.l1_loss(pred_2d[valid], gt_2d[valid]) if valid.any() else pred_joints_cam.sum() * 0.0
+        else:
+            losses["loss_hsi_projected_joints2d"] = pred_joints_cam.sum() * 0.0
+
+        depth_losses = self._hsi_depth_losses(predictions, batch, frame_idx, src_idx, pred_joints_cam, gt_joints_cam)
+        losses.update(depth_losses)
+        return losses
+
+    def _hsi_depth_losses(
+        self,
+        predictions: dict[str, torch.Tensor],
+        batch: dict[str, torch.Tensor],
+        frame_idx: torch.Tensor,
+        src_idx: torch.Tensor,
+        pred_joints_cam: torch.Tensor,
+        gt_joints_cam: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        zero = pred_joints_cam.sum() * 0.0
+        out = {
+            "loss_hsi_depth_teacher": zero,
+            "loss_hsi_anchor_depth": zero,
+            "loss_hsi_contact": zero,
+            "metric_hsi_anchor_depth_l1": zero.detach(),
+            "metric_hsi_depth_teacher_l1": zero.detach(),
+            "metric_hsi_contact_pos_frac": zero.detach(),
+        }
+        if "depth" not in predictions or "hsi_scene_scale" not in predictions or "hsi_scene_depth_bias" not in predictions:
+            return out
+        if "gt_depth" not in batch:
+            return out
+        depth = _canonical_depth(_require_prediction(predictions, "depth"))
+        gt_depth = _canonical_depth(batch["gt_depth"].to(device=depth.device, dtype=depth.dtype))
+        scale = predictions["hsi_scene_scale"].to(device=depth.device, dtype=depth.dtype)
+        bias = predictions["hsi_scene_depth_bias"].to(device=depth.device, dtype=depth.dtype)
+        aligned_depth = depth * scale.squeeze(-1)[..., None, None] + bias.squeeze(-1)[..., None, None]
+        valid_depth = torch.isfinite(gt_depth) & (gt_depth > 1e-6)
+        if valid_depth.any():
+            depth_l1 = F.smooth_l1_loss(aligned_depth[valid_depth], gt_depth[valid_depth])
+            out["loss_hsi_depth_teacher"] = depth_l1
+            out["metric_hsi_depth_teacher_l1"] = depth_l1.detach()
+
+        if "pose_enc" not in predictions:
+            return out
+        intrinsics = _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), self.projection_image_size)
+        projected = _project_points(pred_joints_cam, intrinsics[frame_idx].to(dtype=pred_joints_cam.dtype))
+        sampled_aligned, valid = _sample_depth_at_points(aligned_depth.reshape(-1, *aligned_depth.shape[-2:]), projected, frame_idx)
+        if valid.any():
+            anchor_l1 = F.smooth_l1_loss(sampled_aligned[valid], pred_joints_cam[..., 2][valid].to(dtype=sampled_aligned.dtype))
+            out["loss_hsi_anchor_depth"] = anchor_l1
+            out["metric_hsi_anchor_depth_l1"] = anchor_l1.detach()
+
+        logits = predictions.get("hsi_contact_logits")
+        if logits is None:
+            return out
+        flat_logits = _flatten_prediction(logits, unframed_ndim=4)
+        if flat_logits is None:
+            return out
+        matched_logits = flat_logits[frame_idx, src_idx, :, 0]
+        gt_projected = _project_points(gt_joints_cam, intrinsics[frame_idx].to(dtype=gt_joints_cam.dtype))
+        sampled_gt, gt_valid = _sample_depth_at_points(gt_depth.reshape(-1, *gt_depth.shape[-2:]), gt_projected, frame_idx)
+        contact_target = (torch.abs(sampled_gt - gt_joints_cam[..., 2].to(dtype=sampled_gt.dtype)) < self.hsi_contact_threshold) & gt_valid
+        if contact_target.any() or gt_valid.any():
+            out["loss_hsi_contact"] = F.binary_cross_entropy_with_logits(
+                matched_logits[gt_valid],
+                contact_target[gt_valid].to(dtype=matched_logits.dtype),
+            ) if gt_valid.any() else zero
+            out["metric_hsi_contact_pos_frac"] = contact_target.to(dtype=matched_logits.dtype).mean().detach()
+        return out
+
     def _identity_loss(
         self,
         pred_id_embed: torch.Tensor | None,
@@ -577,6 +736,38 @@ def _flatten_intrinsics(pose_enc: torch.Tensor, image_size: int) -> torch.Tensor
     if intrinsics is None:
         raise RuntimeError("encoding_to_camera did not return intrinsics")
     return intrinsics.reshape(-1, 3, 3)
+
+
+def _canonical_depth(depth: torch.Tensor) -> torch.Tensor:
+    if depth.ndim == 5 and depth.shape[-1] == 1:
+        return depth[..., 0]
+    if depth.ndim == 5 and depth.shape[2] == 1:
+        return depth[:, :, 0]
+    if depth.ndim == 4:
+        return depth
+    raise ValueError(f"Unsupported depth shape: {tuple(depth.shape)}")
+
+
+def _sample_depth_at_points(
+    depth_flat: torch.Tensor,
+    points_2d: torch.Tensor,
+    frame_idx: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    height, width = depth_flat.shape[-2:]
+    px = points_2d[..., 0].round().long()
+    py = points_2d[..., 1].round().long()
+    valid = (
+        torch.isfinite(points_2d).all(dim=-1)
+        & (px >= 0)
+        & (px < width)
+        & (py >= 0)
+        & (py < height)
+    )
+    px = px.clamp(0, width - 1)
+    py = py.clamp(0, height - 1)
+    sampled = depth_flat[frame_idx[:, None], py, px]
+    valid = valid & torch.isfinite(sampled) & (sampled > 1e-6)
+    return sampled, valid
 
 
 def _project_points(points_cam: torch.Tensor, intrinsics: torch.Tensor) -> torch.Tensor:

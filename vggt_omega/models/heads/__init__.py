@@ -6,7 +6,8 @@
 
 from .camera_head import CameraHead
 from .dense_head import DenseHead
+from .hsi_refinement_head import HSIRefinementHead
 from .smpl_head import AggregatorSMPLHead, SMPLRegressionHead
 from .text_alignment_head import TextAlignmentHead
 
-__all__ = ["AggregatorSMPLHead", "CameraHead", "DenseHead", "SMPLRegressionHead", "TextAlignmentHead"]
+__all__ = ["AggregatorSMPLHead", "CameraHead", "DenseHead", "HSIRefinementHead", "SMPLRegressionHead", "TextAlignmentHead"]

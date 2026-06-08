@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 
 from vggt_omega.models.aggregator import Aggregator
-from vggt_omega.models.heads import AggregatorSMPLHead, CameraHead, DenseHead, TextAlignmentHead
+from vggt_omega.models.heads import AggregatorSMPLHead, CameraHead, DenseHead, HSIRefinementHead, TextAlignmentHead
 
 
 class VGGTOmega(nn.Module):
@@ -35,6 +35,15 @@ class VGGTOmega(nn.Module):
         smpl_query_box_prior: bool = False,
         smpl_query_patch_pool: bool = False,
         smpl_query_patch_pool_expand: float = 0.10,
+        enable_hsi_refine: bool = False,
+        hsi_hidden_dim: int = 512,
+        hsi_num_layers: int = 5,
+        hsi_num_heads: int = 8,
+        hsi_num_iters: int = 3,
+        hsi_scene_window: int = 3,
+        smpl_model_dir: str = "",
+        image_size: int = 518,
+        freeze_dense_head: bool = False,
         freeze_aggregator_forward: bool = False,
     ) -> None:
         super().__init__()
@@ -68,6 +77,22 @@ class VGGTOmega(nn.Module):
             if enable_smpl
             else None
         )
+        self.hsi_refinement_head = (
+            HSIRefinementHead(
+                dim_in=2 * embed_dim,
+                hidden_dim=hsi_hidden_dim,
+                num_layers=hsi_num_layers,
+                num_heads=hsi_num_heads,
+                num_iters=hsi_num_iters,
+                scene_window=hsi_scene_window,
+                smpl_model_dir=smpl_model_dir,
+                image_size=image_size,
+            )
+            if enable_hsi_refine
+            else None
+        )
+        if self.hsi_refinement_head is not None and (self.smpl_head is None or self.dense_head is None or self.camera_head is None):
+            raise ValueError("enable_hsi_refine=True requires enable_smpl, enable_depth, and enable_camera")
 
     def forward(
         self,
@@ -123,6 +148,16 @@ class VGGTOmega(nn.Module):
                         aggregated_tokens_list,
                         token_layout=token_layout,
                         reference_boxes=smpl_reference_boxes,
+                    )
+                )
+            if self.hsi_refinement_head is not None:
+                predictions.update(
+                    self.hsi_refinement_head(
+                        aggregated_tokens_list,
+                        token_layout=token_layout,
+                        smpl_outputs=predictions,
+                        depth=predictions["depth"],
+                        pose_enc=predictions["pose_enc"],
                     )
                 )
 
