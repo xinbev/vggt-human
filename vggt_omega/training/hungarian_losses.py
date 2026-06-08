@@ -551,6 +551,13 @@ class HungarianSMPLLoss(nn.Module):
             return out
         depth = _canonical_depth(_require_prediction(predictions, "depth"))
         gt_depth = _canonical_depth(batch["gt_depth"].to(device=depth.device, dtype=depth.dtype))
+        if gt_depth.shape[-2:] != depth.shape[-2:]:
+            gt_depth = F.interpolate(
+                gt_depth.reshape(-1, 1, *gt_depth.shape[-2:]),
+                size=depth.shape[-2:],
+                mode="bilinear",
+                align_corners=False,
+            ).reshape(*gt_depth.shape[:2], *depth.shape[-2:])
         scale = predictions["hsi_scene_scale"].to(device=depth.device, dtype=depth.dtype)
         bias = predictions["hsi_scene_depth_bias"].to(device=depth.device, dtype=depth.dtype)
         aligned_depth = depth * scale.squeeze(-1)[..., None, None] + bias.squeeze(-1)[..., None, None]
@@ -564,6 +571,7 @@ class HungarianSMPLLoss(nn.Module):
             return out
         intrinsics = _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), self.projection_image_size)
         projected = _project_points(pred_joints_cam, intrinsics[frame_idx].to(dtype=pred_joints_cam.dtype))
+        projected = _scale_points_to_depth(projected, self.projection_image_size, aligned_depth.shape[-2], aligned_depth.shape[-1])
         sampled_aligned, valid = _sample_depth_at_points(aligned_depth.reshape(-1, *aligned_depth.shape[-2:]), projected, frame_idx)
         if valid.any():
             anchor_l1 = F.smooth_l1_loss(sampled_aligned[valid], pred_joints_cam[..., 2][valid].to(dtype=sampled_aligned.dtype))
@@ -578,6 +586,7 @@ class HungarianSMPLLoss(nn.Module):
             return out
         matched_logits = flat_logits[frame_idx, src_idx, :, 0]
         gt_projected = _project_points(gt_joints_cam, intrinsics[frame_idx].to(dtype=gt_joints_cam.dtype))
+        gt_projected = _scale_points_to_depth(gt_projected, self.projection_image_size, gt_depth.shape[-2], gt_depth.shape[-1])
         sampled_gt, gt_valid = _sample_depth_at_points(gt_depth.reshape(-1, *gt_depth.shape[-2:]), gt_projected, frame_idx)
         contact_target = (torch.abs(sampled_gt - gt_joints_cam[..., 2].to(dtype=sampled_gt.dtype)) < self.hsi_contact_threshold) & gt_valid
         if contact_target.any() or gt_valid.any():
@@ -768,6 +777,16 @@ def _sample_depth_at_points(
     sampled = depth_flat[frame_idx[:, None], py, px]
     valid = valid & torch.isfinite(sampled) & (sampled > 1e-6)
     return sampled, valid
+
+
+def _scale_points_to_depth(points_2d: torch.Tensor, image_size: int, depth_height: int, depth_width: int) -> torch.Tensor:
+    scale = points_2d.new_tensor(
+        [
+            float(depth_width) / float(image_size),
+            float(depth_height) / float(image_size),
+        ]
+    )
+    return points_2d * scale
 
 
 def _project_points(points_cam: torch.Tensor, intrinsics: torch.Tensor) -> torch.Tensor:

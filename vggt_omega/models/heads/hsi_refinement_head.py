@@ -176,6 +176,7 @@ class HSIRefinementHead(nn.Module):
             intrinsics.repeat_interleave(num_queries, dim=0),
         )
         projected = projected.reshape(*anchors.shape[:3], 24, 2)
+        projected = _scale_points_to_depth(projected, self.image_size, height, width)
         grid_h = height // 16
         grid_w = width // 16
         center_x = (projected[..., 0] / float(width) * float(grid_w)).floor().long().clamp(0, grid_w - 1)
@@ -206,8 +207,9 @@ class HSIRefinementHead(nn.Module):
         flat_anchors = anchors.reshape(flat_frames * num_queries, 24, 3)
         flat_intrinsics = intrinsics.repeat_interleave(num_queries, dim=0)
         projected = _project_points(flat_anchors, flat_intrinsics).reshape(batch_size, num_frames, num_queries, 24, 2)
-        px = projected[..., 0].round().long().clamp(0, width - 1)
-        py = projected[..., 1].round().long().clamp(0, height - 1)
+        projected_depth = _scale_points_to_depth(projected, self.image_size, height, width)
+        px = projected_depth[..., 0].round().long().clamp(0, width - 1)
+        py = projected_depth[..., 1].round().long().clamp(0, height - 1)
         frame_idx = torch.arange(flat_frames, device=pose6d.device).reshape(batch_size, num_frames, 1, 1).expand(-1, -1, num_queries, 24)
         flat_depth = depth_hw.reshape(flat_frames, height, width)
         z_scene = flat_depth[frame_idx.reshape(-1), py.reshape(-1), px.reshape(-1)].reshape(batch_size, num_frames, num_queries, 24)
@@ -215,12 +217,12 @@ class HSIRefinementHead(nn.Module):
         scene_normals = normals.reshape(flat_frames, height, width, 3)[frame_idx.reshape(-1), py.reshape(-1), px.reshape(-1)].reshape(
             batch_size, num_frames, num_queries, 24, 3
         )
-        scene_points = _unproject_pixels(px.float(), py.float(), z_scene, intrinsics, num_queries)
+        scene_points = _unproject_pixels(projected[..., 0], projected[..., 1], z_scene, intrinsics, num_queries)
         offset = scene_points - anchors
         distance = torch.linalg.norm(offset, dim=-1, keepdim=True)
         depth_residual = (z_scene - anchors[..., 2]).unsqueeze(-1)
         proj_norm = torch.stack(
-            [projected[..., 0] / max(float(width - 1), 1.0), projected[..., 1] / max(float(height - 1), 1.0)],
+            [projected_depth[..., 0] / max(float(width - 1), 1.0), projected_depth[..., 1] / max(float(height - 1), 1.0)],
             dim=-1,
         )
         params = torch.cat([pose6d, betas, transl], dim=-1).unsqueeze(3).expand(-1, -1, -1, 24, -1)
@@ -296,6 +298,16 @@ def _unproject_pixels(px: torch.Tensor, py: torch.Tensor, z: torch.Tensor, intri
     x = (px - cx) / fx.clamp(min=1e-6) * z
     y = (py - cy) / fy.clamp(min=1e-6) * z
     return torch.stack([x, y, z], dim=-1)
+
+
+def _scale_points_to_depth(points_2d: torch.Tensor, image_size: int, depth_height: int, depth_width: int) -> torch.Tensor:
+    scale = points_2d.new_tensor(
+        [
+            float(depth_width) / float(image_size),
+            float(depth_height) / float(image_size),
+        ]
+    )
+    return points_2d * scale
 
 
 def _estimate_depth_normals(depth_hw: torch.Tensor, intrinsics: torch.Tensor, height: int, width: int) -> torch.Tensor:
