@@ -22,6 +22,8 @@ CONF_THRESHOLD="0.10"
 TOP_K="20"
 PLY_TOP_K="3"
 ALIGN_SCENE_TO_SMPL="true"
+ALIGN_SCALE_MAX="${ALIGN_SCALE_MAX:-20.0}"
+ALIGN_USE_GT_SMPL_ANCHORS="${ALIGN_USE_GT_SMPL_ANCHORS:-false}"
 USE_GT_BOX_PRIOR="true"
 
 cd "${REPO_ROOT}"
@@ -46,11 +48,16 @@ echo "Output      : ${OUTPUT_DIR}"
 echo "Confidence  : ${CONF_THRESHOLD}"
 echo "Top-K       : ${TOP_K}"
 echo "Align scene : ${ALIGN_SCENE_TO_SMPL}"
+echo "Align max   : ${ALIGN_SCALE_MAX}"
+echo "GT anchors  : ${ALIGN_USE_GT_SMPL_ANCHORS}"
 echo "GT box prior: ${USE_GT_BOX_PRIOR}"
 
 ALIGN_ARGS=()
 if [[ "${ALIGN_SCENE_TO_SMPL}" == "true" ]]; then
-  ALIGN_ARGS+=(--export-ply --export-scene-ply --align-scene-to-smpl --ply-top-k "${PLY_TOP_K}")
+  ALIGN_ARGS+=(--export-ply --export-scene-ply --align-scene-to-smpl --ply-top-k "${PLY_TOP_K}" --align-scale-max "${ALIGN_SCALE_MAX}")
+  if [[ "${ALIGN_USE_GT_SMPL_ANCHORS}" == "true" ]]; then
+    ALIGN_ARGS+=(--align-use-gt-smpl-anchors)
+  fi
 fi
 PRIOR_ARGS=()
 if [[ "${USE_GT_BOX_PRIOR}" == "true" ]]; then

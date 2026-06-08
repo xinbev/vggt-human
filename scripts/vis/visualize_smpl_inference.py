@@ -150,8 +150,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--align-scene-to-smpl", action="store_true", help="Scale VGGT scene depth/points to SMPL metric depth using visible SMPL anchors")
     parser.add_argument("--align-min-anchor-pixels", type=int, default=64, help="Minimum valid SMPL/depth anchor pixels required for scene alignment")
     parser.add_argument("--align-scale-min", type=float, default=0.25, help="Minimum allowed scene-to-SMPL scale")
-    parser.add_argument("--align-scale-max", type=float, default=4.0, help="Maximum allowed scene-to-SMPL scale")
+    parser.add_argument("--align-scale-max", type=float, default=20.0, help="Maximum allowed scene-to-SMPL scale")
     parser.add_argument("--align-anchor-stride", type=int, default=8, help="Use every Nth SMPL vertex as a depth anchor candidate")
+    parser.add_argument(
+        "--align-use-gt-smpl-anchors",
+        action="store_true",
+        help="Use BEDLAM GT SMPL vertices as oracle scale anchors when available",
+    )
     parser.add_argument("--ply-top-k", type=int, default=3, help="Maximum ranked predictions to include in mesh PLY exports")
     parser.add_argument("--ply-use-vertices", action="store_true", help="Deprecated; mesh export is always enabled when --export-ply is set")
     parser.add_argument("--override", action="append", default=[], help="Override config values with dotted.key=value")
@@ -538,8 +543,24 @@ def export_scene_ply(
     scene_alignment = None
     env_vertices = env_vertices_raw
     if args.align_scene_to_smpl:
+        anchor_vertices = pred_points["vertices"].detach()
+        anchor_source = "pred_smpl"
+        if args.align_use_gt_smpl_anchors:
+            try:
+                gt_points = decode_gt_smpl_points(image_path, config, args, smpl_model_dir, device)
+            except (FileNotFoundError, ValueError):
+                gt_points = None
+            if gt_points is not None:
+                gt_meshes = []
+                for item in selected:
+                    query_idx = int(item["query_index"])
+                    if query_idx < gt_points["vertices"].shape[0]:
+                        gt_meshes.append(gt_points["vertices"][query_idx])
+                if gt_meshes:
+                    anchor_vertices = torch.stack(gt_meshes, dim=0).detach()
+                    anchor_source = "gt_smpl"
         scene_alignment = estimate_scene_to_smpl_scale(
-            smpl_vertices=pred_points["vertices"].detach(),
+            smpl_vertices=anchor_vertices,
             depth=depth,
             pose_enc=predictions["pose_enc"],
             input_size=input_size,
@@ -548,6 +569,7 @@ def export_scene_ply(
             scale_max=float(args.align_scale_max),
             anchor_stride=int(args.align_anchor_stride),
         )
+        scene_alignment["anchor_source"] = anchor_source
         scale = float(scene_alignment["scale"])
         if bool(scene_alignment["applied"]):
             env_vertices = np.asarray(env_vertices_raw, dtype=np.float32) * scale
@@ -625,18 +647,22 @@ def estimate_scene_to_smpl_scale(
     if ratios.numel() == 0:
         return _scene_alignment_result(1.0, False, "no_valid_depth_ratios", int(valid.sum().item()), 0, None)
 
+    raw_stats = _ratio_stats(ratios)
     in_range = (ratios >= scale_min) & (ratios <= scale_max)
     ratios_in_range = ratios[in_range]
     num_anchor_pixels = int(ratios_in_range.numel())
     if num_anchor_pixels < int(min_anchor_pixels):
-        stats = _ratio_stats(ratios)
         return _scene_alignment_result(
-            float(stats["median"]),
+            float(raw_stats["median"]),
             False,
             "insufficient_anchor_pixels",
             int(valid.sum().item()),
             num_anchor_pixels,
-            stats,
+            raw_stats,
+            raw_stats=raw_stats,
+            num_raw_anchor_pixels=int(ratios.numel()),
+            num_low_filtered=int((ratios < scale_min).sum().item()),
+            num_high_filtered=int((ratios > scale_max).sum().item()),
         )
 
     stats = _ratio_stats(ratios_in_range)
@@ -652,11 +678,30 @@ def estimate_scene_to_smpl_scale(
         "scale_max": float(scale_max),
         "anchor_stride": int(anchor_stride),
         "num_projected_anchors": int(valid.sum().item()),
+        "num_raw_anchor_pixels": int(ratios.numel()),
         "num_anchor_pixels": num_anchor_pixels,
+        "num_low_filtered": int((ratios < scale_min).sum().item()),
+        "num_high_filtered": int((ratios > scale_max).sum().item()),
+        "ratio_all_median": float(raw_stats["median"]),
+        "ratio_all_mad": float(raw_stats["mad"]),
+        "ratio_all_mean": float(raw_stats["mean"]),
+        "ratio_all_std": float(raw_stats["std"]),
+        "ratio_all_p05": float(raw_stats["p05"]),
+        "ratio_all_p25": float(raw_stats["p25"]),
+        "ratio_all_p50": float(raw_stats["p50"]),
+        "ratio_all_p75": float(raw_stats["p75"]),
+        "ratio_all_p90": float(raw_stats["p90"]),
+        "ratio_all_p95": float(raw_stats["p95"]),
         "ratio_median": scale,
         "ratio_mad": float(stats["mad"]),
         "ratio_mean": float(stats["mean"]),
         "ratio_std": float(stats["std"]),
+        "ratio_p05": float(stats["p05"]),
+        "ratio_p25": float(stats["p25"]),
+        "ratio_p50": float(stats["p50"]),
+        "ratio_p75": float(stats["p75"]),
+        "ratio_p90": float(stats["p90"]),
+        "ratio_p95": float(stats["p95"]),
         "anchor_depth_l1_median_before": float(before.detach().cpu()),
         "anchor_depth_l1_median_after": float(after.detach().cpu()),
     }
@@ -684,11 +729,21 @@ def _ratio_stats(ratios: torch.Tensor) -> dict[str, float]:
     median = ratios_f.median()
     mad = torch.abs(ratios_f - median).median()
     std = ratios_f.std(unbiased=False) if ratios_f.numel() > 1 else ratios_f.new_zeros(())
+    quantiles = torch.quantile(
+        ratios_f,
+        ratios_f.new_tensor([0.05, 0.25, 0.5, 0.75, 0.9, 0.95]),
+    )
     return {
         "median": float(median.cpu()),
         "mad": float(mad.cpu()),
         "mean": float(ratios_f.mean().cpu()),
         "std": float(std.cpu()),
+        "p05": float(quantiles[0].cpu()),
+        "p25": float(quantiles[1].cpu()),
+        "p50": float(quantiles[2].cpu()),
+        "p75": float(quantiles[3].cpu()),
+        "p90": float(quantiles[4].cpu()),
+        "p95": float(quantiles[5].cpu()),
     }
 
 
@@ -699,6 +754,10 @@ def _scene_alignment_result(
     num_projected_anchors: int,
     num_anchor_pixels: int,
     stats: dict[str, float] | None,
+    raw_stats: dict[str, float] | None = None,
+    num_raw_anchor_pixels: int = 0,
+    num_low_filtered: int = 0,
+    num_high_filtered: int = 0,
 ) -> dict[str, Any]:
     return {
         "method": "smpl_anchor_median_depth_ratio",
@@ -706,11 +765,30 @@ def _scene_alignment_result(
         "reason": reason,
         "scale": float(scale),
         "num_projected_anchors": int(num_projected_anchors),
+        "num_raw_anchor_pixels": int(num_raw_anchor_pixels),
         "num_anchor_pixels": int(num_anchor_pixels),
+        "num_low_filtered": int(num_low_filtered),
+        "num_high_filtered": int(num_high_filtered),
+        "ratio_all_median": None if raw_stats is None else float(raw_stats["median"]),
+        "ratio_all_mad": None if raw_stats is None else float(raw_stats["mad"]),
+        "ratio_all_mean": None if raw_stats is None else float(raw_stats["mean"]),
+        "ratio_all_std": None if raw_stats is None else float(raw_stats["std"]),
+        "ratio_all_p05": None if raw_stats is None else float(raw_stats["p05"]),
+        "ratio_all_p25": None if raw_stats is None else float(raw_stats["p25"]),
+        "ratio_all_p50": None if raw_stats is None else float(raw_stats["p50"]),
+        "ratio_all_p75": None if raw_stats is None else float(raw_stats["p75"]),
+        "ratio_all_p90": None if raw_stats is None else float(raw_stats["p90"]),
+        "ratio_all_p95": None if raw_stats is None else float(raw_stats["p95"]),
         "ratio_median": None if stats is None else float(stats["median"]),
         "ratio_mad": None if stats is None else float(stats["mad"]),
         "ratio_mean": None if stats is None else float(stats["mean"]),
         "ratio_std": None if stats is None else float(stats["std"]),
+        "ratio_p05": None if stats is None else float(stats["p05"]),
+        "ratio_p25": None if stats is None else float(stats["p25"]),
+        "ratio_p50": None if stats is None else float(stats["p50"]),
+        "ratio_p75": None if stats is None else float(stats["p75"]),
+        "ratio_p90": None if stats is None else float(stats["p90"]),
+        "ratio_p95": None if stats is None else float(stats["p95"]),
     }
 
 

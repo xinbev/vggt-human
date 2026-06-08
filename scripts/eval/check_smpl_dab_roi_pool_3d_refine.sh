@@ -27,6 +27,7 @@ CONF_THRESHOLDS=(0.05 0.10 0.25 0.30 0.50)
 TOP_K="20"
 PLY_TOP_K="3"
 ALIGN_SCENE_TO_SMPL="true"
+ALIGN_SCALE_MAX="${ALIGN_SCALE_MAX:-20.0}"
 NUM_VIS_IMAGES="5"
 NOISY_CENTER="0.05"
 NOISY_SIZE="0.10"
@@ -58,11 +59,12 @@ echo "Confidence  : ${CONF_THRESHOLD}"
 echo "Top-K       : ${TOP_K}"
 echo "PLY Top-K   : ${PLY_TOP_K}"
 echo "Align scene : ${ALIGN_SCENE_TO_SMPL}"
+echo "Align max   : ${ALIGN_SCALE_MAX}"
 echo "Vis images  : ${#VIS_IMAGES[@]}"
 
 ALIGN_ARGS=()
 if [[ "${ALIGN_SCENE_TO_SMPL}" == "true" ]]; then
-  ALIGN_ARGS+=(--align-scene-to-smpl)
+  ALIGN_ARGS+=(--align-scene-to-smpl --align-scale-max "${ALIGN_SCALE_MAX}")
 fi
 
 echo "========== Eval: clean GT box prior =========="
