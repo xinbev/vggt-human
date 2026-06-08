@@ -26,6 +26,7 @@ CONF_THRESHOLD="0.10"
 CONF_THRESHOLDS=(0.05 0.10 0.25 0.30 0.50)
 TOP_K="20"
 PLY_TOP_K="3"
+ALIGN_SCENE_TO_SMPL="true"
 NUM_VIS_IMAGES="5"
 NOISY_CENTER="0.05"
 NOISY_SIZE="0.10"
@@ -56,7 +57,13 @@ echo "Max samples : ${MAX_SAMPLES}"
 echo "Confidence  : ${CONF_THRESHOLD}"
 echo "Top-K       : ${TOP_K}"
 echo "PLY Top-K   : ${PLY_TOP_K}"
+echo "Align scene : ${ALIGN_SCENE_TO_SMPL}"
 echo "Vis images  : ${#VIS_IMAGES[@]}"
+
+ALIGN_ARGS=()
+if [[ "${ALIGN_SCENE_TO_SMPL}" == "true" ]]; then
+  ALIGN_ARGS+=(--align-scene-to-smpl)
+fi
 
 echo "========== Eval: clean GT box prior =========="
 CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/eval/eval_smpl_box_metrics.py \
@@ -105,6 +112,7 @@ for IMAGE_PATH in "${VIS_IMAGES[@]}"; do
     --draw-gt-smpl-joints \
     --export-ply \
     --export-scene-ply \
+    "${ALIGN_ARGS[@]}" \
     --ply-top-k "${PLY_TOP_K}" \
     --baseline-checkpoint "${VGGT_CKPT}" \
     --smpl-model-dir "${SMPL_MODEL_DIR}" \
@@ -127,6 +135,7 @@ for IMAGE_PATH in "${VIS_IMAGES[@]}"; do
     --draw-gt-smpl-joints \
     --export-ply \
     --export-scene-ply \
+    "${ALIGN_ARGS[@]}" \
     --ply-top-k "${PLY_TOP_K}" \
     --baseline-checkpoint "${VGGT_CKPT}" \
     --smpl-model-dir "${SMPL_MODEL_DIR}" \

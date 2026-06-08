@@ -9,7 +9,7 @@
 优先选择最小、可追踪、可复现的改动。不要为了快速实现而进行大范围重写。
 
 ## 主项目代码与参考代码边界
-
+项目代码在本地，并通过git与服务器环境同步，运行环境在服务器上，本地没有环境以及ckpt之类的内容，如果需要路径在这里找C:\Users\ROG\PycharmProjects\vggt-omega\configs\path.yaml
 主项目代码位于 `vggt_human/` 目录下，是默认可以执行、导入、测试和修改的代码。
 
 外部论文项目、第三方实现、参考仓库统一放在 `.reference/` 目录下，快速查找参考请阅读`C:\Users\ROG\PycharmProjects\vggt-omega\docs\reference-map.md`

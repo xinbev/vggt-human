@@ -94,11 +94,14 @@ def main() -> None:
         add_projected_smpl_joints(results, predictions, config, args, orig_image.size, input_size, device)
     if args.draw_gt_smpl_joints:
         add_projected_gt_smpl_joints(results, image_path, predictions, config, args, orig_image.size, input_size, device)
+    scene_alignment: dict[str, Any] | None = None
     ply_files = []
     if args.export_ply:
         ply_files = export_prediction_gt_ply(results, image_path, predictions, config, args, output_dir, device)
     if args.export_scene_ply:
-        ply_files.extend(export_scene_ply(results, image_tensor, image_path, predictions, config, args, output_dir, input_size, device))
+        scene_export = export_scene_ply(results, image_tensor, image_path, predictions, config, args, output_dir, input_size, device)
+        ply_files.extend(scene_export["ply_files"])
+        scene_alignment = scene_export.get("scene_alignment")
 
     out_image = output_dir / f"{image_path.stem}_smpl_predictions.jpg"
     out_json = output_dir / f"{image_path.stem}_smpl_predictions.json"
@@ -113,6 +116,7 @@ def main() -> None:
                 "gt_box_prior_size_noise": float(args.gt_box_prior_size_noise),
                 "gt_box_prior_drop_prob": float(args.gt_box_prior_drop_prob),
                 "ply_files": ply_files,
+                "scene_alignment": scene_alignment,
                 "predictions": results,
             },
             indent=2,
@@ -143,6 +147,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--baseline-checkpoint", default="", help="Override checkpoints.vggt_baseline for loading VGGT camera head")
     parser.add_argument("--export-ply", action="store_true", help="Export one multi-person SMPL mesh PLY per image")
     parser.add_argument("--export-scene-ply", action="store_true", help="Export VGGT dense environment point cloud with predicted SMPL meshes")
+    parser.add_argument("--align-scene-to-smpl", action="store_true", help="Scale VGGT scene depth/points to SMPL metric depth using visible SMPL anchors")
+    parser.add_argument("--align-min-anchor-pixels", type=int, default=64, help="Minimum valid SMPL/depth anchor pixels required for scene alignment")
+    parser.add_argument("--align-scale-min", type=float, default=0.25, help="Minimum allowed scene-to-SMPL scale")
+    parser.add_argument("--align-scale-max", type=float, default=4.0, help="Maximum allowed scene-to-SMPL scale")
+    parser.add_argument("--align-anchor-stride", type=int, default=8, help="Use every Nth SMPL vertex as a depth anchor candidate")
     parser.add_argument("--ply-top-k", type=int, default=3, help="Maximum ranked predictions to include in mesh PLY exports")
     parser.add_argument("--ply-use-vertices", action="store_true", help="Deprecated; mesh export is always enabled when --export-ply is set")
     parser.add_argument("--override", action="append", default=[], help="Override config values with dotted.key=value")
@@ -509,30 +518,200 @@ def export_scene_ply(
     output_dir: Path,
     input_size: int,
     device: torch.device,
-) -> list[str]:
+) -> dict[str, Any]:
     selected = results[: max(int(args.ply_top_k), 0)]
     if not selected:
-        return []
+        return {"ply_files": [], "scene_alignment": None}
     for key in ("depth", "pose_enc", "pred_poses", "pred_betas", "pred_transl_cam"):
         if key not in predictions:
             raise ValueError(f"Scene PLY export requires model output {key}")
 
     smpl_model_dir = require_smpl_model_dir(config, args)
     pred_points = decode_pred_smpl_points(selected, predictions, smpl_model_dir, device)
-    env_vertices, env_colors, env_faces = dense_depth_to_camera_mesh(
-        predictions["depth"][0, 0].detach(),
+    depth = predictions["depth"][0, 0].detach()
+    env_vertices_raw, env_colors, env_faces = dense_depth_to_camera_mesh(
+        depth,
         predictions["pose_enc"],
         image_tensor[0, 0].detach(),
         input_size,
     )
+    scene_alignment = None
+    env_vertices = env_vertices_raw
+    if args.align_scene_to_smpl:
+        scene_alignment = estimate_scene_to_smpl_scale(
+            smpl_vertices=pred_points["vertices"].detach(),
+            depth=depth,
+            pose_enc=predictions["pose_enc"],
+            input_size=input_size,
+            min_anchor_pixels=int(args.align_min_anchor_pixels),
+            scale_min=float(args.align_scale_min),
+            scale_max=float(args.align_scale_max),
+            anchor_stride=int(args.align_anchor_stride),
+        )
+        scale = float(scene_alignment["scale"])
+        if bool(scene_alignment["applied"]):
+            env_vertices = np.asarray(env_vertices_raw, dtype=np.float32) * scale
     meshes = [pred_points["vertices"][idx].detach().cpu().numpy() for idx in range(len(selected))]
     mesh_colors = [COLORS[idx % len(COLORS)] for idx in range(len(meshes))]
     faces = pred_points["faces"].detach().cpu().numpy()
     env_path = output_dir / f"{image_path.stem}_vggt_depth_mesh.ply"
-    write_ply_vertices_faces(env_path, env_vertices, env_colors, env_faces)
-    path = output_dir / f"{image_path.stem}_scene_vggt_points_smpl_mesh.ply"
+    write_ply_vertices_faces(env_path, env_vertices_raw, env_colors, env_faces)
+    written = [str(env_path)]
+    if args.align_scene_to_smpl:
+        aligned_env_path = output_dir / f"{image_path.stem}_vggt_depth_mesh_smpl_aligned.ply"
+        write_ply_vertices_faces(aligned_env_path, env_vertices, env_colors, env_faces)
+        written.append(str(aligned_env_path))
+    suffix = "scene_vggt_points_smpl_aligned_mesh" if args.align_scene_to_smpl else "scene_vggt_points_smpl_mesh"
+    path = output_dir / f"{image_path.stem}_{suffix}.ply"
     write_ply_scene(path, env_vertices, env_colors, env_faces, meshes, faces, mesh_colors)
-    return [str(env_path), str(path)]
+    written.append(str(path))
+    return {"ply_files": written, "scene_alignment": scene_alignment}
+
+
+def estimate_scene_to_smpl_scale(
+    smpl_vertices: torch.Tensor,
+    depth: torch.Tensor,
+    pose_enc: torch.Tensor,
+    input_size: int,
+    min_anchor_pixels: int,
+    scale_min: float,
+    scale_max: float,
+    anchor_stride: int,
+) -> dict[str, Any]:
+    if scale_min <= 0 or scale_max <= 0 or scale_min > scale_max:
+        raise ValueError(f"Invalid alignment scale range: [{scale_min}, {scale_max}]")
+    if depth.ndim == 3 and depth.shape[-1] == 1:
+        depth = depth[..., 0]
+    if depth.ndim != 2:
+        raise ValueError(f"Expected depth shape (H, W) or (H, W, 1), got {tuple(depth.shape)}")
+    if smpl_vertices.ndim != 3 or smpl_vertices.shape[-1] != 3:
+        raise ValueError(f"Expected smpl_vertices shape (N, V, 3), got {tuple(smpl_vertices.shape)}")
+
+    anchor_stride = max(int(anchor_stride), 1)
+    vertices = smpl_vertices[:, ::anchor_stride].reshape(-1, 3).to(device=depth.device, dtype=depth.dtype)
+    _, intrinsics = encoding_to_camera(pose_enc, image_size_hw=(input_size, input_size), build_intrinsics=True)
+    intrinsics_0 = intrinsics[0, 0].to(device=depth.device, dtype=depth.dtype)
+    projected = project_points(vertices, intrinsics_0)
+    height, width = depth.shape
+    px = projected[:, 0].round().long()
+    py = projected[:, 1].round().long()
+    valid = (
+        torch.isfinite(vertices).all(dim=-1)
+        & torch.isfinite(projected).all(dim=-1)
+        & (vertices[:, 2] > 1e-6)
+        & (px >= 0)
+        & (px < width)
+        & (py >= 0)
+        & (py < height)
+    )
+    if not valid.any():
+        return _scene_alignment_result(1.0, False, "no_projected_smpl_anchors", 0, 0, None)
+
+    px = px[valid]
+    py = py[valid]
+    z_smpl = vertices[valid, 2]
+    z_vggt = depth[py, px]
+    valid_depth = torch.isfinite(z_vggt) & (z_vggt > 1e-6)
+    if not valid_depth.any():
+        return _scene_alignment_result(1.0, False, "no_valid_vggt_depth_at_anchors", int(valid.sum().item()), 0, None)
+
+    px = px[valid_depth]
+    py = py[valid_depth]
+    z_smpl = z_smpl[valid_depth]
+    z_vggt = z_vggt[valid_depth]
+    px, py, z_smpl, z_vggt = _nearest_smpl_anchor_per_pixel(px, py, z_smpl, z_vggt, width)
+    ratios = (z_smpl / z_vggt).flatten()
+    ratios = ratios[torch.isfinite(ratios) & (ratios > 0)]
+    if ratios.numel() == 0:
+        return _scene_alignment_result(1.0, False, "no_valid_depth_ratios", int(valid.sum().item()), 0, None)
+
+    in_range = (ratios >= scale_min) & (ratios <= scale_max)
+    ratios_in_range = ratios[in_range]
+    num_anchor_pixels = int(ratios_in_range.numel())
+    if num_anchor_pixels < int(min_anchor_pixels):
+        stats = _ratio_stats(ratios)
+        return _scene_alignment_result(
+            float(stats["median"]),
+            False,
+            "insufficient_anchor_pixels",
+            int(valid.sum().item()),
+            num_anchor_pixels,
+            stats,
+        )
+
+    stats = _ratio_stats(ratios_in_range)
+    scale = float(stats["median"])
+    before = torch.abs(z_vggt[in_range] - z_smpl[in_range]).median()
+    after = torch.abs(z_vggt[in_range] * z_vggt.new_tensor(scale) - z_smpl[in_range]).median()
+    return {
+        "method": "smpl_anchor_median_depth_ratio",
+        "applied": True,
+        "reason": "ok",
+        "scale": scale,
+        "scale_min": float(scale_min),
+        "scale_max": float(scale_max),
+        "anchor_stride": int(anchor_stride),
+        "num_projected_anchors": int(valid.sum().item()),
+        "num_anchor_pixels": num_anchor_pixels,
+        "ratio_median": scale,
+        "ratio_mad": float(stats["mad"]),
+        "ratio_mean": float(stats["mean"]),
+        "ratio_std": float(stats["std"]),
+        "anchor_depth_l1_median_before": float(before.detach().cpu()),
+        "anchor_depth_l1_median_after": float(after.detach().cpu()),
+    }
+
+
+def _nearest_smpl_anchor_per_pixel(
+    px: torch.Tensor,
+    py: torch.Tensor,
+    z_smpl: torch.Tensor,
+    z_vggt: torch.Tensor,
+    width: int,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    pixel_idx = (py * int(width) + px).detach().cpu().numpy()
+    z_np = z_smpl.detach().float().cpu().numpy()
+    order = np.lexsort((z_np, pixel_idx))
+    sorted_pixels = pixel_idx[order]
+    keep = np.ones(order.shape[0], dtype=bool)
+    keep[1:] = sorted_pixels[1:] != sorted_pixels[:-1]
+    keep_idx = torch.as_tensor(order[keep], dtype=torch.long, device=px.device)
+    return px[keep_idx], py[keep_idx], z_smpl[keep_idx], z_vggt[keep_idx]
+
+
+def _ratio_stats(ratios: torch.Tensor) -> dict[str, float]:
+    ratios_f = ratios.detach().float()
+    median = ratios_f.median()
+    mad = torch.abs(ratios_f - median).median()
+    std = ratios_f.std(unbiased=False) if ratios_f.numel() > 1 else ratios_f.new_zeros(())
+    return {
+        "median": float(median.cpu()),
+        "mad": float(mad.cpu()),
+        "mean": float(ratios_f.mean().cpu()),
+        "std": float(std.cpu()),
+    }
+
+
+def _scene_alignment_result(
+    scale: float,
+    applied: bool,
+    reason: str,
+    num_projected_anchors: int,
+    num_anchor_pixels: int,
+    stats: dict[str, float] | None,
+) -> dict[str, Any]:
+    return {
+        "method": "smpl_anchor_median_depth_ratio",
+        "applied": bool(applied),
+        "reason": reason,
+        "scale": float(scale),
+        "num_projected_anchors": int(num_projected_anchors),
+        "num_anchor_pixels": int(num_anchor_pixels),
+        "ratio_median": None if stats is None else float(stats["median"]),
+        "ratio_mad": None if stats is None else float(stats["mad"]),
+        "ratio_mean": None if stats is None else float(stats["mean"]),
+        "ratio_std": None if stats is None else float(stats["std"]),
+    }
 
 
 def write_ply_points(path: Path, points: np.ndarray, colors: np.ndarray | tuple[int, int, int]) -> None:
