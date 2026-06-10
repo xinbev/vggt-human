@@ -1,0 +1,469 @@
+#!/usr/bin/env python
+"""Evaluate base SMPL vs HSI-refined outputs against BEDLAM GT."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+from torch.utils.data import DataLoader, Subset
+
+# Compatibility patch for old chumpy on Python 3.11+.
+import inspect
+from collections import namedtuple
+
+if not hasattr(inspect, "getargspec"):
+    ArgSpec = namedtuple("ArgSpec", "args varargs keywords defaults")
+
+    def getargspec(func):
+        spec = inspect.getfullargspec(func)
+        return ArgSpec(spec.args, spec.varargs, spec.varkw, spec.defaults)
+
+    inspect.getargspec = getargspec
+
+if not hasattr(np, "bool"):
+    np.bool = bool
+if not hasattr(np, "int"):
+    np.int = int
+if not hasattr(np, "float"):
+    np.float = float
+if not hasattr(np, "complex"):
+    np.complex = complex
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.train.train_smpl import apply_overrides, build_model, load_yaml_config
+from vggt_omega.data import BedlamDataset, bedlam_collate_fn
+from vggt_omega.models.smpl_layer import SMPLLayer
+from vggt_omega.training.config import deep_update, require_path
+from vggt_omega.utils.pose_enc import encoding_to_camera
+from vggt_omega.utils.rotation import rot6d_to_axis_angle
+
+
+class Meter:
+    def __init__(self) -> None:
+        self.total = 0.0
+        self.count = 0
+
+    def add(self, value: float, count: int = 1) -> None:
+        if np.isfinite(value) and count > 0:
+            self.total += float(value) * int(count)
+            self.count += int(count)
+
+    @property
+    def mean(self) -> float | None:
+        return self.total / self.count if self.count else None
+
+
+def main() -> None:
+    args = parse_args()
+    device = torch.device(args.device if args.device else ("cuda" if torch.cuda.is_available() else "cpu"))
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    config = load_config(args)
+    model = build_model(config).to(device)
+    load_vggt_baseline(model, config, device)
+    load_training_checkpoint(model, Path(args.checkpoint), device)
+    model.eval()
+
+    loader = build_eval_loader(config, args)
+    smpl = SMPLLayer(require_path(config, "assets.smpl_model_dir", allow_empty=False)).to(device).eval()
+    metrics = init_metrics()
+    hsi_scales = []
+    hsi_biases = []
+    examples = []
+
+    processed = 0
+    with torch.no_grad():
+        for batch_idx, batch in enumerate(loader):
+            batch = move_to_device(batch, device)
+            predictions = model(
+                batch["images"],
+                smpl_query_boxes=batch["gt_boxes"] if args.use_gt_box_prior else None,
+                smpl_query_boxes_mask=batch["boxes_mask"] if args.use_gt_box_prior else None,
+            )
+            evaluate_batch(predictions, batch, smpl, config, args, metrics, hsi_scales, hsi_biases)
+            if len(examples) < 8:
+                examples.append(example_summary(batch_idx, predictions, batch))
+            processed += int(batch["images"].shape[0])
+            if processed >= args.max_samples:
+                break
+            if args.log_interval > 0 and processed % args.log_interval == 0:
+                print(f"[eval] processed={processed}")
+
+    summary = build_summary(metrics, hsi_scales, hsi_biases, processed, args, examples)
+    out_json = output_dir / "hsi_refine_metrics.json"
+    out_json.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    print_human_summary(summary)
+    print(json.dumps({"output_json": str(out_json), "num_samples": processed}, indent=2))
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Evaluate base vs HSI-refined SMPL predictions")
+    parser.add_argument("--checkpoint", required=True)
+    parser.add_argument("--path-config", default="configs/path.yaml")
+    parser.add_argument("--train-config", default="configs/train_smpl_hsi_refine.yaml")
+    parser.add_argument("--baseline-checkpoint", default="")
+    parser.add_argument("--output-dir", default="outputs/eval/hsi_refine_metrics")
+    parser.add_argument("--device", default="")
+    parser.add_argument("--split", default="Training")
+    parser.add_argument("--max-samples", type=int, default=32)
+    parser.add_argument("--start-index", type=int, default=0)
+    parser.add_argument("--batch-size", type=int, default=1)
+    parser.add_argument("--num-workers", type=int, default=2)
+    parser.add_argument("--conf-threshold", type=float, default=0.10)
+    parser.add_argument("--use-gt-box-prior", action="store_true")
+    parser.add_argument("--log-interval", type=int, default=8)
+    parser.add_argument("--override", action="append", default=[])
+    return parser.parse_args()
+
+
+def load_config(args: argparse.Namespace) -> dict[str, Any]:
+    config = deep_update(load_yaml_config(args.path_config), load_yaml_config(args.train_config))
+    config = apply_overrides(config, args.override)
+    if args.baseline_checkpoint:
+        config.setdefault("checkpoints", {})["vggt_baseline"] = args.baseline_checkpoint
+    config.setdefault("model", {})["enable_camera"] = True
+    config.setdefault("model", {})["enable_depth"] = True
+    config.setdefault("model", {})["enable_hsi_refine"] = True
+    config.setdefault("data", {})["require_depth"] = True
+    config.setdefault("data", {})["require_boxes"] = True
+    return config
+
+
+def build_eval_loader(config: dict[str, Any], args: argparse.Namespace) -> DataLoader:
+    data_cfg = config["data"]
+    dataset = BedlamDataset(
+        root=require_path(config, data_cfg.get("root_key", "datasets.bedlam_root")),
+        split=args.split,
+        sequence_length=int(data_cfg["sequence_length"]),
+        stride=int(data_cfg["stride"]),
+        image_size=int(data_cfg["image_size"]),
+        max_humans=int(data_cfg["max_humans"]),
+        require_smpl=True,
+        require_depth=True,
+        boxes_root=require_path(config, data_cfg["boxes_root_key"], allow_empty=False),
+        require_boxes=True,
+    )
+    end = min(len(dataset), int(args.start_index) + int(args.max_samples))
+    subset = Subset(dataset, list(range(int(args.start_index), end)))
+    return DataLoader(
+        subset,
+        batch_size=int(args.batch_size),
+        shuffle=False,
+        num_workers=int(args.num_workers),
+        pin_memory=bool(data_cfg.get("pin_memory", True)),
+        collate_fn=bedlam_collate_fn,
+        drop_last=False,
+    )
+
+
+def load_vggt_baseline(model: torch.nn.Module, config: dict[str, Any], device: torch.device) -> None:
+    checkpoint_path = require_path(config, "checkpoints.vggt_baseline", allow_empty=False)
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    state_dict = extract_state_dict(checkpoint)
+    missing, unexpected = model.load_state_dict(state_dict, strict=False)
+    print(f"[ckpt] loaded VGGT baseline: {checkpoint_path}")
+    print(f"[ckpt] baseline missing={len(missing)} unexpected={len(unexpected)}")
+
+
+def load_training_checkpoint(model: torch.nn.Module, checkpoint_path: Path, device: torch.device) -> None:
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    state_dict = extract_state_dict(checkpoint)
+    missing, unexpected = model.load_state_dict(state_dict, strict=False)
+    print(f"[ckpt] loaded training checkpoint: {checkpoint_path}")
+    print(f"[ckpt] missing={len(missing)} unexpected={len(unexpected)}")
+
+
+def extract_state_dict(checkpoint: Any) -> dict[str, torch.Tensor]:
+    if isinstance(checkpoint, dict):
+        for key in ("model", "state_dict", "model_state_dict"):
+            value = checkpoint.get(key)
+            if isinstance(value, dict):
+                return {name.removeprefix("module."): tensor for name, tensor in value.items()}
+    if isinstance(checkpoint, dict) and all(torch.is_tensor(value) for value in checkpoint.values()):
+        return {name.removeprefix("module."): tensor for name, tensor in checkpoint.items()}
+    raise ValueError("Could not find a model state_dict in checkpoint")
+
+
+def move_to_device(batch: dict[str, torch.Tensor], device: torch.device) -> dict[str, torch.Tensor]:
+    return {key: value.to(device, non_blocking=True) for key, value in batch.items()}
+
+
+def init_metrics() -> dict[str, Meter]:
+    names = [
+        "base_joints_mpjpe_m",
+        "hsi_joints_mpjpe_m",
+        "base_vertices_pve_m",
+        "hsi_vertices_pve_m",
+        "base_transl_l2_m",
+        "hsi_transl_l2_m",
+        "base_projected_joints_l2_px",
+        "hsi_projected_joints_l2_px",
+        "raw_depth_l1_mean_m",
+        "hsi_depth_l1_mean_m",
+        "raw_depth_l1_median_m",
+        "hsi_depth_l1_median_m",
+    ]
+    return {name: Meter() for name in names} | {"num_gt": Meter(), "num_matched": Meter()}
+
+
+def evaluate_batch(
+    predictions: dict[str, torch.Tensor],
+    batch: dict[str, torch.Tensor],
+    smpl: SMPLLayer,
+    config: dict[str, Any],
+    args: argparse.Namespace,
+    metrics: dict[str, Meter],
+    hsi_scales: list[float],
+    hsi_biases: list[float],
+) -> None:
+    base = decode_smpl_batch(predictions["pred_poses"], predictions["pred_betas"], predictions["pred_transl_cam"], smpl)
+    hsi = decode_smpl_batch(
+        predictions["hsi_refined_pred_poses"],
+        predictions["hsi_refined_pred_betas"],
+        predictions["hsi_refined_pred_transl_cam"],
+        smpl,
+    )
+    gt_poses = rot6d_to_axis_angle(batch["gt_pose_6d"].reshape(-1, 24, 6)).reshape(*batch["gt_pose_6d"].shape[:3], 72)
+    gt = decode_smpl_batch(gt_poses, batch["gt_betas"], batch["gt_transl_cam"], smpl)
+
+    intrinsics = encoding_to_camera(
+        predictions["pose_enc"],
+        image_size_hw=(int(config["data"]["image_size"]), int(config["data"]["image_size"])),
+        build_intrinsics=True,
+    )[1]
+    confs = predictions["pred_confs"].detach()
+    if confs.ndim == 4 and confs.shape[-1] == 1:
+        confs = confs[..., 0]
+    mask = batch["smpl_mask"].bool()
+    batch_size, num_frames, num_queries = mask.shape
+    for b in range(batch_size):
+        for s in range(num_frames):
+            gt_idx = torch.nonzero(mask[b, s], as_tuple=False).flatten()
+            pred_idx = torch.nonzero(confs[b, s] >= float(args.conf_threshold), as_tuple=False).flatten()
+            metrics["num_gt"].add(float(gt_idx.numel()))
+            if gt_idx.numel() == 0 or pred_idx.numel() == 0:
+                continue
+            matches = greedy_match(base["joints"][b, s, pred_idx, :24], gt["joints"][b, s, gt_idx, :24])
+            metrics["num_matched"].add(float(len(matches)))
+            for pred_local, gt_local in matches:
+                q = pred_idx[pred_local]
+                g = gt_idx[gt_local]
+                add_human_metrics(metrics, base, hsi, gt, intrinsics[b, s], b, s, q, g)
+
+    add_depth_metrics(metrics, predictions, batch)
+    if "hsi_scene_scale" in predictions:
+        hsi_scales.extend(predictions["hsi_scene_scale"].detach().float().cpu().reshape(-1).tolist())
+    if "hsi_scene_depth_bias" in predictions:
+        hsi_biases.extend(predictions["hsi_scene_depth_bias"].detach().float().cpu().reshape(-1).tolist())
+
+
+def decode_smpl_batch(poses: torch.Tensor, betas: torch.Tensor, transl: torch.Tensor, smpl: SMPLLayer) -> dict[str, torch.Tensor]:
+    shape = poses.shape[:3]
+    vertices, joints = smpl(poses.reshape(-1, 72).float(), betas.reshape(-1, betas.shape[-1]).float())
+    vertices = vertices.reshape(*shape, vertices.shape[-2], 3).to(dtype=transl.dtype) + transl[..., None, :]
+    joints = joints.reshape(*shape, joints.shape[-2], 3).to(dtype=transl.dtype) + transl[..., None, :]
+    return {"vertices": vertices, "joints": joints, "transl": transl}
+
+
+def greedy_match(pred_joints: torch.Tensor, gt_joints: torch.Tensor) -> list[tuple[int, int]]:
+    cost = torch.linalg.norm(pred_joints[:, None] - gt_joints[None], dim=-1).mean(dim=-1).detach().cpu()
+    matches = []
+    used_pred: set[int] = set()
+    used_gt: set[int] = set()
+    while len(used_pred) < cost.shape[0] and len(used_gt) < cost.shape[1]:
+        best = None
+        for p in range(cost.shape[0]):
+            if p in used_pred:
+                continue
+            for g in range(cost.shape[1]):
+                if g in used_gt:
+                    continue
+                value = float(cost[p, g])
+                if best is None or value < best[0]:
+                    best = (value, p, g)
+        if best is None:
+            break
+        _, p, g = best
+        matches.append((p, g))
+        used_pred.add(p)
+        used_gt.add(g)
+    return matches
+
+
+def add_human_metrics(
+    metrics: dict[str, Meter],
+    base: dict[str, torch.Tensor],
+    hsi: dict[str, torch.Tensor],
+    gt: dict[str, torch.Tensor],
+    intrinsics: torch.Tensor,
+    b: int,
+    s: int,
+    q: torch.Tensor,
+    g: torch.Tensor,
+) -> None:
+    q_int = int(q.item())
+    g_int = int(g.item())
+    gt_j = gt["joints"][b, s, g_int, :24]
+    base_j = base["joints"][b, s, q_int, :24]
+    hsi_j = hsi["joints"][b, s, q_int, :24]
+    metrics["base_joints_mpjpe_m"].add(float(torch.linalg.norm(base_j - gt_j, dim=-1).mean().detach().cpu()))
+    metrics["hsi_joints_mpjpe_m"].add(float(torch.linalg.norm(hsi_j - gt_j, dim=-1).mean().detach().cpu()))
+    metrics["base_vertices_pve_m"].add(float(torch.linalg.norm(base["vertices"][b, s, q_int] - gt["vertices"][b, s, g_int], dim=-1).mean().detach().cpu()))
+    metrics["hsi_vertices_pve_m"].add(float(torch.linalg.norm(hsi["vertices"][b, s, q_int] - gt["vertices"][b, s, g_int], dim=-1).mean().detach().cpu()))
+    metrics["base_transl_l2_m"].add(float(torch.linalg.norm(base["transl"][b, s, q_int] - gt["transl"][b, s, g_int]).detach().cpu()))
+    metrics["hsi_transl_l2_m"].add(float(torch.linalg.norm(hsi["transl"][b, s, q_int] - gt["transl"][b, s, g_int]).detach().cpu()))
+
+    base_2d = project_points(base_j, intrinsics)
+    hsi_2d = project_points(hsi_j, intrinsics)
+    gt_2d = project_points(gt_j, intrinsics)
+    valid_base = (base_j[:, 2] > 1e-4) & (gt_j[:, 2] > 1e-4)
+    valid_hsi = (hsi_j[:, 2] > 1e-4) & (gt_j[:, 2] > 1e-4)
+    if valid_base.any():
+        metrics["base_projected_joints_l2_px"].add(float(torch.linalg.norm(base_2d[valid_base] - gt_2d[valid_base], dim=-1).mean().detach().cpu()))
+    if valid_hsi.any():
+        metrics["hsi_projected_joints_l2_px"].add(float(torch.linalg.norm(hsi_2d[valid_hsi] - gt_2d[valid_hsi], dim=-1).mean().detach().cpu()))
+
+
+def add_depth_metrics(metrics: dict[str, Meter], predictions: dict[str, torch.Tensor], batch: dict[str, torch.Tensor]) -> None:
+    depth = canonical_depth(predictions["depth"]).float()
+    gt_depth = canonical_depth(batch["gt_depth"]).to(device=depth.device, dtype=depth.dtype)
+    if gt_depth.shape[-2:] != depth.shape[-2:]:
+        gt_depth = F.interpolate(
+            gt_depth.reshape(-1, 1, *gt_depth.shape[-2:]),
+            size=depth.shape[-2:],
+            mode="bilinear",
+            align_corners=False,
+        ).reshape(*gt_depth.shape[:2], *depth.shape[-2:])
+    hsi_depth = depth
+    if "hsi_scene_scale" in predictions and "hsi_scene_depth_bias" in predictions:
+        scale = predictions["hsi_scene_scale"].to(device=depth.device, dtype=depth.dtype).reshape(*depth.shape[:2], 1, 1)
+        bias = predictions["hsi_scene_depth_bias"].to(device=depth.device, dtype=depth.dtype).reshape(*depth.shape[:2], 1, 1)
+        hsi_depth = depth * scale + bias
+    valid = torch.isfinite(gt_depth) & (gt_depth > 1e-6) & torch.isfinite(depth) & torch.isfinite(hsi_depth)
+    for b in range(depth.shape[0]):
+        for s in range(depth.shape[1]):
+            frame_valid = valid[b, s]
+            if not frame_valid.any():
+                continue
+            raw_abs = torch.abs(depth[b, s][frame_valid] - gt_depth[b, s][frame_valid])
+            hsi_abs = torch.abs(hsi_depth[b, s][frame_valid] - gt_depth[b, s][frame_valid])
+            metrics["raw_depth_l1_mean_m"].add(float(raw_abs.mean().detach().cpu()), int(raw_abs.numel()))
+            metrics["hsi_depth_l1_mean_m"].add(float(hsi_abs.mean().detach().cpu()), int(hsi_abs.numel()))
+            metrics["raw_depth_l1_median_m"].add(float(raw_abs.median().detach().cpu()))
+            metrics["hsi_depth_l1_median_m"].add(float(hsi_abs.median().detach().cpu()))
+
+
+def canonical_depth(depth: torch.Tensor) -> torch.Tensor:
+    if depth.ndim == 5 and depth.shape[-1] == 1:
+        return depth[..., 0]
+    if depth.ndim == 5 and depth.shape[2] == 1:
+        return depth[:, :, 0]
+    if depth.ndim == 4:
+        return depth
+    raise ValueError(f"Unsupported depth shape: {tuple(depth.shape)}")
+
+
+def project_points(points: torch.Tensor, intrinsics: torch.Tensor) -> torch.Tensor:
+    z = points[..., 2].clamp(min=1e-6)
+    x = intrinsics[0, 0] * points[..., 0] / z + intrinsics[0, 2]
+    y = intrinsics[1, 1] * points[..., 1] / z + intrinsics[1, 2]
+    return torch.stack([x, y], dim=-1)
+
+
+def build_summary(
+    metrics: dict[str, Meter],
+    hsi_scales: list[float],
+    hsi_biases: list[float],
+    processed: int,
+    args: argparse.Namespace,
+    examples: list[dict[str, Any]],
+) -> dict[str, Any]:
+    values = {name: meter.mean for name, meter in metrics.items()}
+    pairs = {
+        "joints_mpjpe_m": ("base_joints_mpjpe_m", "hsi_joints_mpjpe_m"),
+        "vertices_pve_m": ("base_vertices_pve_m", "hsi_vertices_pve_m"),
+        "transl_l2_m": ("base_transl_l2_m", "hsi_transl_l2_m"),
+        "projected_joints_l2_px": ("base_projected_joints_l2_px", "hsi_projected_joints_l2_px"),
+        "depth_l1_mean_m": ("raw_depth_l1_mean_m", "hsi_depth_l1_mean_m"),
+        "depth_l1_median_m": ("raw_depth_l1_median_m", "hsi_depth_l1_median_m"),
+    }
+    improvements = {name: improvement(values[base], values[hsi]) for name, (base, hsi) in pairs.items()}
+    scale_arr = np.asarray(hsi_scales, dtype=np.float64) if hsi_scales else np.asarray([], dtype=np.float64)
+    bias_arr = np.asarray(hsi_biases, dtype=np.float64) if hsi_biases else np.asarray([], dtype=np.float64)
+    return {
+        "checkpoint": args.checkpoint,
+        "num_samples": processed,
+        "conf_threshold": float(args.conf_threshold),
+        "use_gt_box_prior": bool(args.use_gt_box_prior),
+        "metrics": values,
+        "improvement_percent_lower_is_better": improvements,
+        "hsi_scene_scale": describe_array(scale_arr),
+        "hsi_scene_depth_bias": describe_array(bias_arr),
+        "examples": examples,
+    }
+
+
+def improvement(base: float | None, hsi: float | None) -> float | None:
+    if base is None or hsi is None or abs(base) < 1e-12:
+        return None
+    return (base - hsi) / base * 100.0
+
+
+def describe_array(values: np.ndarray) -> dict[str, float | int | None]:
+    if values.size == 0:
+        return {"count": 0, "mean": None, "min": None, "max": None}
+    return {
+        "count": int(values.size),
+        "mean": float(values.mean()),
+        "min": float(values.min()),
+        "max": float(values.max()),
+        "median": float(np.median(values)),
+    }
+
+
+def example_summary(batch_idx: int, predictions: dict[str, torch.Tensor], batch: dict[str, torch.Tensor]) -> dict[str, Any]:
+    return {
+        "batch_idx": int(batch_idx),
+        "num_gt": int(batch["smpl_mask"].sum().detach().cpu()),
+        "num_pred_conf": int((predictions["pred_confs"] >= 0.10).sum().detach().cpu()),
+        "hsi_scene_scale": predictions.get("hsi_scene_scale", torch.empty(0)).detach().float().cpu().reshape(-1).tolist(),
+        "hsi_scene_depth_bias": predictions.get("hsi_scene_depth_bias", torch.empty(0)).detach().float().cpu().reshape(-1).tolist(),
+    }
+
+
+def print_human_summary(summary: dict[str, Any]) -> None:
+    print("========== HSI refine metrics ==========")
+    metrics = summary["metrics"]
+    improvements = summary["improvement_percent_lower_is_better"]
+    for label, base_key, hsi_key, improvement_key in [
+        ("3D joints MPJPE (m)", "base_joints_mpjpe_m", "hsi_joints_mpjpe_m", "joints_mpjpe_m"),
+        ("Vertices PVE (m)", "base_vertices_pve_m", "hsi_vertices_pve_m", "vertices_pve_m"),
+        ("Translation L2 (m)", "base_transl_l2_m", "hsi_transl_l2_m", "transl_l2_m"),
+        ("Projected joints (px)", "base_projected_joints_l2_px", "hsi_projected_joints_l2_px", "projected_joints_l2_px"),
+        ("Depth L1 mean (m)", "raw_depth_l1_mean_m", "hsi_depth_l1_mean_m", "depth_l1_mean_m"),
+        ("Depth L1 median (m)", "raw_depth_l1_median_m", "hsi_depth_l1_median_m", "depth_l1_median_m"),
+    ]:
+        imp = improvements.get(improvement_key)
+        print(f"{label:24s} base={fmt(metrics.get(base_key))} hsi={fmt(metrics.get(hsi_key))} improvement={fmt(imp)}%")
+    print(f"matched humans: {fmt(metrics.get('num_matched'))} / gt {fmt(metrics.get('num_gt'))}")
+    print(f"hsi scale: {summary['hsi_scene_scale']}")
+    print(f"hsi bias : {summary['hsi_scene_depth_bias']}")
+
+
+def fmt(value: float | None) -> str:
+    return "n/a" if value is None else f"{value:.6f}"
+
+
+if __name__ == "__main__":
+    main()
