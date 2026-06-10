@@ -49,6 +49,11 @@ class HungarianSMPLLoss(nn.Module):
         hsi_joints3d_weight: float = 0.0,
         hsi_projected_joints2d_weight: float = 0.0,
         hsi_depth_teacher_weight: float = 0.0,
+        hsi_depth_teacher_max_m: float = 0.0,
+        hsi_depth_teacher_error_clip_m: float = 0.0,
+        hsi_depth_teacher_use_human_roi: bool = False,
+        hsi_depth_teacher_roi_expand: float = 0.35,
+        hsi_depth_teacher_min_valid_pixels: int = 256,
         hsi_anchor_depth_weight: float = 0.0,
         hsi_anchor_scene_xyz_weight: float = 0.0,
         hsi_anchor_scene_window: int = 5,
@@ -92,6 +97,11 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_joints3d_weight = hsi_joints3d_weight
         self.hsi_projected_joints2d_weight = hsi_projected_joints2d_weight
         self.hsi_depth_teacher_weight = hsi_depth_teacher_weight
+        self.hsi_depth_teacher_max_m = hsi_depth_teacher_max_m
+        self.hsi_depth_teacher_error_clip_m = hsi_depth_teacher_error_clip_m
+        self.hsi_depth_teacher_use_human_roi = hsi_depth_teacher_use_human_roi
+        self.hsi_depth_teacher_roi_expand = hsi_depth_teacher_roi_expand
+        self.hsi_depth_teacher_min_valid_pixels = hsi_depth_teacher_min_valid_pixels
         self.hsi_anchor_depth_weight = hsi_anchor_depth_weight
         self.hsi_anchor_scene_xyz_weight = hsi_anchor_scene_xyz_weight
         self.hsi_anchor_scene_window = hsi_anchor_scene_window
@@ -486,6 +496,8 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_anchor_scene_xyz_l1": zero.detach(),
             "metric_hsi_delta_reg": zero.detach(),
             "metric_hsi_depth_teacher_l1": zero.detach(),
+            "metric_hsi_depth_teacher_valid_pixels": zero.detach(),
+            "metric_hsi_depth_teacher_roi_used": zero.detach(),
             "metric_hsi_contact_pos_frac": zero.detach(),
         }
 
@@ -567,6 +579,8 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_anchor_depth_l1": zero.detach(),
             "metric_hsi_anchor_scene_xyz_l1": zero.detach(),
             "metric_hsi_depth_teacher_l1": zero.detach(),
+            "metric_hsi_depth_teacher_valid_pixels": zero.detach(),
+            "metric_hsi_depth_teacher_roi_used": zero.detach(),
             "metric_hsi_contact_pos_frac": zero.detach(),
         }
         if "depth" not in predictions or "hsi_scene_scale" not in predictions or "hsi_scene_depth_bias" not in predictions:
@@ -585,11 +599,32 @@ class HungarianSMPLLoss(nn.Module):
         scale = predictions["hsi_scene_scale"].to(device=depth.device, dtype=depth.dtype)
         bias = predictions["hsi_scene_depth_bias"].to(device=depth.device, dtype=depth.dtype)
         aligned_depth = depth * scale.squeeze(-1)[..., None, None] + bias.squeeze(-1)[..., None, None]
-        valid_depth = torch.isfinite(gt_depth) & (gt_depth > 1e-6)
+        valid_depth = torch.isfinite(gt_depth) & torch.isfinite(aligned_depth) & (gt_depth > 1e-6)
+        if self.hsi_depth_teacher_max_m > 0:
+            valid_depth = valid_depth & (gt_depth <= float(self.hsi_depth_teacher_max_m))
+        roi_used = False
+        if self.hsi_depth_teacher_use_human_roi and "gt_boxes" in batch and "boxes_mask" in batch:
+            roi_mask = _human_roi_depth_mask(
+                batch["gt_boxes"].to(device=depth.device, dtype=depth.dtype),
+                batch["boxes_mask"].to(device=depth.device).bool(),
+                depth.shape[-2],
+                depth.shape[-1],
+                expand=float(self.hsi_depth_teacher_roi_expand),
+            )
+            roi_valid = valid_depth & roi_mask
+            if int(roi_valid.sum().detach().cpu()) >= int(self.hsi_depth_teacher_min_valid_pixels):
+                valid_depth = roi_valid
+                roi_used = True
         if valid_depth.any():
-            depth_l1 = F.smooth_l1_loss(aligned_depth[valid_depth], gt_depth[valid_depth])
+            abs_err = torch.abs(aligned_depth[valid_depth] - gt_depth[valid_depth])
+            loss_err = abs_err
+            if self.hsi_depth_teacher_error_clip_m > 0:
+                loss_err = loss_err.clamp(max=float(self.hsi_depth_teacher_error_clip_m))
+            depth_l1 = _smooth_l1_abs(loss_err).mean()
             out["loss_hsi_depth_teacher"] = depth_l1
-            out["metric_hsi_depth_teacher_l1"] = depth_l1.detach()
+            out["metric_hsi_depth_teacher_l1"] = abs_err.mean().detach()
+            out["metric_hsi_depth_teacher_valid_pixels"] = depth.new_tensor(float(valid_depth.sum().detach().cpu())).detach()
+            out["metric_hsi_depth_teacher_roi_used"] = depth.new_tensor(float(roi_used)).detach()
 
         if "pose_enc" not in predictions:
             return out
@@ -816,6 +851,39 @@ def _sample_depth_at_points(
     sampled = depth_flat[frame_idx[:, None], py, px]
     valid = valid & torch.isfinite(sampled) & (sampled > 1e-6)
     return sampled, valid
+
+
+def _human_roi_depth_mask(
+    boxes: torch.Tensor,
+    boxes_mask: torch.Tensor,
+    depth_height: int,
+    depth_width: int,
+    expand: float = 0.35,
+) -> torch.Tensor:
+    mask = torch.zeros(*boxes.shape[:2], depth_height, depth_width, dtype=torch.bool, device=boxes.device)
+    if boxes.numel() == 0:
+        return mask
+    expand = max(float(expand), 0.0)
+    batch_size, num_frames, num_boxes = boxes.shape[:3]
+    for batch_idx in range(batch_size):
+        for frame_idx in range(num_frames):
+            valid_indices = torch.nonzero(boxes_mask[batch_idx, frame_idx], as_tuple=False).flatten()
+            for box_idx in valid_indices[:num_boxes]:
+                cx, cy, width, height = boxes[batch_idx, frame_idx, box_idx].unbind(dim=-1)
+                width = width * (1.0 + expand)
+                height = height * (1.0 + expand)
+                x1 = int(torch.floor((cx - 0.5 * width).clamp(0.0, 1.0) * depth_width).item())
+                x2 = int(torch.ceil((cx + 0.5 * width).clamp(0.0, 1.0) * depth_width).item())
+                y1 = int(torch.floor((cy - 0.5 * height).clamp(0.0, 1.0) * depth_height).item())
+                y2 = int(torch.ceil((cy + 0.5 * height).clamp(0.0, 1.0) * depth_height).item())
+                if x2 > x1 and y2 > y1:
+                    mask[batch_idx, frame_idx, y1:y2, x1:x2] = True
+    return mask
+
+
+def _smooth_l1_abs(abs_err: torch.Tensor, beta: float = 1.0) -> torch.Tensor:
+    beta = max(float(beta), 1e-6)
+    return torch.where(abs_err < beta, 0.5 * abs_err.square() / beta, abs_err - 0.5 * beta)
 
 
 def _sample_local_scene_distance(
