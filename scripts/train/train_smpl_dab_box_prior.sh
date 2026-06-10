@@ -12,7 +12,7 @@ export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
 
 VGGT_CKPT="/home/zhw/lab_users/xyb/home/projects/vggt-omega/checkpoints/vggt_omega_1b_512.pt"
 SMPL_MODEL_DIR="/home/zhw/xyb_space/SAT-HMR/weights/smpl_data/"
-RESUME_CKPT="${REPO_ROOT}/outputs/train/smpl_conf_quality_aux_20q/checkpoint_latest.pt"
+RESUME_CKPT="${REPO_ROOT}/outputs/train/smpl_conf_quality_20q/checkpoint_latest.pt"
 OUTPUT_DIR="${REPO_ROOT}/outputs/train/smpl_dab_box_prior_20q"
 
 EPOCHS="40"

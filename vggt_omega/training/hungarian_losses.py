@@ -50,6 +50,9 @@ class HungarianSMPLLoss(nn.Module):
         hsi_projected_joints2d_weight: float = 0.0,
         hsi_depth_teacher_weight: float = 0.0,
         hsi_anchor_depth_weight: float = 0.0,
+        hsi_anchor_scene_xyz_weight: float = 0.0,
+        hsi_anchor_scene_window: int = 5,
+        hsi_delta_reg_weight: float = 0.0,
         hsi_contact_weight: float = 0.0,
         hsi_contact_threshold: float = 0.08,
     ) -> None:
@@ -90,6 +93,9 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_projected_joints2d_weight = hsi_projected_joints2d_weight
         self.hsi_depth_teacher_weight = hsi_depth_teacher_weight
         self.hsi_anchor_depth_weight = hsi_anchor_depth_weight
+        self.hsi_anchor_scene_xyz_weight = hsi_anchor_scene_xyz_weight
+        self.hsi_anchor_scene_window = hsi_anchor_scene_window
+        self.hsi_delta_reg_weight = hsi_delta_reg_weight
         self.hsi_contact_weight = hsi_contact_weight
         self.hsi_contact_threshold = hsi_contact_threshold
         self._smpl_layer: SMPLLayer | None = None
@@ -203,6 +209,8 @@ class HungarianSMPLLoss(nn.Module):
             + self.hsi_projected_joints2d_weight * losses["loss_hsi_projected_joints2d"]
             + self.hsi_depth_teacher_weight * losses["loss_hsi_depth_teacher"]
             + self.hsi_anchor_depth_weight * losses["loss_hsi_anchor_depth"]
+            + self.hsi_anchor_scene_xyz_weight * losses["loss_hsi_anchor_scene_xyz"]
+            + self.hsi_delta_reg_weight * losses["loss_hsi_delta_reg"]
             + self.hsi_contact_weight * losses["loss_hsi_contact"]
         )
         return losses
@@ -470,9 +478,13 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_projected_joints2d": zero,
             "loss_hsi_depth_teacher": zero,
             "loss_hsi_anchor_depth": zero,
+            "loss_hsi_anchor_scene_xyz": zero,
+            "loss_hsi_delta_reg": zero,
             "loss_hsi_contact": zero,
             "metric_hsi_joints3d_l1": zero.detach(),
             "metric_hsi_anchor_depth_l1": zero.detach(),
+            "metric_hsi_anchor_scene_xyz_l1": zero.detach(),
+            "metric_hsi_delta_reg": zero.detach(),
             "metric_hsi_depth_teacher_l1": zero.detach(),
             "metric_hsi_contact_pos_frac": zero.detach(),
         }
@@ -504,6 +516,16 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_betas": F.l1_loss(pred_betas, target_betas),
             "loss_hsi_transl_cam": F.l1_loss(pred_transl, target_transl),
         }
+        base_pose6d = _flatten_prediction(_require_prediction(predictions, "pred_pose_6d"), unframed_ndim=3)
+        base_betas = _flatten_prediction(_require_prediction(predictions, "pred_betas"), unframed_ndim=3)
+        base_transl = _flatten_prediction(_require_prediction(predictions, "pred_transl_cam"), unframed_ndim=3)
+        delta_reg = (
+            F.smooth_l1_loss(pred_transl, base_transl[frame_idx, src_idx].detach())
+            + 0.01 * F.smooth_l1_loss(pred_pose, base_pose6d[frame_idx, src_idx].detach())
+            + 0.01 * F.smooth_l1_loss(pred_betas, base_betas[frame_idx, src_idx].detach())
+        )
+        losses["loss_hsi_delta_reg"] = delta_reg
+        losses["metric_hsi_delta_reg"] = delta_reg.detach()
         smpl = self._get_smpl_layer(pred_betas.device)
         pred_aa = refined_poses[frame_idx, src_idx].reshape(-1, 72)
         gt_aa = rot6d_to_axis_angle(target_pose).reshape(-1, 72)
@@ -540,8 +562,10 @@ class HungarianSMPLLoss(nn.Module):
         out = {
             "loss_hsi_depth_teacher": zero,
             "loss_hsi_anchor_depth": zero,
+            "loss_hsi_anchor_scene_xyz": zero,
             "loss_hsi_contact": zero,
             "metric_hsi_anchor_depth_l1": zero.detach(),
+            "metric_hsi_anchor_scene_xyz_l1": zero.detach(),
             "metric_hsi_depth_teacher_l1": zero.detach(),
             "metric_hsi_contact_pos_frac": zero.detach(),
         }
@@ -589,6 +613,21 @@ class HungarianSMPLLoss(nn.Module):
         gt_projected = _scale_points_to_depth(gt_projected, self.projection_image_size, gt_depth.shape[-2], gt_depth.shape[-1])
         sampled_gt, gt_valid = _sample_depth_at_points(gt_depth.reshape(-1, *gt_depth.shape[-2:]), gt_projected, frame_idx)
         contact_target = (torch.abs(sampled_gt - gt_joints_cam[..., 2].to(dtype=sampled_gt.dtype)) < self.hsi_contact_threshold) & gt_valid
+        if self.hsi_anchor_scene_xyz_weight != 0.0 and contact_target.any():
+            local_dist, local_valid = _sample_local_scene_distance(
+                aligned_depth.reshape(-1, *aligned_depth.shape[-2:]),
+                projected,
+                pred_joints_cam,
+                intrinsics[frame_idx].to(dtype=pred_joints_cam.dtype),
+                frame_idx,
+                window_size=int(self.hsi_anchor_scene_window),
+                image_size=self.projection_image_size,
+            )
+            scene_valid = contact_target & local_valid & torch.isfinite(local_dist)
+            if scene_valid.any():
+                scene_xyz = F.smooth_l1_loss(local_dist[scene_valid], torch.zeros_like(local_dist[scene_valid]))
+                out["loss_hsi_anchor_scene_xyz"] = scene_xyz
+                out["metric_hsi_anchor_scene_xyz_l1"] = local_dist[scene_valid].mean().detach()
         if contact_target.any() or gt_valid.any():
             out["loss_hsi_contact"] = F.binary_cross_entropy_with_logits(
                 matched_logits[gt_valid],
@@ -777,6 +816,67 @@ def _sample_depth_at_points(
     sampled = depth_flat[frame_idx[:, None], py, px]
     valid = valid & torch.isfinite(sampled) & (sampled > 1e-6)
     return sampled, valid
+
+
+def _sample_local_scene_distance(
+    depth_flat: torch.Tensor,
+    points_2d: torch.Tensor,
+    points_cam: torch.Tensor,
+    intrinsics: torch.Tensor,
+    frame_idx: torch.Tensor,
+    window_size: int = 5,
+    image_size: int | None = None,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    height, width = depth_flat.shape[-2:]
+    window_size = max(int(window_size), 1)
+    if window_size % 2 == 0:
+        window_size += 1
+    radius = window_size // 2
+
+    center_x = points_2d[..., 0].round().long()
+    center_y = points_2d[..., 1].round().long()
+    point_valid = (
+        torch.isfinite(points_2d).all(dim=-1)
+        & torch.isfinite(points_cam).all(dim=-1)
+        & (points_cam[..., 2] > 1e-6)
+        & (center_x >= 0)
+        & (center_x < width)
+        & (center_y >= 0)
+        & (center_y < height)
+    )
+
+    offsets = torch.arange(-radius, radius + 1, device=points_2d.device)
+    oy, ox = torch.meshgrid(offsets, offsets, indexing="ij")
+    ox = ox.reshape(1, 1, -1)
+    oy = oy.reshape(1, 1, -1)
+    xs = center_x[..., None] + ox
+    ys = center_y[..., None] + oy
+    local_valid = (xs >= 0) & (xs < width) & (ys >= 0) & (ys < height)
+    xs = xs.clamp(0, width - 1)
+    ys = ys.clamp(0, height - 1)
+
+    sampled_depth = depth_flat[frame_idx[:, None, None], ys, xs]
+    local_valid = local_valid & torch.isfinite(sampled_depth) & (sampled_depth > 1e-6)
+
+    fx = intrinsics[:, 0, 0].reshape(-1, 1, 1).clamp(min=1e-6)
+    fy = intrinsics[:, 1, 1].reshape(-1, 1, 1).clamp(min=1e-6)
+    cx = intrinsics[:, 0, 2].reshape(-1, 1, 1)
+    cy = intrinsics[:, 1, 2].reshape(-1, 1, 1)
+    pixel_x = xs.to(dtype=sampled_depth.dtype)
+    pixel_y = ys.to(dtype=sampled_depth.dtype)
+    if image_size is not None:
+        pixel_x = pixel_x * (float(image_size) / float(width))
+        pixel_y = pixel_y * (float(image_size) / float(height))
+    scene_x = (pixel_x - cx.to(dtype=sampled_depth.dtype)) * sampled_depth / fx.to(dtype=sampled_depth.dtype)
+    scene_y = (pixel_y - cy.to(dtype=sampled_depth.dtype)) * sampled_depth / fy.to(dtype=sampled_depth.dtype)
+    scene_xyz = torch.stack([scene_x, scene_y, sampled_depth], dim=-1)
+
+    dist = torch.linalg.norm(scene_xyz - points_cam[..., None, :].to(dtype=scene_xyz.dtype), dim=-1)
+    inf = torch.full_like(dist, float("inf"))
+    nearest = torch.where(local_valid, dist, inf).amin(dim=-1)
+    valid = point_valid & local_valid.any(dim=-1) & torch.isfinite(nearest)
+    nearest = torch.where(valid, nearest, torch.zeros_like(nearest))
+    return nearest, valid
 
 
 def _scale_points_to_depth(points_2d: torch.Tensor, image_size: int, depth_height: int, depth_width: int) -> torch.Tensor:

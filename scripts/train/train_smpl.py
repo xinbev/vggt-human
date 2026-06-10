@@ -204,14 +204,25 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
     model_cfg = config.get("model", {})
     camera_head = getattr(model, "camera_head", None)
     if camera_head is not None and bool(model_cfg.get("freeze_camera_head", False)):
-        camera_head.eval()
-        for _, param in camera_head.named_parameters():
-            param.requires_grad = False
+        freeze_module(camera_head)
     dense_head = getattr(model, "dense_head", None)
     if dense_head is not None and bool(model_cfg.get("freeze_dense_head", False)):
-        dense_head.eval()
-        for _, param in dense_head.named_parameters():
-            param.requires_grad = False
+        freeze_module(dense_head)
+    smpl_head = getattr(model, "smpl_head", None)
+    if smpl_head is not None and bool(model_cfg.get("freeze_smpl_head", False)):
+        freeze_module(smpl_head)
+    hsi_head = getattr(model, "hsi_refinement_head", None)
+    if hsi_head is not None:
+        if bool(model_cfg.get("freeze_hsi_scene_affine", False)):
+            for name in ("scale_delta", "bias_delta"):
+                module = getattr(hsi_head, name, None)
+                if module is not None:
+                    freeze_module(module)
+        if bool(model_cfg.get("freeze_hsi_backbone", False)):
+            for name in ("scene_projs", "token_mlp", "blocks"):
+                module = getattr(hsi_head, name, None)
+                if module is not None:
+                    freeze_module(module)
     if not bool(model_cfg.get("freeze_aggregator", False)):
         return
     aggregator = getattr(model, "aggregator", None)
@@ -230,6 +241,12 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
         aggregator.smpl_patch_pool_embed.train()
         for param in aggregator.smpl_patch_pool_embed.parameters():
             param.requires_grad = True
+
+
+def freeze_module(module: torch.nn.Module) -> None:
+    module.eval()
+    for _, param in module.named_parameters():
+        param.requires_grad = False
 
 
 def load_initial_checkpoint(model: torch.nn.Module, config: dict[str, Any], device: torch.device) -> None:

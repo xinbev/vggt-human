@@ -39,7 +39,7 @@ model:
   id_embed_dim: 256
 
 checkpoint:
-  resume: outputs/train/smpl_conf_quality_aux_20q/checkpoint_latest.pt
+  resume: outputs/train/smpl_conf_quality_20q/checkpoint_latest.pt
   load_vggt_baseline: true
   strict: false
   resume_strict: false
