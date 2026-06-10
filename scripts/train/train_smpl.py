@@ -223,6 +223,11 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
                 module = getattr(hsi_head, name, None)
                 if module is not None:
                     freeze_module(module)
+        if bool(model_cfg.get("train_hsi_transl_only", False)):
+            for name in ("pose_delta", "betas_delta", "contact_head"):
+                module = getattr(hsi_head, name, None)
+                if module is not None:
+                    freeze_module(module)
     if not bool(model_cfg.get("freeze_aggregator", False)):
         return
     aggregator = getattr(model, "aggregator", None)
