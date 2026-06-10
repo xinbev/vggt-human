@@ -1,18 +1,18 @@
 {
   "image": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000000/rgb/seq_000000_0000.png",
-  "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_refine_20q/checkpoint_epoch_0121.pt",
+  "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_refine_20q_robust_depth_from0121/checkpoint_latest.pt",
   "use_gt_box_prior": true,
   "depth": {
     "valid_pixels": 262144,
-    "hsi_scene_scale": 7.850935935974121,
-    "hsi_scene_depth_bias": -0.2859143614768982,
+    "hsi_scene_scale": 8.07228946685791,
+    "hsi_scene_depth_bias": -0.14085647463798523,
     "raw_depth_l1_mean_m": 180.74859619140625,
-    "hsi_depth_l1_mean_m": 174.57151794433594,
+    "hsi_depth_l1_mean_m": 174.61349487304688,
     "raw_depth_l1_median_m": 4.33958625793457,
-    "hsi_depth_l1_median_m": 0.16223430633544922,
+    "hsi_depth_l1_median_m": 0.2248920202255249,
     "raw_depth_rmse_m": 1290.4752197265625,
-    "hsi_depth_rmse_m": 1285.08544921875,
-    "hsi_depth_improvement_median_percent": 96.26152594527146
+    "hsi_depth_rmse_m": 1284.891357421875,
+    "hsi_depth_improvement_median_percent": 94.8176621719564
   },
   "smpl": {
     "base_joints_mpjpe_m": 0.08212796971201897,
