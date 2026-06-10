@@ -65,15 +65,15 @@
     "id_embed_dim": 256
   },
   "checkpoint": {
-    "resume": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_dab_roi_pool_3d_refine_20q/checkpoint_latest.pt",
-    "load_vggt_baseline": true,
+    "resume": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_refine_20q/checkpoint_latest.pt",
+    "load_vggt_baseline": false,
     "strict": false,
     "resume_strict": false,
-    "resume_optimizer": false
+    "resume_optimizer": true
   },
   "optim": {
     "batch_size": 1,
-    "epochs": 140,
+    "epochs": 141,
     "lr": 5e-06,
     "weight_decay": 0.05,
     "grad_clip_norm": 1.0,
