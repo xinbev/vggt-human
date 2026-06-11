@@ -62,6 +62,10 @@ class HungarianSMPLLoss(nn.Module):
         hsi_no_worse_weight: float = 0.0,
         hsi_no_worse_margin_m: float = 0.02,
         hsi_gate_reg_weight: float = 0.0,
+        hsi_foot_contact_weight: float = 0.0,
+        hsi_foot_contact_threshold_m: float = 0.12,
+        hsi_foot_float_margin_m: float = 0.05,
+        hsi_foot_penetration_margin_m: float = 0.02,
         hsi_contact_weight: float = 0.0,
         hsi_contact_threshold: float = 0.08,
     ) -> None:
@@ -114,6 +118,10 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_no_worse_weight = hsi_no_worse_weight
         self.hsi_no_worse_margin_m = hsi_no_worse_margin_m
         self.hsi_gate_reg_weight = hsi_gate_reg_weight
+        self.hsi_foot_contact_weight = hsi_foot_contact_weight
+        self.hsi_foot_contact_threshold_m = hsi_foot_contact_threshold_m
+        self.hsi_foot_float_margin_m = hsi_foot_float_margin_m
+        self.hsi_foot_penetration_margin_m = hsi_foot_penetration_margin_m
         self.hsi_contact_weight = hsi_contact_weight
         self.hsi_contact_threshold = hsi_contact_threshold
         self._smpl_layer: SMPLLayer | None = None
@@ -232,6 +240,7 @@ class HungarianSMPLLoss(nn.Module):
             + self.hsi_delta_reg_weight * losses["loss_hsi_delta_reg"]
             + self.hsi_no_worse_weight * losses["loss_hsi_no_worse"]
             + self.hsi_gate_reg_weight * losses["loss_hsi_gate_reg"]
+            + self.hsi_foot_contact_weight * losses["loss_hsi_foot_contact"]
             + self.hsi_contact_weight * losses["loss_hsi_contact"]
         )
         return losses
@@ -504,12 +513,16 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_delta_reg": zero,
             "loss_hsi_no_worse": zero,
             "loss_hsi_gate_reg": zero,
+            "loss_hsi_foot_contact": zero,
             "loss_hsi_contact": zero,
             "metric_hsi_joints3d_l1": zero.detach(),
             "metric_hsi_vertices_l1": zero.detach(),
             "metric_hsi_no_worse_ratio": zero.detach(),
             "metric_hsi_joint_error_delta": zero.detach(),
             "metric_hsi_gate_mean": zero.detach(),
+            "metric_hsi_foot_float_m": zero.detach(),
+            "metric_hsi_foot_penetration_m": zero.detach(),
+            "metric_hsi_foot_contact_count": zero.detach(),
             "metric_hsi_anchor_depth_l1": zero.detach(),
             "metric_hsi_anchor_scene_xyz_l1": zero.detach(),
             "metric_hsi_delta_reg": zero.detach(),
@@ -622,9 +635,13 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_depth_teacher": zero,
             "loss_hsi_anchor_depth": zero,
             "loss_hsi_anchor_scene_xyz": zero,
+            "loss_hsi_foot_contact": zero,
             "loss_hsi_contact": zero,
             "metric_hsi_anchor_depth_l1": zero.detach(),
             "metric_hsi_anchor_scene_xyz_l1": zero.detach(),
+            "metric_hsi_foot_float_m": zero.detach(),
+            "metric_hsi_foot_penetration_m": zero.detach(),
+            "metric_hsi_foot_contact_count": zero.detach(),
             "metric_hsi_depth_teacher_l1": zero.detach(),
             "metric_hsi_depth_teacher_valid_pixels": zero.detach(),
             "metric_hsi_depth_teacher_roi_used": zero.detach(),
@@ -684,6 +701,17 @@ class HungarianSMPLLoss(nn.Module):
             out["loss_hsi_anchor_depth"] = anchor_l1
             out["metric_hsi_anchor_depth_l1"] = anchor_l1.detach()
 
+        if self.hsi_foot_contact_weight != 0.0:
+            foot_out = self._hsi_foot_contact_losses(
+                aligned_depth=aligned_depth,
+                gt_depth=gt_depth,
+                intrinsics=intrinsics,
+                frame_idx=frame_idx,
+                pred_joints_cam=pred_joints_cam,
+                gt_joints_cam=gt_joints_cam,
+            )
+            out.update(foot_out)
+
         logits = predictions.get("hsi_contact_logits")
         if logits is None:
             return out
@@ -716,6 +744,47 @@ class HungarianSMPLLoss(nn.Module):
                 contact_target[gt_valid].to(dtype=matched_logits.dtype),
             ) if gt_valid.any() else zero
             out["metric_hsi_contact_pos_frac"] = contact_target.to(dtype=matched_logits.dtype).mean().detach()
+        return out
+
+    def _hsi_foot_contact_losses(
+        self,
+        aligned_depth: torch.Tensor,
+        gt_depth: torch.Tensor,
+        intrinsics: torch.Tensor,
+        frame_idx: torch.Tensor,
+        pred_joints_cam: torch.Tensor,
+        gt_joints_cam: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        zero = pred_joints_cam.sum() * 0.0
+        out = {
+            "loss_hsi_foot_contact": zero,
+            "metric_hsi_foot_float_m": zero.detach(),
+            "metric_hsi_foot_penetration_m": zero.detach(),
+            "metric_hsi_foot_contact_count": zero.detach(),
+        }
+        foot_idx = torch.tensor([7, 8, 10, 11], dtype=torch.long, device=pred_joints_cam.device)
+        pred_foot = pred_joints_cam[:, foot_idx]
+        gt_foot = gt_joints_cam[:, foot_idx]
+        pred_projected = _project_points(pred_foot, intrinsics[frame_idx].to(dtype=pred_foot.dtype))
+        pred_projected = _scale_points_to_depth(pred_projected, self.projection_image_size, aligned_depth.shape[-2], aligned_depth.shape[-1])
+        sampled_aligned, pred_valid = _sample_depth_at_points(aligned_depth.reshape(-1, *aligned_depth.shape[-2:]), pred_projected, frame_idx)
+
+        gt_projected = _project_points(gt_foot, intrinsics[frame_idx].to(dtype=gt_foot.dtype))
+        gt_projected = _scale_points_to_depth(gt_projected, self.projection_image_size, gt_depth.shape[-2], gt_depth.shape[-1])
+        sampled_gt, gt_valid = _sample_depth_at_points(gt_depth.reshape(-1, *gt_depth.shape[-2:]), gt_projected, frame_idx)
+        contact_target = (torch.abs(sampled_gt - gt_foot[..., 2].to(dtype=sampled_gt.dtype)) < float(self.hsi_foot_contact_threshold_m)) & gt_valid
+        valid = contact_target & pred_valid
+        if not valid.any():
+            return out
+
+        depth_delta = sampled_aligned - pred_foot[..., 2].to(dtype=sampled_aligned.dtype)
+        float_amt = F.relu(depth_delta - float(self.hsi_foot_float_margin_m))
+        penetration_amt = F.relu(-depth_delta - float(self.hsi_foot_penetration_margin_m))
+        contact_loss = (_smooth_l1_abs(float_amt[valid]) + _smooth_l1_abs(penetration_amt[valid])).mean()
+        out["loss_hsi_foot_contact"] = contact_loss
+        out["metric_hsi_foot_float_m"] = float_amt[valid].mean().detach()
+        out["metric_hsi_foot_penetration_m"] = penetration_amt[valid].mean().detach()
+        out["metric_hsi_foot_contact_count"] = pred_joints_cam.new_tensor(float(valid.sum().detach().cpu())).detach()
         return out
 
     def _identity_loss(

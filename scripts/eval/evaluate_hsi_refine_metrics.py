@@ -122,6 +122,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--num-workers", type=int, default=2)
     parser.add_argument("--conf-threshold", type=float, default=0.10)
     parser.add_argument("--use-gt-box-prior", action="store_true")
+    parser.add_argument("--foot-contact-threshold-m", type=float, default=0.12)
+    parser.add_argument("--foot-float-margin-m", type=float, default=0.04)
+    parser.add_argument("--foot-penetration-margin-m", type=float, default=0.02)
     parser.add_argument("--log-interval", type=int, default=8)
     parser.add_argument("--override", action="append", default=[])
     return parser.parse_args()
@@ -231,6 +234,13 @@ def init_metrics() -> dict[str, Meter]:
         "depth_near_valid_pixels",
         "depth_far_valid_pixels",
         "depth_human_roi_valid_pixels",
+        "base_foot_abs_delta_m",
+        "hsi_foot_abs_delta_m",
+        "base_foot_float_m",
+        "hsi_foot_float_m",
+        "base_foot_penetration_m",
+        "hsi_foot_penetration_m",
+        "foot_contact_valid_count",
     ]
     return {name: Meter() for name in names} | {"num_gt": Meter(), "num_matched": Meter()}
 
@@ -263,6 +273,7 @@ def evaluate_batch(
     confs = predictions["pred_confs"].detach()
     if confs.ndim == 4 and confs.shape[-1] == 1:
         confs = confs[..., 0]
+    raw_depth, hsi_depth, gt_depth = depth_triplet(predictions, batch)
     mask = batch["smpl_mask"].bool()
     batch_size, num_frames, num_queries = mask.shape
     for b in range(batch_size):
@@ -277,7 +288,21 @@ def evaluate_batch(
             for pred_local, gt_local in matches:
                 q = pred_idx[pred_local]
                 g = gt_idx[gt_local]
-                add_human_metrics(metrics, base, hsi, gt, intrinsics[b, s], b, s, q, g)
+                add_human_metrics(
+                    metrics,
+                    base,
+                    hsi,
+                    gt,
+                    intrinsics[b, s],
+                    hsi_depth[b, s],
+                    gt_depth[b, s],
+                    int(config["data"]["image_size"]),
+                    args,
+                    b,
+                    s,
+                    q,
+                    g,
+                )
 
     add_depth_metrics(metrics, predictions, batch)
     if "hsi_scene_scale" in predictions:
@@ -325,6 +350,10 @@ def add_human_metrics(
     hsi: dict[str, torch.Tensor],
     gt: dict[str, torch.Tensor],
     intrinsics: torch.Tensor,
+    hsi_depth: torch.Tensor,
+    gt_depth: torch.Tensor,
+    image_size: int,
+    args: argparse.Namespace,
     b: int,
     s: int,
     q: torch.Tensor,
@@ -355,23 +384,11 @@ def add_human_metrics(
         metrics["base_projected_joints_l2_px"].add(float(torch.linalg.norm(base_2d[valid_base] - gt_2d[valid_base], dim=-1).mean().detach().cpu()))
     if valid_hsi.any():
         metrics["hsi_projected_joints_l2_px"].add(float(torch.linalg.norm(hsi_2d[valid_hsi] - gt_2d[valid_hsi], dim=-1).mean().detach().cpu()))
+    add_foot_contact_metrics(metrics, base_j, hsi_j, gt_j, intrinsics, hsi_depth, gt_depth, image_size, args)
 
 
 def add_depth_metrics(metrics: dict[str, Meter], predictions: dict[str, torch.Tensor], batch: dict[str, torch.Tensor]) -> None:
-    depth = canonical_depth(predictions["depth"]).float()
-    gt_depth = canonical_depth(batch["gt_depth"]).to(device=depth.device, dtype=depth.dtype)
-    if gt_depth.shape[-2:] != depth.shape[-2:]:
-        gt_depth = F.interpolate(
-            gt_depth.reshape(-1, 1, *gt_depth.shape[-2:]),
-            size=depth.shape[-2:],
-            mode="bilinear",
-            align_corners=False,
-        ).reshape(*gt_depth.shape[:2], *depth.shape[-2:])
-    hsi_depth = depth
-    if "hsi_scene_scale" in predictions and "hsi_scene_depth_bias" in predictions:
-        scale = predictions["hsi_scene_scale"].to(device=depth.device, dtype=depth.dtype).reshape(*depth.shape[:2], 1, 1)
-        bias = predictions["hsi_scene_depth_bias"].to(device=depth.device, dtype=depth.dtype).reshape(*depth.shape[:2], 1, 1)
-        hsi_depth = depth * scale + bias
+    depth, hsi_depth, gt_depth = depth_triplet(predictions, batch)
     valid = torch.isfinite(gt_depth) & (gt_depth > 1e-6) & torch.isfinite(depth) & torch.isfinite(hsi_depth)
     near_valid = valid & (gt_depth <= 30.0)
     far_valid = valid & (gt_depth > 30.0)
@@ -389,6 +406,76 @@ def add_depth_metrics(metrics: dict[str, Meter], predictions: dict[str, torch.Te
             add_depth_region_metrics(metrics, "depth_near", depth[b, s], hsi_depth[b, s], gt_depth[b, s], near_valid[b, s])
             add_depth_region_metrics(metrics, "depth_far", depth[b, s], hsi_depth[b, s], gt_depth[b, s], far_valid[b, s])
             add_depth_region_metrics(metrics, "depth_human_roi", depth[b, s], hsi_depth[b, s], gt_depth[b, s], roi_valid[b, s])
+
+
+def depth_triplet(predictions: dict[str, torch.Tensor], batch: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    depth = canonical_depth(predictions["depth"]).float()
+    gt_depth = canonical_depth(batch["gt_depth"]).to(device=depth.device, dtype=depth.dtype)
+    if gt_depth.shape[-2:] != depth.shape[-2:]:
+        gt_depth = F.interpolate(
+            gt_depth.reshape(-1, 1, *gt_depth.shape[-2:]),
+            size=depth.shape[-2:],
+            mode="bilinear",
+            align_corners=False,
+        ).reshape(*gt_depth.shape[:2], *depth.shape[-2:])
+    hsi_depth = depth
+    if "hsi_scene_scale" in predictions and "hsi_scene_depth_bias" in predictions:
+        scale = predictions["hsi_scene_scale"].to(device=depth.device, dtype=depth.dtype).reshape(*depth.shape[:2], 1, 1)
+        bias = predictions["hsi_scene_depth_bias"].to(device=depth.device, dtype=depth.dtype).reshape(*depth.shape[:2], 1, 1)
+        hsi_depth = depth * scale + bias
+    return depth, hsi_depth, gt_depth
+
+
+def add_foot_contact_metrics(
+    metrics: dict[str, Meter],
+    base_joints: torch.Tensor,
+    hsi_joints: torch.Tensor,
+    gt_joints: torch.Tensor,
+    intrinsics: torch.Tensor,
+    hsi_depth: torch.Tensor,
+    gt_depth: torch.Tensor,
+    image_size: int,
+    args: argparse.Namespace,
+) -> None:
+    foot_idx = torch.tensor([7, 8, 10, 11], dtype=torch.long, device=hsi_joints.device)
+    gt_foot = gt_joints[foot_idx]
+    gt_projected = scale_points_to_depth(project_points(gt_foot, intrinsics), image_size, gt_depth.shape[-2], gt_depth.shape[-1])
+    sampled_gt, gt_valid = sample_depth_at_points(gt_depth, gt_projected)
+    contact = (torch.abs(sampled_gt - gt_foot[:, 2].to(dtype=sampled_gt.dtype)) < float(args.foot_contact_threshold_m)) & gt_valid
+    if not contact.any():
+        return
+
+    for prefix, joints in [("base", base_joints), ("hsi", hsi_joints)]:
+        foot = joints[foot_idx]
+        projected = scale_points_to_depth(project_points(foot, intrinsics), image_size, hsi_depth.shape[-2], hsi_depth.shape[-1])
+        sampled, valid = sample_depth_at_points(hsi_depth, projected)
+        use = contact & valid & torch.isfinite(sampled) & torch.isfinite(foot[:, 2])
+        if not use.any():
+            continue
+        depth_delta = sampled - foot[:, 2].to(dtype=sampled.dtype)
+        float_amt = torch.relu(depth_delta - float(args.foot_float_margin_m))
+        penetration_amt = torch.relu(-depth_delta - float(args.foot_penetration_margin_m))
+        metrics[f"{prefix}_foot_abs_delta_m"].add(float(torch.abs(depth_delta[use]).mean().detach().cpu()), int(use.sum().detach().cpu()))
+        metrics[f"{prefix}_foot_float_m"].add(float(float_amt[use].mean().detach().cpu()), int(use.sum().detach().cpu()))
+        metrics[f"{prefix}_foot_penetration_m"].add(float(penetration_amt[use].mean().detach().cpu()), int(use.sum().detach().cpu()))
+    metrics["foot_contact_valid_count"].add(float(contact.sum().detach().cpu()))
+
+
+def scale_points_to_depth(points: torch.Tensor, image_size: int, depth_height: int, depth_width: int) -> torch.Tensor:
+    scale = points.new_tensor([depth_width / float(image_size), depth_height / float(image_size)])
+    return points * scale
+
+
+def sample_depth_at_points(depth: torch.Tensor, points: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    height, width = depth.shape[-2:]
+    x = points[:, 0].round().long()
+    y = points[:, 1].round().long()
+    valid = (x >= 0) & (x < width) & (y >= 0) & (y < height)
+    sampled = depth.new_zeros(points.shape[0])
+    if valid.any():
+        sampled[valid] = depth[y[valid], x[valid]]
+    valid = valid & torch.isfinite(sampled) & (sampled > 1e-6)
+    return sampled, valid
 
 
 def add_depth_region_metrics(
@@ -557,6 +644,14 @@ def print_human_summary(summary: dict[str, Any]) -> None:
         "HSI guard metrics       "
         f"worse>2cm={fmt(metrics.get('hsi_worse_than_base_ratio_2cm'))} "
         f"joint_delta={fmt(metrics.get('hsi_joint_error_delta_m'))}m"
+    )
+    print(
+        "Foot contact metrics    "
+        f"base_float={fmt(metrics.get('base_foot_float_m'))}m "
+        f"hsi_float={fmt(metrics.get('hsi_foot_float_m'))}m "
+        f"base_pen={fmt(metrics.get('base_foot_penetration_m'))}m "
+        f"hsi_pen={fmt(metrics.get('hsi_foot_penetration_m'))}m "
+        f"contacts={fmt(metrics.get('foot_contact_valid_count'))}"
     )
     print(f"matched humans: {fmt(metrics.get('num_matched'))} / gt {fmt(metrics.get('num_gt'))}")
     print(f"hsi scale: {summary['hsi_scene_scale']}")

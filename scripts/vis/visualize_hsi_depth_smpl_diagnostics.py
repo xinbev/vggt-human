@@ -43,11 +43,14 @@ if str(ROOT) not in sys.path:
 from scripts.eval.evaluate_hsi_refine_metrics import (  # noqa: E402
     canonical_depth,
     decode_smpl_batch,
+    depth_triplet,
     greedy_match,
     human_roi_depth_mask,
     load_training_checkpoint,
     load_vggt_baseline,
     project_points,
+    sample_depth_at_points,
+    scale_points_to_depth,
 )
 from scripts.train.train_smpl import apply_overrides, build_model, load_yaml_config  # noqa: E402
 from vggt_omega.data.bedlam import (  # noqa: E402
@@ -129,6 +132,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--use-gt-box-prior", action="store_true")
     parser.add_argument("--depth-bad-threshold-m", type=float, default=0.30)
     parser.add_argument("--smpl-good-threshold-m", type=float, default=0.08)
+    parser.add_argument("--foot-contact-threshold-m", type=float, default=0.12)
+    parser.add_argument("--foot-float-margin-m", type=float, default=0.04)
+    parser.add_argument("--foot-penetration-margin-m", type=float, default=0.02)
     parser.add_argument("--override", action="append", default=[])
     return parser.parse_args()
 
@@ -296,6 +302,7 @@ def compute_smpl_diagnostics(
     confs = predictions["pred_confs"].detach()
     if confs.ndim == 4 and confs.shape[-1] == 1:
         confs = confs[..., 0]
+    _, hsi_depth, gt_depth = depth_triplet(predictions, batch)
 
     gt_idx = torch.nonzero(batch["smpl_mask"][0, 0].bool(), as_tuple=False).flatten()
     pred_idx = torch.nonzero(confs[0, 0] >= float(args.conf_threshold), as_tuple=False).flatten()
@@ -310,11 +317,29 @@ def compute_smpl_diagnostics(
         "hsi_transl_l2_m": [],
         "base_projected_joints_l2_px": [],
         "hsi_projected_joints_l2_px": [],
+        "base_foot_abs_delta_m": [],
+        "hsi_foot_abs_delta_m": [],
+        "base_foot_float_m": [],
+        "hsi_foot_float_m": [],
+        "base_foot_penetration_m": [],
+        "hsi_foot_penetration_m": [],
+        "foot_contact_valid_count": [],
     }
     for pred_local, gt_local in matches:
         q = int(pred_idx[pred_local].item())
         g = int(gt_idx[gt_local].item())
-        values = human_metric_values(base, hsi, gt, intrinsics[0, 0], q, g)
+        values = human_metric_values(
+            base,
+            hsi,
+            gt,
+            intrinsics[0, 0],
+            hsi_depth[0, 0],
+            gt_depth[0, 0],
+            int(config["data"]["image_size"]),
+            args,
+            q,
+            g,
+        )
         for key, value in values.items():
             meters[key].append(value)
         per_person.append({"pred_query": q, "gt_index": g, **values})
@@ -337,9 +362,13 @@ def human_metric_values(
     hsi: dict[str, torch.Tensor],
     gt: dict[str, torch.Tensor],
     intrinsics: torch.Tensor,
+    hsi_depth: torch.Tensor,
+    gt_depth: torch.Tensor,
+    image_size: int,
+    args: argparse.Namespace,
     q: int,
     g: int,
-) -> dict[str, float]:
+) -> dict[str, float | None]:
     gt_j = gt["joints"][0, 0, g, :24]
     base_j = base["joints"][0, 0, q, :24]
     hsi_j = hsi["joints"][0, 0, q, :24]
@@ -348,7 +377,7 @@ def human_metric_values(
     gt_2d = project_points(gt_j, intrinsics)
     valid_base = (base_j[:, 2] > 1e-4) & (gt_j[:, 2] > 1e-4)
     valid_hsi = (hsi_j[:, 2] > 1e-4) & (gt_j[:, 2] > 1e-4)
-    return {
+    values = {
         "base_joints_mpjpe_m": scalar(torch.linalg.norm(base_j - gt_j, dim=-1).mean()),
         "hsi_joints_mpjpe_m": scalar(torch.linalg.norm(hsi_j - gt_j, dim=-1).mean()),
         "base_vertices_pve_m": scalar(torch.linalg.norm(base["vertices"][0, 0, q] - gt["vertices"][0, 0, g], dim=-1).mean()),
@@ -358,6 +387,50 @@ def human_metric_values(
         "base_projected_joints_l2_px": scalar(torch.linalg.norm(base_2d[valid_base] - gt_2d[valid_base], dim=-1).mean()) if valid_base.any() else None,
         "hsi_projected_joints_l2_px": scalar(torch.linalg.norm(hsi_2d[valid_hsi] - gt_2d[valid_hsi], dim=-1).mean()) if valid_hsi.any() else None,
     }
+    values.update(foot_contact_values(base_j, hsi_j, gt_j, intrinsics, hsi_depth, gt_depth, image_size, args))
+    return values
+
+
+def foot_contact_values(
+    base_joints: torch.Tensor,
+    hsi_joints: torch.Tensor,
+    gt_joints: torch.Tensor,
+    intrinsics: torch.Tensor,
+    hsi_depth: torch.Tensor,
+    gt_depth: torch.Tensor,
+    image_size: int,
+    args: argparse.Namespace,
+) -> dict[str, float | None]:
+    foot_idx = torch.tensor([7, 8, 10, 11], dtype=torch.long, device=hsi_joints.device)
+    gt_foot = gt_joints[foot_idx]
+    gt_projected = scale_points_to_depth(project_points(gt_foot, intrinsics), image_size, gt_depth.shape[-2], gt_depth.shape[-1])
+    sampled_gt, gt_valid = sample_depth_at_points(gt_depth, gt_projected)
+    contact = (torch.abs(sampled_gt - gt_foot[:, 2].to(dtype=sampled_gt.dtype)) < float(args.foot_contact_threshold_m)) & gt_valid
+    values: dict[str, float | None] = {
+        "base_foot_abs_delta_m": None,
+        "hsi_foot_abs_delta_m": None,
+        "base_foot_float_m": None,
+        "hsi_foot_float_m": None,
+        "base_foot_penetration_m": None,
+        "hsi_foot_penetration_m": None,
+        "foot_contact_valid_count": float(contact.sum().detach().cpu()),
+    }
+    if not contact.any():
+        return values
+    for prefix, joints in [("base", base_joints), ("hsi", hsi_joints)]:
+        foot = joints[foot_idx]
+        projected = scale_points_to_depth(project_points(foot, intrinsics), image_size, hsi_depth.shape[-2], hsi_depth.shape[-1])
+        sampled, valid = sample_depth_at_points(hsi_depth, projected)
+        use = contact & valid & torch.isfinite(sampled) & torch.isfinite(foot[:, 2])
+        if not use.any():
+            continue
+        depth_delta = sampled - foot[:, 2].to(dtype=sampled.dtype)
+        float_amt = torch.relu(depth_delta - float(args.foot_float_margin_m))
+        penetration_amt = torch.relu(-depth_delta - float(args.foot_penetration_margin_m))
+        values[f"{prefix}_foot_abs_delta_m"] = scalar(torch.abs(depth_delta[use]).mean())
+        values[f"{prefix}_foot_float_m"] = scalar(float_amt[use].mean())
+        values[f"{prefix}_foot_penetration_m"] = scalar(penetration_amt[use].mean())
+    return values
 
 
 def save_depth_visuals(output_dir: Path, stem: str, rgb: Image.Image, images: dict[str, np.ndarray], summary: dict[str, Any]) -> dict[str, str]:
@@ -472,6 +545,11 @@ def print_human_summary(depth: dict[str, Any], smpl: dict[str, Any], diagnosis: 
     print(f"SMPL HSI MPJPE      : {fmt(smpl.get('hsi_joints_mpjpe_m'))} m")
     print(f"SMPL HSI PVE        : {fmt(smpl.get('hsi_vertices_pve_m'))} m")
     print(f"SMPL HSI transl L2  : {fmt(smpl.get('hsi_transl_l2_m'))} m")
+    print(
+        "Foot float / pen    : "
+        f"base={fmt(smpl.get('base_foot_float_m'))}/{fmt(smpl.get('base_foot_penetration_m'))} m "
+        f"hsi={fmt(smpl.get('hsi_foot_float_m'))}/{fmt(smpl.get('hsi_foot_penetration_m'))} m"
+    )
     print(f"Raw depth median L1 : {fmt(depth.get('raw_depth_l1_median_m'))} m")
     print(f"HSI depth median L1 : {fmt(depth.get('hsi_depth_l1_median_m'))} m")
     regions = depth.get("regions", {})
