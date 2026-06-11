@@ -3,16 +3,58 @@
   "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_refine_20q_robust_depth_from0121/checkpoint_latest.pt",
   "use_gt_box_prior": true,
   "depth": {
-    "valid_pixels": 262144,
     "hsi_scene_scale": 8.07228946685791,
     "hsi_scene_depth_bias": -0.14085647463798523,
+    "valid_pixels": 262144,
     "raw_depth_l1_mean_m": 180.74859619140625,
     "hsi_depth_l1_mean_m": 174.61349487304688,
     "raw_depth_l1_median_m": 4.33958625793457,
     "hsi_depth_l1_median_m": 0.2248920202255249,
     "raw_depth_rmse_m": 1290.4752197265625,
     "hsi_depth_rmse_m": 1284.891357421875,
-    "hsi_depth_improvement_median_percent": 94.8176621719564
+    "hsi_depth_improvement_median_percent": 94.8176621719564,
+    "regions": {
+      "full": {
+        "valid_pixels": 262144,
+        "raw_depth_l1_mean_m": 180.74859619140625,
+        "hsi_depth_l1_mean_m": 174.61349487304688,
+        "raw_depth_l1_median_m": 4.33958625793457,
+        "hsi_depth_l1_median_m": 0.2248920202255249,
+        "raw_depth_rmse_m": 1290.4752197265625,
+        "hsi_depth_rmse_m": 1284.891357421875,
+        "hsi_depth_improvement_median_percent": 94.8176621719564
+      },
+      "near_lt_30m": {
+        "valid_pixels": 255490,
+        "raw_depth_l1_mean_m": 6.025036334991455,
+        "hsi_depth_l1_mean_m": 0.7493064999580383,
+        "raw_depth_l1_median_m": 4.25998592376709,
+        "hsi_depth_l1_median_m": 0.21878266334533691,
+        "raw_depth_rmse_m": 7.424618721008301,
+        "hsi_depth_rmse_m": 1.8797918558120728,
+        "hsi_depth_improvement_median_percent": 94.86423975899272
+      },
+      "far_ge_30m": {
+        "valid_pixels": 6654,
+        "raw_depth_l1_mean_m": 6889.5126953125,
+        "hsi_depth_l1_mean_m": 6850.3818359375,
+        "raw_depth_l1_median_m": 6640.798828125,
+        "hsi_depth_l1_median_m": 6606.65869140625,
+        "raw_depth_rmse_m": 8099.74267578125,
+        "hsi_depth_rmse_m": 8064.81689453125,
+        "hsi_depth_improvement_median_percent": 0.5140968368769171
+      },
+      "human_roi": {
+        "valid_pixels": 180002,
+        "raw_depth_l1_mean_m": 89.79444885253906,
+        "hsi_depth_l1_mean_m": 85.10511779785156,
+        "raw_depth_l1_median_m": 3.6850745677948,
+        "hsi_depth_l1_median_m": 0.23105955123901367,
+        "raw_depth_rmse_m": 939.55615234375,
+        "hsi_depth_rmse_m": 935.761962890625,
+        "hsi_depth_improvement_median_percent": 93.72985411860246
+      }
+    }
   },
   "smpl": {
     "base_joints_mpjpe_m": 0.08212796971201897,
