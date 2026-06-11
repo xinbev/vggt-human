@@ -44,6 +44,7 @@ from scripts.eval.evaluate_hsi_refine_metrics import (  # noqa: E402
     canonical_depth,
     decode_smpl_batch,
     greedy_match,
+    human_roi_depth_mask,
     load_training_checkpoint,
     load_vggt_baseline,
     project_points,
@@ -206,22 +207,37 @@ def compute_depth_diagnostics(predictions: dict[str, torch.Tensor], batch: dict[
         bias_value = float(bias.reshape(-1)[0].detach().cpu())
 
     valid = torch.isfinite(gt_depth) & (gt_depth > 1e-6) & torch.isfinite(raw_depth) & torch.isfinite(hsi_depth)
-    raw_abs = torch.abs(raw_depth[valid] - gt_depth[valid]) if valid.any() else raw_depth.new_empty(0)
-    hsi_abs = torch.abs(hsi_depth[valid] - gt_depth[valid]) if valid.any() else raw_depth.new_empty(0)
+    near_valid = valid & (gt_depth <= 30.0)
+    far_valid = valid & (gt_depth > 30.0)
+    roi_mask = human_roi_depth_mask(
+        batch["gt_boxes"].to(device=raw_depth.device, dtype=raw_depth.dtype),
+        batch["boxes_mask"].to(device=raw_depth.device).bool(),
+        raw_depth.shape[-2],
+        raw_depth.shape[-1],
+        expand=0.75,
+    )
+    roi_valid = valid & roi_mask
+    full_stats = depth_region_summary(raw_depth, hsi_depth, gt_depth, valid)
+    near_stats = depth_region_summary(raw_depth, hsi_depth, gt_depth, near_valid)
+    far_stats = depth_region_summary(raw_depth, hsi_depth, gt_depth, far_valid)
+    roi_stats = depth_region_summary(raw_depth, hsi_depth, gt_depth, roi_valid)
     summary = {
-        "valid_pixels": int(valid.sum().detach().cpu()),
         "hsi_scene_scale": scale_value,
         "hsi_scene_depth_bias": bias_value,
-        "raw_depth_l1_mean_m": scalar(raw_abs.mean()) if raw_abs.numel() else None,
-        "hsi_depth_l1_mean_m": scalar(hsi_abs.mean()) if hsi_abs.numel() else None,
-        "raw_depth_l1_median_m": scalar(raw_abs.median()) if raw_abs.numel() else None,
-        "hsi_depth_l1_median_m": scalar(hsi_abs.median()) if hsi_abs.numel() else None,
-        "raw_depth_rmse_m": scalar(torch.sqrt((raw_abs.square()).mean())) if raw_abs.numel() else None,
-        "hsi_depth_rmse_m": scalar(torch.sqrt((hsi_abs.square()).mean())) if hsi_abs.numel() else None,
-        "hsi_depth_improvement_median_percent": improvement(
-            scalar(raw_abs.median()) if raw_abs.numel() else None,
-            scalar(hsi_abs.median()) if hsi_abs.numel() else None,
-        ),
+        "valid_pixels": full_stats["valid_pixels"],
+        "raw_depth_l1_mean_m": full_stats["raw_depth_l1_mean_m"],
+        "hsi_depth_l1_mean_m": full_stats["hsi_depth_l1_mean_m"],
+        "raw_depth_l1_median_m": full_stats["raw_depth_l1_median_m"],
+        "hsi_depth_l1_median_m": full_stats["hsi_depth_l1_median_m"],
+        "raw_depth_rmse_m": full_stats["raw_depth_rmse_m"],
+        "hsi_depth_rmse_m": full_stats["hsi_depth_rmse_m"],
+        "hsi_depth_improvement_median_percent": full_stats["hsi_depth_improvement_median_percent"],
+        "regions": {
+            "full": full_stats,
+            "near_lt_30m": near_stats,
+            "far_ge_30m": far_stats,
+            "human_roi": roi_stats,
+        },
     }
     images = {
         "gt_depth": gt_depth[0, 0].detach().cpu().numpy(),
@@ -232,6 +248,28 @@ def compute_depth_diagnostics(predictions: dict[str, torch.Tensor], batch: dict[
         "valid": valid[0, 0].detach().cpu().numpy(),
     }
     return summary, images
+
+
+def depth_region_summary(
+    raw_depth: torch.Tensor,
+    hsi_depth: torch.Tensor,
+    gt_depth: torch.Tensor,
+    valid: torch.Tensor,
+) -> dict[str, Any]:
+    raw_abs = torch.abs(raw_depth[valid] - gt_depth[valid]) if valid.any() else raw_depth.new_empty(0)
+    hsi_abs = torch.abs(hsi_depth[valid] - gt_depth[valid]) if valid.any() else raw_depth.new_empty(0)
+    raw_median = scalar(raw_abs.median()) if raw_abs.numel() else None
+    hsi_median = scalar(hsi_abs.median()) if hsi_abs.numel() else None
+    return {
+        "valid_pixels": int(valid.sum().detach().cpu()),
+        "raw_depth_l1_mean_m": scalar(raw_abs.mean()) if raw_abs.numel() else None,
+        "hsi_depth_l1_mean_m": scalar(hsi_abs.mean()) if hsi_abs.numel() else None,
+        "raw_depth_l1_median_m": raw_median,
+        "hsi_depth_l1_median_m": hsi_median,
+        "raw_depth_rmse_m": scalar(torch.sqrt((raw_abs.square()).mean())) if raw_abs.numel() else None,
+        "hsi_depth_rmse_m": scalar(torch.sqrt((hsi_abs.square()).mean())) if hsi_abs.numel() else None,
+        "hsi_depth_improvement_median_percent": improvement(raw_median, hsi_median),
+    }
 
 
 def compute_smpl_diagnostics(
@@ -436,6 +474,14 @@ def print_human_summary(depth: dict[str, Any], smpl: dict[str, Any], diagnosis: 
     print(f"SMPL HSI transl L2  : {fmt(smpl.get('hsi_transl_l2_m'))} m")
     print(f"Raw depth median L1 : {fmt(depth.get('raw_depth_l1_median_m'))} m")
     print(f"HSI depth median L1 : {fmt(depth.get('hsi_depth_l1_median_m'))} m")
+    regions = depth.get("regions", {})
+    for label, key in [("Near <30m", "near_lt_30m"), ("Far >=30m", "far_ge_30m"), ("Human ROI", "human_roi")]:
+        region = regions.get(key, {})
+        print(
+            f"{label:18s}: raw={fmt(region.get('raw_depth_l1_median_m'))}m "
+            f"hsi={fmt(region.get('hsi_depth_l1_median_m'))}m "
+            f"pixels={region.get('valid_pixels', 0)}"
+        )
     print(f"HSI scale / bias    : {fmt(depth.get('hsi_scene_scale'))} / {fmt(depth.get('hsi_scene_depth_bias'))}")
     print(f"Likely source       : {diagnosis['likely_source']}")
 

@@ -213,6 +213,22 @@ def init_metrics() -> dict[str, Meter]:
         "hsi_depth_l1_mean_m",
         "raw_depth_l1_median_m",
         "hsi_depth_l1_median_m",
+        "raw_depth_near_l1_mean_m",
+        "hsi_depth_near_l1_mean_m",
+        "raw_depth_near_l1_median_m",
+        "hsi_depth_near_l1_median_m",
+        "raw_depth_far_l1_mean_m",
+        "hsi_depth_far_l1_mean_m",
+        "raw_depth_far_l1_median_m",
+        "hsi_depth_far_l1_median_m",
+        "raw_depth_human_roi_l1_mean_m",
+        "hsi_depth_human_roi_l1_mean_m",
+        "raw_depth_human_roi_l1_median_m",
+        "hsi_depth_human_roi_l1_median_m",
+        "depth_valid_pixels",
+        "depth_near_valid_pixels",
+        "depth_far_valid_pixels",
+        "depth_human_roi_valid_pixels",
     ]
     return {name: Meter() for name in names} | {"num_gt": Meter(), "num_matched": Meter()}
 
@@ -351,17 +367,79 @@ def add_depth_metrics(metrics: dict[str, Meter], predictions: dict[str, torch.Te
         bias = predictions["hsi_scene_depth_bias"].to(device=depth.device, dtype=depth.dtype).reshape(*depth.shape[:2], 1, 1)
         hsi_depth = depth * scale + bias
     valid = torch.isfinite(gt_depth) & (gt_depth > 1e-6) & torch.isfinite(depth) & torch.isfinite(hsi_depth)
+    near_valid = valid & (gt_depth <= 30.0)
+    far_valid = valid & (gt_depth > 30.0)
+    roi_mask = human_roi_depth_mask(
+        batch["gt_boxes"].to(device=depth.device, dtype=depth.dtype),
+        batch["boxes_mask"].to(device=depth.device).bool(),
+        depth.shape[-2],
+        depth.shape[-1],
+        expand=0.75,
+    )
+    roi_valid = valid & roi_mask
     for b in range(depth.shape[0]):
         for s in range(depth.shape[1]):
-            frame_valid = valid[b, s]
-            if not frame_valid.any():
-                continue
-            raw_abs = torch.abs(depth[b, s][frame_valid] - gt_depth[b, s][frame_valid])
-            hsi_abs = torch.abs(hsi_depth[b, s][frame_valid] - gt_depth[b, s][frame_valid])
-            metrics["raw_depth_l1_mean_m"].add(float(raw_abs.mean().detach().cpu()), int(raw_abs.numel()))
-            metrics["hsi_depth_l1_mean_m"].add(float(hsi_abs.mean().detach().cpu()), int(hsi_abs.numel()))
-            metrics["raw_depth_l1_median_m"].add(float(raw_abs.median().detach().cpu()))
-            metrics["hsi_depth_l1_median_m"].add(float(hsi_abs.median().detach().cpu()))
+            add_depth_region_metrics(metrics, "depth", depth[b, s], hsi_depth[b, s], gt_depth[b, s], valid[b, s])
+            add_depth_region_metrics(metrics, "depth_near", depth[b, s], hsi_depth[b, s], gt_depth[b, s], near_valid[b, s])
+            add_depth_region_metrics(metrics, "depth_far", depth[b, s], hsi_depth[b, s], gt_depth[b, s], far_valid[b, s])
+            add_depth_region_metrics(metrics, "depth_human_roi", depth[b, s], hsi_depth[b, s], gt_depth[b, s], roi_valid[b, s])
+
+
+def add_depth_region_metrics(
+    metrics: dict[str, Meter],
+    prefix: str,
+    depth: torch.Tensor,
+    hsi_depth: torch.Tensor,
+    gt_depth: torch.Tensor,
+    valid: torch.Tensor,
+) -> None:
+    metrics[f"{prefix}_valid_pixels"].add(float(valid.sum().detach().cpu()))
+    if not valid.any():
+        return
+    raw_abs = torch.abs(depth[valid] - gt_depth[valid])
+    hsi_abs = torch.abs(hsi_depth[valid] - gt_depth[valid])
+    raw_mean_key, hsi_mean_key, raw_median_key, hsi_median_key = depth_metric_keys(prefix)
+    metrics[raw_mean_key].add(float(raw_abs.mean().detach().cpu()), int(raw_abs.numel()))
+    metrics[hsi_mean_key].add(float(hsi_abs.mean().detach().cpu()), int(hsi_abs.numel()))
+    metrics[raw_median_key].add(float(raw_abs.median().detach().cpu()))
+    metrics[hsi_median_key].add(float(hsi_abs.median().detach().cpu()))
+
+
+def depth_metric_keys(prefix: str) -> tuple[str, str, str, str]:
+    if prefix == "depth":
+        return "raw_depth_l1_mean_m", "hsi_depth_l1_mean_m", "raw_depth_l1_median_m", "hsi_depth_l1_median_m"
+    suffix = prefix.removeprefix("depth_")
+    return (
+        f"raw_depth_{suffix}_l1_mean_m",
+        f"hsi_depth_{suffix}_l1_mean_m",
+        f"raw_depth_{suffix}_l1_median_m",
+        f"hsi_depth_{suffix}_l1_median_m",
+    )
+
+
+def human_roi_depth_mask(
+    boxes: torch.Tensor,
+    boxes_mask: torch.Tensor,
+    depth_height: int,
+    depth_width: int,
+    expand: float = 0.75,
+) -> torch.Tensor:
+    mask = torch.zeros(*boxes.shape[:2], depth_height, depth_width, dtype=torch.bool, device=boxes.device)
+    expand = max(float(expand), 0.0)
+    for batch_idx in range(boxes.shape[0]):
+        for frame_idx in range(boxes.shape[1]):
+            valid_indices = torch.nonzero(boxes_mask[batch_idx, frame_idx], as_tuple=False).flatten()
+            for box_idx in valid_indices:
+                cx, cy, width, height = boxes[batch_idx, frame_idx, box_idx].unbind(dim=-1)
+                width = width * (1.0 + expand)
+                height = height * (1.0 + expand)
+                x1 = int(torch.floor((cx - 0.5 * width).clamp(0.0, 1.0) * depth_width).item())
+                x2 = int(torch.ceil((cx + 0.5 * width).clamp(0.0, 1.0) * depth_width).item())
+                y1 = int(torch.floor((cy - 0.5 * height).clamp(0.0, 1.0) * depth_height).item())
+                y2 = int(torch.ceil((cy + 0.5 * height).clamp(0.0, 1.0) * depth_height).item())
+                if x2 > x1 and y2 > y1:
+                    mask[batch_idx, frame_idx, y1:y2, x1:x2] = True
+    return mask
 
 
 def canonical_depth(depth: torch.Tensor) -> torch.Tensor:
@@ -397,6 +475,9 @@ def build_summary(
         "projected_joints_l2_px": ("base_projected_joints_l2_px", "hsi_projected_joints_l2_px"),
         "depth_l1_mean_m": ("raw_depth_l1_mean_m", "hsi_depth_l1_mean_m"),
         "depth_l1_median_m": ("raw_depth_l1_median_m", "hsi_depth_l1_median_m"),
+        "depth_near_l1_median_m": ("raw_depth_near_l1_median_m", "hsi_depth_near_l1_median_m"),
+        "depth_far_l1_median_m": ("raw_depth_far_l1_median_m", "hsi_depth_far_l1_median_m"),
+        "depth_human_roi_l1_median_m": ("raw_depth_human_roi_l1_median_m", "hsi_depth_human_roi_l1_median_m"),
     }
     improvements = {name: improvement(values[base], values[hsi]) for name, (base, hsi) in pairs.items()}
     scale_arr = np.asarray(hsi_scales, dtype=np.float64) if hsi_scales else np.asarray([], dtype=np.float64)
@@ -453,9 +534,19 @@ def print_human_summary(summary: dict[str, Any]) -> None:
         ("Projected joints (px)", "base_projected_joints_l2_px", "hsi_projected_joints_l2_px", "projected_joints_l2_px"),
         ("Depth L1 mean (m)", "raw_depth_l1_mean_m", "hsi_depth_l1_mean_m", "depth_l1_mean_m"),
         ("Depth L1 median (m)", "raw_depth_l1_median_m", "hsi_depth_l1_median_m", "depth_l1_median_m"),
+        ("Near depth median (m)", "raw_depth_near_l1_median_m", "hsi_depth_near_l1_median_m", "depth_near_l1_median_m"),
+        ("Far depth median (m)", "raw_depth_far_l1_median_m", "hsi_depth_far_l1_median_m", "depth_far_l1_median_m"),
+        ("Human ROI depth median", "raw_depth_human_roi_l1_median_m", "hsi_depth_human_roi_l1_median_m", "depth_human_roi_l1_median_m"),
     ]:
         imp = improvements.get(improvement_key)
         print(f"{label:24s} base={fmt(metrics.get(base_key))} hsi={fmt(metrics.get(hsi_key))} improvement={fmt(imp)}%")
+    print(
+        "depth valid pixels/frame: "
+        f"full={fmt(metrics.get('depth_valid_pixels'))} "
+        f"near={fmt(metrics.get('depth_near_valid_pixels'))} "
+        f"far={fmt(metrics.get('depth_far_valid_pixels'))} "
+        f"human_roi={fmt(metrics.get('depth_human_roi_valid_pixels'))}"
+    )
     print(f"matched humans: {fmt(metrics.get('num_matched'))} / gt {fmt(metrics.get('num_gt'))}")
     print(f"hsi scale: {summary['hsi_scene_scale']}")
     print(f"hsi bias : {summary['hsi_scene_depth_bias']}")
