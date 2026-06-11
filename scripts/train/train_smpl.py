@@ -167,6 +167,7 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_num_heads=int(model_cfg.get("hsi_num_heads", 8)),
         hsi_num_iters=int(model_cfg.get("hsi_num_iters", 3)),
         hsi_scene_window=int(model_cfg.get("hsi_scene_window", 3)),
+        hsi_use_delta_gate=bool(model_cfg.get("hsi_use_delta_gate", False)),
         smpl_model_dir=str(config.get("assets", {}).get("smpl_model_dir", "")),
         image_size=int(config.get("data", {}).get("image_size", 518)),
         freeze_dense_head=bool(model_cfg.get("freeze_dense_head", False)),
@@ -230,6 +231,11 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
                     freeze_module(module)
         if bool(model_cfg.get("train_hsi_scene_affine_only", False)):
             for name in ("pose_delta", "betas_delta", "transl_delta", "contact_head"):
+                module = getattr(hsi_head, name, None)
+                if module is not None:
+                    freeze_module(module)
+        if bool(model_cfg.get("train_hsi_smpl_delta_only", False)):
+            for name in ("scale_delta", "bias_delta", "contact_head"):
                 module = getattr(hsi_head, name, None)
                 if module is not None:
                     freeze_module(module)

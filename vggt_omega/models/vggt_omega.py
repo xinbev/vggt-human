@@ -41,6 +41,7 @@ class VGGTOmega(nn.Module):
         hsi_num_heads: int = 8,
         hsi_num_iters: int = 3,
         hsi_scene_window: int = 3,
+        hsi_use_delta_gate: bool = False,
         smpl_model_dir: str = "",
         image_size: int = 518,
         freeze_dense_head: bool = False,
@@ -85,6 +86,7 @@ class VGGTOmega(nn.Module):
                 num_heads=hsi_num_heads,
                 num_iters=hsi_num_iters,
                 scene_window=hsi_scene_window,
+                use_delta_gate=hsi_use_delta_gate,
                 smpl_model_dir=smpl_model_dir,
                 image_size=image_size,
             )

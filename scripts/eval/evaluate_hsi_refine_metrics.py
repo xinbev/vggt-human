@@ -209,6 +209,8 @@ def init_metrics() -> dict[str, Meter]:
         "hsi_transl_l2_m",
         "base_projected_joints_l2_px",
         "hsi_projected_joints_l2_px",
+        "hsi_worse_than_base_ratio_2cm",
+        "hsi_joint_error_delta_m",
         "raw_depth_l1_mean_m",
         "hsi_depth_l1_mean_m",
         "raw_depth_l1_median_m",
@@ -333,8 +335,12 @@ def add_human_metrics(
     gt_j = gt["joints"][b, s, g_int, :24]
     base_j = base["joints"][b, s, q_int, :24]
     hsi_j = hsi["joints"][b, s, q_int, :24]
-    metrics["base_joints_mpjpe_m"].add(float(torch.linalg.norm(base_j - gt_j, dim=-1).mean().detach().cpu()))
-    metrics["hsi_joints_mpjpe_m"].add(float(torch.linalg.norm(hsi_j - gt_j, dim=-1).mean().detach().cpu()))
+    base_joint_error = torch.linalg.norm(base_j - gt_j, dim=-1).mean()
+    hsi_joint_error = torch.linalg.norm(hsi_j - gt_j, dim=-1).mean()
+    metrics["base_joints_mpjpe_m"].add(float(base_joint_error.detach().cpu()))
+    metrics["hsi_joints_mpjpe_m"].add(float(hsi_joint_error.detach().cpu()))
+    metrics["hsi_worse_than_base_ratio_2cm"].add(float((hsi_joint_error > base_joint_error + 0.02).detach().cpu()))
+    metrics["hsi_joint_error_delta_m"].add(float((hsi_joint_error - base_joint_error).detach().cpu()))
     metrics["base_vertices_pve_m"].add(float(torch.linalg.norm(base["vertices"][b, s, q_int] - gt["vertices"][b, s, g_int], dim=-1).mean().detach().cpu()))
     metrics["hsi_vertices_pve_m"].add(float(torch.linalg.norm(hsi["vertices"][b, s, q_int] - gt["vertices"][b, s, g_int], dim=-1).mean().detach().cpu()))
     metrics["base_transl_l2_m"].add(float(torch.linalg.norm(base["transl"][b, s, q_int] - gt["transl"][b, s, g_int]).detach().cpu()))
@@ -546,6 +552,11 @@ def print_human_summary(summary: dict[str, Any]) -> None:
         f"near={fmt(metrics.get('depth_near_valid_pixels'))} "
         f"far={fmt(metrics.get('depth_far_valid_pixels'))} "
         f"human_roi={fmt(metrics.get('depth_human_roi_valid_pixels'))}"
+    )
+    print(
+        "HSI guard metrics       "
+        f"worse>2cm={fmt(metrics.get('hsi_worse_than_base_ratio_2cm'))} "
+        f"joint_delta={fmt(metrics.get('hsi_joint_error_delta_m'))}m"
     )
     print(f"matched humans: {fmt(metrics.get('num_matched'))} / gt {fmt(metrics.get('num_gt'))}")
     print(f"hsi scale: {summary['hsi_scene_scale']}")

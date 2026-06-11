@@ -47,6 +47,7 @@ class HungarianSMPLLoss(nn.Module):
         hsi_betas_weight: float = 0.0,
         hsi_transl_cam_weight: float = 0.0,
         hsi_joints3d_weight: float = 0.0,
+        hsi_vertices_weight: float = 0.0,
         hsi_projected_joints2d_weight: float = 0.0,
         hsi_depth_teacher_weight: float = 0.0,
         hsi_depth_teacher_max_m: float = 0.0,
@@ -58,6 +59,9 @@ class HungarianSMPLLoss(nn.Module):
         hsi_anchor_scene_xyz_weight: float = 0.0,
         hsi_anchor_scene_window: int = 5,
         hsi_delta_reg_weight: float = 0.0,
+        hsi_no_worse_weight: float = 0.0,
+        hsi_no_worse_margin_m: float = 0.02,
+        hsi_gate_reg_weight: float = 0.0,
         hsi_contact_weight: float = 0.0,
         hsi_contact_threshold: float = 0.08,
     ) -> None:
@@ -95,6 +99,7 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_betas_weight = hsi_betas_weight
         self.hsi_transl_cam_weight = hsi_transl_cam_weight
         self.hsi_joints3d_weight = hsi_joints3d_weight
+        self.hsi_vertices_weight = hsi_vertices_weight
         self.hsi_projected_joints2d_weight = hsi_projected_joints2d_weight
         self.hsi_depth_teacher_weight = hsi_depth_teacher_weight
         self.hsi_depth_teacher_max_m = hsi_depth_teacher_max_m
@@ -106,6 +111,9 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_anchor_scene_xyz_weight = hsi_anchor_scene_xyz_weight
         self.hsi_anchor_scene_window = hsi_anchor_scene_window
         self.hsi_delta_reg_weight = hsi_delta_reg_weight
+        self.hsi_no_worse_weight = hsi_no_worse_weight
+        self.hsi_no_worse_margin_m = hsi_no_worse_margin_m
+        self.hsi_gate_reg_weight = hsi_gate_reg_weight
         self.hsi_contact_weight = hsi_contact_weight
         self.hsi_contact_threshold = hsi_contact_threshold
         self._smpl_layer: SMPLLayer | None = None
@@ -216,11 +224,14 @@ class HungarianSMPLLoss(nn.Module):
             + self.hsi_betas_weight * losses["loss_hsi_betas"]
             + self.hsi_transl_cam_weight * losses["loss_hsi_transl_cam"]
             + self.hsi_joints3d_weight * losses["loss_hsi_joints3d"]
+            + self.hsi_vertices_weight * losses["loss_hsi_vertices"]
             + self.hsi_projected_joints2d_weight * losses["loss_hsi_projected_joints2d"]
             + self.hsi_depth_teacher_weight * losses["loss_hsi_depth_teacher"]
             + self.hsi_anchor_depth_weight * losses["loss_hsi_anchor_depth"]
             + self.hsi_anchor_scene_xyz_weight * losses["loss_hsi_anchor_scene_xyz"]
             + self.hsi_delta_reg_weight * losses["loss_hsi_delta_reg"]
+            + self.hsi_no_worse_weight * losses["loss_hsi_no_worse"]
+            + self.hsi_gate_reg_weight * losses["loss_hsi_gate_reg"]
             + self.hsi_contact_weight * losses["loss_hsi_contact"]
         )
         return losses
@@ -485,13 +496,20 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_betas": zero,
             "loss_hsi_transl_cam": zero,
             "loss_hsi_joints3d": zero,
+            "loss_hsi_vertices": zero,
             "loss_hsi_projected_joints2d": zero,
             "loss_hsi_depth_teacher": zero,
             "loss_hsi_anchor_depth": zero,
             "loss_hsi_anchor_scene_xyz": zero,
             "loss_hsi_delta_reg": zero,
+            "loss_hsi_no_worse": zero,
+            "loss_hsi_gate_reg": zero,
             "loss_hsi_contact": zero,
             "metric_hsi_joints3d_l1": zero.detach(),
+            "metric_hsi_vertices_l1": zero.detach(),
+            "metric_hsi_no_worse_ratio": zero.detach(),
+            "metric_hsi_joint_error_delta": zero.detach(),
+            "metric_hsi_gate_mean": zero.detach(),
             "metric_hsi_anchor_depth_l1": zero.detach(),
             "metric_hsi_anchor_scene_xyz_l1": zero.detach(),
             "metric_hsi_delta_reg": zero.detach(),
@@ -541,12 +559,41 @@ class HungarianSMPLLoss(nn.Module):
         smpl = self._get_smpl_layer(pred_betas.device)
         pred_aa = refined_poses[frame_idx, src_idx].reshape(-1, 72)
         gt_aa = rot6d_to_axis_angle(target_pose).reshape(-1, 72)
-        _, pred_joints = smpl(pred_aa.float(), pred_betas.float())
-        _, gt_joints = smpl(gt_aa.float(), target_betas.float())
+        base_aa = rot6d_to_axis_angle(base_pose6d[frame_idx, src_idx].detach()).reshape(-1, 72)
+        base_betas_matched = base_betas[frame_idx, src_idx].detach()
+        base_transl_matched = base_transl[frame_idx, src_idx].detach()
+        pred_vertices, pred_joints = smpl(pred_aa.float(), pred_betas.float())
+        gt_vertices, gt_joints = smpl(gt_aa.float(), target_betas.float())
+        base_vertices, base_joints = smpl(base_aa.float(), base_betas_matched.float())
         pred_joints_cam = pred_joints[:, :24].to(dtype=pred_betas.dtype) + pred_transl[:, None, :]
         gt_joints_cam = gt_joints[:, :24].to(dtype=pred_betas.dtype) + target_transl[:, None, :]
+        base_joints_cam = base_joints[:, :24].to(dtype=pred_betas.dtype) + base_transl_matched[:, None, :]
+        pred_vertices_cam = pred_vertices.to(dtype=pred_betas.dtype) + pred_transl[:, None, :]
+        gt_vertices_cam = gt_vertices.to(dtype=pred_betas.dtype) + target_transl[:, None, :]
+        base_vertices_cam = base_vertices.to(dtype=pred_betas.dtype) + base_transl_matched[:, None, :]
         losses["loss_hsi_joints3d"] = F.l1_loss(pred_joints_cam, gt_joints_cam)
         losses["metric_hsi_joints3d_l1"] = losses["loss_hsi_joints3d"].detach()
+        losses["loss_hsi_vertices"] = F.l1_loss(pred_vertices_cam, gt_vertices_cam)
+        losses["metric_hsi_vertices_l1"] = losses["loss_hsi_vertices"].detach()
+
+        hsi_joint_err = torch.linalg.norm(pred_joints_cam - gt_joints_cam, dim=-1).mean(dim=-1)
+        base_joint_err = torch.linalg.norm(base_joints_cam - gt_joints_cam, dim=-1).mean(dim=-1).detach()
+        hsi_vert_err = torch.linalg.norm(pred_vertices_cam - gt_vertices_cam, dim=-1).mean(dim=-1)
+        base_vert_err = torch.linalg.norm(base_vertices_cam - gt_vertices_cam, dim=-1).mean(dim=-1).detach()
+        margin = float(self.hsi_no_worse_margin_m)
+        no_worse = F.relu(hsi_joint_err - base_joint_err + margin) + 0.5 * F.relu(hsi_vert_err - base_vert_err + margin)
+        losses["loss_hsi_no_worse"] = no_worse.mean()
+        losses["metric_hsi_no_worse_ratio"] = (hsi_joint_err > (base_joint_err + margin)).to(dtype=pred_betas.dtype).mean().detach()
+        losses["metric_hsi_joint_error_delta"] = (hsi_joint_err - base_joint_err).mean().detach()
+        gate = predictions.get("hsi_refine_gate")
+        if gate is not None:
+            flat_gate = _flatten_prediction(gate, unframed_ndim=3)
+            matched_gate = flat_gate[frame_idx, src_idx, 0] if flat_gate is not None else pred_transl.new_zeros(pred_transl.shape[0])
+            losses["loss_hsi_gate_reg"] = matched_gate.mean()
+            losses["metric_hsi_gate_mean"] = matched_gate.detach().mean()
+        else:
+            losses["loss_hsi_gate_reg"] = pred_transl.sum() * 0.0
+            losses["metric_hsi_gate_mean"] = losses["loss_hsi_gate_reg"].detach()
 
         if "pose_enc" in predictions:
             intrinsics = _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), self.projection_image_size)

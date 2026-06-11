@@ -26,6 +26,7 @@ class HSIRefinementHead(nn.Module):
         scene_window: int = 3,
         smpl_model_dir: str = "",
         image_size: int = 518,
+        use_delta_gate: bool = False,
     ) -> None:
         super().__init__()
         if not smpl_model_dir:
@@ -36,6 +37,7 @@ class HSIRefinementHead(nn.Module):
         self.num_iters = int(num_iters)
         self.scene_window = int(scene_window)
         self.image_size = int(image_size)
+        self.use_delta_gate = bool(use_delta_gate)
         self.smpl = SMPLLayer(smpl_model_dir).eval()
         for param in self.smpl.parameters():
             param.requires_grad = False
@@ -60,6 +62,10 @@ class HSIRefinementHead(nn.Module):
         self.scale_delta = _zero_last_linear(nn.Sequential(nn.Linear(hidden_dim, hidden_dim), nn.GELU(), nn.Linear(hidden_dim, 1)))
         self.bias_delta = _zero_last_linear(nn.Sequential(nn.Linear(hidden_dim, hidden_dim), nn.GELU(), nn.Linear(hidden_dim, 1)))
         self.contact_head = _zero_last_linear(nn.Sequential(nn.Linear(hidden_dim, hidden_dim), nn.GELU(), nn.Linear(hidden_dim, 1)))
+        self.delta_gate = _biased_last_linear(
+            nn.Sequential(nn.Linear(hidden_dim, hidden_dim), nn.GELU(), nn.Linear(hidden_dim, 1)),
+            bias=4.0,
+        )
 
     def forward(
         self,
@@ -112,14 +118,18 @@ class HSIRefinementHead(nn.Module):
         contact_logits = None
         per_query_log_scale = None
         per_query_bias = None
+        gate = None
         tokens = flat_tokens
         for _ in range(max(self.num_iters, 1)):
             for block in self.blocks:
                 tokens = block(tokens, flat_scene)
             pooled = tokens.mean(dim=1).reshape(flat_frames, num_queries, self.hidden_dim)
-            refined_pose6d = refined_pose6d + 0.01 * self.pose_delta(pooled).reshape(batch_size, num_frames, num_queries, 144)
-            refined_betas = refined_betas + 0.01 * self.betas_delta(pooled).reshape(batch_size, num_frames, num_queries, 10)
-            refined_transl = refined_transl + 0.05 * self.transl_delta(pooled).reshape(batch_size, num_frames, num_queries, 3)
+            gate = torch.sigmoid(self.delta_gate(pooled)).reshape(batch_size, num_frames, num_queries, 1)
+            if not self.use_delta_gate:
+                gate = torch.ones_like(gate)
+            refined_pose6d = refined_pose6d + gate * 0.01 * self.pose_delta(pooled).reshape(batch_size, num_frames, num_queries, 144)
+            refined_betas = refined_betas + gate * 0.01 * self.betas_delta(pooled).reshape(batch_size, num_frames, num_queries, 10)
+            refined_transl = refined_transl + gate * 0.05 * self.transl_delta(pooled).reshape(batch_size, num_frames, num_queries, 3)
             per_query_log_scale = self.scale_delta(pooled).reshape(batch_size, num_frames, num_queries, 1)
             per_query_bias = self.bias_delta(pooled).reshape(batch_size, num_frames, num_queries, 1)
             contact_logits = self.contact_head(tokens).reshape(batch_size, num_frames, num_queries, 24, 1)
@@ -141,6 +151,7 @@ class HSIRefinementHead(nn.Module):
             "hsi_anchor_depth_residual": token_aux["depth_residual"],
             "hsi_per_query_scene_log_scale": per_query_log_scale,
             "hsi_per_query_scene_depth_bias": per_query_bias,
+            "hsi_refine_gate": gate,
         }
 
     def _build_scene_features(
@@ -334,4 +345,12 @@ def _zero_last_linear(module: nn.Sequential) -> nn.Sequential:
     if isinstance(last, nn.Linear):
         nn.init.zeros_(last.weight)
         nn.init.zeros_(last.bias)
+    return module
+
+
+def _biased_last_linear(module: nn.Sequential, bias: float) -> nn.Sequential:
+    last = module[-1]
+    if isinstance(last, nn.Linear):
+        nn.init.zeros_(last.weight)
+        nn.init.constant_(last.bias, float(bias))
     return module
