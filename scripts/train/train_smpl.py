@@ -167,6 +167,8 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_num_heads=int(model_cfg.get("hsi_num_heads", 8)),
         hsi_num_iters=int(model_cfg.get("hsi_num_iters", 3)),
         hsi_scene_window=int(model_cfg.get("hsi_scene_window", 3)),
+        hsi_probe_mode=str(model_cfg.get("hsi_probe_mode", "projected")),
+        hsi_probe_window=int(model_cfg.get("hsi_probe_window", 9)),
         hsi_use_delta_gate=bool(model_cfg.get("hsi_use_delta_gate", False)),
         smpl_model_dir=str(config.get("assets", {}).get("smpl_model_dir", "")),
         image_size=int(config.get("data", {}).get("image_size", 518)),

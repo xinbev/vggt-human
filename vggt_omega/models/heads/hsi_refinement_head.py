@@ -24,6 +24,8 @@ class HSIRefinementHead(nn.Module):
         num_heads: int = 8,
         num_iters: int = 3,
         scene_window: int = 3,
+        probe_mode: str = "projected",
+        probe_window: int = 9,
         smpl_model_dir: str = "",
         image_size: int = 518,
         use_delta_gate: bool = False,
@@ -36,8 +38,14 @@ class HSIRefinementHead(nn.Module):
         self.hidden_dim = int(hidden_dim)
         self.num_iters = int(num_iters)
         self.scene_window = int(scene_window)
+        self.probe_mode = str(probe_mode)
+        self.probe_window = int(probe_window)
         self.image_size = int(image_size)
         self.use_delta_gate = bool(use_delta_gate)
+        if self.probe_mode not in {"projected", "local_nearest"}:
+            raise ValueError(f"Unsupported hsi_probe_mode: {self.probe_mode}")
+        if self.probe_window % 2 != 1:
+            raise ValueError(f"hsi_probe_window must be odd, got {self.probe_window}")
         self.smpl = SMPLLayer(smpl_model_dir).eval()
         for param in self.smpl.parameters():
             param.requires_grad = False
@@ -229,9 +237,19 @@ class HSIRefinementHead(nn.Module):
             batch_size, num_frames, num_queries, 24, 3
         )
         scene_points = _unproject_pixels(projected[..., 0], projected[..., 1], z_scene, intrinsics, num_queries)
+        if self.probe_mode == "local_nearest":
+            scene_points, scene_normals = _local_nearest_scene_probe(
+                depth_hw=depth_hw,
+                normals_hw=normals,
+                anchors=anchors,
+                projected_depth=projected_depth,
+                intrinsics=intrinsics,
+                image_size=self.image_size,
+                window_size=self.probe_window,
+            )
         offset = scene_points - anchors
         distance = torch.linalg.norm(offset, dim=-1, keepdim=True)
-        depth_residual = (z_scene - anchors[..., 2]).unsqueeze(-1)
+        depth_residual = (scene_points[..., 2] - anchors[..., 2]).unsqueeze(-1)
         proj_norm = torch.stack(
             [projected_depth[..., 0] / max(float(width - 1), 1.0), projected_depth[..., 1] / max(float(height - 1), 1.0)],
             dim=-1,
@@ -242,7 +260,7 @@ class HSIRefinementHead(nn.Module):
             dim=-1,
         )
         tokens = self.token_mlp(token_input)
-        return tokens, {"depth_residual": depth_residual}
+        return tokens, {"depth_residual": depth_residual, "probe_distance": distance}
 
     def _anchors_cam(self, pose6d: torch.Tensor, betas: torch.Tensor, transl: torch.Tensor) -> torch.Tensor:
         batch_size, num_frames, num_queries, _ = pose6d.shape
@@ -326,6 +344,79 @@ def _estimate_depth_normals(depth_hw: torch.Tensor, intrinsics: torch.Tensor, he
     dzdy = F.pad(depth_hw[..., 2:, :] - depth_hw[..., :-2, :], (0, 0, 1, 1)) * 0.5
     normals = torch.stack([-dzdx, -dzdy, torch.ones_like(depth_hw)], dim=-1)
     return F.normalize(normals, dim=-1)
+
+
+def _local_nearest_scene_probe(
+    depth_hw: torch.Tensor,
+    normals_hw: torch.Tensor,
+    anchors: torch.Tensor,
+    projected_depth: torch.Tensor,
+    intrinsics: torch.Tensor,
+    image_size: int,
+    window_size: int,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    batch_size, num_frames, num_queries, num_tokens, _ = anchors.shape
+    flat_frames = batch_size * num_frames
+    height, width = depth_hw.shape[-2:]
+    radius = max(int(window_size), 1) // 2
+    offsets = torch.arange(-radius, radius + 1, device=anchors.device)
+    oy, ox = torch.meshgrid(offsets, offsets, indexing="ij")
+    ox = ox.reshape(1, 1, 1, 1, -1)
+    oy = oy.reshape(1, 1, 1, 1, -1)
+
+    center_x = projected_depth[..., 0].round().long()
+    center_y = projected_depth[..., 1].round().long()
+    xs = center_x[..., None] + ox
+    ys = center_y[..., None] + oy
+    local_valid = (xs >= 0) & (xs < width) & (ys >= 0) & (ys < height)
+    xs = xs.clamp(0, width - 1)
+    ys = ys.clamp(0, height - 1)
+
+    frame_idx = torch.arange(flat_frames, device=anchors.device).reshape(batch_size, num_frames, 1, 1, 1)
+    flat_depth = depth_hw.reshape(flat_frames, height, width)
+    flat_normals = normals_hw.reshape(flat_frames, height, width, 3)
+    local_depth = flat_depth[frame_idx, ys, xs]
+    local_valid = local_valid & torch.isfinite(local_depth) & (local_depth > 1e-6)
+
+    flat_intrinsics = intrinsics.reshape(batch_size, num_frames, 1, 1, 1, 3, 3)
+    fx = flat_intrinsics[..., 0, 0].clamp(min=1e-6)
+    fy = flat_intrinsics[..., 1, 1].clamp(min=1e-6)
+    cx = flat_intrinsics[..., 0, 2]
+    cy = flat_intrinsics[..., 1, 2]
+    image_x = xs.to(dtype=local_depth.dtype) * (float(image_size) / float(width))
+    image_y = ys.to(dtype=local_depth.dtype) * (float(image_size) / float(height))
+    scene_x = (image_x - cx.to(dtype=local_depth.dtype)) * local_depth / fx.to(dtype=local_depth.dtype)
+    scene_y = (image_y - cy.to(dtype=local_depth.dtype)) * local_depth / fy.to(dtype=local_depth.dtype)
+    scene_xyz = torch.stack([scene_x, scene_y, local_depth], dim=-1)
+
+    dist = torch.linalg.norm(scene_xyz - anchors[..., None, :].to(dtype=scene_xyz.dtype), dim=-1)
+    dist = torch.where(local_valid, dist, torch.full_like(dist, float("inf")))
+    nearest_idx = dist.argmin(dim=-1)
+    has_valid = torch.isfinite(dist.gather(dim=-1, index=nearest_idx[..., None]).squeeze(-1))
+    gather_xyz = nearest_idx[..., None, None].expand(*nearest_idx.shape, 1, 3)
+    nearest_xyz = scene_xyz.gather(dim=-2, index=gather_xyz).squeeze(-2)
+    local_normals = flat_normals[frame_idx.expand_as(xs), ys, xs]
+    nearest_normals = local_normals.gather(dim=-2, index=gather_xyz).squeeze(-2)
+
+    fallback_x = center_x.clamp(0, width - 1)
+    fallback_y = center_y.clamp(0, height - 1)
+    fallback_depth = flat_depth[
+        torch.arange(flat_frames, device=anchors.device).reshape(batch_size, num_frames, 1, 1).expand(-1, -1, num_queries, num_tokens),
+        fallback_y,
+        fallback_x,
+    ]
+    fallback_image_x = fallback_x.to(dtype=local_depth.dtype) * (float(image_size) / float(width))
+    fallback_image_y = fallback_y.to(dtype=local_depth.dtype) * (float(image_size) / float(height))
+    fallback_xyz = _unproject_pixels(fallback_image_x, fallback_image_y, fallback_depth, intrinsics, num_queries)
+    fallback_normals = flat_normals[
+        torch.arange(flat_frames, device=anchors.device).reshape(batch_size, num_frames, 1, 1).expand(-1, -1, num_queries, num_tokens),
+        fallback_y,
+        fallback_x,
+    ]
+    nearest_xyz = torch.where(has_valid[..., None], nearest_xyz, fallback_xyz)
+    nearest_normals = torch.where(has_valid[..., None], nearest_normals, fallback_normals)
+    nearest_normals = F.normalize(torch.nan_to_num(nearest_normals, nan=0.0, posinf=0.0, neginf=0.0), dim=-1)
+    return nearest_xyz.to(dtype=anchors.dtype), nearest_normals.to(dtype=anchors.dtype)
 
 
 def _deterministic_fps_indices(vertices: torch.Tensor, count: int) -> torch.Tensor:
