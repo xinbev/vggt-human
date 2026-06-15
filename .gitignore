@@ -19,3 +19,4 @@ skyseg.onnx.tmp
 *.pkl
 *.pth
 *.safetensors
+.paper/

@@ -66,6 +66,13 @@ class HungarianSMPLLoss(nn.Module):
         hsi_foot_contact_threshold_m: float = 0.12,
         hsi_foot_float_margin_m: float = 0.05,
         hsi_foot_penetration_margin_m: float = 0.02,
+        hsi_foot_sole_contact_weight: float = 0.0,
+        hsi_foot_sole_num_vertices: int = 80,
+        hsi_foot_sole_contact_threshold_m: float = 0.08,
+        hsi_foot_sole_float_margin_m: float = 0.04,
+        hsi_foot_sole_penetration_margin_m: float = 0.015,
+        hsi_foot_sole_float_weight: float = 0.25,
+        hsi_foot_sole_penetration_weight: float = 3.0,
         hsi_contact_weight: float = 0.0,
         hsi_contact_threshold: float = 0.08,
     ) -> None:
@@ -122,9 +129,17 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_foot_contact_threshold_m = hsi_foot_contact_threshold_m
         self.hsi_foot_float_margin_m = hsi_foot_float_margin_m
         self.hsi_foot_penetration_margin_m = hsi_foot_penetration_margin_m
+        self.hsi_foot_sole_contact_weight = hsi_foot_sole_contact_weight
+        self.hsi_foot_sole_num_vertices = hsi_foot_sole_num_vertices
+        self.hsi_foot_sole_contact_threshold_m = hsi_foot_sole_contact_threshold_m
+        self.hsi_foot_sole_float_margin_m = hsi_foot_sole_float_margin_m
+        self.hsi_foot_sole_penetration_margin_m = hsi_foot_sole_penetration_margin_m
+        self.hsi_foot_sole_float_weight = hsi_foot_sole_float_weight
+        self.hsi_foot_sole_penetration_weight = hsi_foot_sole_penetration_weight
         self.hsi_contact_weight = hsi_contact_weight
         self.hsi_contact_threshold = hsi_contact_threshold
         self._smpl_layer: SMPLLayer | None = None
+        self._foot_sole_indices: torch.Tensor | None = None
         if self.conf_loss_type not in {"bce", "focal"}:
             raise ValueError(f"Unsupported conf_loss_type: {self.conf_loss_type}")
         if self.conf_target_type not in {"binary", "matched_iou"}:
@@ -241,6 +256,7 @@ class HungarianSMPLLoss(nn.Module):
             + self.hsi_no_worse_weight * losses["loss_hsi_no_worse"]
             + self.hsi_gate_reg_weight * losses["loss_hsi_gate_reg"]
             + self.hsi_foot_contact_weight * losses["loss_hsi_foot_contact"]
+            + self.hsi_foot_sole_contact_weight * losses["loss_hsi_foot_sole_contact"]
             + self.hsi_contact_weight * losses["loss_hsi_contact"]
         )
         return losses
@@ -514,6 +530,7 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_no_worse": zero,
             "loss_hsi_gate_reg": zero,
             "loss_hsi_foot_contact": zero,
+            "loss_hsi_foot_sole_contact": zero,
             "loss_hsi_contact": zero,
             "metric_hsi_joints3d_l1": zero.detach(),
             "metric_hsi_vertices_l1": zero.detach(),
@@ -523,6 +540,9 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_foot_float_m": zero.detach(),
             "metric_hsi_foot_penetration_m": zero.detach(),
             "metric_hsi_foot_contact_count": zero.detach(),
+            "metric_hsi_foot_sole_float_m": zero.detach(),
+            "metric_hsi_foot_sole_penetration_m": zero.detach(),
+            "metric_hsi_foot_sole_contact_count": zero.detach(),
             "metric_hsi_anchor_depth_l1": zero.detach(),
             "metric_hsi_anchor_scene_xyz_l1": zero.detach(),
             "metric_hsi_delta_reg": zero.detach(),
@@ -617,7 +637,16 @@ class HungarianSMPLLoss(nn.Module):
         else:
             losses["loss_hsi_projected_joints2d"] = pred_joints_cam.sum() * 0.0
 
-        depth_losses = self._hsi_depth_losses(predictions, batch, frame_idx, src_idx, pred_joints_cam, gt_joints_cam)
+        depth_losses = self._hsi_depth_losses(
+            predictions,
+            batch,
+            frame_idx,
+            src_idx,
+            pred_joints_cam,
+            gt_joints_cam,
+            pred_vertices_cam,
+            gt_vertices_cam,
+        )
         losses.update(depth_losses)
         return losses
 
@@ -629,6 +658,8 @@ class HungarianSMPLLoss(nn.Module):
         src_idx: torch.Tensor,
         pred_joints_cam: torch.Tensor,
         gt_joints_cam: torch.Tensor,
+        pred_vertices_cam: torch.Tensor,
+        gt_vertices_cam: torch.Tensor,
     ) -> dict[str, torch.Tensor]:
         zero = pred_joints_cam.sum() * 0.0
         out = {
@@ -636,12 +667,16 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_anchor_depth": zero,
             "loss_hsi_anchor_scene_xyz": zero,
             "loss_hsi_foot_contact": zero,
+            "loss_hsi_foot_sole_contact": zero,
             "loss_hsi_contact": zero,
             "metric_hsi_anchor_depth_l1": zero.detach(),
             "metric_hsi_anchor_scene_xyz_l1": zero.detach(),
             "metric_hsi_foot_float_m": zero.detach(),
             "metric_hsi_foot_penetration_m": zero.detach(),
             "metric_hsi_foot_contact_count": zero.detach(),
+            "metric_hsi_foot_sole_float_m": zero.detach(),
+            "metric_hsi_foot_sole_penetration_m": zero.detach(),
+            "metric_hsi_foot_sole_contact_count": zero.detach(),
             "metric_hsi_depth_teacher_l1": zero.detach(),
             "metric_hsi_depth_teacher_valid_pixels": zero.detach(),
             "metric_hsi_depth_teacher_roi_used": zero.detach(),
@@ -711,6 +746,17 @@ class HungarianSMPLLoss(nn.Module):
                 gt_joints_cam=gt_joints_cam,
             )
             out.update(foot_out)
+
+        if self.hsi_foot_sole_contact_weight != 0.0:
+            sole_out = self._hsi_foot_sole_contact_losses(
+                aligned_depth=aligned_depth,
+                gt_depth=gt_depth,
+                intrinsics=intrinsics,
+                frame_idx=frame_idx,
+                pred_vertices_cam=pred_vertices_cam,
+                gt_vertices_cam=gt_vertices_cam,
+            )
+            out.update(sole_out)
 
         logits = predictions.get("hsi_contact_logits")
         if logits is None:
@@ -786,6 +832,59 @@ class HungarianSMPLLoss(nn.Module):
         out["metric_hsi_foot_penetration_m"] = penetration_amt[valid].mean().detach()
         out["metric_hsi_foot_contact_count"] = pred_joints_cam.new_tensor(float(valid.sum().detach().cpu())).detach()
         return out
+
+    def _hsi_foot_sole_contact_losses(
+        self,
+        aligned_depth: torch.Tensor,
+        gt_depth: torch.Tensor,
+        intrinsics: torch.Tensor,
+        frame_idx: torch.Tensor,
+        pred_vertices_cam: torch.Tensor,
+        gt_vertices_cam: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        zero = pred_vertices_cam.sum() * 0.0
+        out = {
+            "loss_hsi_foot_sole_contact": zero,
+            "metric_hsi_foot_sole_float_m": zero.detach(),
+            "metric_hsi_foot_sole_penetration_m": zero.detach(),
+            "metric_hsi_foot_sole_contact_count": zero.detach(),
+        }
+        foot_idx = self._get_foot_sole_indices(pred_vertices_cam.device)
+        pred_sole = pred_vertices_cam[:, foot_idx]
+        gt_sole = gt_vertices_cam[:, foot_idx]
+
+        gt_projected = _project_points(gt_sole, intrinsics[frame_idx].to(dtype=gt_sole.dtype))
+        gt_projected = _scale_points_to_depth(gt_projected, self.projection_image_size, gt_depth.shape[-2], gt_depth.shape[-1])
+        sampled_gt, gt_valid = _sample_depth_at_points(gt_depth.reshape(-1, *gt_depth.shape[-2:]), gt_projected, frame_idx)
+        contact_target = (torch.abs(sampled_gt - gt_sole[..., 2].to(dtype=sampled_gt.dtype)) < float(self.hsi_foot_sole_contact_threshold_m)) & gt_valid
+
+        pred_projected = _project_points(pred_sole, intrinsics[frame_idx].to(dtype=pred_sole.dtype))
+        pred_projected = _scale_points_to_depth(pred_projected, self.projection_image_size, aligned_depth.shape[-2], aligned_depth.shape[-1])
+        sampled_aligned, pred_valid = _sample_depth_at_points(aligned_depth.reshape(-1, *aligned_depth.shape[-2:]), pred_projected, frame_idx)
+        valid = contact_target & pred_valid
+        if not valid.any():
+            return out
+
+        depth_delta = sampled_aligned - pred_sole[..., 2].to(dtype=sampled_aligned.dtype)
+        float_amt = F.relu(depth_delta - float(self.hsi_foot_sole_float_margin_m))
+        penetration_amt = F.relu(-depth_delta - float(self.hsi_foot_sole_penetration_margin_m))
+        contact_loss = (
+            float(self.hsi_foot_sole_float_weight) * _smooth_l1_abs(float_amt[valid])
+            + float(self.hsi_foot_sole_penetration_weight) * _smooth_l1_abs(penetration_amt[valid])
+        ).mean()
+        out["loss_hsi_foot_sole_contact"] = contact_loss
+        out["metric_hsi_foot_sole_float_m"] = float_amt[valid].mean().detach()
+        out["metric_hsi_foot_sole_penetration_m"] = penetration_amt[valid].mean().detach()
+        out["metric_hsi_foot_sole_contact_count"] = pred_vertices_cam.new_tensor(float(valid.sum().detach().cpu())).detach()
+        return out
+
+    def _get_foot_sole_indices(self, device: torch.device) -> torch.Tensor:
+        if self._foot_sole_indices is None:
+            smpl = self._get_smpl_layer(device)
+            template = smpl.layer.v_template.detach().float().reshape(-1, 3)
+            count = min(max(int(self.hsi_foot_sole_num_vertices), 1), int(template.shape[0]))
+            self._foot_sole_indices = torch.argsort(template[:, 1])[:count].long().cpu()
+        return self._foot_sole_indices.to(device=device)
 
     def _identity_loss(
         self,

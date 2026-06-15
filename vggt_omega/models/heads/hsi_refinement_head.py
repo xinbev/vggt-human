@@ -25,7 +25,9 @@ class HSIRefinementHead(nn.Module):
         num_iters: int = 3,
         scene_window: int = 3,
         probe_mode: str = "projected",
+        affine_probe_mode: str = "projected",
         probe_window: int = 9,
+        probe_blend: float = 1.0,
         smpl_model_dir: str = "",
         image_size: int = 518,
         use_delta_gate: bool = False,
@@ -39,11 +41,15 @@ class HSIRefinementHead(nn.Module):
         self.num_iters = int(num_iters)
         self.scene_window = int(scene_window)
         self.probe_mode = str(probe_mode)
+        self.affine_probe_mode = str(affine_probe_mode)
         self.probe_window = int(probe_window)
+        self.probe_blend = float(probe_blend)
         self.image_size = int(image_size)
         self.use_delta_gate = bool(use_delta_gate)
         if self.probe_mode not in {"projected", "local_nearest"}:
             raise ValueError(f"Unsupported hsi_probe_mode: {self.probe_mode}")
+        if self.affine_probe_mode not in {"projected", "local_nearest"}:
+            raise ValueError(f"Unsupported hsi_affine_probe_mode: {self.affine_probe_mode}")
         if self.probe_window % 2 != 1:
             raise ValueError(f"hsi_probe_window must be odd, got {self.probe_window}")
         self.smpl = SMPLLayer(smpl_model_dir).eval()
@@ -116,7 +122,16 @@ class HSIRefinementHead(nn.Module):
             height,
             width,
         )
-        hsi_tokens, token_aux = self._tokenize(pose6d, betas, transl, depth_hw, intrinsics, height, width)
+        hsi_tokens, token_aux = self._tokenize(
+            pose6d,
+            betas,
+            transl,
+            depth_hw,
+            intrinsics,
+            height,
+            width,
+            probe_mode=self.probe_mode,
+        )
         flat_tokens = hsi_tokens.reshape(flat_frames * num_queries, 24, self.hidden_dim)
         flat_scene = local_scene_tokens.reshape(flat_frames * num_queries, 24, self.scene_window * self.scene_window, self.hidden_dim)
 
@@ -141,6 +156,25 @@ class HSIRefinementHead(nn.Module):
             per_query_log_scale = self.scale_delta(pooled).reshape(batch_size, num_frames, num_queries, 1)
             per_query_bias = self.bias_delta(pooled).reshape(batch_size, num_frames, num_queries, 1)
             contact_logits = self.contact_head(tokens).reshape(batch_size, num_frames, num_queries, 24, 1)
+
+        if self.affine_probe_mode != self.probe_mode:
+            affine_tokens, _ = self._tokenize(
+                pose6d,
+                betas,
+                transl,
+                depth_hw,
+                intrinsics,
+                height,
+                width,
+                probe_mode=self.affine_probe_mode,
+            )
+            affine_tokens = affine_tokens.reshape(flat_frames * num_queries, 24, self.hidden_dim)
+            for _ in range(max(self.num_iters, 1)):
+                for block in self.blocks:
+                    affine_tokens = block(affine_tokens, flat_scene)
+            affine_pooled = affine_tokens.mean(dim=1).reshape(flat_frames, num_queries, self.hidden_dim)
+            per_query_log_scale = self.scale_delta(affine_pooled).reshape(batch_size, num_frames, num_queries, 1)
+            per_query_bias = self.bias_delta(affine_pooled).reshape(batch_size, num_frames, num_queries, 1)
 
         weights = confs.clamp(min=0.0)
         denom = weights.sum(dim=2, keepdim=True).clamp(min=1e-6)
@@ -219,6 +253,7 @@ class HSIRefinementHead(nn.Module):
         intrinsics: torch.Tensor,
         height: int,
         width: int,
+        probe_mode: str,
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         anchors = self._anchors_cam(pose6d, betas, transl)
         batch_size, num_frames, num_queries, _, _ = anchors.shape
@@ -237,8 +272,8 @@ class HSIRefinementHead(nn.Module):
             batch_size, num_frames, num_queries, 24, 3
         )
         scene_points = _unproject_pixels(projected[..., 0], projected[..., 1], z_scene, intrinsics, num_queries)
-        if self.probe_mode == "local_nearest":
-            scene_points, scene_normals = _local_nearest_scene_probe(
+        if probe_mode == "local_nearest":
+            nearest_points, nearest_normals = _local_nearest_scene_probe(
                 depth_hw=depth_hw,
                 normals_hw=normals,
                 anchors=anchors,
@@ -247,6 +282,9 @@ class HSIRefinementHead(nn.Module):
                 image_size=self.image_size,
                 window_size=self.probe_window,
             )
+            blend = min(max(float(self.probe_blend), 0.0), 1.0)
+            scene_points = scene_points + blend * (nearest_points - scene_points)
+            scene_normals = F.normalize(scene_normals + blend * (nearest_normals - scene_normals), dim=-1)
         offset = scene_points - anchors
         distance = torch.linalg.norm(offset, dim=-1, keepdim=True)
         depth_residual = (scene_points[..., 2] - anchors[..., 2]).unsqueeze(-1)
