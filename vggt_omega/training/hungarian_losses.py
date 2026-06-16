@@ -88,6 +88,15 @@ class HungarianSMPLLoss(nn.Module):
         hsi_teacher_joints_weight: float = 0.0,
         hsi_teacher_vertices_weight: float = 0.0,
         hsi_teacher_scene_affine_weight: float = 0.0,
+        hsi_pose_velocity_weight: float = 0.0,
+        hsi_betas_velocity_weight: float = 0.0,
+        hsi_transl_velocity_weight: float = 0.0,
+        hsi_joints_velocity_weight: float = 0.0,
+        hsi_joints_acceleration_weight: float = 0.0,
+        hsi_scene_scale_temporal_weight: float = 0.0,
+        hsi_scene_scale_sequence_weight: float = 0.0,
+        hsi_scene_bias_temporal_weight: float = 0.0,
+        hsi_scene_bias_sequence_weight: float = 0.0,
         hsi_contact_weight: float = 0.0,
         hsi_contact_threshold: float = 0.08,
     ) -> None:
@@ -166,6 +175,15 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_teacher_joints_weight = hsi_teacher_joints_weight
         self.hsi_teacher_vertices_weight = hsi_teacher_vertices_weight
         self.hsi_teacher_scene_affine_weight = hsi_teacher_scene_affine_weight
+        self.hsi_pose_velocity_weight = hsi_pose_velocity_weight
+        self.hsi_betas_velocity_weight = hsi_betas_velocity_weight
+        self.hsi_transl_velocity_weight = hsi_transl_velocity_weight
+        self.hsi_joints_velocity_weight = hsi_joints_velocity_weight
+        self.hsi_joints_acceleration_weight = hsi_joints_acceleration_weight
+        self.hsi_scene_scale_temporal_weight = hsi_scene_scale_temporal_weight
+        self.hsi_scene_scale_sequence_weight = hsi_scene_scale_sequence_weight
+        self.hsi_scene_bias_temporal_weight = hsi_scene_bias_temporal_weight
+        self.hsi_scene_bias_sequence_weight = hsi_scene_bias_sequence_weight
         self.hsi_contact_weight = hsi_contact_weight
         self.hsi_contact_threshold = hsi_contact_threshold
         self._smpl_layer: SMPLLayer | None = None
@@ -295,6 +313,15 @@ class HungarianSMPLLoss(nn.Module):
             + self.hsi_teacher_joints_weight * losses["loss_hsi_teacher_joints"]
             + self.hsi_teacher_vertices_weight * losses["loss_hsi_teacher_vertices"]
             + self.hsi_teacher_scene_affine_weight * losses["loss_hsi_teacher_scene_affine"]
+            + self.hsi_pose_velocity_weight * losses["loss_hsi_pose_velocity"]
+            + self.hsi_betas_velocity_weight * losses["loss_hsi_betas_velocity"]
+            + self.hsi_transl_velocity_weight * losses["loss_hsi_transl_velocity"]
+            + self.hsi_joints_velocity_weight * losses["loss_hsi_joints_velocity"]
+            + self.hsi_joints_acceleration_weight * losses["loss_hsi_joints_acceleration"]
+            + self.hsi_scene_scale_temporal_weight * losses["loss_hsi_scene_scale_temporal"]
+            + self.hsi_scene_scale_sequence_weight * losses["loss_hsi_scene_scale_sequence"]
+            + self.hsi_scene_bias_temporal_weight * losses["loss_hsi_scene_bias_temporal"]
+            + self.hsi_scene_bias_sequence_weight * losses["loss_hsi_scene_bias_sequence"]
             + self.hsi_contact_weight * losses["loss_hsi_contact"]
         )
         return losses
@@ -576,6 +603,15 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_teacher_joints": zero,
             "loss_hsi_teacher_vertices": zero,
             "loss_hsi_teacher_scene_affine": zero,
+            "loss_hsi_pose_velocity": zero,
+            "loss_hsi_betas_velocity": zero,
+            "loss_hsi_transl_velocity": zero,
+            "loss_hsi_joints_velocity": zero,
+            "loss_hsi_joints_acceleration": zero,
+            "loss_hsi_scene_scale_temporal": zero,
+            "loss_hsi_scene_scale_sequence": zero,
+            "loss_hsi_scene_bias_temporal": zero,
+            "loss_hsi_scene_bias_sequence": zero,
             "loss_hsi_contact": zero,
             "metric_hsi_joints3d_l1": zero.detach(),
             "metric_hsi_vertices_l1": zero.detach(),
@@ -595,6 +631,17 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_teacher_transl_l1": zero.detach(),
             "metric_hsi_teacher_vertices_l1": zero.detach(),
             "metric_hsi_teacher_scene_affine_l1": zero.detach(),
+            "metric_hsi_temporal_pair_count": zero.detach(),
+            "metric_hsi_temporal_triple_count": zero.detach(),
+            "metric_hsi_pose_velocity_l1": zero.detach(),
+            "metric_hsi_betas_velocity_l1": zero.detach(),
+            "metric_hsi_transl_velocity_l1": zero.detach(),
+            "metric_hsi_joints_velocity_l1": zero.detach(),
+            "metric_hsi_joints_acceleration_l1": zero.detach(),
+            "metric_hsi_scene_log_scale_delta": zero.detach(),
+            "metric_hsi_scene_log_scale_seq_abs": zero.detach(),
+            "metric_hsi_scene_bias_delta": zero.detach(),
+            "metric_hsi_scene_bias_seq_abs": zero.detach(),
             "metric_hsi_anchor_depth_l1": zero.detach(),
             "metric_hsi_anchor_scene_xyz_l1": zero.detach(),
             "metric_hsi_delta_reg": zero.detach(),
@@ -713,7 +760,206 @@ class HungarianSMPLLoss(nn.Module):
                 smpl=smpl,
             )
         )
+        losses.update(
+            self._hsi_temporal_losses(
+                predictions=predictions,
+                batch=batch,
+                frame_idx=frame_idx,
+                matched=matched,
+                pred_pose=pred_pose,
+                target_pose=target_pose,
+                pred_betas=pred_betas,
+                target_betas=target_betas,
+                pred_transl=pred_transl,
+                target_transl=target_transl,
+                pred_joints_cam=pred_joints_cam,
+                gt_joints_cam=gt_joints_cam,
+            )
+        )
         return losses
+
+    def _hsi_temporal_losses(
+        self,
+        predictions: dict[str, torch.Tensor],
+        batch: dict[str, torch.Tensor],
+        frame_idx: torch.Tensor,
+        matched: dict[str, torch.Tensor],
+        pred_pose: torch.Tensor,
+        target_pose: torch.Tensor,
+        pred_betas: torch.Tensor,
+        target_betas: torch.Tensor,
+        pred_transl: torch.Tensor,
+        target_transl: torch.Tensor,
+        pred_joints_cam: torch.Tensor,
+        gt_joints_cam: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        zero = pred_transl.sum() * 0.0
+        out = {
+            "loss_hsi_pose_velocity": zero,
+            "loss_hsi_betas_velocity": zero,
+            "loss_hsi_transl_velocity": zero,
+            "loss_hsi_joints_velocity": zero,
+            "loss_hsi_joints_acceleration": zero,
+            "loss_hsi_scene_scale_temporal": zero,
+            "loss_hsi_scene_scale_sequence": zero,
+            "loss_hsi_scene_bias_temporal": zero,
+            "loss_hsi_scene_bias_sequence": zero,
+            "metric_hsi_temporal_pair_count": zero.detach(),
+            "metric_hsi_temporal_triple_count": zero.detach(),
+            "metric_hsi_pose_velocity_l1": zero.detach(),
+            "metric_hsi_betas_velocity_l1": zero.detach(),
+            "metric_hsi_transl_velocity_l1": zero.detach(),
+            "metric_hsi_joints_velocity_l1": zero.detach(),
+            "metric_hsi_joints_acceleration_l1": zero.detach(),
+            "metric_hsi_scene_log_scale_delta": zero.detach(),
+            "metric_hsi_scene_log_scale_seq_abs": zero.detach(),
+            "metric_hsi_scene_bias_delta": zero.detach(),
+            "metric_hsi_scene_bias_seq_abs": zero.detach(),
+        }
+        num_frames = _infer_sequence_length(batch, predictions)
+        if num_frames >= 2:
+            out.update(self._hsi_person_temporal_losses(
+                frame_idx=frame_idx,
+                matched=matched,
+                num_frames=num_frames,
+                pred_pose=pred_pose,
+                target_pose=target_pose,
+                pred_betas=pred_betas,
+                target_betas=target_betas,
+                pred_transl=pred_transl,
+                target_transl=target_transl,
+                pred_joints_cam=pred_joints_cam,
+                gt_joints_cam=gt_joints_cam,
+                zero=zero,
+            ))
+        out.update(self._hsi_scene_temporal_losses(predictions, zero))
+        return out
+
+    def _hsi_person_temporal_losses(
+        self,
+        frame_idx: torch.Tensor,
+        matched: dict[str, torch.Tensor],
+        num_frames: int,
+        pred_pose: torch.Tensor,
+        target_pose: torch.Tensor,
+        pred_betas: torch.Tensor,
+        target_betas: torch.Tensor,
+        pred_transl: torch.Tensor,
+        target_transl: torch.Tensor,
+        pred_joints_cam: torch.Tensor,
+        gt_joints_cam: torch.Tensor,
+        zero: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        out = {
+            "loss_hsi_pose_velocity": zero,
+            "loss_hsi_betas_velocity": zero,
+            "loss_hsi_transl_velocity": zero,
+            "loss_hsi_joints_velocity": zero,
+            "loss_hsi_joints_acceleration": zero,
+            "metric_hsi_temporal_pair_count": zero.detach(),
+            "metric_hsi_temporal_triple_count": zero.detach(),
+            "metric_hsi_pose_velocity_l1": zero.detach(),
+            "metric_hsi_betas_velocity_l1": zero.detach(),
+            "metric_hsi_transl_velocity_l1": zero.detach(),
+            "metric_hsi_joints_velocity_l1": zero.detach(),
+            "metric_hsi_joints_acceleration_l1": zero.detach(),
+        }
+        person_ids = matched.get("person_ids")
+        person_mask = matched.get("person_id_mask")
+        if person_ids is None or person_mask is None or frame_idx.numel() == 0:
+            return out
+        valid = person_mask.bool() & (person_ids >= 0)
+        if not valid.any():
+            return out
+
+        batch_ids = torch.div(frame_idx, int(num_frames), rounding_mode="floor")
+        seq_ids = frame_idx % int(num_frames)
+        groups: dict[tuple[int, int], dict[int, int]] = {}
+        for item_idx in torch.nonzero(valid, as_tuple=False).flatten().detach().cpu().tolist():
+            key = (int(batch_ids[item_idx].detach().cpu()), int(person_ids[item_idx].detach().cpu()))
+            seq = int(seq_ids[item_idx].detach().cpu())
+            groups.setdefault(key, {}).setdefault(seq, item_idx)
+
+        pair_prev: list[int] = []
+        pair_next: list[int] = []
+        triple_prev: list[int] = []
+        triple_mid: list[int] = []
+        triple_next: list[int] = []
+        for seq_map in groups.values():
+            for seq in range(1, int(num_frames)):
+                if seq - 1 in seq_map and seq in seq_map:
+                    pair_prev.append(seq_map[seq - 1])
+                    pair_next.append(seq_map[seq])
+            for seq in range(1, int(num_frames) - 1):
+                if seq - 1 in seq_map and seq in seq_map and seq + 1 in seq_map:
+                    triple_prev.append(seq_map[seq - 1])
+                    triple_mid.append(seq_map[seq])
+                    triple_next.append(seq_map[seq + 1])
+
+        if pair_prev:
+            prev = torch.tensor(pair_prev, dtype=torch.long, device=pred_transl.device)
+            curr = torch.tensor(pair_next, dtype=torch.long, device=pred_transl.device)
+            pose_delta = _velocity_residual(pred_pose, target_pose, prev, curr)
+            betas_delta = _velocity_residual(pred_betas, target_betas, prev, curr)
+            transl_delta = _velocity_residual(pred_transl, target_transl, prev, curr)
+            joints_delta = _velocity_residual(pred_joints_cam, gt_joints_cam, prev, curr)
+            out["loss_hsi_pose_velocity"] = _smooth_l1_abs(pose_delta.abs()).mean()
+            out["loss_hsi_betas_velocity"] = _smooth_l1_abs(betas_delta.abs()).mean()
+            out["loss_hsi_transl_velocity"] = _smooth_l1_abs(transl_delta.abs()).mean()
+            out["loss_hsi_joints_velocity"] = _smooth_l1_abs(joints_delta.abs()).mean()
+            out["metric_hsi_temporal_pair_count"] = pred_transl.new_tensor(float(len(pair_prev))).detach()
+            out["metric_hsi_pose_velocity_l1"] = pose_delta.abs().mean().detach()
+            out["metric_hsi_betas_velocity_l1"] = betas_delta.abs().mean().detach()
+            out["metric_hsi_transl_velocity_l1"] = transl_delta.abs().mean().detach()
+            out["metric_hsi_joints_velocity_l1"] = joints_delta.abs().mean().detach()
+
+        if triple_prev:
+            prev = torch.tensor(triple_prev, dtype=torch.long, device=pred_transl.device)
+            mid = torch.tensor(triple_mid, dtype=torch.long, device=pred_transl.device)
+            nxt = torch.tensor(triple_next, dtype=torch.long, device=pred_transl.device)
+            joints_acc_delta = _acceleration_residual(pred_joints_cam, gt_joints_cam, prev, mid, nxt)
+            out["loss_hsi_joints_acceleration"] = _smooth_l1_abs(joints_acc_delta.abs()).mean()
+            out["metric_hsi_temporal_triple_count"] = pred_transl.new_tensor(float(len(triple_prev))).detach()
+            out["metric_hsi_joints_acceleration_l1"] = joints_acc_delta.abs().mean().detach()
+        return out
+
+    def _hsi_scene_temporal_losses(
+        self,
+        predictions: dict[str, torch.Tensor],
+        zero: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        out = {
+            "loss_hsi_scene_scale_temporal": zero,
+            "loss_hsi_scene_scale_sequence": zero,
+            "loss_hsi_scene_bias_temporal": zero,
+            "loss_hsi_scene_bias_sequence": zero,
+            "metric_hsi_scene_log_scale_delta": zero.detach(),
+            "metric_hsi_scene_log_scale_seq_abs": zero.detach(),
+            "metric_hsi_scene_bias_delta": zero.detach(),
+            "metric_hsi_scene_bias_seq_abs": zero.detach(),
+        }
+        scale = predictions.get("hsi_scene_scale")
+        bias = predictions.get("hsi_scene_depth_bias")
+        if scale is None or scale.ndim < 3 or scale.shape[1] < 2:
+            return out
+        log_scale = torch.log(scale.float().clamp(min=1e-6))
+        log_delta = log_scale[:, 1:] - log_scale[:, :-1]
+        out["loss_hsi_scene_scale_temporal"] = _smooth_l1_abs(log_delta.abs()).mean()
+        out["metric_hsi_scene_log_scale_delta"] = log_delta.abs().mean().detach()
+        seq_log_scale = log_scale.median(dim=1, keepdim=True).values.detach()
+        seq_log_abs = (log_scale - seq_log_scale).abs()
+        out["loss_hsi_scene_scale_sequence"] = _smooth_l1_abs(seq_log_abs).mean()
+        out["metric_hsi_scene_log_scale_seq_abs"] = seq_log_abs.mean().detach()
+        if bias is not None and bias.ndim >= 3 and bias.shape[1] >= 2:
+            bias_float = bias.float()
+            bias_delta = bias_float[:, 1:] - bias_float[:, :-1]
+            out["loss_hsi_scene_bias_temporal"] = _smooth_l1_abs(bias_delta.abs()).mean()
+            out["metric_hsi_scene_bias_delta"] = bias_delta.abs().mean().detach()
+            seq_bias = bias_float.median(dim=1, keepdim=True).values.detach()
+            seq_bias_abs = (bias_float - seq_bias).abs()
+            out["loss_hsi_scene_bias_sequence"] = _smooth_l1_abs(seq_bias_abs).mean()
+            out["metric_hsi_scene_bias_seq_abs"] = seq_bias_abs.mean().detach()
+        return out
 
     def _hsi_teacher_losses(
         self,
@@ -1330,6 +1576,46 @@ def _human_roi_depth_mask(
 def _smooth_l1_abs(abs_err: torch.Tensor, beta: float = 1.0) -> torch.Tensor:
     beta = max(float(beta), 1e-6)
     return torch.where(abs_err < beta, 0.5 * abs_err.square() / beta, abs_err - 0.5 * beta)
+
+
+def _infer_sequence_length(batch: dict[str, torch.Tensor], predictions: dict[str, torch.Tensor]) -> int:
+    smpl_mask = batch.get("smpl_mask")
+    if smpl_mask is not None and smpl_mask.ndim >= 3:
+        return int(smpl_mask.shape[1])
+    images = batch.get("images")
+    if images is not None and images.ndim >= 5:
+        return int(images.shape[1])
+    for key in ("hsi_refined_pred_transl_cam", "pred_transl_cam", "hsi_scene_scale"):
+        value = predictions.get(key)
+        if value is not None and value.ndim >= 4:
+            return int(value.shape[1])
+        if value is not None and key == "hsi_scene_scale" and value.ndim == 3:
+            return int(value.shape[1])
+    return 1
+
+
+def _velocity_residual(
+    pred: torch.Tensor,
+    target: torch.Tensor,
+    prev: torch.Tensor,
+    curr: torch.Tensor,
+) -> torch.Tensor:
+    pred_vel = pred[curr] - pred[prev]
+    target_vel = target[curr].to(device=pred.device, dtype=pred.dtype) - target[prev].to(device=pred.device, dtype=pred.dtype)
+    return pred_vel - target_vel
+
+
+def _acceleration_residual(
+    pred: torch.Tensor,
+    target: torch.Tensor,
+    prev: torch.Tensor,
+    mid: torch.Tensor,
+    nxt: torch.Tensor,
+) -> torch.Tensor:
+    pred_acc = pred[nxt] - 2.0 * pred[mid] + pred[prev]
+    target = target.to(device=pred.device, dtype=pred.dtype)
+    target_acc = target[nxt] - 2.0 * target[mid] + target[prev]
+    return pred_acc - target_acc
 
 
 def _sample_local_scene_distance(
