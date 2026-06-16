@@ -1,4 +1,5 @@
 import argparse
+import copy
 import json
 import math
 import random
@@ -68,6 +69,7 @@ def main() -> None:
     model = build_model(config).to(device)
     load_initial_checkpoint(model, config, device)
     apply_freeze_policy(model, config)
+    teacher_model = build_teacher_model(config, device)
     criterion = build_criterion(config).to(device)
     trainable_params = [param for param in model.parameters() if param.requires_grad]
     if not trainable_params:
@@ -95,9 +97,10 @@ def main() -> None:
             epoch=epoch,
             global_step=global_step,
             config=config,
+            teacher_model=teacher_model,
         )
         if val_loader is not None and (epoch + 1) % int(config["optim"].get("val_interval", 1)) == 0:
-            validate(model, criterion, val_loader, device, epoch, config)
+            validate(model, criterion, val_loader, device, epoch, config, teacher_model=teacher_model)
         if (epoch + 1) % int(config["optim"].get("save_interval", 1)) == 0:
             save_checkpoint(model, optimizer, epoch + 1, global_step, config, output_dir / f"checkpoint_epoch_{epoch + 1:04d}.pt")
             save_checkpoint(model, optimizer, epoch + 1, global_step, config, output_dir / "checkpoint_latest.pt")
@@ -281,6 +284,31 @@ def load_initial_checkpoint(model: torch.nn.Module, config: dict[str, Any], devi
     print(f"[ckpt] missing={len(missing)} unexpected={len(unexpected)}")
 
 
+def build_teacher_model(config: dict[str, Any], device: torch.device) -> torch.nn.Module | None:
+    teacher_cfg = config.get("teacher", {})
+    if not bool(teacher_cfg.get("enabled", False)):
+        return None
+    checkpoint_path = str(teacher_cfg.get("checkpoint", "") or "")
+    if not checkpoint_path:
+        raise ValueError("teacher.enabled=true requires teacher.checkpoint")
+    teacher_config = copy.deepcopy(config)
+    model_overrides = teacher_cfg.get("model_overrides", {})
+    if isinstance(model_overrides, dict) and model_overrides:
+        teacher_config["model"] = deep_update(teacher_config.get("model", {}), model_overrides)
+    teacher = build_model(teacher_config).to(device)
+    if bool(teacher_cfg.get("load_vggt_baseline", False)):
+        load_initial_checkpoint(teacher, teacher_config, device)
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    state_dict = extract_state_dict(checkpoint)
+    missing, unexpected = teacher.load_state_dict(state_dict, strict=bool(teacher_cfg.get("strict", False)))
+    teacher.eval()
+    for param in teacher.parameters():
+        param.requires_grad = False
+    print(f"[teacher] loaded frozen HSI teacher: {checkpoint_path}")
+    print(f"[teacher] missing={len(missing)} unexpected={len(unexpected)}")
+    return teacher
+
+
 def resume_training_checkpoint(
     model: torch.nn.Module,
     optimizer: torch.optim.Optimizer,
@@ -325,6 +353,7 @@ def train_one_epoch(
     epoch: int,
     global_step: int,
     config: dict[str, Any],
+    teacher_model: torch.nn.Module | None = None,
 ) -> int:
     model.train()
     apply_freeze_policy(model, config)
@@ -334,6 +363,8 @@ def train_one_epoch(
         batch = move_to_device(batch, device)
         optimizer.zero_grad(set_to_none=True)
         predictions = forward_model(model, batch, config)
+        if teacher_model is not None:
+            attach_teacher_predictions(predictions, forward_teacher_model(teacher_model, batch, config))
         losses = criterion(predictions, batch)
         loss = losses["loss_total"]
         if not torch.isfinite(loss):
@@ -357,13 +388,17 @@ def validate(
     device: torch.device,
     epoch: int,
     config: dict[str, Any],
+    teacher_model: torch.nn.Module | None = None,
 ) -> None:
     model.eval()
     totals: dict[str, float] = {}
     count = 0
     for batch in loader:
         batch = move_to_device(batch, device)
-        losses = criterion(forward_model(model, batch, config), batch)
+        predictions = forward_model(model, batch, config)
+        if teacher_model is not None:
+            attach_teacher_predictions(predictions, forward_teacher_model(teacher_model, batch, config))
+        losses = criterion(predictions, batch)
         for key, value in losses.items():
             totals[key] = totals.get(key, 0.0) + float(value.detach().cpu())
         count += 1
@@ -395,6 +430,30 @@ def forward_model(model: torch.nn.Module, batch: dict[str, torch.Tensor], config
         smpl_query_boxes=boxes,
         smpl_query_boxes_mask=mask,
     )
+
+
+@torch.no_grad()
+def forward_teacher_model(model: torch.nn.Module, batch: dict[str, torch.Tensor], config: dict[str, Any]) -> dict[str, torch.Tensor]:
+    was_training = model.training
+    model.eval()
+    predictions = forward_model(model, batch, config)
+    if was_training:
+        model.train()
+    return predictions
+
+
+def attach_teacher_predictions(predictions: dict[str, torch.Tensor], teacher_predictions: dict[str, torch.Tensor]) -> None:
+    for key in (
+        "hsi_refined_pred_pose_6d",
+        "hsi_refined_pred_poses",
+        "hsi_refined_pred_betas",
+        "hsi_refined_pred_transl_cam",
+        "hsi_scene_scale",
+        "hsi_scene_depth_bias",
+    ):
+        value = teacher_predictions.get(key)
+        if value is not None:
+            predictions[f"teacher_{key}"] = value.detach()
 
 
 def make_noisy_box_prior(

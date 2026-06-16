@@ -73,6 +73,21 @@ class HungarianSMPLLoss(nn.Module):
         hsi_foot_sole_penetration_margin_m: float = 0.015,
         hsi_foot_sole_float_weight: float = 0.25,
         hsi_foot_sole_penetration_weight: float = 3.0,
+        hsi_support_plane_contact_weight: float = 0.0,
+        hsi_support_plane_num_vertices: int = 80,
+        hsi_support_plane_window: int = 9,
+        hsi_support_plane_min_points: int = 6,
+        hsi_support_plane_contact_threshold_m: float = 0.08,
+        hsi_support_plane_float_margin_m: float = 0.04,
+        hsi_support_plane_penetration_margin_m: float = 0.015,
+        hsi_support_plane_float_weight: float = 0.25,
+        hsi_support_plane_penetration_weight: float = 4.0,
+        hsi_teacher_pose_weight: float = 0.0,
+        hsi_teacher_betas_weight: float = 0.0,
+        hsi_teacher_transl_weight: float = 0.0,
+        hsi_teacher_joints_weight: float = 0.0,
+        hsi_teacher_vertices_weight: float = 0.0,
+        hsi_teacher_scene_affine_weight: float = 0.0,
         hsi_contact_weight: float = 0.0,
         hsi_contact_threshold: float = 0.08,
     ) -> None:
@@ -136,10 +151,26 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_foot_sole_penetration_margin_m = hsi_foot_sole_penetration_margin_m
         self.hsi_foot_sole_float_weight = hsi_foot_sole_float_weight
         self.hsi_foot_sole_penetration_weight = hsi_foot_sole_penetration_weight
+        self.hsi_support_plane_contact_weight = hsi_support_plane_contact_weight
+        self.hsi_support_plane_num_vertices = hsi_support_plane_num_vertices
+        self.hsi_support_plane_window = hsi_support_plane_window
+        self.hsi_support_plane_min_points = hsi_support_plane_min_points
+        self.hsi_support_plane_contact_threshold_m = hsi_support_plane_contact_threshold_m
+        self.hsi_support_plane_float_margin_m = hsi_support_plane_float_margin_m
+        self.hsi_support_plane_penetration_margin_m = hsi_support_plane_penetration_margin_m
+        self.hsi_support_plane_float_weight = hsi_support_plane_float_weight
+        self.hsi_support_plane_penetration_weight = hsi_support_plane_penetration_weight
+        self.hsi_teacher_pose_weight = hsi_teacher_pose_weight
+        self.hsi_teacher_betas_weight = hsi_teacher_betas_weight
+        self.hsi_teacher_transl_weight = hsi_teacher_transl_weight
+        self.hsi_teacher_joints_weight = hsi_teacher_joints_weight
+        self.hsi_teacher_vertices_weight = hsi_teacher_vertices_weight
+        self.hsi_teacher_scene_affine_weight = hsi_teacher_scene_affine_weight
         self.hsi_contact_weight = hsi_contact_weight
         self.hsi_contact_threshold = hsi_contact_threshold
         self._smpl_layer: SMPLLayer | None = None
         self._foot_sole_indices: torch.Tensor | None = None
+        self._foot_sole_indices_by_count: dict[int, torch.Tensor] = {}
         if self.conf_loss_type not in {"bce", "focal"}:
             raise ValueError(f"Unsupported conf_loss_type: {self.conf_loss_type}")
         if self.conf_target_type not in {"binary", "matched_iou"}:
@@ -257,6 +288,13 @@ class HungarianSMPLLoss(nn.Module):
             + self.hsi_gate_reg_weight * losses["loss_hsi_gate_reg"]
             + self.hsi_foot_contact_weight * losses["loss_hsi_foot_contact"]
             + self.hsi_foot_sole_contact_weight * losses["loss_hsi_foot_sole_contact"]
+            + self.hsi_support_plane_contact_weight * losses["loss_hsi_support_plane_contact"]
+            + self.hsi_teacher_pose_weight * losses["loss_hsi_teacher_pose"]
+            + self.hsi_teacher_betas_weight * losses["loss_hsi_teacher_betas"]
+            + self.hsi_teacher_transl_weight * losses["loss_hsi_teacher_transl"]
+            + self.hsi_teacher_joints_weight * losses["loss_hsi_teacher_joints"]
+            + self.hsi_teacher_vertices_weight * losses["loss_hsi_teacher_vertices"]
+            + self.hsi_teacher_scene_affine_weight * losses["loss_hsi_teacher_scene_affine"]
             + self.hsi_contact_weight * losses["loss_hsi_contact"]
         )
         return losses
@@ -531,6 +569,13 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_gate_reg": zero,
             "loss_hsi_foot_contact": zero,
             "loss_hsi_foot_sole_contact": zero,
+            "loss_hsi_support_plane_contact": zero,
+            "loss_hsi_teacher_pose": zero,
+            "loss_hsi_teacher_betas": zero,
+            "loss_hsi_teacher_transl": zero,
+            "loss_hsi_teacher_joints": zero,
+            "loss_hsi_teacher_vertices": zero,
+            "loss_hsi_teacher_scene_affine": zero,
             "loss_hsi_contact": zero,
             "metric_hsi_joints3d_l1": zero.detach(),
             "metric_hsi_vertices_l1": zero.detach(),
@@ -543,6 +588,13 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_foot_sole_float_m": zero.detach(),
             "metric_hsi_foot_sole_penetration_m": zero.detach(),
             "metric_hsi_foot_sole_contact_count": zero.detach(),
+            "metric_hsi_support_plane_float_m": zero.detach(),
+            "metric_hsi_support_plane_penetration_m": zero.detach(),
+            "metric_hsi_support_plane_signed_m": zero.detach(),
+            "metric_hsi_support_plane_contact_count": zero.detach(),
+            "metric_hsi_teacher_transl_l1": zero.detach(),
+            "metric_hsi_teacher_vertices_l1": zero.detach(),
+            "metric_hsi_teacher_scene_affine_l1": zero.detach(),
             "metric_hsi_anchor_depth_l1": zero.detach(),
             "metric_hsi_anchor_scene_xyz_l1": zero.detach(),
             "metric_hsi_delta_reg": zero.detach(),
@@ -648,7 +700,100 @@ class HungarianSMPLLoss(nn.Module):
             gt_vertices_cam,
         )
         losses.update(depth_losses)
+        losses.update(
+            self._hsi_teacher_losses(
+                predictions=predictions,
+                frame_idx=frame_idx,
+                src_idx=src_idx,
+                pred_pose=pred_pose,
+                pred_betas=pred_betas,
+                pred_transl=pred_transl,
+                pred_joints_cam=pred_joints_cam,
+                pred_vertices_cam=pred_vertices_cam,
+                smpl=smpl,
+            )
+        )
         return losses
+
+    def _hsi_teacher_losses(
+        self,
+        predictions: dict[str, torch.Tensor],
+        frame_idx: torch.Tensor,
+        src_idx: torch.Tensor,
+        pred_pose: torch.Tensor,
+        pred_betas: torch.Tensor,
+        pred_transl: torch.Tensor,
+        pred_joints_cam: torch.Tensor,
+        pred_vertices_cam: torch.Tensor,
+        smpl: SMPLLayer,
+    ) -> dict[str, torch.Tensor]:
+        zero = pred_transl.sum() * 0.0
+        out = {
+            "loss_hsi_teacher_pose": zero,
+            "loss_hsi_teacher_betas": zero,
+            "loss_hsi_teacher_transl": zero,
+            "loss_hsi_teacher_joints": zero,
+            "loss_hsi_teacher_vertices": zero,
+            "loss_hsi_teacher_scene_affine": zero,
+            "metric_hsi_teacher_transl_l1": zero.detach(),
+            "metric_hsi_teacher_vertices_l1": zero.detach(),
+            "metric_hsi_teacher_scene_affine_l1": zero.detach(),
+        }
+        required = (
+            "teacher_hsi_refined_pred_pose_6d",
+            "teacher_hsi_refined_pred_poses",
+            "teacher_hsi_refined_pred_betas",
+            "teacher_hsi_refined_pred_transl_cam",
+        )
+        if any(key not in predictions for key in required):
+            return out
+
+        teacher_pose6d = _flatten_prediction(predictions["teacher_hsi_refined_pred_pose_6d"], unframed_ndim=3)
+        teacher_poses = _flatten_prediction(predictions["teacher_hsi_refined_pred_poses"], unframed_ndim=3)
+        teacher_betas = _flatten_prediction(predictions["teacher_hsi_refined_pred_betas"], unframed_ndim=3)
+        teacher_transl = _flatten_prediction(predictions["teacher_hsi_refined_pred_transl_cam"], unframed_ndim=3)
+        if teacher_pose6d is None or teacher_poses is None or teacher_betas is None or teacher_transl is None:
+            return out
+
+        teacher_pose = teacher_pose6d[frame_idx, src_idx].to(device=pred_pose.device, dtype=pred_pose.dtype).detach()
+        teacher_aa = teacher_poses[frame_idx, src_idx].reshape(-1, 72).to(device=pred_pose.device).detach()
+        teacher_betas_matched = teacher_betas[frame_idx, src_idx].to(device=pred_betas.device, dtype=pred_betas.dtype).detach()
+        teacher_transl_matched = teacher_transl[frame_idx, src_idx].to(device=pred_transl.device, dtype=pred_transl.dtype).detach()
+
+        out["loss_hsi_teacher_pose"] = F.smooth_l1_loss(pred_pose, teacher_pose)
+        out["loss_hsi_teacher_betas"] = F.smooth_l1_loss(pred_betas, teacher_betas_matched)
+        teacher_transl_loss = F.smooth_l1_loss(pred_transl, teacher_transl_matched)
+        out["loss_hsi_teacher_transl"] = teacher_transl_loss
+        out["metric_hsi_teacher_transl_l1"] = torch.abs(pred_transl - teacher_transl_matched).mean().detach()
+
+        if self.hsi_teacher_joints_weight != 0.0 or self.hsi_teacher_vertices_weight != 0.0:
+            teacher_vertices, teacher_joints = smpl(teacher_aa.float(), teacher_betas_matched.float())
+            teacher_joints_cam = teacher_joints[:, :24].to(dtype=pred_betas.dtype) + teacher_transl_matched[:, None, :]
+            teacher_vertices_cam = teacher_vertices.to(dtype=pred_betas.dtype) + teacher_transl_matched[:, None, :]
+            out["loss_hsi_teacher_joints"] = F.smooth_l1_loss(pred_joints_cam, teacher_joints_cam)
+            teacher_vertices_loss = F.smooth_l1_loss(pred_vertices_cam, teacher_vertices_cam)
+            out["loss_hsi_teacher_vertices"] = teacher_vertices_loss
+            out["metric_hsi_teacher_vertices_l1"] = torch.abs(pred_vertices_cam - teacher_vertices_cam).mean().detach()
+
+        if "teacher_hsi_scene_scale" in predictions and "teacher_hsi_scene_depth_bias" in predictions:
+            scale = _flatten_prediction(predictions.get("hsi_scene_scale"), unframed_ndim=2)
+            bias = _flatten_prediction(predictions.get("hsi_scene_depth_bias"), unframed_ndim=2)
+            teacher_scale = _flatten_prediction(predictions.get("teacher_hsi_scene_scale"), unframed_ndim=2)
+            teacher_bias = _flatten_prediction(predictions.get("teacher_hsi_scene_depth_bias"), unframed_ndim=2)
+            if scale is not None and bias is not None and teacher_scale is not None and teacher_bias is not None:
+                unique_frames = torch.unique(frame_idx)
+                student_affine = torch.cat([scale[unique_frames], bias[unique_frames]], dim=-1)
+                teacher_affine = torch.cat(
+                    [
+                        teacher_scale[unique_frames].to(device=scale.device, dtype=scale.dtype),
+                        teacher_bias[unique_frames].to(device=bias.device, dtype=bias.dtype),
+                    ],
+                    dim=-1,
+                ).detach()
+                affine_l1 = F.smooth_l1_loss(student_affine, teacher_affine)
+                out["loss_hsi_teacher_scene_affine"] = affine_l1
+                out["metric_hsi_teacher_scene_affine_l1"] = torch.abs(student_affine - teacher_affine).mean().detach()
+        return out
 
     def _hsi_depth_losses(
         self,
@@ -668,6 +813,13 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_anchor_scene_xyz": zero,
             "loss_hsi_foot_contact": zero,
             "loss_hsi_foot_sole_contact": zero,
+            "loss_hsi_support_plane_contact": zero,
+            "loss_hsi_teacher_pose": zero,
+            "loss_hsi_teacher_betas": zero,
+            "loss_hsi_teacher_transl": zero,
+            "loss_hsi_teacher_joints": zero,
+            "loss_hsi_teacher_vertices": zero,
+            "loss_hsi_teacher_scene_affine": zero,
             "loss_hsi_contact": zero,
             "metric_hsi_anchor_depth_l1": zero.detach(),
             "metric_hsi_anchor_scene_xyz_l1": zero.detach(),
@@ -677,6 +829,13 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_foot_sole_float_m": zero.detach(),
             "metric_hsi_foot_sole_penetration_m": zero.detach(),
             "metric_hsi_foot_sole_contact_count": zero.detach(),
+            "metric_hsi_support_plane_float_m": zero.detach(),
+            "metric_hsi_support_plane_penetration_m": zero.detach(),
+            "metric_hsi_support_plane_signed_m": zero.detach(),
+            "metric_hsi_support_plane_contact_count": zero.detach(),
+            "metric_hsi_teacher_transl_l1": zero.detach(),
+            "metric_hsi_teacher_vertices_l1": zero.detach(),
+            "metric_hsi_teacher_scene_affine_l1": zero.detach(),
             "metric_hsi_depth_teacher_l1": zero.detach(),
             "metric_hsi_depth_teacher_valid_pixels": zero.detach(),
             "metric_hsi_depth_teacher_roi_used": zero.detach(),
@@ -757,6 +916,17 @@ class HungarianSMPLLoss(nn.Module):
                 gt_vertices_cam=gt_vertices_cam,
             )
             out.update(sole_out)
+
+        if self.hsi_support_plane_contact_weight != 0.0:
+            plane_out = self._hsi_support_plane_contact_losses(
+                aligned_depth=aligned_depth,
+                gt_depth=gt_depth,
+                intrinsics=intrinsics,
+                frame_idx=frame_idx,
+                pred_vertices_cam=pred_vertices_cam,
+                gt_vertices_cam=gt_vertices_cam,
+            )
+            out.update(plane_out)
 
         logits = predictions.get("hsi_contact_logits")
         if logits is None:
@@ -878,13 +1048,74 @@ class HungarianSMPLLoss(nn.Module):
         out["metric_hsi_foot_sole_contact_count"] = pred_vertices_cam.new_tensor(float(valid.sum().detach().cpu())).detach()
         return out
 
-    def _get_foot_sole_indices(self, device: torch.device) -> torch.Tensor:
-        if self._foot_sole_indices is None:
+    def _hsi_support_plane_contact_losses(
+        self,
+        aligned_depth: torch.Tensor,
+        gt_depth: torch.Tensor,
+        intrinsics: torch.Tensor,
+        frame_idx: torch.Tensor,
+        pred_vertices_cam: torch.Tensor,
+        gt_vertices_cam: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        zero = pred_vertices_cam.sum() * 0.0
+        out = {
+            "loss_hsi_support_plane_contact": zero,
+            "metric_hsi_support_plane_float_m": zero.detach(),
+            "metric_hsi_support_plane_penetration_m": zero.detach(),
+            "metric_hsi_support_plane_signed_m": zero.detach(),
+            "metric_hsi_support_plane_contact_count": zero.detach(),
+        }
+        foot_idx = self._get_foot_sole_indices(pred_vertices_cam.device, count=int(self.hsi_support_plane_num_vertices))
+        pred_sole = pred_vertices_cam[:, foot_idx]
+        gt_sole = gt_vertices_cam[:, foot_idx]
+
+        gt_projected = _project_points(gt_sole, intrinsics[frame_idx].to(dtype=gt_sole.dtype))
+        gt_projected = _scale_points_to_depth(gt_projected, self.projection_image_size, gt_depth.shape[-2], gt_depth.shape[-1])
+        sampled_gt, gt_valid = _sample_depth_at_points(gt_depth.reshape(-1, *gt_depth.shape[-2:]), gt_projected, frame_idx)
+        contact_target = (torch.abs(sampled_gt - gt_sole[..., 2].to(dtype=sampled_gt.dtype)) < float(self.hsi_support_plane_contact_threshold_m)) & gt_valid
+        if not contact_target.any():
+            return out
+
+        pred_projected = _project_points(pred_sole, intrinsics[frame_idx].to(dtype=pred_sole.dtype))
+        pred_projected = _scale_points_to_depth(pred_projected, self.projection_image_size, aligned_depth.shape[-2], aligned_depth.shape[-1])
+        signed_delta, plane_valid = _sample_local_support_plane_signed_delta(
+            aligned_depth.reshape(-1, *aligned_depth.shape[-2:]),
+            pred_projected,
+            pred_sole,
+            intrinsics[frame_idx].to(dtype=pred_sole.dtype),
+            frame_idx,
+            window_size=int(self.hsi_support_plane_window),
+            min_points=int(self.hsi_support_plane_min_points),
+            image_size=self.projection_image_size,
+        )
+        valid = contact_target & plane_valid & torch.isfinite(signed_delta)
+        if not valid.any():
+            return out
+
+        float_amt = F.relu(signed_delta - float(self.hsi_support_plane_float_margin_m))
+        penetration_amt = F.relu(-signed_delta - float(self.hsi_support_plane_penetration_margin_m))
+        contact_loss = (
+            float(self.hsi_support_plane_float_weight) * _smooth_l1_abs(float_amt[valid])
+            + float(self.hsi_support_plane_penetration_weight) * _smooth_l1_abs(penetration_amt[valid])
+        ).mean()
+        out["loss_hsi_support_plane_contact"] = contact_loss
+        out["metric_hsi_support_plane_float_m"] = float_amt[valid].mean().detach()
+        out["metric_hsi_support_plane_penetration_m"] = penetration_amt[valid].mean().detach()
+        out["metric_hsi_support_plane_signed_m"] = signed_delta[valid].mean().detach()
+        out["metric_hsi_support_plane_contact_count"] = pred_vertices_cam.new_tensor(float(valid.sum().detach().cpu())).detach()
+        return out
+
+    def _get_foot_sole_indices(self, device: torch.device, count: int | None = None) -> torch.Tensor:
+        count = min(max(int(self.hsi_foot_sole_num_vertices if count is None else count), 1), 6890)
+        cached = self._foot_sole_indices_by_count.get(count)
+        if cached is None:
             smpl = self._get_smpl_layer(device)
             template = smpl.layer.v_template.detach().float().reshape(-1, 3)
-            count = min(max(int(self.hsi_foot_sole_num_vertices), 1), int(template.shape[0]))
-            self._foot_sole_indices = torch.argsort(template[:, 1])[:count].long().cpu()
-        return self._foot_sole_indices.to(device=device)
+            count = min(count, int(template.shape[0]))
+            cached = torch.argsort(template[:, 1])[:count].long().cpu()
+            self._foot_sole_indices_by_count[count] = cached
+            self._foot_sole_indices = cached
+        return cached.to(device=device)
 
     def _identity_loss(
         self,
@@ -1160,6 +1391,83 @@ def _sample_local_scene_distance(
     valid = point_valid & local_valid.any(dim=-1) & torch.isfinite(nearest)
     nearest = torch.where(valid, nearest, torch.zeros_like(nearest))
     return nearest, valid
+
+
+def _sample_local_support_plane_signed_delta(
+    depth_flat: torch.Tensor,
+    points_2d: torch.Tensor,
+    points_cam: torch.Tensor,
+    intrinsics: torch.Tensor,
+    frame_idx: torch.Tensor,
+    window_size: int = 9,
+    min_points: int = 6,
+    image_size: int | None = None,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    height, width = depth_flat.shape[-2:]
+    window_size = max(int(window_size), 1)
+    if window_size % 2 == 0:
+        window_size += 1
+    radius = window_size // 2
+    min_points = max(int(min_points), 3)
+
+    center_x = points_2d[..., 0].round().long()
+    center_y = points_2d[..., 1].round().long()
+    point_valid = (
+        torch.isfinite(points_2d).all(dim=-1)
+        & torch.isfinite(points_cam).all(dim=-1)
+        & (points_cam[..., 2] > 1e-6)
+        & (center_x >= 0)
+        & (center_x < width)
+        & (center_y >= 0)
+        & (center_y < height)
+    )
+
+    offsets = torch.arange(-radius, radius + 1, device=points_2d.device)
+    oy, ox = torch.meshgrid(offsets, offsets, indexing="ij")
+    ox = ox.reshape(1, 1, -1)
+    oy = oy.reshape(1, 1, -1)
+    xs = center_x[..., None] + ox
+    ys = center_y[..., None] + oy
+    local_valid = (xs >= 0) & (xs < width) & (ys >= 0) & (ys < height)
+    xs = xs.clamp(0, width - 1)
+    ys = ys.clamp(0, height - 1)
+
+    sampled_depth = depth_flat[frame_idx[:, None, None], ys, xs]
+    local_valid = local_valid & torch.isfinite(sampled_depth) & (sampled_depth > 1e-6)
+
+    fx = intrinsics[:, 0, 0].reshape(-1, 1, 1).clamp(min=1e-6)
+    fy = intrinsics[:, 1, 1].reshape(-1, 1, 1).clamp(min=1e-6)
+    cx = intrinsics[:, 0, 2].reshape(-1, 1, 1)
+    cy = intrinsics[:, 1, 2].reshape(-1, 1, 1)
+    pixel_x = xs.to(dtype=sampled_depth.dtype)
+    pixel_y = ys.to(dtype=sampled_depth.dtype)
+    if image_size is not None:
+        pixel_x = pixel_x * (float(image_size) / float(width))
+        pixel_y = pixel_y * (float(image_size) / float(height))
+    scene_x = (pixel_x - cx.to(dtype=sampled_depth.dtype)) * sampled_depth / fx.to(dtype=sampled_depth.dtype)
+    scene_y = (pixel_y - cy.to(dtype=sampled_depth.dtype)) * sampled_depth / fy.to(dtype=sampled_depth.dtype)
+    scene_xyz = torch.stack([scene_x, scene_y, sampled_depth], dim=-1)
+
+    weights = local_valid.to(dtype=scene_xyz.dtype)
+    valid_count = local_valid.sum(dim=-1)
+    denom = weights.sum(dim=-1, keepdim=True).clamp(min=1.0)
+    center = (scene_xyz * weights[..., None]).sum(dim=-2) / denom
+    centered = (scene_xyz - center[..., None, :]) * weights[..., None]
+    cov = torch.matmul(centered.transpose(-1, -2), centered) / denom[..., None].clamp(min=1.0)
+    eye = torch.eye(3, dtype=cov.dtype, device=cov.device).reshape(1, 1, 3, 3)
+    cov = cov + eye * 1e-6
+
+    _, evecs = torch.linalg.eigh(cov.float())
+    normal = evecs[..., 0].to(dtype=points_cam.dtype)
+    normal = normal / torch.linalg.norm(normal, dim=-1, keepdim=True).clamp(min=1e-6)
+    normal = torch.where(normal[..., 2:3] > 0, -normal, normal)
+
+    center = center.to(dtype=points_cam.dtype).detach()
+    normal = normal.detach()
+    signed = ((points_cam - center) * normal).sum(dim=-1)
+    valid = point_valid & (valid_count >= min_points) & torch.isfinite(signed)
+    signed = torch.where(valid, signed, torch.zeros_like(signed))
+    return signed, valid
 
 
 def _scale_points_to_depth(points_2d: torch.Tensor, image_size: int, depth_height: int, depth_width: int) -> torch.Tensor:

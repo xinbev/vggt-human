@@ -125,6 +125,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--foot-contact-threshold-m", type=float, default=0.12)
     parser.add_argument("--foot-float-margin-m", type=float, default=0.04)
     parser.add_argument("--foot-penetration-margin-m", type=float, default=0.02)
+    parser.add_argument("--foot-sole-num-vertices", type=int, default=80)
+    parser.add_argument("--foot-sole-contact-threshold-m", type=float, default=0.08)
+    parser.add_argument("--support-plane-window", type=int, default=9)
+    parser.add_argument("--support-plane-min-points", type=int, default=6)
     parser.add_argument("--log-interval", type=int, default=8)
     parser.add_argument("--override", action="append", default=[])
     return parser.parse_args()
@@ -241,6 +245,20 @@ def init_metrics() -> dict[str, Meter]:
         "base_foot_penetration_m",
         "hsi_foot_penetration_m",
         "foot_contact_valid_count",
+        "base_sole_abs_delta_m",
+        "hsi_sole_abs_delta_m",
+        "base_sole_float_m",
+        "hsi_sole_float_m",
+        "base_sole_penetration_m",
+        "hsi_sole_penetration_m",
+        "sole_contact_valid_count",
+        "base_sole_plane_abs_signed_m",
+        "hsi_sole_plane_abs_signed_m",
+        "base_sole_plane_float_m",
+        "hsi_sole_plane_float_m",
+        "base_sole_plane_penetration_m",
+        "hsi_sole_plane_penetration_m",
+        "sole_plane_contact_valid_count",
     ]
     return {name: Meter() for name in names} | {"num_gt": Meter(), "num_matched": Meter()}
 
@@ -276,6 +294,7 @@ def evaluate_batch(
     raw_depth, hsi_depth, gt_depth = depth_triplet(predictions, batch)
     mask = batch["smpl_mask"].bool()
     batch_size, num_frames, num_queries = mask.shape
+    sole_indices = get_foot_sole_indices(smpl, int(args.foot_sole_num_vertices), device=gt["vertices"].device)
     for b in range(batch_size):
         for s in range(num_frames):
             gt_idx = torch.nonzero(mask[b, s], as_tuple=False).flatten()
@@ -302,6 +321,7 @@ def evaluate_batch(
                     s,
                     q,
                     g,
+                    sole_indices,
                 )
 
     add_depth_metrics(metrics, predictions, batch)
@@ -358,6 +378,7 @@ def add_human_metrics(
     s: int,
     q: torch.Tensor,
     g: torch.Tensor,
+    sole_indices: torch.Tensor,
 ) -> None:
     q_int = int(q.item())
     g_int = int(g.item())
@@ -385,6 +406,18 @@ def add_human_metrics(
     if valid_hsi.any():
         metrics["hsi_projected_joints_l2_px"].add(float(torch.linalg.norm(hsi_2d[valid_hsi] - gt_2d[valid_hsi], dim=-1).mean().detach().cpu()))
     add_foot_contact_metrics(metrics, base_j, hsi_j, gt_j, intrinsics, hsi_depth, gt_depth, image_size, args)
+    add_foot_sole_contact_metrics(
+        metrics,
+        base["vertices"][b, s, q_int],
+        hsi["vertices"][b, s, q_int],
+        gt["vertices"][b, s, g_int],
+        sole_indices,
+        intrinsics,
+        hsi_depth,
+        gt_depth,
+        image_size,
+        args,
+    )
 
 
 def add_depth_metrics(metrics: dict[str, Meter], predictions: dict[str, torch.Tensor], batch: dict[str, torch.Tensor]) -> None:
@@ -461,6 +494,59 @@ def add_foot_contact_metrics(
     metrics["foot_contact_valid_count"].add(float(contact.sum().detach().cpu()))
 
 
+def add_foot_sole_contact_metrics(
+    metrics: dict[str, Meter],
+    base_vertices: torch.Tensor,
+    hsi_vertices: torch.Tensor,
+    gt_vertices: torch.Tensor,
+    sole_indices: torch.Tensor,
+    intrinsics: torch.Tensor,
+    hsi_depth: torch.Tensor,
+    gt_depth: torch.Tensor,
+    image_size: int,
+    args: argparse.Namespace,
+) -> None:
+    gt_sole = gt_vertices[sole_indices]
+    gt_projected = scale_points_to_depth(project_points(gt_sole, intrinsics), image_size, gt_depth.shape[-2], gt_depth.shape[-1])
+    sampled_gt, gt_valid = sample_depth_at_points(gt_depth, gt_projected)
+    contact = (torch.abs(sampled_gt - gt_sole[:, 2].to(dtype=sampled_gt.dtype)) < float(args.foot_sole_contact_threshold_m)) & gt_valid
+    if not contact.any():
+        return
+
+    for prefix, vertices in [("base", base_vertices), ("hsi", hsi_vertices)]:
+        sole = vertices[sole_indices]
+        projected = scale_points_to_depth(project_points(sole, intrinsics), image_size, hsi_depth.shape[-2], hsi_depth.shape[-1])
+        sampled, valid = sample_depth_at_points(hsi_depth, projected)
+        use = contact & valid & torch.isfinite(sampled) & torch.isfinite(sole[:, 2])
+        if use.any():
+            depth_delta = sampled - sole[:, 2].to(dtype=sampled.dtype)
+            float_amt = torch.relu(depth_delta - float(args.foot_float_margin_m))
+            penetration_amt = torch.relu(-depth_delta - float(args.foot_penetration_margin_m))
+            metrics[f"{prefix}_sole_abs_delta_m"].add(float(torch.abs(depth_delta[use]).mean().detach().cpu()), int(use.sum().detach().cpu()))
+            metrics[f"{prefix}_sole_float_m"].add(float(float_amt[use].mean().detach().cpu()), int(use.sum().detach().cpu()))
+            metrics[f"{prefix}_sole_penetration_m"].add(float(penetration_amt[use].mean().detach().cpu()), int(use.sum().detach().cpu()))
+
+        signed, plane_valid = sample_local_support_plane_signed_delta(
+            hsi_depth,
+            projected,
+            sole,
+            intrinsics,
+            image_size=image_size,
+            window_size=int(args.support_plane_window),
+            min_points=int(args.support_plane_min_points),
+        )
+        plane_use = contact & plane_valid & torch.isfinite(signed)
+        if plane_use.any():
+            plane_float = torch.relu(signed - float(args.foot_float_margin_m))
+            plane_pen = torch.relu(-signed - float(args.foot_penetration_margin_m))
+            metrics[f"{prefix}_sole_plane_abs_signed_m"].add(float(torch.abs(signed[plane_use]).mean().detach().cpu()), int(plane_use.sum().detach().cpu()))
+            metrics[f"{prefix}_sole_plane_float_m"].add(float(plane_float[plane_use].mean().detach().cpu()), int(plane_use.sum().detach().cpu()))
+            metrics[f"{prefix}_sole_plane_penetration_m"].add(float(plane_pen[plane_use].mean().detach().cpu()), int(plane_use.sum().detach().cpu()))
+
+    metrics["sole_contact_valid_count"].add(float(contact.sum().detach().cpu()))
+    metrics["sole_plane_contact_valid_count"].add(float(contact.sum().detach().cpu()))
+
+
 def scale_points_to_depth(points: torch.Tensor, image_size: int, depth_height: int, depth_width: int) -> torch.Tensor:
     scale = points.new_tensor([depth_width / float(image_size), depth_height / float(image_size)])
     return points * scale
@@ -476,6 +562,79 @@ def sample_depth_at_points(depth: torch.Tensor, points: torch.Tensor) -> tuple[t
         sampled[valid] = depth[y[valid], x[valid]]
     valid = valid & torch.isfinite(sampled) & (sampled > 1e-6)
     return sampled, valid
+
+
+def get_foot_sole_indices(smpl: SMPLLayer, count: int, device: torch.device) -> torch.Tensor:
+    template = smpl.layer.v_template.detach().float().reshape(-1, 3)
+    count = min(max(int(count), 1), int(template.shape[0]))
+    return torch.argsort(template[:, 1])[:count].long().to(device=device)
+
+
+def sample_local_support_plane_signed_delta(
+    depth: torch.Tensor,
+    points_2d: torch.Tensor,
+    points_cam: torch.Tensor,
+    intrinsics: torch.Tensor,
+    image_size: int,
+    window_size: int = 9,
+    min_points: int = 6,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    height, width = depth.shape[-2:]
+    window_size = max(int(window_size), 1)
+    if window_size % 2 == 0:
+        window_size += 1
+    radius = window_size // 2
+    min_points = max(int(min_points), 3)
+
+    center_x = points_2d[:, 0].round().long()
+    center_y = points_2d[:, 1].round().long()
+    point_valid = (
+        torch.isfinite(points_2d).all(dim=-1)
+        & torch.isfinite(points_cam).all(dim=-1)
+        & (points_cam[:, 2] > 1e-6)
+        & (center_x >= 0)
+        & (center_x < width)
+        & (center_y >= 0)
+        & (center_y < height)
+    )
+
+    offsets = torch.arange(-radius, radius + 1, device=points_2d.device)
+    oy, ox = torch.meshgrid(offsets, offsets, indexing="ij")
+    ox = ox.reshape(1, -1)
+    oy = oy.reshape(1, -1)
+    xs = center_x[:, None] + ox
+    ys = center_y[:, None] + oy
+    local_valid = (xs >= 0) & (xs < width) & (ys >= 0) & (ys < height)
+    xs = xs.clamp(0, width - 1)
+    ys = ys.clamp(0, height - 1)
+
+    sampled_depth = depth[ys, xs]
+    local_valid = local_valid & torch.isfinite(sampled_depth) & (sampled_depth > 1e-6)
+    pixel_x = xs.to(dtype=sampled_depth.dtype) * (float(image_size) / float(width))
+    pixel_y = ys.to(dtype=sampled_depth.dtype) * (float(image_size) / float(height))
+    fx = intrinsics[0, 0].to(dtype=sampled_depth.dtype).clamp(min=1e-6)
+    fy = intrinsics[1, 1].to(dtype=sampled_depth.dtype).clamp(min=1e-6)
+    cx = intrinsics[0, 2].to(dtype=sampled_depth.dtype)
+    cy = intrinsics[1, 2].to(dtype=sampled_depth.dtype)
+    scene_x = (pixel_x - cx) * sampled_depth / fx
+    scene_y = (pixel_y - cy) * sampled_depth / fy
+    scene_xyz = torch.stack([scene_x, scene_y, sampled_depth], dim=-1)
+
+    weights = local_valid.to(dtype=scene_xyz.dtype)
+    valid_count = local_valid.sum(dim=-1)
+    denom = weights.sum(dim=-1, keepdim=True).clamp(min=1.0)
+    center = (scene_xyz * weights[..., None]).sum(dim=-2) / denom
+    centered = (scene_xyz - center[:, None, :]) * weights[..., None]
+    cov = torch.matmul(centered.transpose(-1, -2), centered) / denom[:, :, None].clamp(min=1.0)
+    cov = cov + torch.eye(3, dtype=cov.dtype, device=cov.device).reshape(1, 3, 3) * 1e-6
+    _, evecs = torch.linalg.eigh(cov.float())
+    normal = evecs[..., 0].to(dtype=points_cam.dtype)
+    normal = normal / torch.linalg.norm(normal, dim=-1, keepdim=True).clamp(min=1e-6)
+    normal = torch.where(normal[:, 2:3] > 0, -normal, normal)
+    signed = ((points_cam - center.to(dtype=points_cam.dtype)) * normal).sum(dim=-1)
+    valid = point_valid & (valid_count >= min_points) & torch.isfinite(signed)
+    signed = torch.where(valid, signed, torch.zeros_like(signed))
+    return signed, valid
 
 
 def add_depth_region_metrics(
@@ -571,6 +730,10 @@ def build_summary(
         "depth_near_l1_median_m": ("raw_depth_near_l1_median_m", "hsi_depth_near_l1_median_m"),
         "depth_far_l1_median_m": ("raw_depth_far_l1_median_m", "hsi_depth_far_l1_median_m"),
         "depth_human_roi_l1_median_m": ("raw_depth_human_roi_l1_median_m", "hsi_depth_human_roi_l1_median_m"),
+        "sole_float_m": ("base_sole_float_m", "hsi_sole_float_m"),
+        "sole_penetration_m": ("base_sole_penetration_m", "hsi_sole_penetration_m"),
+        "sole_plane_float_m": ("base_sole_plane_float_m", "hsi_sole_plane_float_m"),
+        "sole_plane_penetration_m": ("base_sole_plane_penetration_m", "hsi_sole_plane_penetration_m"),
     }
     improvements = {name: improvement(values[base], values[hsi]) for name, (base, hsi) in pairs.items()}
     scale_arr = np.asarray(hsi_scales, dtype=np.float64) if hsi_scales else np.asarray([], dtype=np.float64)
@@ -652,6 +815,22 @@ def print_human_summary(summary: dict[str, Any]) -> None:
         f"base_pen={fmt(metrics.get('base_foot_penetration_m'))}m "
         f"hsi_pen={fmt(metrics.get('hsi_foot_penetration_m'))}m "
         f"contacts={fmt(metrics.get('foot_contact_valid_count'))}"
+    )
+    print(
+        "Sole contact metrics    "
+        f"base_float={fmt(metrics.get('base_sole_float_m'))}m "
+        f"hsi_float={fmt(metrics.get('hsi_sole_float_m'))}m "
+        f"base_pen={fmt(metrics.get('base_sole_penetration_m'))}m "
+        f"hsi_pen={fmt(metrics.get('hsi_sole_penetration_m'))}m "
+        f"contacts={fmt(metrics.get('sole_contact_valid_count'))}"
+    )
+    print(
+        "Sole plane metrics      "
+        f"base_float={fmt(metrics.get('base_sole_plane_float_m'))}m "
+        f"hsi_float={fmt(metrics.get('hsi_sole_plane_float_m'))}m "
+        f"base_pen={fmt(metrics.get('base_sole_plane_penetration_m'))}m "
+        f"hsi_pen={fmt(metrics.get('hsi_sole_plane_penetration_m'))}m "
+        f"contacts={fmt(metrics.get('sole_plane_contact_valid_count'))}"
     )
     print(f"matched humans: {fmt(metrics.get('num_matched'))} / gt {fmt(metrics.get('num_gt'))}")
     print(f"hsi scale: {summary['hsi_scene_scale']}")

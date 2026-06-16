@@ -44,12 +44,14 @@ from scripts.eval.evaluate_hsi_refine_metrics import (  # noqa: E402
     canonical_depth,
     decode_smpl_batch,
     depth_triplet,
+    get_foot_sole_indices,
     greedy_match,
     human_roi_depth_mask,
     load_training_checkpoint,
     load_vggt_baseline,
     project_points,
     sample_depth_at_points,
+    sample_local_support_plane_signed_delta,
     scale_points_to_depth,
 )
 from scripts.train.train_smpl import apply_overrides, build_model, load_yaml_config  # noqa: E402
@@ -92,11 +94,12 @@ def main() -> None:
         )
 
     depth_summary, depth_images = compute_depth_diagnostics(predictions, batch)
-    smpl_summary = compute_smpl_diagnostics(predictions, batch, smpl, config, args)
+    smpl_summary, contact_points = compute_smpl_diagnostics(predictions, batch, smpl, config, args)
     diagnosis = infer_source(depth_summary, smpl_summary, args)
 
     stem = image_path.stem
     image_paths = save_depth_visuals(output_dir, stem, rgb, depth_images, depth_summary)
+    image_paths.update(save_contact_overlays(output_dir, stem, rgb, contact_points, args))
     out_json = output_dir / f"{stem}_hsi_depth_smpl_diagnostics.json"
     out_json.write_text(
         json.dumps(
@@ -135,6 +138,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--foot-contact-threshold-m", type=float, default=0.12)
     parser.add_argument("--foot-float-margin-m", type=float, default=0.04)
     parser.add_argument("--foot-penetration-margin-m", type=float, default=0.02)
+    parser.add_argument("--foot-sole-num-vertices", type=int, default=80)
+    parser.add_argument("--foot-sole-contact-threshold-m", type=float, default=0.08)
+    parser.add_argument("--support-plane-window", type=int, default=9)
+    parser.add_argument("--support-plane-min-points", type=int, default=6)
     parser.add_argument("--override", action="append", default=[])
     return parser.parse_args()
 
@@ -284,7 +291,7 @@ def compute_smpl_diagnostics(
     smpl: SMPLLayer,
     config: dict[str, Any],
     args: argparse.Namespace,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]]]:
     base = decode_smpl_batch(predictions["pred_poses"], predictions["pred_betas"], predictions["pred_transl_cam"], smpl)
     hsi = decode_smpl_batch(
         predictions["hsi_refined_pred_poses"],
@@ -308,6 +315,8 @@ def compute_smpl_diagnostics(
     pred_idx = torch.nonzero(confs[0, 0] >= float(args.conf_threshold), as_tuple=False).flatten()
     matches = greedy_match(base["joints"][0, 0, pred_idx, :24], gt["joints"][0, 0, gt_idx, :24]) if gt_idx.numel() and pred_idx.numel() else []
     per_person = []
+    contact_points: dict[str, list[dict[str, Any]]] = {"base": [], "hsi": []}
+    sole_indices = get_foot_sole_indices(smpl, int(args.foot_sole_num_vertices), device=gt["vertices"].device)
     meters: dict[str, list[float]] = {
         "base_joints_mpjpe_m": [],
         "hsi_joints_mpjpe_m": [],
@@ -324,6 +333,20 @@ def compute_smpl_diagnostics(
         "base_foot_penetration_m": [],
         "hsi_foot_penetration_m": [],
         "foot_contact_valid_count": [],
+        "base_sole_abs_delta_m": [],
+        "hsi_sole_abs_delta_m": [],
+        "base_sole_float_m": [],
+        "hsi_sole_float_m": [],
+        "base_sole_penetration_m": [],
+        "hsi_sole_penetration_m": [],
+        "sole_contact_valid_count": [],
+        "base_sole_plane_abs_signed_m": [],
+        "hsi_sole_plane_abs_signed_m": [],
+        "base_sole_plane_float_m": [],
+        "hsi_sole_plane_float_m": [],
+        "base_sole_plane_penetration_m": [],
+        "hsi_sole_plane_penetration_m": [],
+        "sole_plane_contact_valid_count": [],
     }
     for pred_local, gt_local in matches:
         q = int(pred_idx[pred_local].item())
@@ -339,7 +362,11 @@ def compute_smpl_diagnostics(
             args,
             q,
             g,
+            sole_indices,
         )
+        person_contact_points = values.pop("_contact_points", {"base": [], "hsi": []})
+        for prefix in ("base", "hsi"):
+            contact_points[prefix].extend(person_contact_points.get(prefix, []))
         for key, value in values.items():
             meters[key].append(value)
         per_person.append({"pred_query": q, "gt_index": g, **values})
@@ -354,7 +381,7 @@ def compute_smpl_diagnostics(
             "per_person": per_person,
         }
     )
-    return summary
+    return summary, contact_points
 
 
 def human_metric_values(
@@ -368,6 +395,7 @@ def human_metric_values(
     args: argparse.Namespace,
     q: int,
     g: int,
+    sole_indices: torch.Tensor,
 ) -> dict[str, float | None]:
     gt_j = gt["joints"][0, 0, g, :24]
     base_j = base["joints"][0, 0, q, :24]
@@ -388,6 +416,19 @@ def human_metric_values(
         "hsi_projected_joints_l2_px": scalar(torch.linalg.norm(hsi_2d[valid_hsi] - gt_2d[valid_hsi], dim=-1).mean()) if valid_hsi.any() else None,
     }
     values.update(foot_contact_values(base_j, hsi_j, gt_j, intrinsics, hsi_depth, gt_depth, image_size, args))
+    values.update(
+        sole_contact_values(
+            base["vertices"][0, 0, q],
+            hsi["vertices"][0, 0, q],
+            gt["vertices"][0, 0, g],
+            sole_indices,
+            intrinsics,
+            hsi_depth,
+            gt_depth,
+            image_size,
+            args,
+        )
+    )
     return values
 
 
@@ -431,6 +472,136 @@ def foot_contact_values(
         values[f"{prefix}_foot_float_m"] = scalar(float_amt[use].mean())
         values[f"{prefix}_foot_penetration_m"] = scalar(penetration_amt[use].mean())
     return values
+
+
+def sole_contact_values(
+    base_vertices: torch.Tensor,
+    hsi_vertices: torch.Tensor,
+    gt_vertices: torch.Tensor,
+    sole_indices: torch.Tensor,
+    intrinsics: torch.Tensor,
+    hsi_depth: torch.Tensor,
+    gt_depth: torch.Tensor,
+    image_size: int,
+    args: argparse.Namespace,
+) -> dict[str, Any]:
+    gt_sole = gt_vertices[sole_indices]
+    gt_projected = scale_points_to_depth(project_points(gt_sole, intrinsics), image_size, gt_depth.shape[-2], gt_depth.shape[-1])
+    sampled_gt, gt_valid = sample_depth_at_points(gt_depth, gt_projected)
+    contact = (torch.abs(sampled_gt - gt_sole[:, 2].to(dtype=sampled_gt.dtype)) < float(args.foot_sole_contact_threshold_m)) & gt_valid
+    values: dict[str, Any] = {
+        "base_sole_abs_delta_m": None,
+        "hsi_sole_abs_delta_m": None,
+        "base_sole_float_m": None,
+        "hsi_sole_float_m": None,
+        "base_sole_penetration_m": None,
+        "hsi_sole_penetration_m": None,
+        "sole_contact_valid_count": float(contact.sum().detach().cpu()),
+        "base_sole_plane_abs_signed_m": None,
+        "hsi_sole_plane_abs_signed_m": None,
+        "base_sole_plane_float_m": None,
+        "hsi_sole_plane_float_m": None,
+        "base_sole_plane_penetration_m": None,
+        "hsi_sole_plane_penetration_m": None,
+        "sole_plane_contact_valid_count": float(contact.sum().detach().cpu()),
+        "_contact_points": {"base": [], "hsi": []},
+    }
+    if not contact.any():
+        return values
+
+    for prefix, vertices in [("base", base_vertices), ("hsi", hsi_vertices)]:
+        sole = vertices[sole_indices]
+        projected = scale_points_to_depth(project_points(sole, intrinsics), image_size, hsi_depth.shape[-2], hsi_depth.shape[-1])
+        sampled, valid = sample_depth_at_points(hsi_depth, projected)
+        use = contact & valid & torch.isfinite(sampled) & torch.isfinite(sole[:, 2])
+        depth_delta = sampled - sole[:, 2].to(dtype=sampled.dtype)
+        if use.any():
+            float_amt = torch.relu(depth_delta - float(args.foot_float_margin_m))
+            penetration_amt = torch.relu(-depth_delta - float(args.foot_penetration_margin_m))
+            values[f"{prefix}_sole_abs_delta_m"] = scalar(torch.abs(depth_delta[use]).mean())
+            values[f"{prefix}_sole_float_m"] = scalar(float_amt[use].mean())
+            values[f"{prefix}_sole_penetration_m"] = scalar(penetration_amt[use].mean())
+
+        signed, plane_valid = sample_local_support_plane_signed_delta(
+            hsi_depth,
+            projected,
+            sole,
+            intrinsics,
+            image_size=image_size,
+            window_size=int(args.support_plane_window),
+            min_points=int(args.support_plane_min_points),
+        )
+        plane_use = contact & plane_valid & torch.isfinite(signed)
+        if plane_use.any():
+            plane_float = torch.relu(signed - float(args.foot_float_margin_m))
+            plane_pen = torch.relu(-signed - float(args.foot_penetration_margin_m))
+            values[f"{prefix}_sole_plane_abs_signed_m"] = scalar(torch.abs(signed[plane_use]).mean())
+            values[f"{prefix}_sole_plane_float_m"] = scalar(plane_float[plane_use].mean())
+            values[f"{prefix}_sole_plane_penetration_m"] = scalar(plane_pen[plane_use].mean())
+
+        draw_mask = contact & (plane_valid | use)
+        draw_indices = torch.nonzero(draw_mask, as_tuple=False).flatten()
+        if draw_indices.numel() > 80:
+            draw_indices = draw_indices[:: max(int(draw_indices.numel() // 80), 1)][:80]
+        for idx in draw_indices:
+            idx_int = int(idx.item())
+            if bool(plane_valid[idx_int].detach().cpu()):
+                delta = float(signed[idx_int].detach().cpu())
+            elif bool(use[idx_int].detach().cpu()):
+                delta = float(depth_delta[idx_int].detach().cpu())
+            else:
+                continue
+            status = contact_status(delta, float(args.foot_float_margin_m), float(args.foot_penetration_margin_m))
+            values["_contact_points"][prefix].append(
+                {
+                    "x": float(projected[idx_int, 0].detach().cpu()) * float(image_size) / float(hsi_depth.shape[-1]),
+                    "y": float(projected[idx_int, 1].detach().cpu()) * float(image_size) / float(hsi_depth.shape[-2]),
+                    "delta_m": delta,
+                    "status": status,
+                }
+            )
+    return values
+
+
+def contact_status(delta: float, float_margin: float, penetration_margin: float) -> str:
+    if delta > float_margin:
+        return "floating"
+    if delta < -penetration_margin:
+        return "penetration"
+    return "contact"
+
+
+def save_contact_overlays(
+    output_dir: Path,
+    stem: str,
+    rgb: Image.Image,
+    contact_points: dict[str, list[dict[str, Any]]],
+    args: argparse.Namespace,
+) -> dict[str, str]:
+    paths: dict[str, str] = {}
+    colors = {
+        "penetration": (255, 48, 48),
+        "floating": (48, 128, 255),
+        "contact": (64, 220, 96),
+    }
+    radius = 3
+    for prefix in ("base", "hsi"):
+        overlay = rgb.copy()
+        draw = ImageDraw.Draw(overlay)
+        points = contact_points.get(prefix, [])
+        for point in points:
+            status = str(point.get("status", "contact"))
+            color = colors.get(status, (240, 240, 240))
+            x = float(point.get("x", 0.0))
+            y = float(point.get("y", 0.0))
+            draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=color, outline=(20, 20, 20))
+        draw.rectangle((6, 6, 304, 62), fill=(0, 0, 0))
+        draw.text((14, 14), f"{prefix.upper()} sole contact | red pen blue float green contact", fill=(245, 245, 245))
+        draw.text((14, 36), f"points={len(points)} window={args.support_plane_window}", fill=(245, 245, 245))
+        path = output_dir / f"{stem}_{prefix}_sole_contact_overlay.png"
+        overlay.save(path)
+        paths[f"{prefix}_sole_contact_overlay"] = str(path)
+    return paths
 
 
 def save_depth_visuals(output_dir: Path, stem: str, rgb: Image.Image, images: dict[str, np.ndarray], summary: dict[str, Any]) -> dict[str, str]:
@@ -549,6 +720,16 @@ def print_human_summary(depth: dict[str, Any], smpl: dict[str, Any], diagnosis: 
         "Foot float / pen    : "
         f"base={fmt(smpl.get('base_foot_float_m'))}/{fmt(smpl.get('base_foot_penetration_m'))} m "
         f"hsi={fmt(smpl.get('hsi_foot_float_m'))}/{fmt(smpl.get('hsi_foot_penetration_m'))} m"
+    )
+    print(
+        "Sole float / pen    : "
+        f"base={fmt(smpl.get('base_sole_float_m'))}/{fmt(smpl.get('base_sole_penetration_m'))} m "
+        f"hsi={fmt(smpl.get('hsi_sole_float_m'))}/{fmt(smpl.get('hsi_sole_penetration_m'))} m"
+    )
+    print(
+        "Sole plane float/pen: "
+        f"base={fmt(smpl.get('base_sole_plane_float_m'))}/{fmt(smpl.get('base_sole_plane_penetration_m'))} m "
+        f"hsi={fmt(smpl.get('hsi_sole_plane_float_m'))}/{fmt(smpl.get('hsi_sole_plane_penetration_m'))} m"
     )
     print(f"Raw depth median L1 : {fmt(depth.get('raw_depth_l1_median_m'))} m")
     print(f"HSI depth median L1 : {fmt(depth.get('hsi_depth_l1_median_m'))} m")
