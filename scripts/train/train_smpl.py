@@ -74,6 +74,7 @@ def main() -> None:
     trainable_params = [param for param in model.parameters() if param.requires_grad]
     if not trainable_params:
         raise RuntimeError("No trainable parameters after applying freeze policy")
+    print_trainable_summary(model)
     optimizer = torch.optim.AdamW(
         trainable_params,
         lr=float(config["optim"]["lr"]),
@@ -237,7 +238,7 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
                 if module is not None:
                     freeze_module(module)
         if bool(model_cfg.get("train_hsi_scene_affine_only", False)):
-            for name in ("pose_delta", "betas_delta", "transl_delta", "contact_head"):
+            for name in ("pose_delta", "betas_delta", "transl_delta", "contact_head", "delta_gate"):
                 module = getattr(hsi_head, name, None)
                 if module is not None:
                     freeze_module(module)
@@ -270,6 +271,16 @@ def freeze_module(module: torch.nn.Module) -> None:
     module.eval()
     for _, param in module.named_parameters():
         param.requires_grad = False
+
+
+def print_trainable_summary(model: torch.nn.Module, max_names: int = 40) -> None:
+    trainable = [(name, param.numel()) for name, param in model.named_parameters() if param.requires_grad]
+    total = sum(count for _, count in trainable)
+    print(f"[trainable] tensors={len(trainable)} params={total:,}")
+    for name, count in trainable[:max_names]:
+        print(f"[trainable] {name} ({count:,})")
+    if len(trainable) > max_names:
+        print(f"[trainable] ... {len(trainable) - max_names} more tensors")
 
 
 def load_initial_checkpoint(model: torch.nn.Module, config: dict[str, Any], device: torch.device) -> None:
