@@ -1,0 +1,243 @@
+{
+  "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_refine_20q/checkpoint_epoch_0121.pt",
+  "num_sequences": 64,
+  "conf_threshold": 0.1,
+  "use_gt_box_prior": true,
+  "metrics": {
+    "num_gt_per_frame": 3.0,
+    "num_matched_per_frame": 3.0,
+    "temporal_pair_count": 0.0,
+    "temporal_triple_count": 0.0,
+    "temporal_quad_count": 0.0,
+    "query_switch_rate": null,
+    "base_transl_velocity_l1_m": null,
+    "hsi_transl_velocity_l1_m": null,
+    "base_joints_velocity_l1_m": null,
+    "hsi_joints_velocity_l1_m": null,
+    "base_joints_acceleration_l1_m": null,
+    "hsi_joints_acceleration_l1_m": null,
+    "base_joints_jerk_l1_m": null,
+    "hsi_joints_jerk_l1_m": null,
+    "hsi_scene_log_scale_abs_delta": 0.014291234030679334,
+    "hsi_scene_log_scale_seq_abs": 0.011745393741875887,
+    "hsi_scene_scale_range": 0.2954803481698036,
+    "hsi_scene_scale_saturation_rate": 0.0,
+    "hsi_scene_bias_abs_delta_m": 0.07710837636841461,
+    "hsi_scene_bias_seq_abs_m": 0.06694593510474078,
+    "hsi_scene_bias_range_m": 0.19793171237688512
+  },
+  "improvement_percent_lower_is_better": {
+    "transl_velocity_l1_m": null,
+    "joints_velocity_l1_m": null,
+    "joints_acceleration_l1_m": null,
+    "joints_jerk_l1_m": null
+  },
+  "sequence_robust_scale": {
+    "count": 64,
+    "mean": 8.136995166540146,
+    "min": 6.7382426261901855,
+    "max": 10.143540382385254,
+    "median": 7.687407493591309
+  },
+  "sequence_robust_bias": {
+    "count": 64,
+    "mean": -0.19379934069729643,
+    "min": -0.8746160864830017,
+    "max": 0.46710970997810364,
+    "median": -0.05848049372434616
+  },
+  "examples": [
+    {
+      "batch_idx": 0,
+      "num_frames": 4,
+      "frame_match_counts": [
+        3,
+        3,
+        3,
+        3
+      ],
+      "temporal_pairs": 0,
+      "temporal_triples": 0,
+      "temporal_quads": 0,
+      "query_switches": 0,
+      "scene": {
+        "sequence_scale": [
+          7.819460868835449
+        ],
+        "mean_log_scale_delta": 0.016856273636221886,
+        "sequence_bias": [
+          -0.5692988634109497
+        ],
+        "mean_bias_delta_m": 0.07752641290426254
+      }
+    },
+    {
+      "batch_idx": 1,
+      "num_frames": 4,
+      "frame_match_counts": [
+        3,
+        3,
+        3,
+        3
+      ],
+      "temporal_pairs": 0,
+      "temporal_triples": 0,
+      "temporal_quads": 0,
+      "query_switches": 0,
+      "scene": {
+        "sequence_scale": [
+          8.323040008544922
+        ],
+        "mean_log_scale_delta": 0.031763553619384766,
+        "sequence_bias": [
+          -0.5402669310569763
+        ],
+        "mean_bias_delta_m": 0.07853168249130249
+      }
+    },
+    {
+      "batch_idx": 2,
+      "num_frames": 4,
+      "frame_match_counts": [
+        3,
+        3,
+        3,
+        3
+      ],
+      "temporal_pairs": 0,
+      "temporal_triples": 0,
+      "temporal_quads": 0,
+      "query_switches": 0,
+      "scene": {
+        "sequence_scale": [
+          8.363482475280762
+        ],
+        "mean_log_scale_delta": 0.02939574047923088,
+        "sequence_bias": [
+          -0.49607154726982117
+        ],
+        "mean_bias_delta_m": 0.07729707658290863
+      }
+    },
+    {
+      "batch_idx": 3,
+      "num_frames": 4,
+      "frame_match_counts": [
+        3,
+        3,
+        3,
+        3
+      ],
+      "temporal_pairs": 0,
+      "temporal_triples": 0,
+      "temporal_quads": 0,
+      "query_switches": 0,
+      "scene": {
+        "sequence_scale": [
+          7.978577136993408
+        ],
+        "mean_log_scale_delta": 0.025783300399780273,
+        "sequence_bias": [
+          -0.41067707538604736
+        ],
+        "mean_bias_delta_m": 0.12283027172088623
+      }
+    },
+    {
+      "batch_idx": 4,
+      "num_frames": 4,
+      "frame_match_counts": [
+        3,
+        3,
+        3,
+        3
+      ],
+      "temporal_pairs": 0,
+      "temporal_triples": 0,
+      "temporal_quads": 0,
+      "query_switches": 0,
+      "scene": {
+        "sequence_scale": [
+          7.662619590759277
+        ],
+        "mean_log_scale_delta": 0.022908370941877365,
+        "sequence_bias": [
+          -0.1535620540380478
+        ],
+        "mean_bias_delta_m": 0.1698930561542511
+      }
+    },
+    {
+      "batch_idx": 5,
+      "num_frames": 4,
+      "frame_match_counts": [
+        3,
+        3,
+        3,
+        3
+      ],
+      "temporal_pairs": 0,
+      "temporal_triples": 0,
+      "temporal_quads": 0,
+      "query_switches": 0,
+      "scene": {
+        "sequence_scale": [
+          7.4736199378967285
+        ],
+        "mean_log_scale_delta": 0.019631624221801758,
+        "sequence_bias": [
+          0.08369306474924088
+        ],
+        "mean_bias_delta_m": 0.150260329246521
+      }
+    },
+    {
+      "batch_idx": 6,
+      "num_frames": 4,
+      "frame_match_counts": [
+        3,
+        3,
+        3,
+        3
+      ],
+      "temporal_pairs": 0,
+      "temporal_triples": 0,
+      "temporal_quads": 0,
+      "query_switches": 0,
+      "scene": {
+        "sequence_scale": [
+          7.315774917602539
+        ],
+        "mean_log_scale_delta": 0.022854328155517578,
+        "sequence_bias": [
+          0.11968176066875458
+        ],
+        "mean_bias_delta_m": 0.1016007512807846
+      }
+    },
+    {
+      "batch_idx": 7,
+      "num_frames": 4,
+      "frame_match_counts": [
+        3,
+        3,
+        3,
+        3
+      ],
+      "temporal_pairs": 0,
+      "temporal_triples": 0,
+      "temporal_quads": 0,
+      "query_switches": 0,
+      "scene": {
+        "sequence_scale": [
+          7.1002912521362305
+        ],
+        "mean_log_scale_delta": 0.022852540016174316,
+        "sequence_bias": [
+          0.10933884978294373
+        ],
+        "mean_bias_delta_m": 0.06857120990753174
+      }
+    }
+  ]
+}
