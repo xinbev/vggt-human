@@ -14,6 +14,12 @@ import numpy.core
 import numpy.core.multiarray
 import numpy.core.numeric
 
+
+TRACK_SOURCE_SLOT = 0
+TRACK_SOURCE_PERSON_INDEX = 1
+TRACK_SOURCE_EXPLICIT_ID = 2
+TRACK_ID_NAMESPACE = 1_000_000_000
+
 # Some BEDLAM pickle files may reference NumPy 2.x module names. Register the
 # compatibility aliases only after project imports have loaded torch, because
 # setting numpy._core before torch import can segfault in this environment.
@@ -118,6 +124,10 @@ class BedlamDataset(Dataset):
             "boxes_mask": boxes["boxes_mask"],
             "person_ids": boxes["person_ids"],
             "person_id_mask": boxes["person_id_mask"],
+            "gt_track_ids": boxes["gt_track_ids"],
+            "gt_track_mask": boxes["gt_track_mask"],
+            "gt_track_source": boxes["gt_track_source"],
+            "gt_track_quality": boxes["gt_track_quality"],
         }
 
     def _box_path(self, seq_dir: Path, frame_id: str) -> Path:
@@ -252,32 +262,43 @@ def _build_box_targets(
     max_humans: int,
     require_boxes: bool,
 ) -> dict[str, torch.Tensor]:
+    explicit_by_person_index: dict[int, int] = {}
+    explicit_by_slot: dict[int, int] = {}
+    for frame_idx, persons in enumerate(persons_per_frame):
+        box_persons = boxes_per_frame[frame_idx]
+        for person_idx, person in enumerate(persons[:max_humans]):
+            box_person = box_persons[person_idx] if box_persons is not None and person_idx < len(box_persons) else None
+            explicit_id, explicit_valid = _extract_explicit_person_id(box_person, person)
+            if not explicit_valid:
+                continue
+            sidecar_index, sidecar_valid = _extract_person_index(box_person)
+            if sidecar_valid:
+                explicit_by_person_index.setdefault(sidecar_index, explicit_id)
+            explicit_by_slot.setdefault(person_idx, explicit_id)
+
     box_frames = []
     box_mask_frames = []
     person_id_frames = []
     person_id_mask_frames = []
+    track_source_frames = []
     for frame_idx, persons in enumerate(persons_per_frame):
         boxes = torch.zeros(max_humans, 4, dtype=torch.float32)
         boxes_mask = torch.zeros(max_humans, dtype=torch.bool)
         person_ids = torch.full((max_humans,), -1, dtype=torch.long)
         person_id_mask = torch.zeros(max_humans, dtype=torch.bool)
+        track_source = torch.full((max_humans,), -1, dtype=torch.long)
         box_persons = boxes_per_frame[frame_idx]
         for person_idx, person in enumerate(persons[:max_humans]):
+            box_person = None
             if box_persons is not None and person_idx < len(box_persons):
                 box_person = box_persons[person_idx]
                 if bool(box_person.get("bbox_valid", False)):
                     boxes[person_idx] = torch.as_tensor(box_person["bbox_cxcywh_norm"], dtype=torch.float32).reshape(4).clamp(0.0, 1.0)
                     boxes_mask[person_idx] = True
-                person_id = box_person.get("person_id", -1)
-                person_id_valid = bool(box_person.get("person_id_valid", False))
-                if person_id_valid:
-                    person_ids[person_idx] = int(person_id)
-                    person_id_mask[person_idx] = True
-            else:
-                person_id, person_id_valid = extract_person_id(person)
-                if person_id_valid:
-                    person_ids[person_idx] = person_id
-                    person_id_mask[person_idx] = True
+            track_id, source = _resolve_track_id(box_person, person, person_idx, explicit_by_person_index, explicit_by_slot)
+            person_ids[person_idx] = track_id
+            person_id_mask[person_idx] = True
+            track_source[person_idx] = source
             if require_boxes and not boxes_mask[person_idx]:
                 raise ValueError(
                     "Valid SMPL person is missing a preprocessed bbox. "
@@ -287,12 +308,111 @@ def _build_box_targets(
         box_mask_frames.append(boxes_mask)
         person_id_frames.append(person_ids)
         person_id_mask_frames.append(person_id_mask)
+        track_source_frames.append(track_source)
+    track_quality = _compute_track_quality(persons_per_frame, person_id_frames, person_id_mask_frames, track_source_frames, max_humans)
+    track_ids = torch.stack(person_id_frames, dim=0)
+    track_mask = torch.stack(person_id_mask_frames, dim=0)
+    track_source = torch.stack(track_source_frames, dim=0)
     return {
         "boxes": torch.stack(box_frames, dim=0),
         "boxes_mask": torch.stack(box_mask_frames, dim=0),
-        "person_ids": torch.stack(person_id_frames, dim=0),
-        "person_id_mask": torch.stack(person_id_mask_frames, dim=0),
+        "person_ids": track_ids,
+        "person_id_mask": track_mask,
+        "gt_track_ids": track_ids,
+        "gt_track_mask": track_mask,
+        "gt_track_source": track_source,
+        "gt_track_quality": track_quality,
     }
+
+
+def _extract_explicit_person_id(box_person: dict[str, Any] | None, person: dict[str, Any]) -> tuple[int, bool]:
+    if box_person is not None and bool(box_person.get("person_id_valid", False)):
+        try:
+            person_id = int(box_person.get("person_id", -1))
+            if person_id >= 0:
+                return person_id, True
+        except (TypeError, ValueError):
+            pass
+    return extract_person_id(person)
+
+
+def _extract_person_index(box_person: dict[str, Any] | None) -> tuple[int, bool]:
+    if box_person is None or "person_index" not in box_person:
+        return -1, False
+    try:
+        return int(box_person["person_index"]), True
+    except (TypeError, ValueError):
+        return -1, False
+
+
+def _resolve_track_id(
+    box_person: dict[str, Any] | None,
+    person: dict[str, Any],
+    person_idx: int,
+    explicit_by_person_index: dict[int, int],
+    explicit_by_slot: dict[int, int],
+) -> tuple[int, int]:
+    explicit_id, explicit_valid = _extract_explicit_person_id(box_person, person)
+    if explicit_valid:
+        return _namespaced_track_id(TRACK_SOURCE_EXPLICIT_ID, explicit_id), TRACK_SOURCE_EXPLICIT_ID
+
+    sidecar_index, sidecar_valid = _extract_person_index(box_person)
+    if sidecar_valid and sidecar_index in explicit_by_person_index:
+        return _namespaced_track_id(TRACK_SOURCE_EXPLICIT_ID, explicit_by_person_index[sidecar_index]), TRACK_SOURCE_EXPLICIT_ID
+    if person_idx in explicit_by_slot:
+        return _namespaced_track_id(TRACK_SOURCE_EXPLICIT_ID, explicit_by_slot[person_idx]), TRACK_SOURCE_EXPLICIT_ID
+    if sidecar_valid:
+        return _namespaced_track_id(TRACK_SOURCE_PERSON_INDEX, sidecar_index), TRACK_SOURCE_PERSON_INDEX
+    return _namespaced_track_id(TRACK_SOURCE_SLOT, person_idx), TRACK_SOURCE_SLOT
+
+
+def _namespaced_track_id(source: int, raw_id: int) -> int:
+    if raw_id < 0:
+        return -1
+    return int(source) * TRACK_ID_NAMESPACE + int(raw_id)
+
+
+def _compute_track_quality(
+    persons_per_frame: list[list[dict[str, Any]]],
+    track_id_frames: list[torch.Tensor],
+    track_mask_frames: list[torch.Tensor],
+    track_source_frames: list[torch.Tensor],
+    max_humans: int,
+) -> torch.Tensor:
+    quality_frames = []
+    previous: dict[int, tuple[torch.Tensor, torch.Tensor]] = {}
+    for frame_idx, persons in enumerate(persons_per_frame):
+        quality = torch.zeros(max_humans, dtype=torch.float32)
+        track_ids = track_id_frames[frame_idx]
+        track_mask = track_mask_frames[frame_idx]
+        track_source = track_source_frames[frame_idx]
+        for person_idx, person in enumerate(persons[:max_humans]):
+            if not bool(track_mask[person_idx]):
+                continue
+            track_id = int(track_ids[person_idx])
+            source = int(track_source[person_idx])
+            base_quality = _track_source_base_quality(source)
+            transl = torch.as_tensor(person["smplx_transl"], dtype=torch.float32).reshape(3)
+            betas = torch.as_tensor(person["smplx_shape"], dtype=torch.float32).reshape(-1)[:10]
+            if track_id in previous:
+                prev_transl, prev_betas = previous[track_id]
+                transl_dist = torch.linalg.norm(transl - prev_transl).item()
+                beta_l1 = torch.mean(torch.abs(betas - prev_betas)).item()
+                continuity = 1.0 / (1.0 + float(transl_dist) + 0.2 * float(beta_l1))
+                quality[person_idx] = float(min(base_quality, continuity))
+            else:
+                quality[person_idx] = base_quality
+            previous[track_id] = (transl, betas)
+        quality_frames.append(quality)
+    return torch.stack(quality_frames, dim=0)
+
+
+def _track_source_base_quality(source: int) -> float:
+    if source == TRACK_SOURCE_EXPLICIT_ID:
+        return 1.0
+    if source == TRACK_SOURCE_PERSON_INDEX:
+        return 0.95
+    return 0.75
 
 
 def _person_pose_6d(person: dict[str, Any]) -> torch.Tensor:

@@ -1397,12 +1397,18 @@ def flatten_smpl_targets(batch: dict[str, torch.Tensor], device: torch.device) -
     gt_pose = batch["gt_pose_6d"].to(device=device)
     gt_betas = batch["gt_betas"].to(device=device)
     gt_transl_cam = batch.get("gt_transl_cam", batch["gt_cam_trans"]).to(device=device)
-    person_ids = batch.get("person_ids")
-    person_id_mask = batch.get("person_id_mask")
+    person_ids = batch.get("gt_track_ids", batch.get("person_ids"))
+    person_id_mask = batch.get("gt_track_mask", batch.get("person_id_mask"))
+    track_source = batch.get("gt_track_source")
+    track_quality = batch.get("gt_track_quality")
     if person_ids is not None:
         person_ids = person_ids.to(device=device)
     if person_id_mask is not None:
         person_id_mask = person_id_mask.to(device=device).bool()
+    if track_source is not None:
+        track_source = track_source.to(device=device)
+    if track_quality is not None:
+        track_quality = track_quality.to(device=device)
 
     targets = []
     batch_size, num_frames, _ = smpl_mask.shape
@@ -1421,6 +1427,14 @@ def flatten_smpl_targets(batch: dict[str, torch.Tensor], device: torch.device) -
             else:
                 target["person_ids"] = torch.full((int(valid.sum()),), -1, dtype=torch.long, device=device)
                 target["person_id_mask"] = torch.zeros(int(valid.sum()), dtype=torch.bool, device=device)
+            if track_source is not None:
+                target["gt_track_source"] = track_source[batch_idx, frame_idx, valid]
+            else:
+                target["gt_track_source"] = torch.full((int(valid.sum()),), -1, dtype=torch.long, device=device)
+            if track_quality is not None:
+                target["gt_track_quality"] = track_quality[batch_idx, frame_idx, valid]
+            else:
+                target["gt_track_quality"] = torch.zeros(int(valid.sum()), dtype=torch.float32, device=device)
             targets.append(target)
     return targets
 
@@ -1428,7 +1442,16 @@ def flatten_smpl_targets(batch: dict[str, torch.Tensor], device: torch.device) -
 def _collect_matches(indices, targets: list[dict[str, torch.Tensor]], device: torch.device) -> dict[str, torch.Tensor]:
     frame_indices = []
     src_indices = []
-    target_parts: dict[str, list[torch.Tensor]] = {"boxes": [], "pose_6d": [], "betas": [], "transl_cam": [], "person_ids": [], "person_id_mask": []}
+    target_parts: dict[str, list[torch.Tensor]] = {
+        "boxes": [],
+        "pose_6d": [],
+        "betas": [],
+        "transl_cam": [],
+        "person_ids": [],
+        "person_id_mask": [],
+        "gt_track_source": [],
+        "gt_track_quality": [],
+    }
     for frame_idx, (src_idx, tgt_idx) in enumerate(indices):
         if src_idx.numel() == 0:
             continue

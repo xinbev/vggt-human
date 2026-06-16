@@ -178,9 +178,17 @@ def init_metrics() -> dict[str, Meter]:
     names = [
         "num_gt_per_frame",
         "num_matched_per_frame",
+        "track_valid_per_frame",
+        "track_explicit_per_frame",
+        "track_person_index_per_frame",
+        "track_slot_per_frame",
+        "track_quality_mean",
         "temporal_pair_count",
         "temporal_triple_count",
         "temporal_quad_count",
+        "temporal_pair_explicit_count",
+        "temporal_pair_person_index_count",
+        "temporal_pair_slot_count",
         "query_switch_rate",
         "base_transl_velocity_l1_m",
         "hsi_transl_velocity_l1_m",
@@ -224,10 +232,12 @@ def evaluate_temporal_batch(
     if confs.ndim == 4 and confs.shape[-1] == 1:
         confs = confs[..., 0]
     smpl_mask = batch["smpl_mask"].bool()
-    person_ids = batch.get("person_ids")
-    person_id_mask = batch.get("person_id_mask")
-    if person_ids is None or person_id_mask is None:
-        return {"temporal_pairs": 0, "reason": "missing_person_ids"}
+    track_ids = batch.get("gt_track_ids", batch.get("person_ids"))
+    track_mask = batch.get("gt_track_mask", batch.get("person_id_mask"))
+    track_source = batch.get("gt_track_source")
+    track_quality = batch.get("gt_track_quality")
+    if track_ids is None or track_mask is None:
+        return {"temporal_pairs": 0, "reason": "missing_gt_track_ids"}
 
     batch_size, num_frames, _ = smpl_mask.shape
     records: dict[tuple[int, int], dict[int, dict[str, int]]] = {}
@@ -237,6 +247,7 @@ def evaluate_temporal_batch(
             gt_idx = torch.nonzero(smpl_mask[b, s], as_tuple=False).flatten()
             pred_idx = torch.nonzero(confs[b, s] >= float(args.conf_threshold), as_tuple=False).flatten()
             metrics["num_gt_per_frame"].add(float(gt_idx.numel()))
+            add_track_source_metrics(metrics, track_mask, track_source, track_quality, b, s, gt_idx)
             if gt_idx.numel() == 0 or pred_idx.numel() == 0:
                 frame_match_counts.append(0)
                 continue
@@ -246,12 +257,14 @@ def evaluate_temporal_batch(
             for pred_local, gt_local in matches:
                 q = int(pred_idx[pred_local].item())
                 g = int(gt_idx[gt_local].item())
-                if not bool(person_id_mask[b, s, g].detach().cpu()):
+                if not bool(track_mask[b, s, g].detach().cpu()):
                     continue
-                pid = int(person_ids[b, s, g].detach().cpu())
+                pid = int(track_ids[b, s, g].detach().cpu())
                 if pid < 0:
                     continue
-                records.setdefault((b, pid), {}).setdefault(s, {"query": q, "gt_index": g})
+                source = int(track_source[b, s, g].detach().cpu()) if track_source is not None else -1
+                quality = float(track_quality[b, s, g].detach().cpu()) if track_quality is not None else 0.0
+                records.setdefault((b, pid), {}).setdefault(s, {"query": q, "gt_index": g, "source": source, "quality": quality})
 
     pair_count, triple_count, quad_count, query_switches = add_person_temporal_metrics(metrics, records, base, hsi, gt, num_frames)
     scale_summary = add_scene_temporal_metrics(metrics, predictions, sequence_scales, sequence_biases)
@@ -266,6 +279,33 @@ def evaluate_temporal_batch(
     }
 
 
+def add_track_source_metrics(
+    metrics: dict[str, Meter],
+    track_mask: torch.Tensor,
+    track_source: torch.Tensor | None,
+    track_quality: torch.Tensor | None,
+    batch_idx: int,
+    seq_idx: int,
+    gt_idx: torch.Tensor,
+) -> None:
+    if gt_idx.numel() == 0:
+        metrics["track_valid_per_frame"].add(0.0)
+        return
+    valid = track_mask[batch_idx, seq_idx, gt_idx].bool()
+    metrics["track_valid_per_frame"].add(float(valid.sum().detach().cpu()))
+    if not valid.any():
+        return
+    if track_quality is not None:
+        quality = track_quality[batch_idx, seq_idx, gt_idx][valid].float()
+        metrics["track_quality_mean"].add(float(quality.mean().detach().cpu()), int(valid.sum().detach().cpu()))
+    if track_source is None:
+        return
+    source = track_source[batch_idx, seq_idx, gt_idx][valid].long()
+    metrics["track_explicit_per_frame"].add(float((source == 2).sum().detach().cpu()))
+    metrics["track_person_index_per_frame"].add(float((source == 1).sum().detach().cpu()))
+    metrics["track_slot_per_frame"].add(float((source == 0).sum().detach().cpu()))
+
+
 def add_person_temporal_metrics(
     metrics: dict[str, Meter],
     records: dict[tuple[int, int], dict[int, dict[str, int]]],
@@ -278,6 +318,7 @@ def add_person_temporal_metrics(
     triple_count = 0
     quad_count = 0
     query_switches = 0
+    pair_source_counts = {"explicit": 0, "person_index": 0, "slot": 0}
     for (batch_idx, _), seq_map in records.items():
         for seq in range(1, num_frames):
             if seq - 1 not in seq_map or seq not in seq_map:
@@ -285,6 +326,9 @@ def add_person_temporal_metrics(
             prev = seq_map[seq - 1]
             curr = seq_map[seq]
             pair_count += 1
+            pair_source = pair_source_name(prev, curr)
+            if pair_source in pair_source_counts:
+                pair_source_counts[pair_source] += 1
             query_switches += int(prev["query"] != curr["query"])
             add_velocity_metric(metrics, "base", base, gt, batch_idx, seq - 1, seq, prev, curr)
             add_velocity_metric(metrics, "hsi", hsi, gt, batch_idx, seq - 1, seq, prev, curr)
@@ -304,9 +348,23 @@ def add_person_temporal_metrics(
     metrics["temporal_pair_count"].add(float(pair_count))
     metrics["temporal_triple_count"].add(float(triple_count))
     metrics["temporal_quad_count"].add(float(quad_count))
+    metrics["temporal_pair_explicit_count"].add(float(pair_source_counts["explicit"]))
+    metrics["temporal_pair_person_index_count"].add(float(pair_source_counts["person_index"]))
+    metrics["temporal_pair_slot_count"].add(float(pair_source_counts["slot"]))
     if pair_count > 0:
         metrics["query_switch_rate"].add(float(query_switches) / float(pair_count), pair_count)
     return pair_count, triple_count, quad_count, query_switches
+
+
+def pair_source_name(prev: dict[str, int], curr: dict[str, int]) -> str:
+    source = min(int(prev.get("source", -1)), int(curr.get("source", -1)))
+    if source == 2:
+        return "explicit"
+    if source == 1:
+        return "person_index"
+    if source == 0:
+        return "slot"
+    return "unknown"
 
 
 def add_velocity_metric(
@@ -471,6 +529,20 @@ def print_human_summary(summary: dict[str, Any]) -> None:
         f"triples={fmt(metrics.get('temporal_triple_count'))} "
         f"quads={fmt(metrics.get('temporal_quad_count'))} "
         f"query_switch={fmt(metrics.get('query_switch_rate'))}"
+    )
+    print(
+        "Track coverage         "
+        f"valid/frame={fmt(metrics.get('track_valid_per_frame'))} "
+        f"explicit/frame={fmt(metrics.get('track_explicit_per_frame'))} "
+        f"person_index/frame={fmt(metrics.get('track_person_index_per_frame'))} "
+        f"slot/frame={fmt(metrics.get('track_slot_per_frame'))} "
+        f"quality={fmt(metrics.get('track_quality_mean'))}"
+    )
+    print(
+        "Temporal pair source   "
+        f"explicit={fmt(metrics.get('temporal_pair_explicit_count'))} "
+        f"person_index={fmt(metrics.get('temporal_pair_person_index_count'))} "
+        f"slot={fmt(metrics.get('temporal_pair_slot_count'))}"
     )
     print(
         "Scene temporal         "
