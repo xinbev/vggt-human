@@ -78,6 +78,8 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     config = load_config(args)
+    requested_num_frames = int(args.num_frames)
+    args.num_frames = resolve_effective_num_frames(args)
     config.setdefault("data", {})
     config["data"]["sequence_length"] = int(args.num_frames)
     config["data"]["stride"] = int(args.frame_stride)
@@ -151,7 +153,8 @@ def main() -> None:
         "checkpoint": str(args.checkpoint),
         "train_config": str(args.train_config),
         "num_sequences": int(processed),
-        "num_frames_requested": int(args.num_frames),
+        "num_frames_requested": int(requested_num_frames),
+        "num_frames_effective": int(args.num_frames),
         "frame_stride": int(args.frame_stride),
         "intrinsics_source": str(args.intrinsics_source),
         "use_gt_box_prior": bool(args.use_gt_box_prior),
@@ -209,23 +212,44 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def resolve_effective_num_frames(args: argparse.Namespace) -> int:
+    requested = max(int(args.num_frames), 1)
+    stride = max(int(args.frame_stride), 1)
+    if not args.image:
+        return requested
+    image_path = Path(args.image).expanduser().resolve()
+    if not image_path.is_file():
+        raise FileNotFoundError(f"Start image not found: {image_path}")
+    if image_path.parent.name != "rgb":
+        raise ValueError(f"--image must point to a BEDLAM rgb frame, got: {image_path}")
+    frames = sorted(path.resolve() for path in image_path.parent.iterdir() if path.suffix.lower() in {".png", ".jpg", ".jpeg"})
+    try:
+        start_idx = frames.index(image_path)
+    except ValueError as exc:
+        raise ValueError(f"Start image is not in its rgb directory listing: {image_path}") from exc
+    available = 0
+    for offset in range(requested):
+        frame_idx = start_idx + offset * stride
+        if frame_idx >= len(frames):
+            break
+        available += 1
+    if available <= 0:
+        raise RuntimeError(f"No frames available from start image: {image_path}")
+    if available < requested:
+        print(
+            "[sequence-person-diagnostics] "
+            f"requested NUM_FRAMES={requested}, but only {available} frames are available "
+            f"from {image_path.name} with stride={stride}; using {available}."
+        )
+    return available
+
+
 def build_sequence_loader(
     config: dict[str, Any],
     args: argparse.Namespace,
 ) -> tuple[DataLoader, list[int], dict[int, list[Path]]]:
     data_cfg = config["data"]
-    dataset = BedlamDataset(
-        root=require_path(config, data_cfg.get("root_key", "datasets.bedlam_root")),
-        split=args.split,
-        sequence_length=int(args.num_frames),
-        stride=int(args.frame_stride),
-        image_size=int(data_cfg["image_size"]),
-        max_humans=int(data_cfg["max_humans"]),
-        require_smpl=True,
-        require_depth=True,
-        boxes_root=require_path(config, data_cfg["boxes_root_key"], allow_empty=False),
-        require_boxes=True,
-    )
+    dataset = make_bedlam_dataset(config, args)
     selected_indices = select_dataset_indices(dataset, args)
     frame_paths_by_index = {index: frame_paths_for_dataset_index(dataset, index) for index in selected_indices}
     subset = Subset(dataset, selected_indices)
@@ -239,6 +263,69 @@ def build_sequence_loader(
         drop_last=False,
     )
     return loader, selected_indices, frame_paths_by_index
+
+
+def make_bedlam_dataset(config: dict[str, Any], args: argparse.Namespace) -> BedlamDataset:
+    data_cfg = config["data"]
+    root = require_path(config, data_cfg.get("root_key", "datasets.bedlam_root"))
+    boxes_root = require_path(config, data_cfg["boxes_root_key"], allow_empty=False)
+    try:
+        return BedlamDataset(
+            root=root,
+            split=args.split,
+            sequence_length=int(args.num_frames),
+            stride=int(args.frame_stride),
+            image_size=int(data_cfg["image_size"]),
+            max_humans=int(data_cfg["max_humans"]),
+            require_smpl=True,
+            require_depth=True,
+            boxes_root=boxes_root,
+            require_boxes=True,
+        )
+    except RuntimeError as exc:
+        message = str(exc)
+        if args.image or "No trainable frame windows found" not in message:
+            raise
+        fallback_frames = infer_max_sequence_length(Path(root), str(args.split), int(args.frame_stride))
+        if fallback_frames >= int(args.num_frames):
+            raise
+        args.num_frames = fallback_frames
+        config["data"]["sequence_length"] = fallback_frames
+        print(
+            "[sequence-person-diagnostics] "
+            f"requested NUM_FRAMES is unavailable for split={args.split}; "
+            f"falling back to max sequence_length={fallback_frames}."
+        )
+        return BedlamDataset(
+            root=root,
+            split=args.split,
+            sequence_length=fallback_frames,
+            stride=int(args.frame_stride),
+            image_size=int(data_cfg["image_size"]),
+            max_humans=int(data_cfg["max_humans"]),
+            require_smpl=True,
+            require_depth=True,
+            boxes_root=boxes_root,
+            require_boxes=True,
+        )
+
+
+def infer_max_sequence_length(root: Path, split: str, stride: int) -> int:
+    split_dir = root / split
+    if not split_dir.is_dir():
+        raise FileNotFoundError(f"BEDLAM split directory not found: {split_dir}")
+    stride = max(int(stride), 1)
+    max_frames = 0
+    for seq_dir in sorted(path for path in split_dir.iterdir() if path.is_dir()):
+        rgb_dir = seq_dir / "rgb"
+        if not rgb_dir.is_dir():
+            continue
+        count = sum(1 for path in rgb_dir.iterdir() if path.suffix.lower() in {".png", ".jpg", ".jpeg"})
+        if count > 0:
+            max_frames = max(max_frames, 1 + (count - 1) // stride)
+    if max_frames <= 0:
+        raise RuntimeError(f"No valid RGB frames found under {split_dir}")
+    return max_frames
 
 
 def select_dataset_indices(dataset: BedlamDataset, args: argparse.Namespace) -> list[int]:
