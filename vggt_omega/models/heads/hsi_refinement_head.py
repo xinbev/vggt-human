@@ -31,6 +31,10 @@ class HSIRefinementHead(nn.Module):
         smpl_model_dir: str = "",
         image_size: int = 518,
         use_delta_gate: bool = False,
+        enable_temporal_momentum: bool = False,
+        temporal_momentum_decay: float = 0.7,
+        temporal_momentum_detach: bool = True,
+        temporal_momentum_use_track_ids: bool = True,
     ) -> None:
         super().__init__()
         if not smpl_model_dir:
@@ -46,6 +50,10 @@ class HSIRefinementHead(nn.Module):
         self.probe_blend = float(probe_blend)
         self.image_size = int(image_size)
         self.use_delta_gate = bool(use_delta_gate)
+        self.enable_temporal_momentum = bool(enable_temporal_momentum)
+        self.temporal_momentum_decay = float(temporal_momentum_decay)
+        self.temporal_momentum_detach = bool(temporal_momentum_detach)
+        self.temporal_momentum_use_track_ids = bool(temporal_momentum_use_track_ids)
         if self.probe_mode not in {"projected", "local_nearest"}:
             raise ValueError(f"Unsupported hsi_probe_mode: {self.probe_mode}")
         if self.affine_probe_mode not in {"projected", "local_nearest"}:
@@ -80,6 +88,20 @@ class HSIRefinementHead(nn.Module):
             nn.Sequential(nn.Linear(hidden_dim, hidden_dim), nn.GELU(), nn.Linear(hidden_dim, 1)),
             bias=4.0,
         )
+        if self.enable_temporal_momentum:
+            self.temporal_memory_proj = nn.Sequential(
+                nn.Linear(hidden_dim + 1 + 3 + 2, hidden_dim),
+                nn.GELU(),
+                nn.LayerNorm(hidden_dim),
+                nn.Linear(hidden_dim, hidden_dim),
+            )
+            self.temporal_memory_gate = _biased_last_linear(
+                nn.Sequential(nn.Linear(hidden_dim * 2, hidden_dim), nn.GELU(), nn.Linear(hidden_dim, 1)),
+                bias=1.5,
+            )
+        else:
+            self.temporal_memory_proj = None
+            self.temporal_memory_gate = None
 
     def forward(
         self,
@@ -88,6 +110,8 @@ class HSIRefinementHead(nn.Module):
         smpl_outputs: dict[str, torch.Tensor],
         depth: torch.Tensor,
         pose_enc: torch.Tensor,
+        track_ids: torch.Tensor | None = None,
+        track_mask: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor]:
         required = ("pred_pose_6d", "pred_poses", "pred_betas", "pred_transl_cam", "pred_confs")
         for key in required:
@@ -97,6 +121,16 @@ class HSIRefinementHead(nn.Module):
             raise ValueError("HSI refinement requires VGGT depth; set model.enable_depth=true")
         if pose_enc is None:
             raise ValueError("HSI refinement requires pose_enc; set model.enable_camera=true")
+        if self.enable_temporal_momentum and smpl_outputs["pred_pose_6d"].shape[1] > 1:
+            return self._forward_temporal(
+                aggregated_tokens_list=aggregated_tokens_list,
+                token_layout=token_layout,
+                smpl_outputs=smpl_outputs,
+                depth=depth,
+                pose_enc=pose_enc,
+                track_ids=track_ids,
+                track_mask=track_mask,
+            )
 
         pose6d = smpl_outputs["pred_pose_6d"].float()
         betas = smpl_outputs["pred_betas"].float()
@@ -191,6 +225,159 @@ class HSIRefinementHead(nn.Module):
             "hsi_scene_depth_bias": depth_bias,
             "hsi_contact_logits": contact_logits,
             "hsi_anchor_depth_residual": token_aux["depth_residual"],
+            "hsi_per_query_scene_log_scale": per_query_log_scale,
+            "hsi_per_query_scene_depth_bias": per_query_bias,
+            "hsi_refine_gate": gate,
+        }
+
+    def _forward_temporal(
+        self,
+        aggregated_tokens_list: list[torch.Tensor | None],
+        token_layout: AggregatorTokenLayout,
+        smpl_outputs: dict[str, torch.Tensor],
+        depth: torch.Tensor,
+        pose_enc: torch.Tensor,
+        track_ids: torch.Tensor | None = None,
+        track_mask: torch.Tensor | None = None,
+    ) -> dict[str, torch.Tensor]:
+        pose6d = smpl_outputs["pred_pose_6d"].float()
+        betas = smpl_outputs["pred_betas"].float()
+        transl = smpl_outputs["pred_transl_cam"].float()
+        confs = smpl_outputs["pred_confs"].float()
+        batch_size, num_frames, num_queries, _ = pose6d.shape
+        depth_hw = _canonical_depth(depth).float()
+        if depth_hw.shape[:2] != (batch_size, num_frames):
+            raise ValueError(f"Expected depth shape [B,S,H,W], got {tuple(depth_hw.shape)}")
+        intrinsics = _flatten_intrinsics(pose_enc, self.image_size).to(device=pose6d.device, dtype=pose6d.dtype)
+        scene_features = self._build_scene_features(aggregated_tokens_list, token_layout)
+        num_patches = int(scene_features.shape[1])
+        scene_features = scene_features.reshape(batch_size, num_frames, num_patches, -1)
+
+        refined_pose6d_frames: list[torch.Tensor] = []
+        refined_pose_frames: list[torch.Tensor] = []
+        refined_betas_frames: list[torch.Tensor] = []
+        refined_transl_frames: list[torch.Tensor] = []
+        scene_scale_frames: list[torch.Tensor] = []
+        scene_bias_frames: list[torch.Tensor] = []
+        contact_frames: list[torch.Tensor] = []
+        anchor_depth_residual_frames: list[torch.Tensor] = []
+        per_query_log_scale_frames: list[torch.Tensor] = []
+        per_query_bias_frames: list[torch.Tensor] = []
+        gate_frames: list[torch.Tensor] = []
+
+        memories: list[dict[int, dict[str, torch.Tensor]]] = [dict() for _ in range(batch_size)]
+        for frame_idx in range(num_frames):
+            frame_pose6d = pose6d[:, frame_idx : frame_idx + 1]
+            frame_betas = betas[:, frame_idx : frame_idx + 1]
+            frame_transl = transl[:, frame_idx : frame_idx + 1]
+            frame_depth = depth_hw[:, frame_idx : frame_idx + 1]
+            frame_intrinsics = intrinsics.reshape(batch_size, num_frames, 3, 3)[:, frame_idx]
+            frame_scene_features = scene_features[:, frame_idx]
+            frame_tokens, token_aux = self._tokenize(
+                frame_pose6d,
+                frame_betas,
+                frame_transl,
+                frame_depth,
+                frame_intrinsics,
+                frame_depth.shape[-2],
+                frame_depth.shape[-1],
+                probe_mode=self.probe_mode,
+            )
+            frame_tokens = self._inject_temporal_memory(
+                frame_tokens,
+                memories,
+                track_ids[:, frame_idx] if track_ids is not None else None,
+                track_mask[:, frame_idx] if track_mask is not None else None,
+                frame_transl,
+                frame_scale=None,
+                frame_bias=None,
+            )
+            flat_tokens = frame_tokens.reshape(batch_size * num_queries, 24, self.hidden_dim)
+            flat_scene = self._reshape_local_scene_tokens(frame_scene_features, frame_pose6d, frame_betas, frame_transl, frame_depth, frame_intrinsics)
+            tokens = flat_tokens
+            for _ in range(max(self.num_iters, 1)):
+                for block in self.blocks:
+                    tokens = block(tokens, flat_scene)
+            pooled = tokens.mean(dim=1).reshape(batch_size, num_queries, self.hidden_dim)
+            gate = torch.sigmoid(self.delta_gate(pooled)).reshape(batch_size, 1, num_queries, 1)
+            if not self.use_delta_gate:
+                gate = torch.ones_like(gate)
+            refined_pose6d = frame_pose6d + gate * 0.01 * self.pose_delta(pooled).reshape(batch_size, 1, num_queries, 144)
+            refined_betas = frame_betas + gate * 0.01 * self.betas_delta(pooled).reshape(batch_size, 1, num_queries, 10)
+            refined_transl = frame_transl + gate * 0.05 * self.transl_delta(pooled).reshape(batch_size, 1, num_queries, 3)
+            per_query_log_scale = self.scale_delta(pooled).reshape(batch_size, 1, num_queries, 1)
+            per_query_bias = self.bias_delta(pooled).reshape(batch_size, 1, num_queries, 1)
+            contact_logits = self.contact_head(tokens).reshape(batch_size, 1, num_queries, 24, 1)
+            if self.affine_probe_mode != self.probe_mode:
+                affine_tokens, _ = self._tokenize(
+                    frame_pose6d,
+                    frame_betas,
+                    frame_transl,
+                    frame_depth,
+                    frame_intrinsics,
+                    frame_depth.shape[-2],
+                    frame_depth.shape[-1],
+                    probe_mode=self.affine_probe_mode,
+                )
+                affine_tokens = affine_tokens.reshape(batch_size * num_queries, 24, self.hidden_dim)
+                for _ in range(max(self.num_iters, 1)):
+                    for block in self.blocks:
+                        affine_tokens = block(affine_tokens, flat_scene)
+                affine_pooled = affine_tokens.mean(dim=1).reshape(batch_size, num_queries, self.hidden_dim)
+                per_query_log_scale = self.scale_delta(affine_pooled).reshape(batch_size, 1, num_queries, 1)
+                per_query_bias = self.bias_delta(affine_pooled).reshape(batch_size, 1, num_queries, 1)
+            scene_scale = torch.exp(
+                ((per_query_log_scale * confs[:, frame_idx : frame_idx + 1].float().clamp(min=0.0)).sum(dim=2)
+                 / confs[:, frame_idx : frame_idx + 1].float().clamp(min=0.0).sum(dim=2, keepdim=True).clamp(min=1e-6).squeeze(2)).clamp(min=-3.0, max=3.0)
+            )
+            depth_bias = (
+                (per_query_bias * confs[:, frame_idx : frame_idx + 1].float().clamp(min=0.0)).sum(dim=2)
+                / confs[:, frame_idx : frame_idx + 1].float().clamp(min=0.0).sum(dim=2, keepdim=True).clamp(min=1e-6).squeeze(2)
+            )
+
+            self._update_temporal_memory(
+                memories,
+                tokens.reshape(batch_size, num_queries, 24, self.hidden_dim),
+                contact_logits.reshape(batch_size, num_queries, 24, 1),
+                refined_transl[:, 0],
+                scene_scale[:, 0],
+                depth_bias[:, 0],
+                track_ids[:, frame_idx] if track_ids is not None else None,
+                track_mask[:, frame_idx] if track_mask is not None else None,
+            )
+
+            refined_pose6d_frames.append(refined_pose6d)
+            refined_pose_frames.append(rot6d_to_axis_angle(refined_pose6d.reshape(-1, 24, 6)).reshape(batch_size, 1, num_queries, 72))
+            refined_betas_frames.append(refined_betas)
+            refined_transl_frames.append(refined_transl)
+            scene_scale_frames.append(scene_scale)
+            scene_bias_frames.append(depth_bias)
+            contact_frames.append(contact_logits)
+            anchor_depth_residual_frames.append(token_aux["depth_residual"])
+            per_query_log_scale_frames.append(per_query_log_scale)
+            per_query_bias_frames.append(per_query_bias)
+            gate_frames.append(gate)
+
+        refined_pose6d = torch.cat(refined_pose6d_frames, dim=1)
+        refined_poses = torch.cat(refined_pose_frames, dim=1)
+        refined_betas = torch.cat(refined_betas_frames, dim=1)
+        refined_transl = torch.cat(refined_transl_frames, dim=1)
+        scene_scale = torch.cat(scene_scale_frames, dim=1)
+        depth_bias = torch.cat(scene_bias_frames, dim=1)
+        contact_logits = torch.cat(contact_frames, dim=1)
+        anchor_depth_residual = torch.cat(anchor_depth_residual_frames, dim=1)
+        per_query_log_scale = torch.cat(per_query_log_scale_frames, dim=1)
+        per_query_bias = torch.cat(per_query_bias_frames, dim=1)
+        gate = torch.cat(gate_frames, dim=1)
+        return {
+            "hsi_refined_pred_pose_6d": refined_pose6d,
+            "hsi_refined_pred_poses": refined_poses,
+            "hsi_refined_pred_betas": refined_betas,
+            "hsi_refined_pred_transl_cam": refined_transl,
+            "hsi_scene_scale": scene_scale,
+            "hsi_scene_depth_bias": depth_bias,
+            "hsi_contact_logits": contact_logits,
+            "hsi_anchor_depth_residual": anchor_depth_residual,
             "hsi_per_query_scene_log_scale": per_query_log_scale,
             "hsi_per_query_scene_depth_bias": per_query_bias,
             "hsi_refine_gate": gate,
@@ -312,6 +499,117 @@ class HSIRefinementHead(nn.Module):
         full_body = vertices[:, self.full_body_vertex_indices.to(vertices.device)].mean(dim=1)
         anchors = torch.cat([body, left_hand[:, None], right_hand[:, None], full_body[:, None]], dim=1)
         return anchors.reshape(batch_size, num_frames, num_queries, 24, 3)
+
+    def _reshape_local_scene_tokens(
+        self,
+        frame_scene_features: torch.Tensor,
+        frame_pose6d: torch.Tensor,
+        frame_betas: torch.Tensor,
+        frame_transl: torch.Tensor,
+        frame_depth: torch.Tensor,
+        frame_intrinsics: torch.Tensor,
+    ) -> torch.Tensor:
+        local_scene_tokens = self._gather_local_scene_tokens(
+            frame_scene_features,
+            frame_pose6d,
+            frame_betas,
+            frame_transl,
+            frame_depth,
+            frame_intrinsics,
+            frame_depth.shape[-2],
+            frame_depth.shape[-1],
+        )
+        batch_size, num_queries = local_scene_tokens.shape[:2]
+        return local_scene_tokens.reshape(batch_size * num_queries, 24, self.scene_window * self.scene_window, self.hidden_dim)
+
+    def _inject_temporal_memory(
+        self,
+        tokens: torch.Tensor,
+        memories: list[dict[int, dict[str, torch.Tensor]]],
+        track_ids: torch.Tensor | None,
+        track_mask: torch.Tensor | None,
+        frame_transl: torch.Tensor,
+        frame_scale: torch.Tensor | None,
+        frame_bias: torch.Tensor | None,
+    ) -> torch.Tensor:
+        del frame_scale, frame_bias
+        if self.temporal_memory_proj is None or self.temporal_memory_gate is None:
+            return tokens
+
+        batch_size, _, num_queries, num_tokens, hidden_dim = tokens.shape
+        fused_batches = []
+        for batch_idx in range(batch_size):
+            fused_queries = []
+            for query_idx in range(num_queries):
+                current = tokens[batch_idx, 0, query_idx]
+                key = self._temporal_memory_key(track_ids, track_mask, batch_idx, query_idx)
+                memory = memories[batch_idx].get(key)
+                if memory is None:
+                    fused_queries.append(current)
+                    continue
+                previous_tokens = memory["tokens"].to(device=current.device, dtype=current.dtype)
+                previous_contact = memory["contact"].to(device=current.device, dtype=current.dtype)
+                previous_transl = memory["transl"].to(device=current.device, dtype=current.dtype)
+                previous_scale_bias = memory["scale_bias"].to(device=current.device, dtype=current.dtype)
+                transl_delta = (frame_transl[batch_idx, 0, query_idx] - previous_transl).reshape(1, 3).expand(num_tokens, 3)
+                scale_bias = previous_scale_bias.reshape(1, 2).expand(num_tokens, 2)
+                memory_input = torch.cat([previous_tokens, previous_contact, transl_delta, scale_bias], dim=-1)
+                memory_feature = self.temporal_memory_proj(memory_input)
+                gate = torch.sigmoid(self.temporal_memory_gate(torch.cat([current, memory_feature], dim=-1)))
+                fused_queries.append(current + gate * memory_feature)
+            fused_batches.append(torch.stack(fused_queries, dim=0))
+        return torch.stack(fused_batches, dim=0).reshape(batch_size, 1, num_queries, num_tokens, hidden_dim)
+
+    def _update_temporal_memory(
+        self,
+        memories: list[dict[int, dict[str, torch.Tensor]]],
+        tokens: torch.Tensor,
+        contact_logits: torch.Tensor,
+        refined_transl: torch.Tensor,
+        scene_scale: torch.Tensor,
+        depth_bias: torch.Tensor,
+        track_ids: torch.Tensor | None,
+        track_mask: torch.Tensor | None,
+    ) -> None:
+        batch_size, num_queries = tokens.shape[:2]
+        decay = min(max(float(self.temporal_momentum_decay), 0.0), 0.999)
+        for batch_idx in range(batch_size):
+            scale_value = scene_scale[batch_idx].reshape(-1)[0]
+            bias_value = depth_bias[batch_idx].reshape(-1)[0]
+            for query_idx in range(num_queries):
+                key = self._temporal_memory_key(track_ids, track_mask, batch_idx, query_idx)
+                current = {
+                    "tokens": tokens[batch_idx, query_idx],
+                    "contact": torch.sigmoid(contact_logits[batch_idx, query_idx]),
+                    "transl": refined_transl[batch_idx, query_idx],
+                    "scale_bias": torch.stack([scale_value, bias_value], dim=0),
+                }
+                if self.temporal_momentum_detach:
+                    current = {name: value.detach() for name, value in current.items()}
+                previous = memories[batch_idx].get(key)
+                if previous is None:
+                    memories[batch_idx][key] = current
+                    continue
+                memories[batch_idx][key] = {
+                    name: decay * previous[name].to(device=value.device, dtype=value.dtype) + (1.0 - decay) * value
+                    for name, value in current.items()
+                }
+
+    def _temporal_memory_key(
+        self,
+        track_ids: torch.Tensor | None,
+        track_mask: torch.Tensor | None,
+        batch_idx: int,
+        query_idx: int,
+    ) -> int:
+        if self.temporal_momentum_use_track_ids and track_ids is not None:
+            mask_ok = True
+            if track_mask is not None:
+                mask_ok = bool(track_mask[batch_idx, query_idx].detach().cpu())
+            track_id = int(track_ids[batch_idx, query_idx].detach().cpu())
+            if mask_ok and track_id >= 0:
+                return track_id
+        return -(query_idx + 1)
 
 
 class HSITransformerLayer(nn.Module):

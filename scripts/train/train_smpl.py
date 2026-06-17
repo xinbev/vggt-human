@@ -176,6 +176,10 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_probe_window=int(model_cfg.get("hsi_probe_window", 9)),
         hsi_probe_blend=float(model_cfg.get("hsi_probe_blend", 1.0)),
         hsi_use_delta_gate=bool(model_cfg.get("hsi_use_delta_gate", False)),
+        hsi_enable_temporal_momentum=bool(model_cfg.get("hsi_enable_temporal_momentum", False)),
+        hsi_temporal_momentum_decay=float(model_cfg.get("hsi_temporal_momentum_decay", 0.7)),
+        hsi_temporal_momentum_detach=bool(model_cfg.get("hsi_temporal_momentum_detach", True)),
+        hsi_temporal_momentum_use_track_ids=bool(model_cfg.get("hsi_temporal_momentum_use_track_ids", True)),
         smpl_model_dir=str(config.get("assets", {}).get("smpl_model_dir", "")),
         image_size=int(config.get("data", {}).get("image_size", 518)),
         freeze_dense_head=bool(model_cfg.get("freeze_dense_head", False)),
@@ -440,6 +444,8 @@ def forward_model(model: torch.nn.Module, batch: dict[str, torch.Tensor], config
         batch["images"],
         smpl_query_boxes=boxes,
         smpl_query_boxes_mask=mask,
+        smpl_track_ids=batch.get("gt_track_ids", batch.get("person_ids")),
+        smpl_track_mask=batch.get("gt_track_mask", batch.get("person_id_mask")),
     )
 
 

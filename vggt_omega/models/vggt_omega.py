@@ -46,6 +46,10 @@ class VGGTOmega(nn.Module):
         hsi_probe_window: int = 9,
         hsi_probe_blend: float = 1.0,
         hsi_use_delta_gate: bool = False,
+        hsi_enable_temporal_momentum: bool = False,
+        hsi_temporal_momentum_decay: float = 0.7,
+        hsi_temporal_momentum_detach: bool = True,
+        hsi_temporal_momentum_use_track_ids: bool = True,
         smpl_model_dir: str = "",
         image_size: int = 518,
         freeze_dense_head: bool = False,
@@ -95,6 +99,10 @@ class VGGTOmega(nn.Module):
                 probe_window=hsi_probe_window,
                 probe_blend=hsi_probe_blend,
                 use_delta_gate=hsi_use_delta_gate,
+                enable_temporal_momentum=hsi_enable_temporal_momentum,
+                temporal_momentum_decay=hsi_temporal_momentum_decay,
+                temporal_momentum_detach=hsi_temporal_momentum_detach,
+                temporal_momentum_use_track_ids=hsi_temporal_momentum_use_track_ids,
                 smpl_model_dir=smpl_model_dir,
                 image_size=image_size,
             )
@@ -109,6 +117,8 @@ class VGGTOmega(nn.Module):
         images: torch.Tensor,
         smpl_query_boxes: torch.Tensor | None = None,
         smpl_query_boxes_mask: torch.Tensor | None = None,
+        smpl_track_ids: torch.Tensor | None = None,
+        smpl_track_mask: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor]:
         if len(images.shape) == 4:
             images = images.unsqueeze(0)
@@ -168,6 +178,8 @@ class VGGTOmega(nn.Module):
                         smpl_outputs=predictions,
                         depth=predictions["depth"],
                         pose_enc=predictions["pose_enc"],
+                        track_ids=smpl_track_ids,
+                        track_mask=smpl_track_mask,
                     )
                 )
 

@@ -115,6 +115,8 @@ def main() -> None:
                 batch["images"],
                 smpl_query_boxes=batch["gt_boxes"] if args.use_gt_box_prior else None,
                 smpl_query_boxes_mask=batch["boxes_mask"] if args.use_gt_box_prior else None,
+                smpl_track_ids=batch.get("gt_track_ids", batch.get("person_ids")),
+                smpl_track_mask=batch.get("gt_track_mask", batch.get("person_id_mask")),
             )
             batch_frame_rows, batch_depth_rows, batch_temporal_rows = evaluate_batch(
                 predictions,

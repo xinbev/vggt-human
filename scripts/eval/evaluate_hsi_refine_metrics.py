@@ -90,6 +90,8 @@ def main() -> None:
                 batch["images"],
                 smpl_query_boxes=batch["gt_boxes"] if args.use_gt_box_prior else None,
                 smpl_query_boxes_mask=batch["boxes_mask"] if args.use_gt_box_prior else None,
+                smpl_track_ids=batch.get("gt_track_ids", batch.get("person_ids")),
+                smpl_track_mask=batch.get("gt_track_mask", batch.get("person_id_mask")),
             )
             evaluate_batch(predictions, batch, smpl, config, args, metrics, hsi_scales, hsi_biases)
             if len(examples) < 8:
