@@ -4,6 +4,7 @@ import json
 import math
 import random
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -88,6 +89,8 @@ def main() -> None:
         start_epoch, global_step = resume_training_checkpoint(model, optimizer, resume_path, device, config)
 
     epochs = int(config["optim"]["epochs"])
+    train_started_at = time.monotonic()
+    total_train_steps = max((epochs - start_epoch) * len(train_loader), 1)
     for epoch in range(start_epoch, epochs):
         global_step = train_one_epoch(
             model=model,
@@ -99,6 +102,10 @@ def main() -> None:
             global_step=global_step,
             config=config,
             teacher_model=teacher_model,
+            progress_start_time=train_started_at,
+            progress_total_steps=total_train_steps,
+            progress_done_offset=(epoch - start_epoch) * len(train_loader),
+            total_epochs=epochs,
         )
         if val_loader is not None and (epoch + 1) % int(config["optim"].get("val_interval", 1)) == 0:
             validate(model, criterion, val_loader, device, epoch, config, teacher_model=teacher_model)
@@ -369,6 +376,10 @@ def train_one_epoch(
     global_step: int,
     config: dict[str, Any],
     teacher_model: torch.nn.Module | None = None,
+    progress_start_time: float | None = None,
+    progress_total_steps: int | None = None,
+    progress_done_offset: int = 0,
+    total_epochs: int | None = None,
 ) -> int:
     model.train()
     apply_freeze_policy(model, config)
@@ -391,7 +402,26 @@ def train_one_epoch(
 
         global_step += 1
         if global_step % log_interval == 0:
-            print(format_log("train", epoch, step, len(loader), global_step, losses))
+            log_style = str(config.get("optim", {}).get("log_style", "full")).lower()
+            if log_style in {"progress", "compact"}:
+                print(
+                    format_progress_log(
+                        prefix="train",
+                        epoch=epoch,
+                        total_epochs=total_epochs or int(config["optim"]["epochs"]),
+                        step=step,
+                        steps=len(loader),
+                        global_step=global_step,
+                        losses=losses,
+                        started_at=progress_start_time,
+                        total_steps=progress_total_steps,
+                        done_steps=progress_done_offset + step + 1,
+                        config=config,
+                    ),
+                    flush=True,
+                )
+            else:
+                print(format_log("train", epoch, step, len(loader), global_step, losses), flush=True)
     return global_step
 
 
@@ -539,6 +569,132 @@ def format_log(prefix: str, epoch: int, step: int, steps: int, global_step: int,
         if math.isfinite(scalar):
             loss_items.append(f"{key}={scalar:.6f}")
     return f"[{prefix}] epoch={epoch + 1} step={step + 1}/{steps} global_step={global_step} " + " ".join(loss_items)
+
+
+def format_progress_log(
+    prefix: str,
+    epoch: int,
+    total_epochs: int,
+    step: int,
+    steps: int,
+    global_step: int,
+    losses: dict[str, Any],
+    started_at: float | None,
+    total_steps: int | None,
+    done_steps: int,
+    config: dict[str, Any],
+) -> str:
+    total = max(int(total_steps or steps), 1)
+    done = min(max(int(done_steps), 0), total)
+    ratio = done / total
+    elapsed = max(time.monotonic() - started_at, 1e-6) if started_at is not None else 0.0
+    speed = done / elapsed if elapsed > 0 and done > 0 else 0.0
+    remaining = (total - done) / speed if speed > 0 else math.inf
+    bar = make_progress_bar(ratio, width=int(config.get("optim", {}).get("progress_bar_width", 24)))
+    scalars = scalarize_losses(losses)
+    loss_text = format_compact_loss_items(scalars, config)
+    eta_text = format_duration(remaining) if math.isfinite(remaining) else "--:--:--"
+    elapsed_text = format_duration(elapsed)
+    return (
+        f"[{prefix}] ep {epoch + 1}/{total_epochs} step {step + 1}/{steps} gs={global_step} "
+        f"{bar} {ratio * 100.0:5.1f}% {speed:.2f}it/s elapsed={elapsed_text} eta={eta_text} "
+        f"{loss_text}"
+    )
+
+
+def scalarize_losses(losses: dict[str, Any]) -> dict[str, float]:
+    scalars: dict[str, float] = {}
+    for key, value in losses.items():
+        try:
+            scalar = float(value.detach().cpu()) if isinstance(value, torch.Tensor) else float(value)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(scalar):
+            scalars[key] = scalar
+    return scalars
+
+
+def format_compact_loss_items(scalars: dict[str, float], config: dict[str, Any]) -> str:
+    keys = get_progress_log_keys(config)
+    max_items = int(config.get("optim", {}).get("progress_max_loss_items", 8))
+    items: list[str] = []
+    for key in keys:
+        if key not in scalars:
+            continue
+        value = scalars[key]
+        short_key = compact_loss_name(key)
+        items.append(f"{short_key}={value:.4g}")
+        if len(items) >= max_items:
+            break
+    if "loss_total" not in keys and "loss_total" in scalars and len(items) < max_items:
+        items.insert(0, f"total={scalars['loss_total']:.4g}")
+    return " ".join(items)
+
+
+def get_progress_log_keys(config: dict[str, Any]) -> list[str]:
+    raw = config.get("optim", {}).get("progress_log_keys")
+    if isinstance(raw, str) and raw.strip():
+        return [item.strip() for item in raw.split(",") if item.strip()]
+    if isinstance(raw, list):
+        return [str(item) for item in raw]
+    return [
+        "loss_total",
+        "loss_hsi_depth_teacher",
+        "loss_hsi_teacher_scene_affine",
+        "loss_hsi_transl_cam",
+        "loss_hsi_joints3d",
+        "loss_hsi_vertices",
+        "loss_hsi_teacher_transl",
+        "loss_hsi_teacher_joints",
+        "loss_hsi_transl_velocity",
+        "loss_hsi_joints_velocity",
+        "loss_hsi_joints_acceleration",
+        "loss_hsi_scene_scale_temporal",
+        "loss_hsi_scene_bias_temporal",
+        "metric_hsi_scene_log_scale_delta",
+        "metric_hsi_scene_bias_delta",
+    ]
+
+
+def compact_loss_name(key: str) -> str:
+    mapping = {
+        "loss_total": "total",
+        "loss_hsi_depth_teacher": "depth",
+        "loss_hsi_anchor_depth": "anchorD",
+        "loss_hsi_teacher_scene_affine": "affineT",
+        "loss_hsi_transl_cam": "transl",
+        "loss_hsi_joints3d": "j3d",
+        "loss_hsi_vertices": "verts",
+        "loss_hsi_no_worse": "noWorse",
+        "loss_hsi_teacher_transl": "translT",
+        "loss_hsi_teacher_joints": "jointsT",
+        "loss_hsi_teacher_vertices": "vertsT",
+        "loss_hsi_transl_velocity": "velT",
+        "loss_hsi_joints_velocity": "velJ",
+        "loss_hsi_joints_acceleration": "accJ",
+        "loss_hsi_scene_scale_temporal": "scaleTmp",
+        "loss_hsi_scene_scale_sequence": "scaleSeq",
+        "loss_hsi_scene_bias_temporal": "biasTmp",
+        "loss_hsi_scene_bias_sequence": "biasSeq",
+        "metric_hsi_scene_log_scale_delta": "dLogS",
+        "metric_hsi_scene_bias_delta": "dBias",
+    }
+    return mapping.get(key, key.removeprefix("loss_").removeprefix("metric_"))
+
+
+def make_progress_bar(ratio: float, width: int = 24) -> str:
+    width = max(width, 8)
+    filled = int(round(max(0.0, min(1.0, ratio)) * width))
+    return "[" + "=" * filled + "." * (width - filled) + "]"
+
+
+def format_duration(seconds: float) -> str:
+    if not math.isfinite(seconds) or seconds < 0:
+        return "--:--:--"
+    seconds_i = int(seconds)
+    hours, rem = divmod(seconds_i, 3600)
+    minutes, secs = divmod(rem, 60)
+    return f"{hours:02d}:{minutes:02d}:{secs:02d}"
 
 
 def save_checkpoint(
