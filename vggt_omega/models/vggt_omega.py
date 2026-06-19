@@ -11,6 +11,7 @@ import torch.nn as nn
 
 from vggt_omega.models.aggregator import Aggregator
 from vggt_omega.models.heads import AggregatorSMPLHead, CameraHead, DenseHead, HSIRefinementHead, TextAlignmentHead
+from vggt_omega.utils.hsi_affine import apply_hsi_scene_affine_mode
 
 
 class VGGTOmega(nn.Module):
@@ -50,6 +51,8 @@ class VGGTOmega(nn.Module):
         hsi_temporal_momentum_decay: float = 0.7,
         hsi_temporal_momentum_detach: bool = True,
         hsi_temporal_momentum_use_track_ids: bool = True,
+        hsi_scene_affine_mode: str = "per_frame",
+        hsi_scene_affine_ema_alpha: float = 0.25,
         smpl_model_dir: str = "",
         image_size: int = 518,
         freeze_dense_head: bool = False,
@@ -68,6 +71,8 @@ class VGGTOmega(nn.Module):
             smpl_query_patch_pool_expand=smpl_query_patch_pool_expand,
         )
         self.freeze_aggregator_forward = freeze_aggregator_forward
+        self.hsi_scene_affine_mode = str(hsi_scene_affine_mode or "per_frame")
+        self.hsi_scene_affine_ema_alpha = float(hsi_scene_affine_ema_alpha)
         _warn_if_rope_not_max(self.aggregator)
         self.camera_head = CameraHead(dim_in=2 * embed_dim) if enable_camera else None
         self.dense_head = DenseHead(dim_in=2 * embed_dim, patch_size=patch_size) if enable_depth else None
@@ -181,6 +186,11 @@ class VGGTOmega(nn.Module):
                         track_ids=smpl_track_ids,
                         track_mask=smpl_track_mask,
                     )
+                )
+                apply_hsi_scene_affine_mode(
+                    predictions,
+                    mode=self.hsi_scene_affine_mode,
+                    ema_alpha=self.hsi_scene_affine_ema_alpha,
                 )
 
         if not self.training:

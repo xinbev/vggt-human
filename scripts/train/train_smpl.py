@@ -187,6 +187,8 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_temporal_momentum_decay=float(model_cfg.get("hsi_temporal_momentum_decay", 0.7)),
         hsi_temporal_momentum_detach=bool(model_cfg.get("hsi_temporal_momentum_detach", True)),
         hsi_temporal_momentum_use_track_ids=bool(model_cfg.get("hsi_temporal_momentum_use_track_ids", True)),
+        hsi_scene_affine_mode=str(model_cfg.get("hsi_scene_affine_mode", "per_frame")),
+        hsi_scene_affine_ema_alpha=float(model_cfg.get("hsi_scene_affine_ema_alpha", 0.25)),
         smpl_model_dir=str(config.get("assets", {}).get("smpl_model_dir", "")),
         image_size=int(config.get("data", {}).get("image_size", 518)),
         freeze_dense_head=bool(model_cfg.get("freeze_dense_head", False)),
@@ -243,6 +245,16 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
                 module = getattr(hsi_head, name, None)
                 if module is not None:
                     freeze_module(module)
+        train_last_blocks = int(model_cfg.get("train_hsi_last_blocks", 0) or 0)
+        if train_last_blocks > 0:
+            blocks = getattr(hsi_head, "blocks", None)
+            if blocks is not None:
+                for block in list(blocks)[-train_last_blocks:]:
+                    unfreeze_module(block)
+        if bool(model_cfg.get("freeze_hsi_betas_delta", False)):
+            module = getattr(hsi_head, "betas_delta", None)
+            if module is not None:
+                freeze_module(module)
         if bool(model_cfg.get("train_hsi_transl_only", False)):
             for name in ("pose_delta", "betas_delta", "contact_head"):
                 module = getattr(hsi_head, name, None)
@@ -282,6 +294,12 @@ def freeze_module(module: torch.nn.Module) -> None:
     module.eval()
     for _, param in module.named_parameters():
         param.requires_grad = False
+
+
+def unfreeze_module(module: torch.nn.Module) -> None:
+    module.train()
+    for _, param in module.named_parameters():
+        param.requires_grad = True
 
 
 def print_trainable_summary(model: torch.nn.Module, max_names: int = 40) -> None:
@@ -649,6 +667,7 @@ def get_progress_log_keys(config: dict[str, Any]) -> list[str]:
         "loss_hsi_transl_velocity",
         "loss_hsi_joints_velocity",
         "loss_hsi_joints_acceleration",
+        "loss_hsi_foot_sliding",
         "loss_hsi_scene_scale_temporal",
         "loss_hsi_scene_bias_temporal",
         "metric_hsi_scene_log_scale_delta",
@@ -672,6 +691,10 @@ def compact_loss_name(key: str) -> str:
         "loss_hsi_transl_velocity": "velT",
         "loss_hsi_joints_velocity": "velJ",
         "loss_hsi_joints_acceleration": "accJ",
+        "loss_hsi_foot_sliding": "footSlide",
+        "loss_hsi_foot_sole_contact": "sole",
+        "loss_hsi_support_plane_contact": "plane",
+        "loss_hsi_contact": "contact",
         "loss_hsi_scene_scale_temporal": "scaleTmp",
         "loss_hsi_scene_scale_sequence": "scaleSeq",
         "loss_hsi_scene_bias_temporal": "biasTmp",

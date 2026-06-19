@@ -93,6 +93,8 @@ class HungarianSMPLLoss(nn.Module):
         hsi_transl_velocity_weight: float = 0.0,
         hsi_joints_velocity_weight: float = 0.0,
         hsi_joints_acceleration_weight: float = 0.0,
+        hsi_foot_sliding_weight: float = 0.0,
+        hsi_foot_sliding_contact_threshold_m: float = 0.08,
         hsi_scene_scale_temporal_weight: float = 0.0,
         hsi_scene_scale_sequence_weight: float = 0.0,
         hsi_scene_bias_temporal_weight: float = 0.0,
@@ -180,6 +182,8 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_transl_velocity_weight = hsi_transl_velocity_weight
         self.hsi_joints_velocity_weight = hsi_joints_velocity_weight
         self.hsi_joints_acceleration_weight = hsi_joints_acceleration_weight
+        self.hsi_foot_sliding_weight = hsi_foot_sliding_weight
+        self.hsi_foot_sliding_contact_threshold_m = hsi_foot_sliding_contact_threshold_m
         self.hsi_scene_scale_temporal_weight = hsi_scene_scale_temporal_weight
         self.hsi_scene_scale_sequence_weight = hsi_scene_scale_sequence_weight
         self.hsi_scene_bias_temporal_weight = hsi_scene_bias_temporal_weight
@@ -318,6 +322,7 @@ class HungarianSMPLLoss(nn.Module):
             + self.hsi_transl_velocity_weight * losses["loss_hsi_transl_velocity"]
             + self.hsi_joints_velocity_weight * losses["loss_hsi_joints_velocity"]
             + self.hsi_joints_acceleration_weight * losses["loss_hsi_joints_acceleration"]
+            + self.hsi_foot_sliding_weight * losses["loss_hsi_foot_sliding"]
             + self.hsi_scene_scale_temporal_weight * losses["loss_hsi_scene_scale_temporal"]
             + self.hsi_scene_scale_sequence_weight * losses["loss_hsi_scene_scale_sequence"]
             + self.hsi_scene_bias_temporal_weight * losses["loss_hsi_scene_bias_temporal"]
@@ -608,6 +613,7 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_transl_velocity": zero,
             "loss_hsi_joints_velocity": zero,
             "loss_hsi_joints_acceleration": zero,
+            "loss_hsi_foot_sliding": zero,
             "loss_hsi_scene_scale_temporal": zero,
             "loss_hsi_scene_scale_sequence": zero,
             "loss_hsi_scene_bias_temporal": zero,
@@ -638,6 +644,8 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_transl_velocity_l1": zero.detach(),
             "metric_hsi_joints_velocity_l1": zero.detach(),
             "metric_hsi_joints_acceleration_l1": zero.detach(),
+            "metric_hsi_foot_sliding_l1": zero.detach(),
+            "metric_hsi_foot_sliding_contact_count": zero.detach(),
             "metric_hsi_scene_log_scale_delta": zero.detach(),
             "metric_hsi_scene_log_scale_seq_abs": zero.detach(),
             "metric_hsi_scene_bias_delta": zero.detach(),
@@ -800,6 +808,7 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_transl_velocity": zero,
             "loss_hsi_joints_velocity": zero,
             "loss_hsi_joints_acceleration": zero,
+            "loss_hsi_foot_sliding": zero,
             "loss_hsi_scene_scale_temporal": zero,
             "loss_hsi_scene_scale_sequence": zero,
             "loss_hsi_scene_bias_temporal": zero,
@@ -811,6 +820,8 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_transl_velocity_l1": zero.detach(),
             "metric_hsi_joints_velocity_l1": zero.detach(),
             "metric_hsi_joints_acceleration_l1": zero.detach(),
+            "metric_hsi_foot_sliding_l1": zero.detach(),
+            "metric_hsi_foot_sliding_contact_count": zero.detach(),
             "metric_hsi_scene_log_scale_delta": zero.detach(),
             "metric_hsi_scene_log_scale_seq_abs": zero.detach(),
             "metric_hsi_scene_bias_delta": zero.detach(),
@@ -819,6 +830,8 @@ class HungarianSMPLLoss(nn.Module):
         num_frames = _infer_sequence_length(batch, predictions)
         if num_frames >= 2:
             out.update(self._hsi_person_temporal_losses(
+                predictions=predictions,
+                batch=batch,
                 frame_idx=frame_idx,
                 matched=matched,
                 num_frames=num_frames,
@@ -837,6 +850,8 @@ class HungarianSMPLLoss(nn.Module):
 
     def _hsi_person_temporal_losses(
         self,
+        predictions: dict[str, torch.Tensor],
+        batch: dict[str, torch.Tensor],
         frame_idx: torch.Tensor,
         matched: dict[str, torch.Tensor],
         num_frames: int,
@@ -856,6 +871,7 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_transl_velocity": zero,
             "loss_hsi_joints_velocity": zero,
             "loss_hsi_joints_acceleration": zero,
+            "loss_hsi_foot_sliding": zero,
             "metric_hsi_temporal_pair_count": zero.detach(),
             "metric_hsi_temporal_triple_count": zero.detach(),
             "metric_hsi_pose_velocity_l1": zero.detach(),
@@ -863,6 +879,8 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_transl_velocity_l1": zero.detach(),
             "metric_hsi_joints_velocity_l1": zero.detach(),
             "metric_hsi_joints_acceleration_l1": zero.detach(),
+            "metric_hsi_foot_sliding_l1": zero.detach(),
+            "metric_hsi_foot_sliding_contact_count": zero.detach(),
         }
         person_ids = matched.get("person_ids")
         person_mask = matched.get("person_id_mask")
@@ -907,6 +925,21 @@ class HungarianSMPLLoss(nn.Module):
             out["loss_hsi_betas_velocity"] = _smooth_l1_abs(betas_delta.abs()).mean()
             out["loss_hsi_transl_velocity"] = _smooth_l1_abs(transl_delta.abs()).mean()
             out["loss_hsi_joints_velocity"] = _smooth_l1_abs(joints_delta.abs()).mean()
+            foot_contact = self._matched_foot_contact_mask(
+                predictions=predictions,
+                batch=batch,
+                frame_idx=frame_idx,
+                gt_joints_cam=gt_joints_cam,
+            )
+            if foot_contact is not None:
+                foot_idx = torch.tensor([7, 8, 10, 11], dtype=torch.long, device=pred_joints_cam.device)
+                foot_residual = _velocity_residual(pred_joints_cam[:, foot_idx], gt_joints_cam[:, foot_idx], prev, curr)
+                pair_contact = foot_contact[prev] & foot_contact[curr]
+                if pair_contact.any():
+                    foot_abs = foot_residual.abs()
+                    out["loss_hsi_foot_sliding"] = _smooth_l1_abs(foot_abs[pair_contact]).mean()
+                    out["metric_hsi_foot_sliding_l1"] = foot_abs[pair_contact].mean().detach()
+                    out["metric_hsi_foot_sliding_contact_count"] = pred_transl.new_tensor(float(pair_contact.sum().detach().cpu())).detach()
             out["metric_hsi_temporal_pair_count"] = pred_transl.new_tensor(float(len(pair_prev))).detach()
             out["metric_hsi_pose_velocity_l1"] = pose_delta.abs().mean().detach()
             out["metric_hsi_betas_velocity_l1"] = betas_delta.abs().mean().detach()
@@ -922,6 +955,36 @@ class HungarianSMPLLoss(nn.Module):
             out["metric_hsi_temporal_triple_count"] = pred_transl.new_tensor(float(len(triple_prev))).detach()
             out["metric_hsi_joints_acceleration_l1"] = joints_acc_delta.abs().mean().detach()
         return out
+
+    def _matched_foot_contact_mask(
+        self,
+        predictions: dict[str, torch.Tensor],
+        batch: dict[str, torch.Tensor],
+        frame_idx: torch.Tensor,
+        gt_joints_cam: torch.Tensor,
+    ) -> torch.Tensor | None:
+        if self.hsi_foot_sliding_weight == 0.0:
+            return None
+        if "pose_enc" not in predictions or "gt_depth" not in batch:
+            return None
+        gt_depth = _canonical_depth(batch["gt_depth"].to(device=gt_joints_cam.device, dtype=gt_joints_cam.dtype))
+        pred_depth = predictions.get("depth")
+        if pred_depth is not None:
+            pred_depth_hw = _canonical_depth(pred_depth)
+            if gt_depth.shape[-2:] != pred_depth_hw.shape[-2:]:
+                gt_depth = F.interpolate(
+                    gt_depth.reshape(-1, 1, *gt_depth.shape[-2:]),
+                    size=pred_depth_hw.shape[-2:],
+                    mode="bilinear",
+                    align_corners=False,
+                ).reshape(*gt_depth.shape[:2], *pred_depth_hw.shape[-2:])
+        intrinsics = _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), self.projection_image_size)
+        foot_idx = torch.tensor([7, 8, 10, 11], dtype=torch.long, device=gt_joints_cam.device)
+        gt_foot = gt_joints_cam[:, foot_idx]
+        gt_projected = _project_points(gt_foot, intrinsics[frame_idx].to(dtype=gt_foot.dtype))
+        gt_projected = _scale_points_to_depth(gt_projected, self.projection_image_size, gt_depth.shape[-2], gt_depth.shape[-1])
+        sampled_gt, gt_valid = _sample_depth_at_points(gt_depth.reshape(-1, *gt_depth.shape[-2:]), gt_projected, frame_idx)
+        return (torch.abs(sampled_gt - gt_foot[..., 2].to(dtype=sampled_gt.dtype)) < float(self.hsi_foot_sliding_contact_threshold_m)) & gt_valid
 
     def _hsi_scene_temporal_losses(
         self,

@@ -94,8 +94,10 @@ def main() -> None:
     if "hsi_scene_scale" not in predictions or "hsi_scene_depth_bias" not in predictions:
         raise ValueError("Checkpoint/model did not produce HSI scene affine outputs")
 
-    scale = predictions["hsi_scene_scale"][0, :, 0].detach().float()
-    bias = predictions["hsi_scene_depth_bias"][0, :, 0].detach().float()
+    scale_source = predictions.get("hsi_frame_scene_scale", predictions["hsi_scene_scale"])
+    bias_source = predictions.get("hsi_frame_scene_depth_bias", predictions["hsi_scene_depth_bias"])
+    scale = scale_source[0, :, 0].detach().float()
+    bias = bias_source[0, :, 0].detach().float()
     clip_scale, clip_bias = clip_median_affine(scale, bias)
     ema_scale, ema_bias = ema_affine(scale, bias, alpha=float(args.ema_alpha))
     affine_modes = build_affine_modes(scale, bias, clip_scale, clip_bias, ema_scale, ema_bias)
