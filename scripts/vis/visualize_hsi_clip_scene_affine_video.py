@@ -57,6 +57,8 @@ from scripts.vis.visualize_smpl_inference import (  # noqa: E402
     add_projected_smpl_joints,
     collect_predictions,
     draw_predictions,
+    export_prediction_gt_ply,
+    export_scene_ply,
     load_config,
     load_training_checkpoint,
     load_vggt_baseline_for_camera,
@@ -111,6 +113,7 @@ def main() -> None:
     ema_scale, ema_bias = ema_affine(scale, bias, alpha=float(args.ema_alpha))
     affine_modes = build_affine_modes(scale, bias, clip_scale, clip_bias, ema_scale, ema_bias)
     depth_metrics = compute_depth_metrics(predictions, frame_paths, affine_modes, args)
+    ply_frame_indices = selected_ply_frame_indices(args, frame_paths)
 
     raw_depth = canonical_depth_numpy(predictions["depth"].detach().float().cpu())[0]
     gt_depths = [load_gt_depth(path, raw_depth.shape[-2], raw_depth.shape[-1]) for path in frame_paths]
@@ -119,9 +122,11 @@ def main() -> None:
 
     gif_frames: list[Image.Image] = []
     frame_files: list[str] = []
+    ply_files: list[str] = []
     per_frame_stats = []
     for frame_idx, frame_path in enumerate(frame_paths):
-        frame_pred = slice_predictions(predictions, frame_idx)
+        frame_pred_raw = slice_predictions(predictions, frame_idx)
+        frame_pred = frame_pred_raw
         if args.use_hsi_refined:
             frame_pred = hsi_as_primary_smpl(frame_pred)
         results = collect_predictions(frame_pred, orig_images[frame_idx].size, args.conf_threshold, args.top_k)
@@ -152,6 +157,33 @@ def main() -> None:
         frame_files.append(str(frame_out))
         gif_frames.append(board)
         per_frame_stats.append(stats)
+        if frame_idx in ply_frame_indices:
+            frame_ply_dir = output_dir / "ply" / f"{frame_idx:04d}_{frame_path.stem}"
+            frame_ply_dir.mkdir(parents=True, exist_ok=True)
+            frame_image_tensor = image_tensor[:, frame_idx : frame_idx + 1].contiguous()
+            frame_ply_files = export_prediction_gt_ply(
+                results,
+                frame_path,
+                frame_pred_raw,
+                config,
+                args,
+                frame_ply_dir,
+                device,
+            )
+            scene_export = export_scene_ply(
+                results,
+                frame_image_tensor,
+                frame_path,
+                frame_pred_raw,
+                config,
+                args,
+                frame_ply_dir,
+                input_size,
+                device,
+            )
+            frame_ply_files.extend(scene_export.get("ply_files", []))
+            ply_files.extend(frame_ply_files)
+            stats["ply_files"] = frame_ply_files
 
     gif_path = output_dir / "hsi_clip_scene_affine_compare.gif"
     if gif_frames:
@@ -174,6 +206,8 @@ def main() -> None:
         "frame_paths": [str(path) for path in frame_paths],
         "gif": str(gif_path),
         "frame_files": frame_files,
+        "ply_frame_indices": sorted(ply_frame_indices),
+        "ply_files": ply_files,
         "affine": {
             "per_frame_scale": to_float_list(scale),
             "per_frame_bias": to_float_list(bias),
@@ -220,6 +254,28 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--use-hsi-refined", action="store_true")
     parser.add_argument("--depth-max-m", type=float, default=30.0)
     parser.add_argument("--include-error-panels", action="store_true")
+    parser.add_argument("--export-selected-ply", action="store_true", help="Export PLY files for selected clip frames")
+    parser.add_argument(
+        "--ply-frame-indices",
+        default="",
+        help="Comma-separated 0-based clip frame indices for --export-selected-ply, e.g. 7,20",
+    )
+    parser.add_argument(
+        "--ply-frame-stems",
+        default="",
+        help="Comma-separated image stems for --export-selected-ply, e.g. seq_000000_0035,seq_000000_0100",
+    )
+    parser.add_argument("--export-ply", action="store_true", help="Compatibility flag used by shared PLY helpers")
+    parser.add_argument("--export-scene-ply", action="store_true", help="Compatibility flag used by shared PLY helpers")
+    parser.add_argument("--align-scene-to-smpl", action="store_true")
+    parser.add_argument("--align-min-anchor-pixels", type=int, default=64)
+    parser.add_argument("--align-scale-min", type=float, default=0.25)
+    parser.add_argument("--align-scale-max", type=float, default=20.0)
+    parser.add_argument("--align-anchor-stride", type=int, default=8)
+    parser.add_argument("--align-use-gt-smpl-anchors", action="store_true")
+    parser.add_argument("--ply-top-k", type=int, default=3)
+    parser.add_argument("--export-hsi-comparison", action="store_true")
+    parser.add_argument("--hsi-align-scene", action="store_true")
     parser.add_argument("--override", action="append", default=[])
     return parser.parse_args()
 
@@ -246,6 +302,33 @@ def hsi_as_primary_smpl(predictions: dict[str, torch.Tensor]) -> dict[str, torch
         if src in out:
             out[dst] = out[src]
     return out
+
+
+def selected_ply_frame_indices(args: argparse.Namespace, frame_paths: list[Path]) -> set[int]:
+    if not bool(args.export_selected_ply):
+        return set()
+    selected: set[int] = set()
+    if str(args.ply_frame_indices).strip():
+        for item in str(args.ply_frame_indices).split(","):
+            item = item.strip()
+            if not item:
+                continue
+            idx = int(item)
+            if idx < 0 or idx >= len(frame_paths):
+                raise ValueError(f"PLY frame index out of range: {idx}, valid=[0,{len(frame_paths) - 1}]")
+            selected.add(idx)
+    stems = {path.stem: idx for idx, path in enumerate(frame_paths)}
+    if str(args.ply_frame_stems).strip():
+        for item in str(args.ply_frame_stems).split(","):
+            stem = item.strip()
+            if not stem:
+                continue
+            if stem not in stems:
+                raise ValueError(f"PLY frame stem not found in selected clip: {stem}")
+            selected.add(stems[stem])
+    if not selected:
+        raise ValueError("--export-selected-ply requires --ply-frame-indices or --ply-frame-stems")
+    return selected
 
 
 def canonical_depth_numpy(depth: torch.Tensor) -> np.ndarray:
