@@ -1,0 +1,315 @@
+{
+  "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_clip_affine_relaxed_contact/stage2_relaxed_contact/checkpoint_latest.pt",
+  "num_sequences": 64,
+  "conf_threshold": 0.1,
+  "use_gt_box_prior": true,
+  "metrics": {
+    "num_gt_per_frame": 2.9921875,
+    "num_matched_per_frame": 2.9921875,
+    "track_valid_per_frame": 2.9921875,
+    "track_explicit_per_frame": 0.0,
+    "track_person_index_per_frame": 2.9921875,
+    "track_slot_per_frame": 0.0,
+    "track_quality_mean": 0.9085331885995193,
+    "temporal_pair_count": 32.90625,
+    "temporal_triple_count": 29.90625,
+    "temporal_quad_count": 26.90625,
+    "temporal_pair_explicit_count": 0.0,
+    "temporal_pair_person_index_count": 32.90625,
+    "temporal_pair_slot_count": 0.0,
+    "query_switch_rate": 0.0,
+    "base_transl_velocity_l1_m": 0.03211132638663976,
+    "hsi_transl_velocity_l1_m": 0.024793051124435646,
+    "base_joints_velocity_l1_m": 0.03756247048181325,
+    "hsi_joints_velocity_l1_m": 0.031946167256064,
+    "base_joints_acceleration_l1_m": 0.05231582827534227,
+    "hsi_joints_acceleration_l1_m": 0.046837680088502115,
+    "base_joints_jerk_l1_m": 0.09179425607278563,
+    "hsi_joints_jerk_l1_m": 0.08125118883683602,
+    "hsi_scene_log_scale_abs_delta": 0.0,
+    "hsi_scene_log_scale_seq_abs": 0.0,
+    "hsi_scene_scale_range": 0.0,
+    "hsi_scene_scale_saturation_rate": 0.0,
+    "hsi_scene_bias_abs_delta_m": 0.0,
+    "hsi_scene_bias_seq_abs_m": 0.0,
+    "hsi_scene_bias_range_m": 0.0
+  },
+  "improvement_percent_lower_is_better": {
+    "transl_velocity_l1_m": 22.790323806894985,
+    "joints_velocity_l1_m": 14.951900537182489,
+    "joints_acceleration_l1_m": 10.471301645093407,
+    "joints_jerk_l1_m": 11.485541347586919
+  },
+  "sequence_robust_scale": {
+    "count": 64,
+    "mean": 8.070785760879517,
+    "min": 6.891223907470703,
+    "max": 10.347062110900879,
+    "median": 7.528973817825317
+  },
+  "sequence_robust_bias": {
+    "count": 64,
+    "mean": -0.024670920567587018,
+    "min": -0.4320005476474762,
+    "max": 0.3320826590061188,
+    "median": 0.043206063099205494
+  },
+  "examples": [
+    {
+      "batch_idx": 0,
+      "num_frames": 12,
+      "frame_match_counts": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "temporal_pairs": 33,
+      "temporal_triples": 30,
+      "temporal_quads": 27,
+      "query_switches": 0,
+      "scene": {
+        "sequence_scale": [
+          7.553829669952393
+        ],
+        "mean_log_scale_delta": 0.0,
+        "sequence_bias": [
+          -0.1940395087003708
+        ],
+        "mean_bias_delta_m": 0.0
+      }
+    },
+    {
+      "batch_idx": 1,
+      "num_frames": 12,
+      "frame_match_counts": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "temporal_pairs": 33,
+      "temporal_triples": 30,
+      "temporal_quads": 27,
+      "query_switches": 0,
+      "scene": {
+        "sequence_scale": [
+          7.4664106369018555
+        ],
+        "mean_log_scale_delta": 0.0,
+        "sequence_bias": [
+          -0.05778887867927551
+        ],
+        "mean_bias_delta_m": 0.0
+      }
+    },
+    {
+      "batch_idx": 2,
+      "num_frames": 12,
+      "frame_match_counts": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "temporal_pairs": 33,
+      "temporal_triples": 30,
+      "temporal_quads": 27,
+      "query_switches": 0,
+      "scene": {
+        "sequence_scale": [
+          7.318378925323486
+        ],
+        "mean_log_scale_delta": 0.0,
+        "sequence_bias": [
+          -0.040149811655282974
+        ],
+        "mean_bias_delta_m": 0.0
+      }
+    },
+    {
+      "batch_idx": 3,
+      "num_frames": 12,
+      "frame_match_counts": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "temporal_pairs": 33,
+      "temporal_triples": 30,
+      "temporal_quads": 27,
+      "query_switches": 0,
+      "scene": {
+        "sequence_scale": [
+          7.27568244934082
+        ],
+        "mean_log_scale_delta": 0.0,
+        "sequence_bias": [
+          0.02417326159775257
+        ],
+        "mean_bias_delta_m": 0.0
+      }
+    },
+    {
+      "batch_idx": 4,
+      "num_frames": 12,
+      "frame_match_counts": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "temporal_pairs": 33,
+      "temporal_triples": 30,
+      "temporal_quads": 27,
+      "query_switches": 0,
+      "scene": {
+        "sequence_scale": [
+          7.243434906005859
+        ],
+        "mean_log_scale_delta": 0.0,
+        "sequence_bias": [
+          0.06461145728826523
+        ],
+        "mean_bias_delta_m": 0.0
+      }
+    },
+    {
+      "batch_idx": 5,
+      "num_frames": 12,
+      "frame_match_counts": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "temporal_pairs": 33,
+      "temporal_triples": 30,
+      "temporal_quads": 27,
+      "query_switches": 0,
+      "scene": {
+        "sequence_scale": [
+          7.110026836395264
+        ],
+        "mean_log_scale_delta": 0.0,
+        "sequence_bias": [
+          0.11414889991283417
+        ],
+        "mean_bias_delta_m": 0.0
+      }
+    },
+    {
+      "batch_idx": 6,
+      "num_frames": 12,
+      "frame_match_counts": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "temporal_pairs": 33,
+      "temporal_triples": 30,
+      "temporal_quads": 27,
+      "query_switches": 0,
+      "scene": {
+        "sequence_scale": [
+          6.971249103546143
+        ],
+        "mean_log_scale_delta": 0.0,
+        "sequence_bias": [
+          0.11450817435979843
+        ],
+        "mean_bias_delta_m": 0.0
+      }
+    },
+    {
+      "batch_idx": 7,
+      "num_frames": 12,
+      "frame_match_counts": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "temporal_pairs": 33,
+      "temporal_triples": 30,
+      "temporal_quads": 27,
+      "query_switches": 0,
+      "scene": {
+        "sequence_scale": [
+          6.891223907470703
+        ],
+        "mean_log_scale_delta": 0.0,
+        "sequence_bias": [
+          0.12058825045824051
+        ],
+        "mean_bias_delta_m": 0.0
+      }
+    }
+  ]
+}
