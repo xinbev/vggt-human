@@ -24,6 +24,9 @@ CONF_THRESHOLD="${CONF_THRESHOLD:-0.10}"
 SPLIT="${SPLIT:-Training}"
 USE_GT_BOX_PRIOR="${USE_GT_BOX_PRIOR:-true}"
 MOMENTUM_DECAY="${MOMENTUM_DECAY:-0.7}"
+SCENE_AFFINE_MODE="${SCENE_AFFINE_MODE:-clip_median}"
+TEMPORAL_NO_WORSE_MARGIN_M="${TEMPORAL_NO_WORSE_MARGIN_M:-0.002}"
+TEMPORAL_NO_WORSE_ACCEL_MARGIN_M="${TEMPORAL_NO_WORSE_ACCEL_MARGIN_M:-0.003}"
 
 cd "${REPO_ROOT}"
 mkdir -p "${OUTPUT_DIR}"
@@ -44,6 +47,8 @@ echo "Views       : ${NUM_VIEWS}"
 echo "Samples     : ${MAX_SAMPLES}"
 echo "GT prior    : ${USE_GT_BOX_PRIOR}"
 echo "Momentum    : ${MOMENTUM_DECAY}"
+echo "Scene affine: ${SCENE_AFFINE_MODE}"
+echo "No-worse m  : ${TEMPORAL_NO_WORSE_MARGIN_M} / accel ${TEMPORAL_NO_WORSE_ACCEL_MARGIN_M}"
 
 PRIOR_ARGS=()
 if [[ "${USE_GT_BOX_PRIOR}" == "true" ]]; then
@@ -62,6 +67,8 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/eval/evaluat
   --batch-size "${BATCH_SIZE}" \
   --num-workers "${NUM_WORKERS}" \
   --conf-threshold "${CONF_THRESHOLD}" \
+  --temporal-no-worse-margin-m "${TEMPORAL_NO_WORSE_MARGIN_M}" \
+  --temporal-no-worse-accel-margin-m "${TEMPORAL_NO_WORSE_ACCEL_MARGIN_M}" \
   "${PRIOR_ARGS[@]}" \
   --override "assets.smpl_model_dir=${SMPL_MODEL_DIR}" \
   --override "datasets.bedlam_root=${BEDLAM_ROOT}" \
@@ -79,7 +86,8 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/eval/evaluat
   --override "model.hsi_enable_temporal_momentum=true" \
   --override "model.hsi_temporal_momentum_decay=${MOMENTUM_DECAY}" \
   --override "model.hsi_temporal_momentum_detach=true" \
-  --override "model.hsi_temporal_momentum_use_track_ids=true"
+  --override "model.hsi_temporal_momentum_use_track_ids=true" \
+  --override "model.hsi_scene_affine_mode=${SCENE_AFFINE_MODE}"
 
 echo "========== SMPL HSI scene-then-temporal-momentum metrics finished =========="
 echo "Metrics json: ${OUTPUT_DIR}/hsi_temporal_metrics.json"

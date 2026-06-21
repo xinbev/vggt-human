@@ -30,6 +30,7 @@ USE_HSI_REFINED="${USE_HSI_REFINED:-true}"
 INCLUDE_ERROR_PANELS="${INCLUDE_ERROR_PANELS:-false}"
 DEPTH_MAX_M="${DEPTH_MAX_M:-30.0}"
 MOMENTUM_DECAY="${MOMENTUM_DECAY:-0.7}"
+SCENE_AFFINE_MODE="${SCENE_AFFINE_MODE:-clip_median}"
 
 cd "${REPO_ROOT}"
 mkdir -p "${OUTPUT_DIR}"
@@ -53,6 +54,7 @@ echo "Stride      : ${STRIDE}"
 echo "GT prior    : ${USE_GT_BOX_PRIOR}"
 echo "Use HSI     : ${USE_HSI_REFINED}"
 echo "Momentum    : ${MOMENTUM_DECAY}"
+echo "Scene affine: ${SCENE_AFFINE_MODE}"
 
 PRIOR_ARGS=()
 if [[ "${USE_GT_BOX_PRIOR}" == "true" ]]; then
@@ -104,7 +106,8 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/vis/visualiz
   --override "model.hsi_enable_temporal_momentum=true" \
   --override "model.hsi_temporal_momentum_decay=${MOMENTUM_DECAY}" \
   --override "model.hsi_temporal_momentum_detach=true" \
-  --override "model.hsi_temporal_momentum_use_track_ids=false"
+  --override "model.hsi_temporal_momentum_use_track_ids=false" \
+  --override "model.hsi_scene_affine_mode=${SCENE_AFFINE_MODE}"
 
 echo "========== SMPL HSI scene-then-temporal-momentum GIF finished =========="
 echo "GIF         : ${OUTPUT_DIR}/hsi_clip_scene_affine_compare.gif"

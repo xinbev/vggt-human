@@ -116,6 +116,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--num-workers", type=int, default=2)
     parser.add_argument("--conf-threshold", type=float, default=0.10)
     parser.add_argument("--use-gt-box-prior", action="store_true")
+    parser.add_argument("--temporal-no-worse-margin-m", type=float, default=0.002)
+    parser.add_argument("--temporal-no-worse-accel-margin-m", type=float, default=0.003)
     parser.add_argument("--log-interval", type=int, default=8)
     parser.add_argument("--override", action="append", default=[])
     return parser.parse_args()
@@ -200,6 +202,11 @@ def init_metrics() -> dict[str, Meter]:
         "hsi_joints_acceleration_l1_m",
         "base_joints_jerk_l1_m",
         "hsi_joints_jerk_l1_m",
+        "hsi_transl_velocity_worse_margin_ratio",
+        "hsi_joints_velocity_worse_margin_ratio",
+        "hsi_joints_acceleration_worse_margin_ratio",
+        "hsi_temporal_no_worse_margin_ratio",
+        "hsi_temporal_no_worse_excess_m",
         "hsi_scene_log_scale_abs_delta",
         "hsi_scene_log_scale_seq_abs",
         "hsi_scene_scale_range",
@@ -268,7 +275,7 @@ def evaluate_temporal_batch(
                 quality = float(track_quality[b, s, g].detach().cpu()) if track_quality is not None else 0.0
                 records.setdefault((b, pid), {}).setdefault(s, {"query": q, "gt_index": g, "source": source, "quality": quality})
 
-    pair_count, triple_count, quad_count, query_switches = add_person_temporal_metrics(metrics, records, base, hsi, gt, num_frames)
+    pair_count, triple_count, quad_count, query_switches = add_person_temporal_metrics(metrics, records, base, hsi, gt, num_frames, args)
     scale_summary = add_scene_temporal_metrics(metrics, predictions, sequence_scales, sequence_biases)
     return {
         "num_frames": int(num_frames),
@@ -315,6 +322,7 @@ def add_person_temporal_metrics(
     hsi: dict[str, torch.Tensor],
     gt: dict[str, torch.Tensor],
     num_frames: int,
+    args: argparse.Namespace,
 ) -> tuple[int, int, int, int]:
     pair_count = 0
     triple_count = 0
@@ -334,12 +342,36 @@ def add_person_temporal_metrics(
             query_switches += int(prev["query"] != curr["query"])
             add_velocity_metric(metrics, "base", base, gt, batch_idx, seq - 1, seq, prev, curr)
             add_velocity_metric(metrics, "hsi", hsi, gt, batch_idx, seq - 1, seq, prev, curr)
+            add_velocity_no_worse_metrics(
+                metrics,
+                base,
+                hsi,
+                gt,
+                batch_idx,
+                seq - 1,
+                seq,
+                prev,
+                curr,
+                float(args.temporal_no_worse_margin_m),
+            )
         for seq in range(1, num_frames - 1):
             if seq - 1 not in seq_map or seq not in seq_map or seq + 1 not in seq_map:
                 continue
             triple_count += 1
             add_acceleration_metric(metrics, "base", base, gt, batch_idx, seq - 1, seq, seq + 1, seq_map)
             add_acceleration_metric(metrics, "hsi", hsi, gt, batch_idx, seq - 1, seq, seq + 1, seq_map)
+            add_acceleration_no_worse_metrics(
+                metrics,
+                base,
+                hsi,
+                gt,
+                batch_idx,
+                seq - 1,
+                seq,
+                seq + 1,
+                seq_map,
+                float(args.temporal_no_worse_accel_margin_m),
+            )
         for seq in range(3, num_frames):
             if any(item not in seq_map for item in (seq - 3, seq - 2, seq - 1, seq)):
                 continue
@@ -390,6 +422,43 @@ def add_velocity_metric(
     metrics[f"{prefix}_joints_velocity_l1_m"].add(float(torch.abs(pred_joint_vel - gt_joint_vel).mean().detach().cpu()))
 
 
+def add_velocity_no_worse_metrics(
+    metrics: dict[str, Meter],
+    base: dict[str, torch.Tensor],
+    hsi: dict[str, torch.Tensor],
+    gt: dict[str, torch.Tensor],
+    batch_idx: int,
+    prev_seq: int,
+    curr_seq: int,
+    prev: dict[str, int],
+    curr: dict[str, int],
+    margin_m: float,
+) -> None:
+    q0, q1 = prev["query"], curr["query"]
+    g0, g1 = prev["gt_index"], curr["gt_index"]
+    gt_transl_vel = gt["transl"][batch_idx, curr_seq, g1] - gt["transl"][batch_idx, prev_seq, g0]
+    base_transl_vel = base["transl"][batch_idx, curr_seq, q1] - base["transl"][batch_idx, prev_seq, q0]
+    hsi_transl_vel = hsi["transl"][batch_idx, curr_seq, q1] - hsi["transl"][batch_idx, prev_seq, q0]
+    add_no_worse_metric(
+        metrics,
+        "hsi_transl_velocity_worse_margin_ratio",
+        torch.abs(base_transl_vel - gt_transl_vel).mean(),
+        torch.abs(hsi_transl_vel - gt_transl_vel).mean(),
+        margin_m,
+    )
+
+    gt_joint_vel = gt["joints"][batch_idx, curr_seq, g1, :24] - gt["joints"][batch_idx, prev_seq, g0, :24]
+    base_joint_vel = base["joints"][batch_idx, curr_seq, q1, :24] - base["joints"][batch_idx, prev_seq, q0, :24]
+    hsi_joint_vel = hsi["joints"][batch_idx, curr_seq, q1, :24] - hsi["joints"][batch_idx, prev_seq, q0, :24]
+    add_no_worse_metric(
+        metrics,
+        "hsi_joints_velocity_worse_margin_ratio",
+        torch.abs(base_joint_vel - gt_joint_vel).mean(),
+        torch.abs(hsi_joint_vel - gt_joint_vel).mean(),
+        margin_m,
+    )
+
+
 def add_acceleration_metric(
     metrics: dict[str, Meter],
     prefix: str,
@@ -406,6 +475,46 @@ def add_acceleration_metric(
     pred_acc = pred["joints"][batch_idx, seq2, q2, :24] - 2.0 * pred["joints"][batch_idx, seq1, q1, :24] + pred["joints"][batch_idx, seq0, q0, :24]
     gt_acc = gt["joints"][batch_idx, seq2, g2, :24] - 2.0 * gt["joints"][batch_idx, seq1, g1, :24] + gt["joints"][batch_idx, seq0, g0, :24]
     metrics[f"{prefix}_joints_acceleration_l1_m"].add(float(torch.abs(pred_acc - gt_acc).mean().detach().cpu()))
+
+
+def add_acceleration_no_worse_metrics(
+    metrics: dict[str, Meter],
+    base: dict[str, torch.Tensor],
+    hsi: dict[str, torch.Tensor],
+    gt: dict[str, torch.Tensor],
+    batch_idx: int,
+    seq0: int,
+    seq1: int,
+    seq2: int,
+    seq_map: dict[int, dict[str, int]],
+    margin_m: float,
+) -> None:
+    q0, q1, q2 = seq_map[seq0]["query"], seq_map[seq1]["query"], seq_map[seq2]["query"]
+    g0, g1, g2 = seq_map[seq0]["gt_index"], seq_map[seq1]["gt_index"], seq_map[seq2]["gt_index"]
+    gt_acc = gt["joints"][batch_idx, seq2, g2, :24] - 2.0 * gt["joints"][batch_idx, seq1, g1, :24] + gt["joints"][batch_idx, seq0, g0, :24]
+    base_acc = base["joints"][batch_idx, seq2, q2, :24] - 2.0 * base["joints"][batch_idx, seq1, q1, :24] + base["joints"][batch_idx, seq0, q0, :24]
+    hsi_acc = hsi["joints"][batch_idx, seq2, q2, :24] - 2.0 * hsi["joints"][batch_idx, seq1, q1, :24] + hsi["joints"][batch_idx, seq0, q0, :24]
+    add_no_worse_metric(
+        metrics,
+        "hsi_joints_acceleration_worse_margin_ratio",
+        torch.abs(base_acc - gt_acc).mean(),
+        torch.abs(hsi_acc - gt_acc).mean(),
+        margin_m,
+    )
+
+
+def add_no_worse_metric(
+    metrics: dict[str, Meter],
+    component_key: str,
+    base_err: torch.Tensor,
+    hsi_err: torch.Tensor,
+    margin_m: float,
+) -> None:
+    excess = torch.relu(hsi_err - base_err.detach() - float(margin_m))
+    worse = float((excess > 0).to(dtype=torch.float32).detach().cpu())
+    metrics[component_key].add(worse)
+    metrics["hsi_temporal_no_worse_margin_ratio"].add(worse)
+    metrics["hsi_temporal_no_worse_excess_m"].add(float(excess.detach().cpu()))
 
 
 def add_jerk_metric(
@@ -545,6 +654,14 @@ def print_human_summary(summary: dict[str, Any]) -> None:
         f"explicit={fmt(metrics.get('temporal_pair_explicit_count'))} "
         f"person_index={fmt(metrics.get('temporal_pair_person_index_count'))} "
         f"slot={fmt(metrics.get('temporal_pair_slot_count'))}"
+    )
+    print(
+        "Temporal no-worse      "
+        f"worse={fmt(metrics.get('hsi_temporal_no_worse_margin_ratio'))} "
+        f"excess={fmt(metrics.get('hsi_temporal_no_worse_excess_m'))}m "
+        f"transl={fmt(metrics.get('hsi_transl_velocity_worse_margin_ratio'))} "
+        f"joints={fmt(metrics.get('hsi_joints_velocity_worse_margin_ratio'))} "
+        f"accel={fmt(metrics.get('hsi_joints_acceleration_worse_margin_ratio'))}"
     )
     print(
         "Scene temporal         "

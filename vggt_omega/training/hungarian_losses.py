@@ -61,6 +61,9 @@ class HungarianSMPLLoss(nn.Module):
         hsi_delta_reg_weight: float = 0.0,
         hsi_no_worse_weight: float = 0.0,
         hsi_no_worse_margin_m: float = 0.02,
+        hsi_temporal_no_worse_weight: float = 0.0,
+        hsi_temporal_no_worse_margin_m: float = 0.002,
+        hsi_temporal_no_worse_accel_margin_m: float = 0.003,
         hsi_gate_reg_weight: float = 0.0,
         hsi_foot_contact_weight: float = 0.0,
         hsi_foot_contact_threshold_m: float = 0.12,
@@ -150,6 +153,9 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_delta_reg_weight = hsi_delta_reg_weight
         self.hsi_no_worse_weight = hsi_no_worse_weight
         self.hsi_no_worse_margin_m = hsi_no_worse_margin_m
+        self.hsi_temporal_no_worse_weight = hsi_temporal_no_worse_weight
+        self.hsi_temporal_no_worse_margin_m = hsi_temporal_no_worse_margin_m
+        self.hsi_temporal_no_worse_accel_margin_m = hsi_temporal_no_worse_accel_margin_m
         self.hsi_gate_reg_weight = hsi_gate_reg_weight
         self.hsi_foot_contact_weight = hsi_foot_contact_weight
         self.hsi_foot_contact_threshold_m = hsi_foot_contact_threshold_m
@@ -322,6 +328,7 @@ class HungarianSMPLLoss(nn.Module):
             + self.hsi_transl_velocity_weight * losses["loss_hsi_transl_velocity"]
             + self.hsi_joints_velocity_weight * losses["loss_hsi_joints_velocity"]
             + self.hsi_joints_acceleration_weight * losses["loss_hsi_joints_acceleration"]
+            + self.hsi_temporal_no_worse_weight * losses["loss_hsi_temporal_no_worse"]
             + self.hsi_foot_sliding_weight * losses["loss_hsi_foot_sliding"]
             + self.hsi_scene_scale_temporal_weight * losses["loss_hsi_scene_scale_temporal"]
             + self.hsi_scene_scale_sequence_weight * losses["loss_hsi_scene_scale_sequence"]
@@ -613,6 +620,7 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_transl_velocity": zero,
             "loss_hsi_joints_velocity": zero,
             "loss_hsi_joints_acceleration": zero,
+            "loss_hsi_temporal_no_worse": zero,
             "loss_hsi_foot_sliding": zero,
             "loss_hsi_scene_scale_temporal": zero,
             "loss_hsi_scene_scale_sequence": zero,
@@ -644,6 +652,8 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_transl_velocity_l1": zero.detach(),
             "metric_hsi_joints_velocity_l1": zero.detach(),
             "metric_hsi_joints_acceleration_l1": zero.detach(),
+            "metric_hsi_temporal_no_worse_ratio": zero.detach(),
+            "metric_hsi_temporal_no_worse_l1": zero.detach(),
             "metric_hsi_foot_sliding_l1": zero.detach(),
             "metric_hsi_foot_sliding_contact_count": zero.detach(),
             "metric_hsi_scene_log_scale_delta": zero.detach(),
@@ -782,6 +792,8 @@ class HungarianSMPLLoss(nn.Module):
                 target_transl=target_transl,
                 pred_joints_cam=pred_joints_cam,
                 gt_joints_cam=gt_joints_cam,
+                base_transl=base_transl_matched,
+                base_joints_cam=base_joints_cam,
             )
         )
         return losses
@@ -800,6 +812,8 @@ class HungarianSMPLLoss(nn.Module):
         target_transl: torch.Tensor,
         pred_joints_cam: torch.Tensor,
         gt_joints_cam: torch.Tensor,
+        base_transl: torch.Tensor,
+        base_joints_cam: torch.Tensor,
     ) -> dict[str, torch.Tensor]:
         zero = pred_transl.sum() * 0.0
         out = {
@@ -808,6 +822,7 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_transl_velocity": zero,
             "loss_hsi_joints_velocity": zero,
             "loss_hsi_joints_acceleration": zero,
+            "loss_hsi_temporal_no_worse": zero,
             "loss_hsi_foot_sliding": zero,
             "loss_hsi_scene_scale_temporal": zero,
             "loss_hsi_scene_scale_sequence": zero,
@@ -820,6 +835,8 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_transl_velocity_l1": zero.detach(),
             "metric_hsi_joints_velocity_l1": zero.detach(),
             "metric_hsi_joints_acceleration_l1": zero.detach(),
+            "metric_hsi_temporal_no_worse_ratio": zero.detach(),
+            "metric_hsi_temporal_no_worse_l1": zero.detach(),
             "metric_hsi_foot_sliding_l1": zero.detach(),
             "metric_hsi_foot_sliding_contact_count": zero.detach(),
             "metric_hsi_scene_log_scale_delta": zero.detach(),
@@ -843,6 +860,8 @@ class HungarianSMPLLoss(nn.Module):
                 target_transl=target_transl,
                 pred_joints_cam=pred_joints_cam,
                 gt_joints_cam=gt_joints_cam,
+                base_transl=base_transl,
+                base_joints_cam=base_joints_cam,
                 zero=zero,
             ))
         out.update(self._hsi_scene_temporal_losses(predictions, zero))
@@ -863,6 +882,8 @@ class HungarianSMPLLoss(nn.Module):
         target_transl: torch.Tensor,
         pred_joints_cam: torch.Tensor,
         gt_joints_cam: torch.Tensor,
+        base_transl: torch.Tensor,
+        base_joints_cam: torch.Tensor,
         zero: torch.Tensor,
     ) -> dict[str, torch.Tensor]:
         out = {
@@ -871,6 +892,7 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_transl_velocity": zero,
             "loss_hsi_joints_velocity": zero,
             "loss_hsi_joints_acceleration": zero,
+            "loss_hsi_temporal_no_worse": zero,
             "loss_hsi_foot_sliding": zero,
             "metric_hsi_temporal_pair_count": zero.detach(),
             "metric_hsi_temporal_triple_count": zero.detach(),
@@ -879,6 +901,8 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_transl_velocity_l1": zero.detach(),
             "metric_hsi_joints_velocity_l1": zero.detach(),
             "metric_hsi_joints_acceleration_l1": zero.detach(),
+            "metric_hsi_temporal_no_worse_ratio": zero.detach(),
+            "metric_hsi_temporal_no_worse_l1": zero.detach(),
             "metric_hsi_foot_sliding_l1": zero.detach(),
             "metric_hsi_foot_sliding_contact_count": zero.detach(),
         }
@@ -914,6 +938,11 @@ class HungarianSMPLLoss(nn.Module):
                     triple_mid.append(seq_map[seq])
                     triple_next.append(seq_map[seq + 1])
 
+        temporal_no_worse_terms: list[torch.Tensor] = []
+        temporal_no_worse_flags: list[torch.Tensor] = []
+        velocity_margin = float(self.hsi_temporal_no_worse_margin_m)
+        accel_margin = float(self.hsi_temporal_no_worse_accel_margin_m)
+
         if pair_prev:
             prev = torch.tensor(pair_prev, dtype=torch.long, device=pred_transl.device)
             curr = torch.tensor(pair_next, dtype=torch.long, device=pred_transl.device)
@@ -921,10 +950,25 @@ class HungarianSMPLLoss(nn.Module):
             betas_delta = _velocity_residual(pred_betas, target_betas, prev, curr)
             transl_delta = _velocity_residual(pred_transl, target_transl, prev, curr)
             joints_delta = _velocity_residual(pred_joints_cam, gt_joints_cam, prev, curr)
+            base_transl_delta = _velocity_residual(base_transl.detach(), target_transl, prev, curr)
+            base_joints_delta = _velocity_residual(base_joints_cam.detach(), gt_joints_cam, prev, curr)
             out["loss_hsi_pose_velocity"] = _smooth_l1_abs(pose_delta.abs()).mean()
             out["loss_hsi_betas_velocity"] = _smooth_l1_abs(betas_delta.abs()).mean()
             out["loss_hsi_transl_velocity"] = _smooth_l1_abs(transl_delta.abs()).mean()
             out["loss_hsi_joints_velocity"] = _smooth_l1_abs(joints_delta.abs()).mean()
+
+            hsi_transl_vel_err = torch.linalg.norm(transl_delta, dim=-1)
+            base_transl_vel_err = torch.linalg.norm(base_transl_delta, dim=-1).detach()
+            transl_vel_excess = F.relu(hsi_transl_vel_err - base_transl_vel_err - velocity_margin)
+            temporal_no_worse_terms.append(transl_vel_excess)
+            temporal_no_worse_flags.append(hsi_transl_vel_err > (base_transl_vel_err + velocity_margin))
+
+            hsi_joints_vel_err = torch.linalg.norm(joints_delta, dim=-1).mean(dim=-1)
+            base_joints_vel_err = torch.linalg.norm(base_joints_delta, dim=-1).mean(dim=-1).detach()
+            joints_vel_excess = F.relu(hsi_joints_vel_err - base_joints_vel_err - velocity_margin)
+            temporal_no_worse_terms.append(joints_vel_excess)
+            temporal_no_worse_flags.append(hsi_joints_vel_err > (base_joints_vel_err + velocity_margin))
+
             foot_contact = self._matched_foot_contact_mask(
                 predictions=predictions,
                 batch=batch,
@@ -951,9 +995,25 @@ class HungarianSMPLLoss(nn.Module):
             mid = torch.tensor(triple_mid, dtype=torch.long, device=pred_transl.device)
             nxt = torch.tensor(triple_next, dtype=torch.long, device=pred_transl.device)
             joints_acc_delta = _acceleration_residual(pred_joints_cam, gt_joints_cam, prev, mid, nxt)
+            base_joints_acc_delta = _acceleration_residual(base_joints_cam.detach(), gt_joints_cam, prev, mid, nxt)
             out["loss_hsi_joints_acceleration"] = _smooth_l1_abs(joints_acc_delta.abs()).mean()
+            hsi_joints_acc_err = torch.linalg.norm(joints_acc_delta, dim=-1).mean(dim=-1)
+            base_joints_acc_err = torch.linalg.norm(base_joints_acc_delta, dim=-1).mean(dim=-1).detach()
+            joints_acc_excess = F.relu(hsi_joints_acc_err - base_joints_acc_err - accel_margin)
+            temporal_no_worse_terms.append(joints_acc_excess)
+            temporal_no_worse_flags.append(hsi_joints_acc_err > (base_joints_acc_err + accel_margin))
             out["metric_hsi_temporal_triple_count"] = pred_transl.new_tensor(float(len(triple_prev))).detach()
             out["metric_hsi_joints_acceleration_l1"] = joints_acc_delta.abs().mean().detach()
+
+        if temporal_no_worse_terms:
+            temporal_no_worse = torch.cat([term.reshape(-1) for term in temporal_no_worse_terms], dim=0)
+            temporal_no_worse_flags_tensor = torch.cat(
+                [flag.reshape(-1).to(dtype=pred_transl.dtype) for flag in temporal_no_worse_flags],
+                dim=0,
+            )
+            out["loss_hsi_temporal_no_worse"] = _smooth_l1_abs(temporal_no_worse, beta=0.01).mean()
+            out["metric_hsi_temporal_no_worse_ratio"] = temporal_no_worse_flags_tensor.mean().detach()
+            out["metric_hsi_temporal_no_worse_l1"] = temporal_no_worse.mean().detach()
         return out
 
     def _matched_foot_contact_mask(

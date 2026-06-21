@@ -30,6 +30,11 @@ MAX_HUMANS="${MAX_HUMANS:-20}"
 NUM_VIEWS="${NUM_VIEWS:-12}"
 NUM_WORKERS="${NUM_WORKERS:-4}"
 MOMENTUM_DECAY="${MOMENTUM_DECAY:-0.7}"
+SCENE_AFFINE_MODE="${SCENE_AFFINE_MODE:-clip_median}"
+SCENE_AFFINE_EMA_ALPHA="${SCENE_AFFINE_EMA_ALPHA:-0.25}"
+TEMPORAL_NO_WORSE_WEIGHT="${TEMPORAL_NO_WORSE_WEIGHT:-0.0}"
+TEMPORAL_NO_WORSE_MARGIN_M="${TEMPORAL_NO_WORSE_MARGIN_M:-0.002}"
+TEMPORAL_NO_WORSE_ACCEL_MARGIN_M="${TEMPORAL_NO_WORSE_ACCEL_MARGIN_M:-0.003}"
 LOG_INTERVAL="${LOG_INTERVAL:-20}"
 
 DEPTH_MAX_M="${DEPTH_MAX_M:-30.0}"
@@ -76,9 +81,21 @@ echo "Stage2 output       : ${STAGE2_OUTPUT_DIR}"
 echo "Stage2 extra epochs : ${STAGE2_EXTRA_EPOCHS}"
 echo "Stage2 LR           : ${STAGE2_LR}"
 echo "Momentum decay      : ${MOMENTUM_DECAY}"
+echo "Scene affine mode   : ${SCENE_AFFINE_MODE}"
+echo "Temporal no-worse   : weight=${TEMPORAL_NO_WORSE_WEIGHT} margin=${TEMPORAL_NO_WORSE_MARGIN_M} accel_margin=${TEMPORAL_NO_WORSE_ACCEL_MARGIN_M}"
 df -h "${OUTPUT_ROOT}" || true
 
 echo "========== Stage 1/2: scene affine stabilization =========="
+STAGE1_CKPT="${STAGE1_OUTPUT_DIR}/checkpoint_latest.pt"
+if [[ "${STAGE1_EXTRA_EPOCHS}" == "0" ]]; then
+  if [[ -f "${STAGE1_CKPT}" ]]; then
+    echo "[stage1] STAGE1_EXTRA_EPOCHS=0 and checkpoint exists; reusing ${STAGE1_CKPT}"
+  else
+    echo "[ERROR] STAGE1_EXTRA_EPOCHS=0 but missing stage1 checkpoint: ${STAGE1_CKPT}" >&2
+    echo "        Set STAGE1_EXTRA_EPOCHS=3 for a fresh stage1 run, or point STAGE1_OUTPUT_DIR to an existing stage1 directory." >&2
+    exit 1
+  fi
+else
 CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_smpl.py \
   --path-config "${PATH_CONFIG}" \
   --train-config "${STAGE1_CONFIG}" \
@@ -125,8 +142,8 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_
   --override "optim.log_interval=${LOG_INTERVAL}" \
   --override "optim.log_style=progress" \
   --override "optim.progress_log_keys=loss_total,loss_hsi_depth_teacher,loss_hsi_anchor_depth,loss_hsi_teacher_scene_affine,loss_hsi_scene_scale_temporal,loss_hsi_scene_bias_temporal,metric_hsi_scene_log_scale_delta,metric_hsi_scene_bias_delta"
+fi
 
-STAGE1_CKPT="${STAGE1_OUTPUT_DIR}/checkpoint_latest.pt"
 [[ -f "${STAGE1_CKPT}" ]] || { echo "[ERROR] Stage1 checkpoint missing: ${STAGE1_CKPT}" >&2; exit 1; }
 STAGE1_EPOCH="$(read_epoch "${STAGE1_CKPT}")"
 STAGE2_TOTAL_EPOCHS=$((STAGE1_EPOCH + STAGE2_EXTRA_EPOCHS))
@@ -174,9 +191,15 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_
   --override "model.hsi_temporal_momentum_decay=${MOMENTUM_DECAY}" \
   --override "model.hsi_temporal_momentum_detach=true" \
   --override "model.hsi_temporal_momentum_use_track_ids=true" \
+  --override "model.hsi_scene_affine_mode=${SCENE_AFFINE_MODE}" \
+  --override "model.hsi_scene_affine_ema_alpha=${SCENE_AFFINE_EMA_ALPHA}" \
+  --override "teacher.model_overrides.hsi_scene_affine_mode=${SCENE_AFFINE_MODE}" \
   --override "loss.hsi_transl_velocity_weight=4.0" \
   --override "loss.hsi_joints_velocity_weight=10.0" \
   --override "loss.hsi_joints_acceleration_weight=6.0" \
+  --override "loss.hsi_temporal_no_worse_weight=${TEMPORAL_NO_WORSE_WEIGHT}" \
+  --override "loss.hsi_temporal_no_worse_margin_m=${TEMPORAL_NO_WORSE_MARGIN_M}" \
+  --override "loss.hsi_temporal_no_worse_accel_margin_m=${TEMPORAL_NO_WORSE_ACCEL_MARGIN_M}" \
   --override "loss.hsi_scene_scale_temporal_weight=0.0" \
   --override "loss.hsi_scene_scale_sequence_weight=0.0" \
   --override "loss.hsi_scene_bias_temporal_weight=0.0" \
@@ -193,7 +216,7 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_
   --override "optim.grad_clip_norm=0.10" \
   --override "optim.log_interval=${LOG_INTERVAL}" \
   --override "optim.log_style=progress" \
-  --override "optim.progress_log_keys=loss_total,loss_hsi_transl_cam,loss_hsi_joints3d,loss_hsi_vertices,loss_hsi_teacher_transl,loss_hsi_teacher_joints,loss_hsi_transl_velocity,loss_hsi_joints_velocity,loss_hsi_joints_acceleration"
+  --override "optim.progress_log_keys=loss_total,loss_hsi_transl_cam,loss_hsi_joints3d,loss_hsi_vertices,loss_hsi_teacher_transl,loss_hsi_teacher_joints,loss_hsi_transl_velocity,loss_hsi_joints_velocity,loss_hsi_joints_acceleration,loss_hsi_temporal_no_worse,metric_hsi_temporal_no_worse_ratio,metric_hsi_temporal_no_worse_l1"
 
 echo "========== SMPL HSI scene-then-temporal-momentum training finished =========="
 echo "Stage1 checkpoint: ${STAGE1_CKPT}"
