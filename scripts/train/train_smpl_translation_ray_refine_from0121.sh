@@ -56,6 +56,7 @@ echo "Output        : ${OUTPUT_DIR}"
 echo "LR            : ${LR}"
 echo "Max humans    : ${MAX_HUMANS}"
 echo "Num views     : ${NUM_VIEWS}"
+echo "CUDA devices  : ${CUDA_VISIBLE_DEVICES_VALUE}"
 echo "Depth/HSI     : disabled for base translation repair"
 
 CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_smpl.py \
@@ -66,6 +67,9 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_
   --override "datasets.bedlam_root=${BEDLAM_ROOT}" \
   --override "datasets.bedlam_boxes_root=${PREPROCESSED_ROOT}" \
   --override "checkpoint.resume=${INIT_CKPT}" \
+  --override "checkpoint.save_final=true" \
+  --override "checkpoint.save_epoch_checkpoint=false" \
+  --override "checkpoint.save_latest=true" \
   --override "experiment.output_dir=${OUTPUT_DIR}" \
   --override "data.sequence_length=${NUM_VIEWS}" \
   --override "data.val_split=" \
@@ -125,6 +129,7 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_
   --override "optim.epochs=${TOTAL_EPOCHS}" \
   --override "optim.lr=${LR}" \
   --override "optim.batch_size=1" \
+  --override "optim.save_interval=0" \
   --override "optim.log_interval=20"
 
 echo "========== SMPL Translation Ray Refine finished =========="

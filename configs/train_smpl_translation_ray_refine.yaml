@@ -61,6 +61,9 @@ checkpoint:
   strict: false
   resume_strict: false
   resume_optimizer: false
+  save_final: true
+  save_epoch_checkpoint: false
+  save_latest: true
 
 optim:
   batch_size: 1
@@ -69,7 +72,7 @@ optim:
   weight_decay: 0.05
   grad_clip_norm: 1.0
   log_interval: 20
-  save_interval: 1
+  save_interval: 0
   val_interval: 1
   progress_log_keys:
     - loss_total

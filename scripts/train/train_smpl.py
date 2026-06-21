@@ -91,6 +91,15 @@ def main() -> None:
     epochs = int(config["optim"]["epochs"])
     train_started_at = time.monotonic()
     total_train_steps = max((epochs - start_epoch) * len(train_loader), 1)
+    print(
+        "[data] "
+        f"train_samples={len(train_loader.dataset)} "
+        f"batch_size={int(config['optim']['batch_size'])} "
+        f"steps_per_epoch={len(train_loader)} "
+        f"start_epoch={start_epoch} total_epochs={epochs} "
+        f"remaining_steps={total_train_steps}",
+        flush=True,
+    )
     for epoch in range(start_epoch, epochs):
         global_step = train_one_epoch(
             model=model,
@@ -109,9 +118,12 @@ def main() -> None:
         )
         if val_loader is not None and (epoch + 1) % int(config["optim"].get("val_interval", 1)) == 0:
             validate(model, criterion, val_loader, device, epoch, config, teacher_model=teacher_model)
-        if (epoch + 1) % int(config["optim"].get("save_interval", 1)) == 0:
-            save_checkpoint(model, optimizer, epoch + 1, global_step, config, output_dir / f"checkpoint_epoch_{epoch + 1:04d}.pt")
-            save_checkpoint(model, optimizer, epoch + 1, global_step, config, output_dir / "checkpoint_latest.pt")
+        if should_save_checkpoint(config, epoch + 1, epochs):
+            checkpoint_cfg = config.get("checkpoint", {})
+            if bool(checkpoint_cfg.get("save_epoch_checkpoint", True)):
+                save_checkpoint(model, optimizer, epoch + 1, global_step, config, output_dir / f"checkpoint_epoch_{epoch + 1:04d}.pt")
+            if bool(checkpoint_cfg.get("save_latest", True)):
+                save_checkpoint(model, optimizer, epoch + 1, global_step, config, output_dir / "checkpoint_latest.pt")
 
 
 def parse_args() -> argparse.Namespace:
@@ -779,6 +791,13 @@ def save_checkpoint(
         path,
     )
     print(f"[ckpt] saved: {path}")
+
+
+def should_save_checkpoint(config: dict[str, Any], epoch: int, total_epochs: int) -> bool:
+    save_interval = int(config.get("optim", {}).get("save_interval", 1) or 0)
+    interval_due = save_interval > 0 and epoch % save_interval == 0
+    final_due = bool(config.get("checkpoint", {}).get("save_final", False)) and epoch == int(total_epochs)
+    return interval_due or final_due
 
 
 def set_seed(seed: int) -> None:

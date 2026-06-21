@@ -136,6 +136,9 @@ run_translation_stage() {
     --override "checkpoint.resume=${init_ckpt}" \
     --override "checkpoint.resume_strict=false" \
     --override "checkpoint.resume_optimizer=false" \
+    --override "checkpoint.save_final=true" \
+    --override "checkpoint.save_epoch_checkpoint=false" \
+    --override "checkpoint.save_latest=true" \
     --override "experiment.output_dir=${output_dir}" \
     --override "data.sequence_length=${NUM_VIEWS}" \
     --override "data.val_split=" \
@@ -193,6 +196,7 @@ run_translation_stage() {
     --override "optim.epochs=${total_epochs}" \
     --override "optim.lr=${lr}" \
     --override "optim.batch_size=1" \
+    --override "optim.save_interval=0" \
     --override "optim.grad_clip_norm=1.0" \
     --override "optim.log_interval=${LOG_INTERVAL}" \
     --override "optim.log_style=progress" \
@@ -204,6 +208,7 @@ echo "Repo             : ${REPO_ROOT}"
 echo "Init HSI ckpt    : ${INIT_HSI_CKPT}"
 echo "Output root      : ${OUTPUT_ROOT}"
 echo "Eval root        : ${EVAL_ROOT}"
+echo "CUDA devices     : ${CUDA_VISIBLE_DEVICES_VALUE}"
 echo "Views/max humans : ${NUM_VIEWS}/${MAX_HUMANS}"
 
 if [[ "${RUN_T0_EVAL}" == "1" ]]; then
