@@ -63,6 +63,8 @@
     "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/hsi_scene_then_temporal_momentum_clip/frames/0025_seq_000000_0125_affine_compare.png",
     "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/hsi_scene_then_temporal_momentum_clip/frames/0026_seq_000000_0130_affine_compare.png"
   ],
+  "ply_frame_indices": [],
+  "ply_files": [],
   "affine": {
     "per_frame_scale": [
       7.542459487915039,
