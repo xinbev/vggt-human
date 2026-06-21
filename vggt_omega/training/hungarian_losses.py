@@ -37,6 +37,9 @@ class HungarianSMPLLoss(nn.Module):
         aux_giou_weight: float | None = None,
         joints3d_weight: float = 0.0,
         projected_joints2d_weight: float = 0.0,
+        transl_refine_delta_reg_weight: float = 0.0,
+        transl_refine_ray_depth_weight: float = 0.0,
+        transl_refine_tangent_weight: float = 0.0,
         projected_bbox_weight: float = 0.0,
         projected_giou_weight: float = 0.0,
         projected_bbox_source: str = "joints",
@@ -129,6 +132,9 @@ class HungarianSMPLLoss(nn.Module):
         self.aux_giou_weight = giou_weight if aux_giou_weight is None else aux_giou_weight
         self.joints3d_weight = joints3d_weight
         self.projected_joints2d_weight = projected_joints2d_weight
+        self.transl_refine_delta_reg_weight = transl_refine_delta_reg_weight
+        self.transl_refine_ray_depth_weight = transl_refine_ray_depth_weight
+        self.transl_refine_tangent_weight = transl_refine_tangent_weight
         self.projected_bbox_weight = projected_bbox_weight
         self.projected_giou_weight = projected_giou_weight
         self.projected_bbox_source = projected_bbox_source
@@ -249,10 +255,23 @@ class HungarianSMPLLoss(nn.Module):
                     "loss_id": zero,
                     "loss_joints3d": zero,
                     "loss_projected_joints2d": zero,
+                    "loss_transl_refine_delta_reg": zero,
+                    "loss_transl_refine_ray_depth": zero,
+                    "loss_transl_refine_tangent": zero,
                     "loss_projected_bbox": zero,
                     "loss_projected_giou": zero,
                     "metric_joints3d_l1": zero.detach(),
                     "metric_projected_joints2d_l1": zero.detach(),
+                    "metric_base_transl_l1": zero.detach(),
+                    "metric_refined_transl_l1": zero.detach(),
+                    "metric_transl_refine_l1_delta": zero.detach(),
+                    "metric_transl_box_prior_weight_abs": zero.detach(),
+                    "metric_base_transl_ray_depth_l1": zero.detach(),
+                    "metric_refined_transl_ray_depth_l1": zero.detach(),
+                    "metric_transl_ray_depth_l1_delta": zero.detach(),
+                    "metric_base_transl_tangent_l1": zero.detach(),
+                    "metric_refined_transl_tangent_l1": zero.detach(),
+                    "metric_transl_tangent_l1_delta": zero.detach(),
                     "metric_bbox_iou_mean": zero.detach(),
                     "metric_projected_bbox_iou_mean": zero.detach(),
                     "metric_conf_target_pos_mean": zero.detach(),
@@ -284,6 +303,7 @@ class HungarianSMPLLoss(nn.Module):
             losses["loss_id"] = self._identity_loss(flat_id_embed, frame_idx, src_idx, matched)
             joint_losses = self._smpl_joint_losses(predictions, pred_betas, pred_transl_cam, frame_idx, src_idx, matched)
             losses.update(joint_losses)
+            losses.update(self._translation_refine_losses(predictions, pred_transl_cam, frame_idx, src_idx, matched))
             projected = self._projected_bbox_losses(predictions, pred_betas, pred_transl_cam, frame_idx, src_idx, target_boxes)
             losses.update(projected)
             losses.update(self._hsi_refined_losses(predictions, batch, frame_idx, src_idx, matched))
@@ -298,6 +318,9 @@ class HungarianSMPLLoss(nn.Module):
             + self.id_weight * losses["loss_id"]
             + self.joints3d_weight * losses["loss_joints3d"]
             + self.projected_joints2d_weight * losses["loss_projected_joints2d"]
+            + self.transl_refine_delta_reg_weight * losses["loss_transl_refine_delta_reg"]
+            + self.transl_refine_ray_depth_weight * losses["loss_transl_refine_ray_depth"]
+            + self.transl_refine_tangent_weight * losses["loss_transl_refine_tangent"]
             + self.projected_bbox_weight * losses["loss_projected_bbox"]
             + self.projected_giou_weight * losses["loss_projected_giou"]
             + self.duplicate_conf_weight * losses["loss_duplicate_conf"]
@@ -579,6 +602,127 @@ class HungarianSMPLLoss(nn.Module):
             "loss_projected_joints2d": projected_l1,
             "metric_joints3d_l1": joints3d_l1.detach(),
             "metric_projected_joints2d_l1": projected_l1.detach(),
+        }
+
+    def _translation_refine_losses(
+        self,
+        predictions: dict[str, torch.Tensor],
+        pred_transl_cam: torch.Tensor,
+        frame_idx: torch.Tensor,
+        src_idx: torch.Tensor,
+        matched: dict[str, torch.Tensor],
+    ) -> dict[str, torch.Tensor]:
+        target_transl = matched["transl_cam"].to(device=pred_transl_cam.device, dtype=pred_transl_cam.dtype)
+        pred_transl = pred_transl_cam[frame_idx, src_idx]
+        delta = predictions.get("pred_transl_cam_delta")
+        if delta is not None:
+            flat_delta = _flatten_prediction(delta, unframed_ndim=3)
+            matched_delta = flat_delta[frame_idx, src_idx]
+            delta_reg = F.smooth_l1_loss(matched_delta, torch.zeros_like(matched_delta))
+        else:
+            delta_reg = pred_transl.sum() * 0.0
+
+        base_transl = predictions.get("base_pred_transl_cam")
+        flat_base_transl = None
+        if base_transl is not None:
+            flat_base_transl = _flatten_prediction(base_transl, unframed_ndim=3)
+            base_l1 = F.l1_loss(flat_base_transl[frame_idx, src_idx], target_transl)
+        else:
+            base_l1 = F.l1_loss(pred_transl, target_transl).detach()
+        refined_l1 = F.l1_loss(pred_transl, target_transl)
+        box_prior_weight = predictions.get("pred_transl_box_prior_weight")
+        if box_prior_weight is not None:
+            flat_weight = _flatten_prediction(box_prior_weight, unframed_ndim=3)
+            matched_weight = flat_weight[frame_idx, src_idx]
+            box_prior_weight_abs = matched_weight.abs().mean()
+        else:
+            box_prior_weight_abs = pred_transl.sum() * 0.0
+
+        ray_depth_loss = pred_transl.sum() * 0.0
+        tangent_loss = pred_transl.sum() * 0.0
+        base_ray_l1 = pred_transl.sum() * 0.0
+        refined_ray_l1 = pred_transl.sum() * 0.0
+        base_tangent_l1 = pred_transl.sum() * 0.0
+        refined_tangent_l1 = pred_transl.sum() * 0.0
+        ray_dir = predictions.get("pred_transl_ray_dir")
+        tangent_x = predictions.get("pred_transl_tangent_x")
+        tangent_y = predictions.get("pred_transl_tangent_y")
+        if ray_dir is not None and tangent_x is not None and tangent_y is not None:
+            flat_ray = _flatten_prediction(ray_dir, unframed_ndim=3)
+            flat_tx = _flatten_prediction(tangent_x, unframed_ndim=3)
+            flat_ty = _flatten_prediction(tangent_y, unframed_ndim=3)
+            matched_ray = flat_ray[frame_idx, src_idx].to(dtype=pred_transl.dtype)
+            matched_tx = flat_tx[frame_idx, src_idx].to(dtype=pred_transl.dtype)
+            matched_ty = flat_ty[frame_idx, src_idx].to(dtype=pred_transl.dtype)
+            target_ray_depth = (target_transl * matched_ray).sum(dim=-1, keepdim=True)
+            target_tangent = torch.cat(
+                [
+                    (target_transl * matched_tx).sum(dim=-1, keepdim=True),
+                    (target_transl * matched_ty).sum(dim=-1, keepdim=True),
+                ],
+                dim=-1,
+            )
+            pred_ray_depth = predictions.get("pred_transl_ray_depth")
+            pred_tangent = predictions.get("pred_transl_tangent")
+            base_ray_depth = predictions.get("base_pred_transl_ray_depth")
+            base_tangent = predictions.get("base_pred_transl_tangent")
+            if pred_ray_depth is not None:
+                flat_pred_ray_depth = _flatten_prediction(pred_ray_depth, unframed_ndim=3)
+                matched_pred_ray_depth = flat_pred_ray_depth[frame_idx, src_idx].to(dtype=pred_transl.dtype)
+            else:
+                matched_pred_ray_depth = (pred_transl * matched_ray).sum(dim=-1, keepdim=True)
+            if pred_tangent is not None:
+                flat_pred_tangent = _flatten_prediction(pred_tangent, unframed_ndim=3)
+                matched_pred_tangent = flat_pred_tangent[frame_idx, src_idx].to(dtype=pred_transl.dtype)
+            else:
+                matched_pred_tangent = torch.cat(
+                    [
+                        (pred_transl * matched_tx).sum(dim=-1, keepdim=True),
+                        (pred_transl * matched_ty).sum(dim=-1, keepdim=True),
+                    ],
+                    dim=-1,
+                )
+            if base_ray_depth is not None:
+                flat_base_ray_depth = _flatten_prediction(base_ray_depth, unframed_ndim=3)
+                matched_base_ray_depth = flat_base_ray_depth[frame_idx, src_idx].to(dtype=pred_transl.dtype)
+            else:
+                matched_base_ray_depth = (
+                    (flat_base_transl[frame_idx, src_idx] * matched_ray).sum(dim=-1, keepdim=True)
+                    if flat_base_transl is not None
+                    else matched_pred_ray_depth
+                )
+            if base_tangent is not None:
+                flat_base_tangent = _flatten_prediction(base_tangent, unframed_ndim=3)
+                matched_base_tangent = flat_base_tangent[frame_idx, src_idx].to(dtype=pred_transl.dtype)
+            else:
+                base_values = flat_base_transl[frame_idx, src_idx] if flat_base_transl is not None else pred_transl
+                matched_base_tangent = torch.cat(
+                    [
+                        (base_values * matched_tx).sum(dim=-1, keepdim=True),
+                        (base_values * matched_ty).sum(dim=-1, keepdim=True),
+                    ],
+                    dim=-1,
+                )
+            ray_depth_loss = F.l1_loss(matched_pred_ray_depth, target_ray_depth)
+            tangent_loss = F.l1_loss(matched_pred_tangent, target_tangent)
+            base_ray_l1 = F.l1_loss(matched_base_ray_depth, target_ray_depth)
+            refined_ray_l1 = ray_depth_loss
+            base_tangent_l1 = F.l1_loss(matched_base_tangent, target_tangent)
+            refined_tangent_l1 = tangent_loss
+        return {
+            "loss_transl_refine_delta_reg": delta_reg,
+            "loss_transl_refine_ray_depth": ray_depth_loss,
+            "loss_transl_refine_tangent": tangent_loss,
+            "metric_base_transl_l1": base_l1.detach(),
+            "metric_refined_transl_l1": refined_l1.detach(),
+            "metric_transl_refine_l1_delta": (refined_l1 - base_l1).detach(),
+            "metric_transl_box_prior_weight_abs": box_prior_weight_abs.detach(),
+            "metric_base_transl_ray_depth_l1": base_ray_l1.detach(),
+            "metric_refined_transl_ray_depth_l1": refined_ray_l1.detach(),
+            "metric_transl_ray_depth_l1_delta": (refined_ray_l1 - base_ray_l1).detach(),
+            "metric_base_transl_tangent_l1": base_tangent_l1.detach(),
+            "metric_refined_transl_tangent_l1": refined_tangent_l1.detach(),
+            "metric_transl_tangent_l1_delta": (refined_tangent_l1 - base_tangent_l1).detach(),
         }
 
     def _get_smpl_layer(self, device: torch.device) -> SMPLLayer:

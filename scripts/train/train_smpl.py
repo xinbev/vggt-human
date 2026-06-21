@@ -169,6 +169,14 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         smpl_predict_id_embed=bool(model_cfg.get("predict_id_embed", False)),
         smpl_id_embed_dim=int(model_cfg.get("id_embed_dim", 256)),
         smpl_return_aux=bool(model_cfg.get("smpl_return_aux", False)),
+        smpl_enable_translation_refine=bool(model_cfg.get("smpl_enable_translation_refine", False)),
+        smpl_translation_refine_hidden_dim=int(model_cfg.get("smpl_translation_refine_hidden_dim", 512)),
+        smpl_translation_refine_max_ray_delta_m=float(model_cfg.get("smpl_translation_refine_max_ray_delta_m", 0.60)),
+        smpl_translation_refine_max_tangent_delta_m=float(model_cfg.get("smpl_translation_refine_max_tangent_delta_m", 0.35)),
+        smpl_translation_refine_max_log_depth_delta=float(model_cfg.get("smpl_translation_refine_max_log_depth_delta", 0.50)),
+        smpl_translation_refine_max_box_prior_weight=float(model_cfg.get("smpl_translation_refine_max_box_prior_weight", 0.50)),
+        smpl_translation_refine_human_height_prior_m=float(model_cfg.get("smpl_translation_refine_human_height_prior_m", 1.70)),
+        smpl_translation_refine_use_log_depth=bool(model_cfg.get("smpl_translation_refine_use_log_depth", True)),
         smpl_query_box_prior=bool(model_cfg.get("smpl_query_box_prior", False)),
         smpl_query_patch_pool=bool(model_cfg.get("smpl_query_patch_pool", False)),
         smpl_query_patch_pool_expand=float(model_cfg.get("smpl_query_patch_pool_expand", 0.10)),
@@ -233,6 +241,24 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
     smpl_head = getattr(model, "smpl_head", None)
     if smpl_head is not None and bool(model_cfg.get("freeze_smpl_head", False)):
         freeze_module(smpl_head)
+    if smpl_head is not None and bool(model_cfg.get("train_smpl_translation_heads", False)):
+        regression_head = getattr(smpl_head, "regression_head", None)
+        transl_heads = getattr(regression_head, "transl_cam_heads", None)
+        if transl_heads is None:
+            raise ValueError("train_smpl_translation_heads=true requires SMPL transl_cam_heads")
+        unfreeze_module(transl_heads)
+    if smpl_head is not None and bool(model_cfg.get("train_smpl_translation_refiner", False)):
+        regression_head = getattr(smpl_head, "regression_head", None)
+        translation_refiner = getattr(regression_head, "translation_refiner", None)
+        if translation_refiner is None:
+            raise ValueError("train_smpl_translation_refiner=true requires model.smpl_enable_translation_refine=true")
+        unfreeze_module(translation_refiner)
+    if smpl_head is not None and bool(model_cfg.get("train_smpl_box_heads", False)):
+        regression_head = getattr(smpl_head, "regression_head", None)
+        for name in ("box_heads", "box_delta_heads"):
+            module = getattr(regression_head, name, None)
+            if module is not None:
+                unfreeze_module(module)
     hsi_head = getattr(model, "hsi_refinement_head", None)
     if hsi_head is not None:
         if bool(model_cfg.get("freeze_hsi_scene_affine", False)):
@@ -705,6 +731,15 @@ def compact_loss_name(key: str) -> str:
         "loss_hsi_scene_bias_sequence": "biasSeq",
         "metric_hsi_scene_log_scale_delta": "dLogS",
         "metric_hsi_scene_bias_delta": "dBias",
+        "loss_transl_refine_delta_reg": "tDeltaReg",
+        "loss_transl_refine_ray_depth": "rayD",
+        "loss_transl_refine_tangent": "tan",
+        "metric_base_transl_l1": "baseT",
+        "metric_refined_transl_l1": "refT",
+        "metric_transl_refine_l1_delta": "dT",
+        "metric_transl_box_prior_weight_abs": "boxPriorW",
+        "metric_transl_ray_depth_l1_delta": "dRay",
+        "metric_transl_tangent_l1_delta": "dTan",
     }
     return mapping.get(key, key.removeprefix("loss_").removeprefix("metric_"))
 

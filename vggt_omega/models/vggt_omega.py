@@ -33,6 +33,14 @@ class VGGTOmega(nn.Module):
         smpl_predict_id_embed: bool = False,
         smpl_id_embed_dim: int = 256,
         smpl_return_aux: bool = False,
+        smpl_enable_translation_refine: bool = False,
+        smpl_translation_refine_hidden_dim: int = 512,
+        smpl_translation_refine_max_ray_delta_m: float = 0.60,
+        smpl_translation_refine_max_tangent_delta_m: float = 0.35,
+        smpl_translation_refine_max_log_depth_delta: float = 0.50,
+        smpl_translation_refine_max_box_prior_weight: float = 0.50,
+        smpl_translation_refine_human_height_prior_m: float = 1.70,
+        smpl_translation_refine_use_log_depth: bool = True,
         smpl_query_box_prior: bool = False,
         smpl_query_patch_pool: bool = False,
         smpl_query_patch_pool_expand: float = 0.10,
@@ -61,6 +69,8 @@ class VGGTOmega(nn.Module):
         super().__init__()
         if enable_smpl and num_smpl_queries <= 0:
             raise ValueError("enable_smpl=True requires num_smpl_queries > 0")
+        if smpl_enable_translation_refine and not enable_camera:
+            raise ValueError("smpl_enable_translation_refine=True requires enable_camera=True")
 
         self.aggregator = Aggregator(
             patch_size=patch_size,
@@ -73,6 +83,7 @@ class VGGTOmega(nn.Module):
         self.freeze_aggregator_forward = freeze_aggregator_forward
         self.hsi_scene_affine_mode = str(hsi_scene_affine_mode or "per_frame")
         self.hsi_scene_affine_ema_alpha = float(hsi_scene_affine_ema_alpha)
+        self.image_size = int(image_size)
         _warn_if_rope_not_max(self.aggregator)
         self.camera_head = CameraHead(dim_in=2 * embed_dim) if enable_camera else None
         self.dense_head = DenseHead(dim_in=2 * embed_dim, patch_size=patch_size) if enable_depth else None
@@ -87,6 +98,15 @@ class VGGTOmega(nn.Module):
                 predict_id_embed=smpl_predict_id_embed,
                 id_embed_dim=smpl_id_embed_dim,
                 return_aux=smpl_return_aux,
+                enable_translation_refine=smpl_enable_translation_refine,
+                translation_refine_hidden_dim=smpl_translation_refine_hidden_dim,
+                translation_refine_max_ray_delta_m=smpl_translation_refine_max_ray_delta_m,
+                translation_refine_max_tangent_delta_m=smpl_translation_refine_max_tangent_delta_m,
+                translation_refine_max_log_depth_delta=smpl_translation_refine_max_log_depth_delta,
+                translation_refine_max_box_prior_weight=smpl_translation_refine_max_box_prior_weight,
+                translation_refine_human_height_prior_m=smpl_translation_refine_human_height_prior_m,
+                translation_refine_use_log_depth=smpl_translation_refine_use_log_depth,
+                image_size=image_size,
             )
             if enable_smpl
             else None
@@ -173,6 +193,7 @@ class VGGTOmega(nn.Module):
                         aggregated_tokens_list,
                         token_layout=token_layout,
                         reference_boxes=smpl_reference_boxes,
+                        pose_enc=predictions.get("pose_enc"),
                     )
                 )
             if self.hsi_refinement_head is not None:
