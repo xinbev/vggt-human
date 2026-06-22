@@ -32,6 +32,11 @@ NUM_WORKERS="${NUM_WORKERS:-4}"
 MOMENTUM_DECAY="${MOMENTUM_DECAY:-0.7}"
 SCENE_AFFINE_MODE="${SCENE_AFFINE_MODE:-clip_median}"
 SCENE_AFFINE_EMA_ALPHA="${SCENE_AFFINE_EMA_ALPHA:-0.25}"
+SMPL_ENABLE_TRANSLATION_REFINE="${SMPL_ENABLE_TRANSLATION_REFINE:-false}"
+SMPL_TRANSLATION_REFINE_MAX_RAY_DELTA_M="${SMPL_TRANSLATION_REFINE_MAX_RAY_DELTA_M:-1.20}"
+SMPL_TRANSLATION_REFINE_MAX_TANGENT_DELTA_M="${SMPL_TRANSLATION_REFINE_MAX_TANGENT_DELTA_M:-0.60}"
+SMPL_TRANSLATION_REFINE_MAX_LOG_DEPTH_DELTA="${SMPL_TRANSLATION_REFINE_MAX_LOG_DEPTH_DELTA:-0.85}"
+SMPL_TRANSLATION_REFINE_MAX_BOX_PRIOR_WEIGHT="${SMPL_TRANSLATION_REFINE_MAX_BOX_PRIOR_WEIGHT:-1.00}"
 TEMPORAL_NO_WORSE_WEIGHT="${TEMPORAL_NO_WORSE_WEIGHT:-0.0}"
 TEMPORAL_NO_WORSE_MARGIN_M="${TEMPORAL_NO_WORSE_MARGIN_M:-0.002}"
 TEMPORAL_NO_WORSE_ACCEL_MARGIN_M="${TEMPORAL_NO_WORSE_ACCEL_MARGIN_M:-0.003}"
@@ -82,6 +87,7 @@ echo "Stage2 extra epochs : ${STAGE2_EXTRA_EPOCHS}"
 echo "Stage2 LR           : ${STAGE2_LR}"
 echo "Momentum decay      : ${MOMENTUM_DECAY}"
 echo "Scene affine mode   : ${SCENE_AFFINE_MODE}"
+echo "SMPL ray refine     : ${SMPL_ENABLE_TRANSLATION_REFINE}"
 echo "Temporal no-worse   : weight=${TEMPORAL_NO_WORSE_WEIGHT} margin=${TEMPORAL_NO_WORSE_MARGIN_M} accel_margin=${TEMPORAL_NO_WORSE_ACCEL_MARGIN_M}"
 df -h "${OUTPUT_ROOT}" || true
 
@@ -126,6 +132,13 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_
   --override "model.freeze_camera_head=true" \
   --override "model.freeze_dense_head=true" \
   --override "model.freeze_smpl_head=true" \
+  --override "model.smpl_enable_translation_refine=${SMPL_ENABLE_TRANSLATION_REFINE}" \
+  --override "model.smpl_translation_refine_max_ray_delta_m=${SMPL_TRANSLATION_REFINE_MAX_RAY_DELTA_M}" \
+  --override "model.smpl_translation_refine_max_tangent_delta_m=${SMPL_TRANSLATION_REFINE_MAX_TANGENT_DELTA_M}" \
+  --override "model.smpl_translation_refine_max_log_depth_delta=${SMPL_TRANSLATION_REFINE_MAX_LOG_DEPTH_DELTA}" \
+  --override "model.smpl_translation_refine_max_box_prior_weight=${SMPL_TRANSLATION_REFINE_MAX_BOX_PRIOR_WEIGHT}" \
+  --override "model.train_smpl_translation_heads=false" \
+  --override "model.train_smpl_translation_refiner=false" \
   --override "model.freeze_hsi_backbone=true" \
   --override "model.freeze_hsi_scene_affine=false" \
   --override "model.train_hsi_scene_affine_only=true" \
@@ -183,6 +196,13 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_
   --override "model.freeze_camera_head=true" \
   --override "model.freeze_dense_head=true" \
   --override "model.freeze_smpl_head=true" \
+  --override "model.smpl_enable_translation_refine=${SMPL_ENABLE_TRANSLATION_REFINE}" \
+  --override "model.smpl_translation_refine_max_ray_delta_m=${SMPL_TRANSLATION_REFINE_MAX_RAY_DELTA_M}" \
+  --override "model.smpl_translation_refine_max_tangent_delta_m=${SMPL_TRANSLATION_REFINE_MAX_TANGENT_DELTA_M}" \
+  --override "model.smpl_translation_refine_max_log_depth_delta=${SMPL_TRANSLATION_REFINE_MAX_LOG_DEPTH_DELTA}" \
+  --override "model.smpl_translation_refine_max_box_prior_weight=${SMPL_TRANSLATION_REFINE_MAX_BOX_PRIOR_WEIGHT}" \
+  --override "model.train_smpl_translation_heads=false" \
+  --override "model.train_smpl_translation_refiner=false" \
   --override "model.freeze_hsi_backbone=true" \
   --override "model.freeze_hsi_scene_affine=true" \
   --override "model.train_hsi_transl_only=true" \

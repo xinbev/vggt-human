@@ -31,6 +31,11 @@ INCLUDE_ERROR_PANELS="${INCLUDE_ERROR_PANELS:-false}"
 DEPTH_MAX_M="${DEPTH_MAX_M:-30.0}"
 MOMENTUM_DECAY="${MOMENTUM_DECAY:-0.7}"
 SCENE_AFFINE_MODE="${SCENE_AFFINE_MODE:-clip_median}"
+SMPL_ENABLE_TRANSLATION_REFINE="${SMPL_ENABLE_TRANSLATION_REFINE:-false}"
+SMPL_TRANSLATION_REFINE_MAX_RAY_DELTA_M="${SMPL_TRANSLATION_REFINE_MAX_RAY_DELTA_M:-1.20}"
+SMPL_TRANSLATION_REFINE_MAX_TANGENT_DELTA_M="${SMPL_TRANSLATION_REFINE_MAX_TANGENT_DELTA_M:-0.60}"
+SMPL_TRANSLATION_REFINE_MAX_LOG_DEPTH_DELTA="${SMPL_TRANSLATION_REFINE_MAX_LOG_DEPTH_DELTA:-0.85}"
+SMPL_TRANSLATION_REFINE_MAX_BOX_PRIOR_WEIGHT="${SMPL_TRANSLATION_REFINE_MAX_BOX_PRIOR_WEIGHT:-1.00}"
 
 cd "${REPO_ROOT}"
 mkdir -p "${OUTPUT_DIR}"
@@ -55,6 +60,7 @@ echo "GT prior    : ${USE_GT_BOX_PRIOR}"
 echo "Use HSI     : ${USE_HSI_REFINED}"
 echo "Momentum    : ${MOMENTUM_DECAY}"
 echo "Scene affine: ${SCENE_AFFINE_MODE}"
+echo "SMPL ray ref: ${SMPL_ENABLE_TRANSLATION_REFINE}"
 
 PRIOR_ARGS=()
 if [[ "${USE_GT_BOX_PRIOR}" == "true" ]]; then
@@ -101,6 +107,11 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/vis/visualiz
   --override "model.enable_camera=true" \
   --override "model.enable_depth=true" \
   --override "model.enable_hsi_refine=true" \
+  --override "model.smpl_enable_translation_refine=${SMPL_ENABLE_TRANSLATION_REFINE}" \
+  --override "model.smpl_translation_refine_max_ray_delta_m=${SMPL_TRANSLATION_REFINE_MAX_RAY_DELTA_M}" \
+  --override "model.smpl_translation_refine_max_tangent_delta_m=${SMPL_TRANSLATION_REFINE_MAX_TANGENT_DELTA_M}" \
+  --override "model.smpl_translation_refine_max_log_depth_delta=${SMPL_TRANSLATION_REFINE_MAX_LOG_DEPTH_DELTA}" \
+  --override "model.smpl_translation_refine_max_box_prior_weight=${SMPL_TRANSLATION_REFINE_MAX_BOX_PRIOR_WEIGHT}" \
   --override "model.freeze_hsi_scene_affine=true" \
   --override "model.train_hsi_transl_only=true" \
   --override "model.hsi_enable_temporal_momentum=true" \
