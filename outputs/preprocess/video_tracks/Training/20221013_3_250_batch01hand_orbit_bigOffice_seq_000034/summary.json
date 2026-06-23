@@ -1,0 +1,83 @@
+{
+  "source_name": "20221013_3_250_batch01hand_orbit_bigOffice_seq_000034",
+  "source_kind": "bedlam",
+  "source_video": null,
+  "source_frames_dir": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000034/rgb",
+  "bedlam": {
+    "root": "/home/zhw/xyb_space/bedlam/processed_bedlam",
+    "split": "Training",
+    "sequence": "20221013_3_250_batch01hand_orbit_bigOffice_seq_000034",
+    "sequence_dir": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000034"
+  },
+  "output_root": "outputs/preprocess/video_tracks/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000034",
+  "detector": {
+    "backend": "yolo_torchscript",
+    "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-omega/checkpoints/yolov8x.torchscript",
+    "image_size": 640,
+    "conf_threshold": 0.25,
+    "iou_threshold": 0.7
+  },
+  "tracker": {
+    "backend": "boosttrack",
+    "root": "/home/zhw/lab_users/xyb/home/projects/vggt-human/third_party/BoostTrack",
+    "weights_root": "/home/zhw/lab_users/xyb/home/projects/vggt-human/third_party/weights/BoostTrack",
+    "use_reid": true,
+    "use_ecc": false,
+    "max_age": 90,
+    "min_hits": 1
+  },
+  "sam2_masks": {
+    "enabled": false,
+    "root": "/home/zhw/lab_users/xyb/home/projects/vggt-human/third_party/sam2",
+    "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/third_party/weights/sam/sam2.1_hiera_large.pt"
+  },
+  "total_frames": 35,
+  "total_detections": 102,
+  "total_observations": 93,
+  "num_tracks": 5,
+  "max_people_per_frame": 3,
+  "track_lengths": {
+    "1": 3,
+    "2": 24,
+    "3": 35,
+    "4": 26,
+    "5": 5
+  },
+  "track_first_frame": {
+    "1": 0,
+    "2": 0,
+    "3": 0,
+    "4": 8,
+    "5": 30
+  },
+  "track_last_frame": {
+    "1": 2,
+    "2": 23,
+    "3": 34,
+    "4": 33,
+    "5": 34
+  },
+  "track_gap_count": 0,
+  "track_gap_max": 0,
+  "track_gap_mean": 0.0,
+  "track_confidence_mean": 0.9757760311326673,
+  "postprocess": {
+    "tracklet_stitching": {
+      "enabled": true,
+      "num_raw_tracklets": 5,
+      "num_final_tracks": 5,
+      "num_changed_observations": 5,
+      "track_id_map": {
+        "6": 5
+      },
+      "stitches": [],
+      "params": {
+        "max_gap": 30,
+        "center_thresh": 1.25,
+        "size_log_thresh": 0.7,
+        "min_score": 0.25,
+        "compact_ids": true
+      }
+    }
+  }
+}

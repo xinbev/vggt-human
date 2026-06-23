@@ -1,0 +1,18 @@
+{
+  "track_id_map": {
+    "6": 4,
+    "7": 1
+  },
+  "stitches": [
+    {
+      "source_id": 1,
+      "target_id": 7,
+      "score": 0.7448890031537446,
+      "gap": 1,
+      "center_norm": 0.14553189337343633,
+      "size_log_delta": 0.2462562962587603,
+      "pred_iou": 0.29517496126669057,
+      "final_id": 1
+    }
+  ]
+}

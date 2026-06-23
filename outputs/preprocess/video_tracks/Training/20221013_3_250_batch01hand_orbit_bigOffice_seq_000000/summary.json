@@ -40,22 +40,41 @@
     "1": 8,
     "2": 27,
     "3": 27,
-    "5": 17
+    "4": 17
   },
   "track_first_frame": {
     "1": 0,
     "2": 0,
     "3": 0,
-    "5": 10
+    "4": 10
   },
   "track_last_frame": {
     "1": 7,
     "2": 26,
     "3": 26,
-    "5": 26
+    "4": 26
   },
   "track_gap_count": 0,
   "track_gap_max": 0,
   "track_gap_mean": 0.0,
-  "track_confidence_mean": 0.963048035208183
+  "track_confidence_mean": 0.963048035208183,
+  "postprocess": {
+    "tracklet_stitching": {
+      "enabled": true,
+      "num_raw_tracklets": 4,
+      "num_final_tracks": 4,
+      "num_changed_observations": 17,
+      "track_id_map": {
+        "5": 4
+      },
+      "stitches": [],
+      "params": {
+        "max_gap": 30,
+        "center_thresh": 1.25,
+        "size_log_thresh": 0.7,
+        "min_score": 0.25,
+        "compact_ids": true
+      }
+    }
+  }
 }

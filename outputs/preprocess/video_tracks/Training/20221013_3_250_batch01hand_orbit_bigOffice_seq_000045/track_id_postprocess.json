@@ -1,0 +1,28 @@
+{
+  "track_id_map": {
+    "5": 1,
+    "6": 1
+  },
+  "stitches": [
+    {
+      "source_id": 1,
+      "target_id": 5,
+      "score": 0.7334334747829265,
+      "gap": 1,
+      "center_norm": 0.13213321609299547,
+      "size_log_delta": 0.3098453936115958,
+      "pred_iou": 0.3344775787915737,
+      "final_id": 1
+    },
+    {
+      "source_id": 5,
+      "target_id": 6,
+      "score": 0.568618908623144,
+      "gap": 2,
+      "center_norm": 0.17807051347652772,
+      "size_log_delta": 0.6617200741778975,
+      "pred_iou": 0.21751549891772368,
+      "final_id": 1
+    }
+  ]
+}
