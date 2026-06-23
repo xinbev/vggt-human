@@ -1,0 +1,15 @@
+# Optional video person observation frontend dependencies.
+# Keep this separate from the baseline requirements so VGGT-Omega training/inference
+# without video tracking is not forced to install third-party tracker stacks.
+
+-r requirements.txt
+
+# BoostTrack association / Kalman update dependencies.
+scipy
+lap
+
+# SAM2 image-mask backend. Install SAM2 itself from the local third_party checkout:
+#   SAM2_BUILD_CUDA=0 pip install -e third_party/sam2
+hydra-core>=1.3.2
+iopath>=0.1.10
+tqdm>=4.66.1
