@@ -78,6 +78,8 @@ def main() -> None:
                 batch["images"],
                 smpl_query_boxes=batch["gt_boxes"] if args.use_gt_box_prior else None,
                 smpl_query_boxes_mask=batch["boxes_mask"] if args.use_gt_box_prior else None,
+                smpl_track_ids=batch.get("gt_track_ids", batch.get("person_ids")),
+                smpl_track_mask=batch.get("gt_track_mask", batch.get("person_id_mask")),
             )
             evaluate_batch(
                 predictions,
@@ -90,7 +92,7 @@ def main() -> None:
                 frame_paths_by_index,
             )
             processed += batch_size
-            if processed >= args.max_samples:
+            if int(args.max_samples) > 0 and processed >= int(args.max_samples):
                 break
             if args.log_interval > 0 and processed % args.log_interval == 0:
                 print(f"[eval] processed={processed}")
@@ -129,6 +131,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--num-workers", type=int, default=2)
     parser.add_argument("--use-gt-box-prior", action="store_true")
+    parser.add_argument("--subset-indices-csv", default="", help="Optional CSV with dataset_index rows to evaluate, e.g. old bad_frame_person_rows.csv")
+    parser.add_argument("--subset-index-column", default="dataset_index")
+    parser.add_argument("--subset-frame-csv", default="", help="Optional CSV with sequence_name/frame_name rows; selects windows containing those frames")
+    parser.add_argument("--subset-sequence-column", default="sequence_name")
+    parser.add_argument("--subset-frame-column", default="frame_name")
+    parser.add_argument("--subset-unique", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--log-interval", type=int, default=20)
     parser.add_argument("--top-worst", type=int, default=20)
     parser.add_argument("--override", action="append", default=[])
@@ -144,7 +152,7 @@ def load_config(args: argparse.Namespace) -> dict[str, Any]:
     model_cfg["enable_camera"] = True
     model_cfg["enable_depth"] = False
     model_cfg["enable_hsi_refine"] = False
-    model_cfg["smpl_enable_translation_refine"] = True
+    model_cfg.setdefault("smpl_enable_translation_refine", True)
     data_cfg = config.setdefault("data", {})
     data_cfg["require_boxes"] = True
     data_cfg["require_smpl"] = True
@@ -166,8 +174,7 @@ def build_eval_loader(config: dict[str, Any], args: argparse.Namespace) -> tuple
         boxes_root=require_path(config, data_cfg["boxes_root_key"], allow_empty=False),
         require_boxes=True,
     )
-    end = min(len(dataset), int(args.start_index) + int(args.max_samples))
-    selected_indices = list(range(int(args.start_index), end))
+    selected_indices = select_eval_indices(dataset, args)
     frame_paths_by_index = {index: frame_paths_for_dataset_index(dataset, index) for index in selected_indices}
     subset = Subset(dataset, selected_indices)
     loader = DataLoader(
@@ -180,6 +187,78 @@ def build_eval_loader(config: dict[str, Any], args: argparse.Namespace) -> tuple
         drop_last=False,
     )
     return loader, selected_indices, frame_paths_by_index
+
+
+def select_eval_indices(dataset: BedlamDataset, args: argparse.Namespace) -> list[int]:
+    subset_frame_csv = str(args.subset_frame_csv or "").strip()
+    if subset_frame_csv:
+        path = Path(subset_frame_csv).expanduser()
+        if not path.is_file():
+            raise FileNotFoundError(f"--subset-frame-csv not found: {path}")
+        targets = read_subset_frames_csv(path, str(args.subset_sequence_column), str(args.subset_frame_column))
+        selected = []
+        for dataset_index in range(len(dataset)):
+            frame_paths = frame_paths_for_dataset_index(dataset, dataset_index)
+            if any((path.parent.parent.name, path.stem) in targets for path in frame_paths):
+                selected.append(dataset_index)
+        if bool(args.subset_unique):
+            seen = set()
+            selected = [idx for idx in selected if not (idx in seen or seen.add(idx))]
+        if not selected:
+            raise ValueError(f"No windows matched frames from {path}")
+        max_samples = int(args.max_samples)
+        return selected[:max_samples] if max_samples > 0 else selected
+
+    subset_csv = str(args.subset_indices_csv or "").strip()
+    if subset_csv:
+        path = Path(subset_csv).expanduser()
+        if not path.is_file():
+            raise FileNotFoundError(f"--subset-indices-csv not found: {path}")
+        indices = read_subset_indices_csv(path, str(args.subset_index_column))
+        if bool(args.subset_unique):
+            seen = set()
+            indices = [idx for idx in indices if not (idx in seen or seen.add(idx))]
+        selected = [idx for idx in indices if 0 <= idx < len(dataset)]
+        if not selected:
+            raise ValueError(f"No valid dataset indices found in {path}")
+        max_samples = int(args.max_samples)
+        return selected[:max_samples] if max_samples > 0 else selected
+    max_samples = int(args.max_samples)
+    end = len(dataset) if max_samples <= 0 else min(len(dataset), int(args.start_index) + max_samples)
+    return list(range(int(args.start_index), end))
+
+
+def read_subset_indices_csv(path: Path, column: str) -> list[int]:
+    indices: list[int] = []
+    with path.open("r", encoding="utf-8", newline="") as file:
+        reader = csv.DictReader(file)
+        if reader.fieldnames is None or column not in reader.fieldnames:
+            raise ValueError(f"CSV {path} does not contain required column {column!r}")
+        for row in reader:
+            raw = str(row.get(column, "")).strip()
+            if not raw:
+                continue
+            indices.append(int(float(raw)))
+    return indices
+
+
+def read_subset_frames_csv(path: Path, sequence_column: str, frame_column: str) -> set[tuple[str, str]]:
+    frames: set[tuple[str, str]] = set()
+    with path.open("r", encoding="utf-8", newline="") as file:
+        reader = csv.DictReader(file)
+        if reader.fieldnames is None:
+            raise ValueError(f"CSV {path} has no header")
+        missing = [column for column in (sequence_column, frame_column) if column not in reader.fieldnames]
+        if missing:
+            raise ValueError(f"CSV {path} missing required columns: {missing}")
+        for row in reader:
+            sequence_name = str(row.get(sequence_column, "")).strip()
+            frame_name = str(row.get(frame_column, "")).strip()
+            if sequence_name and frame_name:
+                frames.add((sequence_name, frame_name))
+    if not frames:
+        raise ValueError(f"No frame keys found in {path}")
+    return frames
 
 
 def load_training_checkpoint(model: torch.nn.Module, checkpoint_path: Path, device: torch.device) -> None:
@@ -208,6 +287,7 @@ def evaluate_batch(
     pred_boxes = flatten_prediction(predictions["pred_boxes"], 3)
     pred_transl = flatten_prediction(predictions["pred_transl_cam"], 3)
     base_transl = flatten_prediction(predictions.get("base_pred_transl_cam", predictions["pred_transl_cam"]), 3)
+    seed_transl = flatten_prediction(predictions.get("seed_pred_transl_cam"), 3)
     pred_pose6d = flatten_prediction(predictions["pred_pose_6d"], 3)
     pred_poses = flatten_prediction(predictions["pred_poses"], 3)
     pred_betas = flatten_prediction(predictions["pred_betas"], 3)
@@ -232,7 +312,10 @@ def evaluate_batch(
     gt_transl = matched["transl_cam"].to(device=pred_transl.device, dtype=pred_transl.dtype)
     refined = pred_transl[frame_idx, src_idx]
     base = base_transl[frame_idx, src_idx]
+    seed = seed_transl[frame_idx, src_idx] if seed_transl is not None else None
     totals.add_translation(base, refined, gt_transl)
+    if seed is not None:
+        totals.add_seed_translation(seed, refined, gt_transl)
     if ray_dir is not None and tangent_x is not None and tangent_y is not None:
         matched_ray = ray_dir[frame_idx, src_idx].to(dtype=refined.dtype)
         matched_tx = tangent_x[frame_idx, src_idx].to(dtype=refined.dtype)
@@ -297,6 +380,7 @@ def evaluate_batch(
         matched=matched,
         src_idx=src_idx,
         base=base,
+        seed=seed,
         refined=refined,
         target=gt_transl,
         base_mpjpe=base_mpjpe,
@@ -358,6 +442,7 @@ def append_person_rows(
     matched: dict[str, torch.Tensor],
     src_idx: torch.Tensor,
     base: torch.Tensor,
+    seed: torch.Tensor | None,
     refined: torch.Tensor,
     target: torch.Tensor,
     base_mpjpe: torch.Tensor,
@@ -383,6 +468,7 @@ def append_person_rows(
         frame_paths = frame_paths_by_index.get(dataset_index, [])
         frame_path = frame_paths[frame_offset] if frame_offset < len(frame_paths) else None
         base_err = base[row_idx] - target[row_idx]
+        seed_err = seed[row_idx] - target[row_idx] if seed is not None else None
         refined_err = refined[row_idx] - target[row_idx]
         row = {
             "dataset_index": dataset_index,
@@ -399,6 +485,9 @@ def append_person_rows(
             "base_transl_x_m": tensor_float(base[row_idx, 0]),
             "base_transl_y_m": tensor_float(base[row_idx, 1]),
             "base_transl_z_m": tensor_float(base[row_idx, 2]),
+            "seed_transl_x_m": tensor_float(seed[row_idx, 0]) if seed is not None else None,
+            "seed_transl_y_m": tensor_float(seed[row_idx, 1]) if seed is not None else None,
+            "seed_transl_z_m": tensor_float(seed[row_idx, 2]) if seed is not None else None,
             "refined_transl_x_m": tensor_float(refined[row_idx, 0]),
             "refined_transl_y_m": tensor_float(refined[row_idx, 1]),
             "refined_transl_z_m": tensor_float(refined[row_idx, 2]),
@@ -406,9 +495,12 @@ def append_person_rows(
             "gt_transl_y_m": tensor_float(target[row_idx, 1]),
             "gt_transl_z_m": tensor_float(target[row_idx, 2]),
             "base_transl_l2_m": tensor_norm(base_err),
+            "seed_transl_l2_m": tensor_norm(seed_err) if seed_err is not None else None,
             "refined_transl_l2_m": tensor_norm(refined_err),
             "transl_l2_delta_m": tensor_norm(refined_err) - tensor_norm(base_err),
+            "seed_to_refined_l2_delta_m": (tensor_norm(refined_err) - tensor_norm(seed_err)) if seed_err is not None else None,
             "base_transl_z_l1_m": tensor_float(base_err[2].abs()),
+            "seed_transl_z_l1_m": tensor_float(seed_err[2].abs()) if seed_err is not None else None,
             "refined_transl_z_l1_m": tensor_float(refined_err[2].abs()),
             "base_transl_xy_l2_m": tensor_norm(base_err[:2]),
             "refined_transl_xy_l2_m": tensor_norm(refined_err[:2]),
@@ -460,9 +552,12 @@ def top_rows(rows: list[dict[str, Any]], key: str, limit: int) -> list[dict[str,
         "gt_idx",
         "track_id",
         "base_transl_l2_m",
+        "seed_transl_l2_m",
         "refined_transl_l2_m",
         "transl_l2_delta_m",
+        "seed_to_refined_l2_delta_m",
         "base_transl_z_l1_m",
+        "seed_transl_z_l1_m",
         "refined_transl_z_l1_m",
         "base_mpjpe_m",
         "refined_mpjpe_m",
@@ -549,6 +644,16 @@ class MetricTotals:
         self.add("refined_transl_xy_l2_m", torch.linalg.norm(refined_err[:, :2], dim=-1).mean(), count)
         self.add("delta_transl_l2_m", torch.linalg.norm(refined - base, dim=-1).mean(), count)
 
+    def add_seed_translation(self, seed: torch.Tensor, refined: torch.Tensor, target: torch.Tensor) -> None:
+        count = int(refined.shape[0])
+        seed_err = seed - target
+        refined_err = refined - target
+        self.add("seed_transl_l1_m", seed_err.abs().mean(), count)
+        self.add("seed_transl_l2_m", torch.linalg.norm(seed_err, dim=-1).mean(), count)
+        self.add("seed_transl_z_l1_m", seed_err[:, 2].abs().mean(), count)
+        self.add("seed_transl_xy_l2_m", torch.linalg.norm(seed_err[:, :2], dim=-1).mean(), count)
+        self.add("seed_to_refined_transl_l2_delta_m", torch.linalg.norm(refined_err, dim=-1).mean() - torch.linalg.norm(seed_err, dim=-1).mean(), count)
+
     def add_ray_components(
         self,
         base_ray: torch.Tensor,
@@ -573,6 +678,7 @@ class MetricTotals:
         add_improvement(out, "transl_xy_l2", "base_transl_xy_l2_m", "refined_transl_xy_l2_m")
         add_improvement(out, "ray_depth_l1", "base_ray_depth_l1_m", "refined_ray_depth_l1_m")
         add_improvement(out, "tangent_l2", "base_tangent_l2_m", "refined_tangent_l2_m")
+        add_improvement(out, "seed_to_refined_transl_l2", "seed_transl_l2_m", "refined_transl_l2_m")
         add_improvement(out, "joints_mpjpe", "base_joints_mpjpe_m", "refined_joints_mpjpe_m")
         add_improvement(out, "vertices_pve", "base_vertices_pve_m", "refined_vertices_pve_m")
         out["num_matched"] = float(max(self.counts.values(), default=0))
@@ -602,6 +708,9 @@ TRANSLATION_PERSON_FIELDS = [
     "base_transl_x_m",
     "base_transl_y_m",
     "base_transl_z_m",
+    "seed_transl_x_m",
+    "seed_transl_y_m",
+    "seed_transl_z_m",
     "refined_transl_x_m",
     "refined_transl_y_m",
     "refined_transl_z_m",
@@ -609,9 +718,12 @@ TRANSLATION_PERSON_FIELDS = [
     "gt_transl_y_m",
     "gt_transl_z_m",
     "base_transl_l2_m",
+    "seed_transl_l2_m",
     "refined_transl_l2_m",
     "transl_l2_delta_m",
+    "seed_to_refined_l2_delta_m",
     "base_transl_z_l1_m",
+    "seed_transl_z_l1_m",
     "refined_transl_z_l1_m",
     "base_transl_xy_l2_m",
     "refined_transl_xy_l2_m",

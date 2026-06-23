@@ -166,6 +166,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--export-hsi-comparison", action="store_true", help="Export base and HSI refined mesh comparison PLYs")
     parser.add_argument("--export-pre-refine-comparison", action="store_true", help="Export base_pred_transl_cam mesh before the camera-ray translation refiner")
     parser.add_argument("--export-translation-debug-json", action="store_true", help="Export per-query pre/post/HSI/GT translation values and L2 errors")
+    parser.add_argument("--export-translation-only-comparison", action="store_true", help="Export same-pose meshes at pre/post/HSI/GT translations to isolate root translation")
     parser.add_argument("--hsi-align-scene", action="store_true", help="Export scene mesh from HSI affine depth s*depth+b")
     parser.add_argument("--ply-use-vertices", action="store_true", help="Deprecated; mesh export is always enabled when --export-ply is set")
     parser.add_argument("--override", action="append", default=[], help="Override config values with dotted.key=value")
@@ -578,6 +579,72 @@ def export_translation_debug_json(
     return str(path)
 
 
+def export_translation_only_comparison_ply(
+    selected: list[dict[str, Any]],
+    image_path: Path,
+    predictions: dict[str, torch.Tensor],
+    gt_points: dict[str, torch.Tensor] | None,
+    smpl_model_dir: str,
+    output_dir: Path,
+    device: torch.device,
+) -> list[str]:
+    if gt_points is None or "transl_cam" not in gt_points:
+        return []
+    if "pred_poses" not in predictions or "pred_betas" not in predictions or "pred_transl_cam" not in predictions:
+        return []
+    query_indices = [int(item["query_index"]) for item in selected]
+    if not query_indices:
+        return []
+    index_tensor = torch.as_tensor(query_indices, dtype=torch.long, device=device)
+    smpl = SMPLLayer(smpl_model_dir).to(device).eval()
+    with torch.no_grad():
+        local_vertices, _ = smpl(
+            predictions["pred_poses"][0, 0, index_tensor].detach().reshape(-1, 72),
+            predictions["pred_betas"][0, 0, index_tensor].detach(),
+        )
+    faces = torch.as_tensor(smpl.faces, dtype=torch.long, device=device).detach().cpu().numpy()
+    gt_transl = gt_points["transl_cam"].detach().to(device=device, dtype=local_vertices.dtype)
+
+    stage_specs: list[tuple[str, torch.Tensor, tuple[int, int, int]]] = []
+    if "base_pred_transl_cam" in predictions:
+        stage_specs.append(("pre_refine", predictions["base_pred_transl_cam"][0, 0, index_tensor].detach(), (255, 160, 32)))
+    stage_specs.append(("post_refine", predictions["pred_transl_cam"][0, 0, index_tensor].detach(), (255, 64, 64)))
+    if "hsi_refined_pred_transl_cam" in predictions:
+        stage_specs.append(("hsi_refined", predictions["hsi_refined_pred_transl_cam"][0, 0, index_tensor].detach(), (64, 192, 255)))
+    gt_query_transl = []
+    valid_gt = []
+    for local_idx, query_idx in enumerate(query_indices):
+        if 0 <= query_idx < gt_transl.shape[0]:
+            gt_query_transl.append(gt_transl[query_idx])
+            valid_gt.append(local_idx)
+    if len(gt_query_transl) == len(query_indices):
+        stage_specs.append(("gt_translation", torch.stack(gt_query_transl, dim=0), (64, 255, 128)))
+
+    written: list[str] = []
+    all_meshes: list[np.ndarray] = []
+    all_colors: list[tuple[int, int, int]] = []
+    for local_idx, item in enumerate(selected):
+        person_meshes: list[np.ndarray] = []
+        person_colors: list[tuple[int, int, int]] = []
+        for _, transl, color in stage_specs:
+            mesh = (local_vertices[local_idx] + transl[local_idx][None, :]).detach().cpu().numpy()
+            person_meshes.append(mesh)
+            person_colors.append(color)
+            all_meshes.append(mesh)
+            all_colors.append(color)
+        query_idx = int(item["query_index"])
+        rank = int(item.get("rank", local_idx))
+        person_path = output_dir / f"{image_path.stem}_rank{rank:02d}_q{query_idx:02d}_translation_only_compare.ply"
+        write_ply_meshes(person_path, person_meshes, faces, person_colors)
+        written.append(str(person_path))
+
+    if all_meshes:
+        top_path = output_dir / f"{image_path.stem}_translation_only_compare_top{len(selected):02d}.ply"
+        write_ply_meshes(top_path, all_meshes, faces, all_colors)
+        written.append(str(top_path))
+    return written
+
+
 def export_prediction_gt_ply(
     results: list[dict[str, Any]],
     image_path: Path,
@@ -671,6 +738,9 @@ def export_prediction_gt_ply(
 
     if getattr(args, "export_translation_debug_json", False) or getattr(args, "export_pre_refine_comparison", False):
         written.append(export_translation_debug_json(selected, image_path, predictions, gt_points, args, output_dir))
+
+    if getattr(args, "export_translation_only_comparison", False):
+        written.extend(export_translation_only_comparison_ply(selected, image_path, predictions, gt_points, smpl_model_dir, output_dir, device))
 
     return written
 

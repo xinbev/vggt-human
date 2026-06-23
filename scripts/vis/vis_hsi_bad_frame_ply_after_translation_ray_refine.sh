@@ -2,7 +2,9 @@
 
 set -euo pipefail
 
-# Export PLY files for known bad frames after camera-ray translation repair.
+# Export PLY files for known bad frames after camera-ray translation repair
+# under the clip-context forward path. This is intentionally not the same as
+# the NUM_FRAMES=1 single-frame scan.
 # The default frame is seq_000000_0100, which was previously inspected as a
 # base-SMPL translation failure. Override PLY_FRAME_STEMS or PLY_FRAME_INDICES
 # to inspect other frames.
@@ -34,6 +36,7 @@ USE_HSI_REFINED="${USE_HSI_REFINED:-true}"
 EXPORT_HSI_COMPARISON="${EXPORT_HSI_COMPARISON:-true}"
 EXPORT_PRE_REFINE_COMPARISON="${EXPORT_PRE_REFINE_COMPARISON:-true}"
 EXPORT_TRANSLATION_DEBUG_JSON="${EXPORT_TRANSLATION_DEBUG_JSON:-true}"
+EXPORT_TRANSLATION_ONLY_COMPARISON="${EXPORT_TRANSLATION_ONLY_COMPARISON:-true}"
 HSI_ALIGN_SCENE="${HSI_ALIGN_SCENE:-true}"
 ALIGN_SCENE_TO_SMPL="${ALIGN_SCENE_TO_SMPL:-true}"
 ALIGN_SCALE_MAX="${ALIGN_SCALE_MAX:-20.0}"
@@ -70,6 +73,7 @@ echo "Train config: ${TRAIN_CONFIG}"
 echo "Output      : ${OUTPUT_DIR}"
 echo "Frames      : ${NUM_FRAMES}"
 echo "Stride      : ${STRIDE}"
+echo "Context     : clip forward, not NUM_FRAMES=1 single-frame scan"
 echo "PLY stems   : ${PLY_FRAME_STEMS}"
 echo "PLY indices : ${PLY_FRAME_INDICES}"
 echo "PLY Top-K   : ${PLY_TOP_K}"
@@ -101,6 +105,9 @@ if [[ "${EXPORT_PRE_REFINE_COMPARISON}" == "true" ]]; then
 fi
 if [[ "${EXPORT_TRANSLATION_DEBUG_JSON}" == "true" ]]; then
   HSI_ARGS+=(--export-translation-debug-json)
+fi
+if [[ "${EXPORT_TRANSLATION_ONLY_COMPARISON}" == "true" ]]; then
+  HSI_ARGS+=(--export-translation-only-comparison)
 fi
 if [[ "${HSI_ALIGN_SCENE}" == "true" ]]; then
   HSI_ARGS+=(--hsi-align-scene)

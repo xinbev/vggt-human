@@ -277,6 +277,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--export-hsi-comparison", action="store_true")
     parser.add_argument("--export-pre-refine-comparison", action="store_true")
     parser.add_argument("--export-translation-debug-json", action="store_true")
+    parser.add_argument("--export-translation-only-comparison", action="store_true")
     parser.add_argument("--hsi-align-scene", action="store_true")
     parser.add_argument("--override", action="append", default=[])
     return parser.parse_args()

@@ -2,7 +2,9 @@
 
 set -euo pipefail
 
-# High-information 2D diagnostic panel for the known bad frame. It draws:
+# High-information 2D diagnostic panel for the known bad frame under the
+# clip-context forward path. This is intentionally not the same as the
+# NUM_FRAMES=1 single-frame scan. It draws:
 # original RGB, GT input boxes, predicted boxes, GT/base/HSI SMPL projections,
 # and per-person translation/MPJPE errors.
 
@@ -56,6 +58,7 @@ echo "Output      : ${OUTPUT_DIR}"
 echo "Target stem : ${TARGET_FRAME_STEM}"
 echo "Target idx  : ${TARGET_FRAME_INDEX}"
 echo "Frames      : ${NUM_FRAMES}"
+echo "Context     : clip forward, not NUM_FRAMES=1 single-frame scan"
 echo "GT prior    : ${USE_GT_BOX_PRIOR}"
 echo "Track ids   : ${USE_TRACK_IDS}"
 echo "SMPL ray ref: ${SMPL_ENABLE_TRANSLATION_REFINE}"

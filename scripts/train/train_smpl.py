@@ -234,6 +234,12 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         smpl_predict_id_embed=bool(model_cfg.get("predict_id_embed", False)),
         smpl_id_embed_dim=int(model_cfg.get("id_embed_dim", 256)),
         smpl_return_aux=bool(model_cfg.get("smpl_return_aux", False)),
+        smpl_translation_output_mode=str(model_cfg.get("smpl_translation_output_mode", "direct")),
+        smpl_translation_decode_hidden_dim=int(model_cfg.get("smpl_translation_decode_hidden_dim", 512)),
+        smpl_translation_decode_max_log_depth_delta=float(model_cfg.get("smpl_translation_decode_max_log_depth_delta", 1.00)),
+        smpl_translation_decode_max_ray_delta_m=float(model_cfg.get("smpl_translation_decode_max_ray_delta_m", 1.50)),
+        smpl_translation_decode_max_tangent_offset_m=float(model_cfg.get("smpl_translation_decode_max_tangent_offset_m", 1.00)),
+        smpl_translation_decode_human_height_prior_m=float(model_cfg.get("smpl_translation_decode_human_height_prior_m", 1.70)),
         smpl_enable_translation_refine=bool(model_cfg.get("smpl_enable_translation_refine", False)),
         smpl_translation_refine_hidden_dim=int(model_cfg.get("smpl_translation_refine_hidden_dim", 512)),
         smpl_translation_refine_max_ray_delta_m=float(model_cfg.get("smpl_translation_refine_max_ray_delta_m", 0.60)),
@@ -245,6 +251,11 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         smpl_query_box_prior=bool(model_cfg.get("smpl_query_box_prior", False)),
         smpl_query_patch_pool=bool(model_cfg.get("smpl_query_patch_pool", False)),
         smpl_query_patch_pool_expand=float(model_cfg.get("smpl_query_patch_pool_expand", 0.10)),
+        smpl_enable_temporal_translation=bool(model_cfg.get("smpl_enable_temporal_translation", False)),
+        smpl_temporal_translation_hidden_dim=int(model_cfg.get("smpl_temporal_translation_hidden_dim", 512)),
+        smpl_temporal_translation_max_velocity_delta_m=float(model_cfg.get("smpl_temporal_translation_max_velocity_delta_m", 0.25)),
+        smpl_temporal_translation_gate_bias=float(model_cfg.get("smpl_temporal_translation_gate_bias", 2.5)),
+        smpl_temporal_translation_use_world=bool(model_cfg.get("smpl_temporal_translation_use_world", True)),
         enable_hsi_refine=bool(model_cfg.get("enable_hsi_refine", False)),
         hsi_hidden_dim=int(model_cfg.get("hsi_hidden_dim", 512)),
         hsi_num_layers=int(model_cfg.get("hsi_num_layers", 5)),
@@ -318,6 +329,17 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
         if translation_refiner is None:
             raise ValueError("train_smpl_translation_refiner=true requires model.smpl_enable_translation_refine=true")
         unfreeze_module(translation_refiner)
+    if smpl_head is not None and bool(model_cfg.get("train_smpl_translation_decode_heads", False)):
+        regression_head = getattr(smpl_head, "regression_head", None)
+        translation_decode_heads = getattr(regression_head, "translation_decode_heads", None)
+        if translation_decode_heads is None:
+            raise ValueError("train_smpl_translation_decode_heads=true requires model.smpl_translation_output_mode=ray_offset_depth")
+        unfreeze_module(translation_decode_heads)
+    if smpl_head is not None and bool(model_cfg.get("train_smpl_temporal_translation", False)):
+        temporal_translation_refiner = getattr(smpl_head, "temporal_translation_refiner", None)
+        if temporal_translation_refiner is None:
+            raise ValueError("train_smpl_temporal_translation=true requires model.smpl_enable_temporal_translation=true")
+        unfreeze_module(temporal_translation_refiner)
     if smpl_head is not None and bool(model_cfg.get("train_smpl_box_heads", False)):
         regression_head = getattr(smpl_head, "regression_head", None)
         for name in ("box_heads", "box_delta_heads"):
@@ -799,12 +821,17 @@ def compact_loss_name(key: str) -> str:
         "loss_transl_refine_delta_reg": "tDeltaReg",
         "loss_transl_refine_ray_depth": "rayD",
         "loss_transl_refine_tangent": "tan",
+        "loss_transl_temporal_velocity": "tVel",
+        "loss_transl_temporal_acceleration": "tAcc",
+        "loss_transl_temporal_no_worse": "tNoWorse",
         "metric_base_transl_l1": "baseT",
         "metric_refined_transl_l1": "refT",
         "metric_transl_refine_l1_delta": "dT",
         "metric_transl_box_prior_weight_abs": "boxPriorW",
         "metric_transl_ray_depth_l1_delta": "dRay",
         "metric_transl_tangent_l1_delta": "dTan",
+        "metric_transl_temporal_no_worse_ratio": "tWorse",
+        "metric_transl_temporal_no_worse_l1": "tExcess",
     }
     return mapping.get(key, key.removeprefix("loss_").removeprefix("metric_"))
 

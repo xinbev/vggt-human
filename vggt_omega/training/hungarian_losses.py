@@ -45,6 +45,11 @@ class HungarianSMPLLoss(nn.Module):
         transl_hard_topk_fraction: float = 0.25,
         transl_hard_min_k: int = 1,
         transl_hard_error_threshold_m: float = 0.20,
+        transl_temporal_velocity_weight: float = 0.0,
+        transl_temporal_acceleration_weight: float = 0.0,
+        transl_temporal_no_worse_weight: float = 0.0,
+        transl_temporal_no_worse_margin_m: float = 0.002,
+        transl_temporal_no_worse_accel_margin_m: float = 0.003,
         projected_bbox_weight: float = 0.0,
         projected_giou_weight: float = 0.0,
         projected_bbox_source: str = "joints",
@@ -145,6 +150,11 @@ class HungarianSMPLLoss(nn.Module):
         self.transl_hard_topk_fraction = transl_hard_topk_fraction
         self.transl_hard_min_k = transl_hard_min_k
         self.transl_hard_error_threshold_m = transl_hard_error_threshold_m
+        self.transl_temporal_velocity_weight = transl_temporal_velocity_weight
+        self.transl_temporal_acceleration_weight = transl_temporal_acceleration_weight
+        self.transl_temporal_no_worse_weight = transl_temporal_no_worse_weight
+        self.transl_temporal_no_worse_margin_m = transl_temporal_no_worse_margin_m
+        self.transl_temporal_no_worse_accel_margin_m = transl_temporal_no_worse_accel_margin_m
         self.projected_bbox_weight = projected_bbox_weight
         self.projected_giou_weight = projected_giou_weight
         self.projected_bbox_source = projected_bbox_source
@@ -270,6 +280,9 @@ class HungarianSMPLLoss(nn.Module):
                     "loss_transl_refine_tangent": zero,
                     "loss_transl_hard_topk": zero,
                     "loss_transl_hard_severe": zero,
+                    "loss_transl_temporal_velocity": zero,
+                    "loss_transl_temporal_acceleration": zero,
+                    "loss_transl_temporal_no_worse": zero,
                     "loss_projected_bbox": zero,
                     "loss_projected_giou": zero,
                     "metric_joints3d_l1": zero.detach(),
@@ -279,6 +292,12 @@ class HungarianSMPLLoss(nn.Module):
                     "metric_transl_l2_max": zero.detach(),
                     "metric_transl_l2_over_threshold_rate": zero.detach(),
                     "metric_transl_hard_count": zero.detach(),
+                    "metric_transl_temporal_pair_count": zero.detach(),
+                    "metric_transl_temporal_triple_count": zero.detach(),
+                    "metric_transl_temporal_velocity_l1": zero.detach(),
+                    "metric_transl_temporal_acceleration_l1": zero.detach(),
+                    "metric_transl_temporal_no_worse_ratio": zero.detach(),
+                    "metric_transl_temporal_no_worse_l1": zero.detach(),
                     "metric_base_transl_l1": zero.detach(),
                     "metric_refined_transl_l1": zero.detach(),
                     "metric_transl_refine_l1_delta": zero.detach(),
@@ -322,6 +341,7 @@ class HungarianSMPLLoss(nn.Module):
             joint_losses = self._smpl_joint_losses(predictions, pred_betas, pred_transl_cam, frame_idx, src_idx, matched)
             losses.update(joint_losses)
             losses.update(self._translation_refine_losses(predictions, pred_transl_cam, frame_idx, src_idx, matched))
+            losses.update(self._translation_temporal_losses(predictions, batch, pred_transl_cam, frame_idx, src_idx, matched))
             projected = self._projected_bbox_losses(predictions, pred_betas, pred_transl_cam, frame_idx, src_idx, target_boxes)
             losses.update(projected)
             losses.update(self._hsi_refined_losses(predictions, batch, frame_idx, src_idx, matched))
@@ -341,6 +361,9 @@ class HungarianSMPLLoss(nn.Module):
             + self.transl_refine_tangent_weight * losses["loss_transl_refine_tangent"]
             + self.transl_hard_topk_weight * losses["loss_transl_hard_topk"]
             + self.transl_hard_severe_weight * losses["loss_transl_hard_severe"]
+            + self.transl_temporal_velocity_weight * losses["loss_transl_temporal_velocity"]
+            + self.transl_temporal_acceleration_weight * losses["loss_transl_temporal_acceleration"]
+            + self.transl_temporal_no_worse_weight * losses["loss_transl_temporal_no_worse"]
             + self.projected_bbox_weight * losses["loss_projected_bbox"]
             + self.projected_giou_weight * losses["loss_projected_giou"]
             + self.duplicate_conf_weight * losses["loss_duplicate_conf"]
@@ -798,6 +821,111 @@ class HungarianSMPLLoss(nn.Module):
             "metric_refined_transl_tangent_l1": refined_tangent_l1.detach(),
             "metric_transl_tangent_l1_delta": (refined_tangent_l1 - base_tangent_l1).detach(),
         }
+
+    def _translation_temporal_losses(
+        self,
+        predictions: dict[str, torch.Tensor],
+        batch: dict[str, torch.Tensor],
+        pred_transl_cam: torch.Tensor,
+        frame_idx: torch.Tensor,
+        src_idx: torch.Tensor,
+        matched: dict[str, torch.Tensor],
+    ) -> dict[str, torch.Tensor]:
+        zero = pred_transl_cam.sum() * 0.0
+        out = {
+            "loss_transl_temporal_velocity": zero,
+            "loss_transl_temporal_acceleration": zero,
+            "loss_transl_temporal_no_worse": zero,
+            "metric_transl_temporal_pair_count": zero.detach(),
+            "metric_transl_temporal_triple_count": zero.detach(),
+            "metric_transl_temporal_velocity_l1": zero.detach(),
+            "metric_transl_temporal_acceleration_l1": zero.detach(),
+            "metric_transl_temporal_no_worse_ratio": zero.detach(),
+            "metric_transl_temporal_no_worse_l1": zero.detach(),
+        }
+        num_frames = _infer_sequence_length(batch, predictions)
+        if num_frames <= 1 or frame_idx.numel() == 0:
+            return out
+
+        pred_transl = pred_transl_cam[frame_idx, src_idx]
+        target_transl = matched["transl_cam"].to(device=pred_transl_cam.device, dtype=pred_transl_cam.dtype)
+        seed = predictions.get("seed_pred_transl_cam")
+        if seed is None:
+            seed = predictions.get("base_pred_transl_cam")
+        flat_seed = _flatten_prediction(seed, unframed_ndim=3) if seed is not None else None
+        seed_transl = flat_seed[frame_idx, src_idx].detach() if flat_seed is not None else pred_transl.detach()
+
+        batch_ids = torch.div(frame_idx, int(num_frames), rounding_mode="floor")
+        seq_ids = frame_idx % int(num_frames)
+        person_ids = matched.get("person_ids")
+        person_id_mask = matched.get("person_id_mask")
+        if person_ids is None:
+            person_ids = torch.full_like(src_idx, -1)
+        if person_id_mask is None:
+            person_id_mask = torch.zeros_like(src_idx, dtype=torch.bool)
+
+        groups: dict[tuple[int, int], dict[int, int]] = {}
+        for item_idx in range(int(frame_idx.numel())):
+            batch_id = int(batch_ids[item_idx].detach().cpu())
+            seq_id = int(seq_ids[item_idx].detach().cpu())
+            track_valid = bool(person_id_mask[item_idx].detach().cpu())
+            track_id = int(person_ids[item_idx].detach().cpu()) if track_valid else -(int(src_idx[item_idx].detach().cpu()) + 1)
+            groups.setdefault((batch_id, track_id), {}).setdefault(seq_id, item_idx)
+
+        pair_prev: list[int] = []
+        pair_next: list[int] = []
+        triple_prev: list[int] = []
+        triple_mid: list[int] = []
+        triple_next: list[int] = []
+        for seq_map in groups.values():
+            for seq in range(1, int(num_frames)):
+                if seq - 1 in seq_map and seq in seq_map:
+                    pair_prev.append(seq_map[seq - 1])
+                    pair_next.append(seq_map[seq])
+            for seq in range(1, int(num_frames) - 1):
+                if seq - 1 in seq_map and seq in seq_map and seq + 1 in seq_map:
+                    triple_prev.append(seq_map[seq - 1])
+                    triple_mid.append(seq_map[seq])
+                    triple_next.append(seq_map[seq + 1])
+
+        no_worse_terms: list[torch.Tensor] = []
+        no_worse_flags: list[torch.Tensor] = []
+        if pair_prev:
+            prev = torch.tensor(pair_prev, dtype=torch.long, device=pred_transl.device)
+            curr = torch.tensor(pair_next, dtype=torch.long, device=pred_transl.device)
+            velocity_delta = _velocity_residual(pred_transl, target_transl, prev, curr)
+            seed_velocity_delta = _velocity_residual(seed_transl, target_transl, prev, curr)
+            out["loss_transl_temporal_velocity"] = _smooth_l1_abs(velocity_delta.abs()).mean()
+            pred_vel_err = torch.linalg.norm(velocity_delta, dim=-1)
+            seed_vel_err = torch.linalg.norm(seed_velocity_delta, dim=-1).detach()
+            velocity_excess = F.relu(pred_vel_err - seed_vel_err - float(self.transl_temporal_no_worse_margin_m))
+            no_worse_terms.append(velocity_excess)
+            no_worse_flags.append(pred_vel_err > seed_vel_err + float(self.transl_temporal_no_worse_margin_m))
+            out["metric_transl_temporal_pair_count"] = pred_transl.new_tensor(float(len(pair_prev))).detach()
+            out["metric_transl_temporal_velocity_l1"] = velocity_delta.abs().mean().detach()
+
+        if triple_prev:
+            prev = torch.tensor(triple_prev, dtype=torch.long, device=pred_transl.device)
+            mid = torch.tensor(triple_mid, dtype=torch.long, device=pred_transl.device)
+            nxt = torch.tensor(triple_next, dtype=torch.long, device=pred_transl.device)
+            acceleration_delta = _acceleration_residual(pred_transl, target_transl, prev, mid, nxt)
+            seed_acceleration_delta = _acceleration_residual(seed_transl, target_transl, prev, mid, nxt)
+            out["loss_transl_temporal_acceleration"] = _smooth_l1_abs(acceleration_delta.abs()).mean()
+            pred_acc_err = torch.linalg.norm(acceleration_delta, dim=-1)
+            seed_acc_err = torch.linalg.norm(seed_acceleration_delta, dim=-1).detach()
+            acc_excess = F.relu(pred_acc_err - seed_acc_err - float(self.transl_temporal_no_worse_accel_margin_m))
+            no_worse_terms.append(acc_excess)
+            no_worse_flags.append(pred_acc_err > seed_acc_err + float(self.transl_temporal_no_worse_accel_margin_m))
+            out["metric_transl_temporal_triple_count"] = pred_transl.new_tensor(float(len(triple_prev))).detach()
+            out["metric_transl_temporal_acceleration_l1"] = acceleration_delta.abs().mean().detach()
+
+        if no_worse_terms:
+            no_worse = torch.cat([term.reshape(-1) for term in no_worse_terms], dim=0)
+            flags = torch.cat([flag.reshape(-1).to(dtype=pred_transl.dtype) for flag in no_worse_flags], dim=0)
+            out["loss_transl_temporal_no_worse"] = _smooth_l1_abs(no_worse, beta=0.01).mean()
+            out["metric_transl_temporal_no_worse_ratio"] = flags.mean().detach()
+            out["metric_transl_temporal_no_worse_l1"] = no_worse.mean().detach()
+        return out
 
     def _get_smpl_layer(self, device: torch.device) -> SMPLLayer:
         if self._smpl_layer is None:
