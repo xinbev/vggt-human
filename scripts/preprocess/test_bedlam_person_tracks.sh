@@ -9,6 +9,10 @@ SEQ_INDEX="${SEQ_INDEX:-0}"
 MAX_FRAMES="${MAX_FRAMES:-120}"
 OUT_ROOT="${OUT_ROOT:-outputs/preprocess/video_tracks}"
 VIS_ROOT="${VIS_ROOT:-outputs/vis/video_person_tracks}"
+STITCH_MAX_GAP="${STITCH_MAX_GAP:-30}"
+STITCH_CENTER_THRESH="${STITCH_CENTER_THRESH:-1.25}"
+STITCH_SIZE_LOG_THRESH="${STITCH_SIZE_LOG_THRESH:-0.70}"
+STITCH_MIN_SCORE="${STITCH_MIN_SCORE:-0.25}"
 
 python scripts/preprocess/prepare_video_person_tracks.py \
   --bedlam-sequence-index "${SEQ_INDEX}" \
@@ -22,7 +26,11 @@ python scripts/preprocess/prepare_video_person_tracks.py \
   --det-iou 0.70 \
   --max-age 90 \
   --min-hits 1 \
-  --aspect-ratio-thresh 10.0
+  --aspect-ratio-thresh 10.0 \
+  --stitch-max-gap "${STITCH_MAX_GAP}" \
+  --stitch-center-thresh "${STITCH_CENTER_THRESH}" \
+  --stitch-size-log-thresh "${STITCH_SIZE_LOG_THRESH}" \
+  --stitch-min-score "${STITCH_MIN_SCORE}"
 
 SIDE_ROOT="$(python - <<PY
 import json

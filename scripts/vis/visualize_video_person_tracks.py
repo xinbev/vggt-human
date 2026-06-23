@@ -124,7 +124,9 @@ def draw_frame(image: np.ndarray, frame: dict[str, Any]) -> None:
         x2 = int(np.clip(x2, 0, width - 1))
         y2 = int(np.clip(y2, 0, height - 1))
         cv2.rectangle(image, (x1, y1), (x2, y2), color, 3)
-        label = f"ID {person_id}  {float(person.get('track_confidence', 0.0)):.2f}"
+        raw_id = person.get("track_id_before_postprocess")
+        raw = f" raw{int(raw_id)}" if raw_id is not None and int(raw_id) != person_id else ""
+        label = f"ID {person_id}{raw}  {float(person.get('track_confidence', 0.0)):.2f}"
         draw_label(image, label, x1, max(0, y1 - 24), color)
 
 

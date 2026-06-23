@@ -110,6 +110,44 @@ python scripts/vis/visualize_video_person_tracks.py \
   --write-video
 ```
 
+## BEDLAM Tracking Evaluation
+
+Run tracker and evaluate against BEDLAM GT person IDs over the full split:
+
+```bash
+bash scripts/eval/eval_bedlam_person_tracking.sh
+```
+
+Small smoke test:
+
+```bash
+MAX_SEQUENCES=2 MAX_FRAMES_PER_SEQUENCE=120 bash scripts/eval/eval_bedlam_person_tracking.sh
+```
+
+Evaluate existing sidecars without rerunning YOLO/BoostTrack:
+
+```bash
+RUN_TRACKER=0 bash scripts/eval/eval_bedlam_person_tracking.sh
+```
+
+Outputs:
+
+```text
+outputs/eval/bedlam_person_tracking/
+  bedlam_person_tracking_eval.json
+  bedlam_person_tracking_eval.csv
+```
+
+Core metrics:
+
+```text
+match_recall             matched GT person-frames / all GT person-frames
+match_precision          matched predictions / all predictions
+id_dominant_accuracy     for each GT person, frames assigned to its dominant predicted ID
+id_switches              predicted ID changes for the same GT person
+fragmentations           GT track reappears after missed frames
+```
+
 Each person observation contains:
 
 ```json

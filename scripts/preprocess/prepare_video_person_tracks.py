@@ -14,6 +14,7 @@ from vggt_omega.tracking.boosttrack_adapter import BoostTrackPersonTracker
 from vggt_omega.tracking.detectors import TorchScriptYOLOPersonDetector
 from vggt_omega.tracking.diagnostics import TrackingDiagnostics
 from vggt_omega.tracking.io import append_jsonl, iter_image_files, write_frame_sidecar, write_json
+from vggt_omega.tracking.postprocess import postprocess_sidecar_tracks
 from vggt_omega.tracking.sam2_masks import SAM2BoxMaskPredictor, save_frame_masks
 from vggt_omega.tracking.schema import FrameObservations
 from vggt_omega.training.config import load_yaml_config, require_path
@@ -115,7 +116,20 @@ def main() -> None:
             break
 
     tracker.dump_cache()
-    summary.update(diagnostics.to_dict())
+    if args.no_tracklet_stitch:
+        summary.update(diagnostics.to_dict())
+        summary["postprocess"] = {"tracklet_stitching": {"enabled": False}}
+    else:
+        post = postprocess_sidecar_tracks(
+            output_root,
+            max_gap=args.stitch_max_gap,
+            center_thresh=args.stitch_center_thresh,
+            size_log_thresh=args.stitch_size_log_thresh,
+            min_score=args.stitch_min_score,
+            compact_ids=not args.no_compact_track_ids,
+        )
+        summary.update(post["diagnostics"])
+        summary["postprocess"] = {"tracklet_stitching": post["tracklet_stitching"]}
     write_json(output_root / "summary.json", summary)
     write_latest_pointer(args, source, output_root, summary)
     print(json.dumps(summary, indent=2, ensure_ascii=False))
@@ -157,6 +171,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-hits", type=int, default=1)
     parser.add_argument("--min-box-area", type=float, default=10.0)
     parser.add_argument("--aspect-ratio-thresh", type=float, default=10.0)
+    parser.add_argument("--no-tracklet-stitch", action="store_true")
+    parser.add_argument("--no-compact-track-ids", action="store_true")
+    parser.add_argument("--stitch-max-gap", type=int, default=30)
+    parser.add_argument("--stitch-center-thresh", type=float, default=1.25)
+    parser.add_argument("--stitch-size-log-thresh", type=float, default=0.70)
+    parser.add_argument("--stitch-min-score", type=float, default=0.25)
 
     parser.add_argument("--enable-sam2-masks", action="store_true")
     parser.add_argument("--sam2-root", default=None)
