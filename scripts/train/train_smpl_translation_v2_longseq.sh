@@ -32,6 +32,7 @@ LOG_INTERVAL="${LOG_INTERVAL:-20}"
 SAVE_FINAL="${SAVE_FINAL:-true}"
 SAVE_EPOCH_CHECKPOINT="${SAVE_EPOCH_CHECKPOINT:-false}"
 SAVE_LATEST="${SAVE_LATEST:-true}"
+RESET_EPOCH="${RESET_EPOCH:-true}"
 SUBSET_CSV="${SUBSET_CSV:-}"
 SUBSET_REPEAT="${SUBSET_REPEAT:-1}"
 SUBSET_MAX_SAMPLES="${SUBSET_MAX_SAMPLES:-0}"
@@ -69,7 +70,7 @@ echo "Epochs      : ${EPOCHS}"
 echo "LR          : ${LR}"
 echo "Subset CSV  : ${SUBSET_CSV:-<none>}"
 echo "Temporal    : enable=${ENABLE_TEMPORAL_TRANSLATION} train=${TRAIN_TEMPORAL_TRANSLATION} world=${TEMPORAL_USE_WORLD}"
-echo "Checkpoints : final=${SAVE_FINAL} epoch=${SAVE_EPOCH_CHECKPOINT} latest=${SAVE_LATEST}"
+echo "Checkpoints : final=${SAVE_FINAL} epoch=${SAVE_EPOCH_CHECKPOINT} latest=${SAVE_LATEST} reset_epoch=${RESET_EPOCH}"
 echo "GPU         : ${CUDA_VISIBLE_DEVICES_VALUE}"
 
 CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_smpl.py \
@@ -91,6 +92,7 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_
   --override "checkpoint.load_vggt_baseline=true" \
   --override "checkpoint.resume_strict=false" \
   --override "checkpoint.resume_optimizer=false" \
+  --override "checkpoint.reset_epoch=${RESET_EPOCH}" \
   --override "checkpoint.save_final=${SAVE_FINAL}" \
   --override "checkpoint.save_epoch_checkpoint=${SAVE_EPOCH_CHECKPOINT}" \
   --override "checkpoint.save_latest=${SAVE_LATEST}" \

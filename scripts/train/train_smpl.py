@@ -88,6 +88,10 @@ def main() -> None:
     resume_path = str(config.get("checkpoint", {}).get("resume", "") or "")
     if resume_path:
         start_epoch, global_step = resume_training_checkpoint(model, optimizer, resume_path, device, config)
+        if bool(config.get("checkpoint", {}).get("reset_epoch", False)):
+            start_epoch = 0
+            global_step = 0
+            print("[ckpt] reset resume epoch/global_step to 0")
 
     epochs = int(config["optim"]["epochs"])
     train_started_at = time.monotonic()
