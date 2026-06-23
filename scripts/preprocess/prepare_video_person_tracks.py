@@ -301,14 +301,35 @@ def resolve_config_path(
     allow_missing: bool = False,
 ) -> str:
     if override:
-        return str(Path(override).expanduser())
+        return str(resolve_project_path(override))
     try:
         value = require_path(config, dotted_key)
     except ValueError:
         if allow_missing:
             return ""
         raise
-    return str(Path(value).expanduser())
+    return str(resolve_project_path(value))
+
+
+def resolve_project_path(value: str | Path) -> Path:
+    path = Path(value).expanduser()
+    candidates: list[Path] = []
+    if path.is_absolute():
+        candidates.append(path)
+        for marker in ("vggt-omega", "vggt-human"):
+            parts = path.parts
+            if marker in parts:
+                marker_idx = parts.index(marker)
+                suffix = Path(*parts[marker_idx + 1 :])
+                candidates.append(ROOT / suffix)
+                break
+    else:
+        candidates.append(ROOT / path)
+        candidates.append(path)
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
 
 
 def write_latest_pointer(args: argparse.Namespace, source: dict[str, Any], output_root: Path, summary: dict[str, Any]) -> None:

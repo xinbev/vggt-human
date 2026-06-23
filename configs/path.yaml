@@ -27,9 +27,9 @@ datasets:
   bedlam_boxes_root: "outputs/preprocess/bedlam_boxes"
 
 third_party:
-  # Video person observation frontend. These paths point to the server layout;
-  # local synced copies can be overridden from the CLI when running on Windows.
-  boosttrack_root: "/home/zhw/lab_users/xyb/home/projects/vggt-omega/third_party/BoostTrack"
-  boosttrack_weights_root: "/home/zhw/lab_users/xyb/home/projects/vggt-omega/third_party/weights/BoostTrack"
-  sam2_root: "/home/zhw/lab_users/xyb/home/projects/vggt-omega/third_party/sam2"
-  sam2_checkpoint: "/home/zhw/lab_users/xyb/home/projects/vggt-omega/third_party/weights/sam/sam2.1_hiera_large.pt"
+  # Video person observation frontend. Keep third-party paths project-relative
+  # because the same checkout may be named vggt-human or vggt-omega on server.
+  boosttrack_root: "third_party/BoostTrack"
+  boosttrack_weights_root: "third_party/weights/BoostTrack"
+  sam2_root: "third_party/sam2"
+  sam2_checkpoint: "third_party/weights/sam/sam2.1_hiera_large.pt"
