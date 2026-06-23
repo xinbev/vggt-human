@@ -20,6 +20,8 @@ BOOSTTRACK_WEIGHT_NAMES = (
     "osnet_ain_ms_d_c.pth.tar",
 )
 
+_ORIGINAL_TORCH_LOAD = None
+
 
 @contextlib.contextmanager
 def temporary_cwd(path: Path) -> Iterator[None]:
@@ -59,6 +61,7 @@ class BoostTrackPersonTracker:
         if auto_link_weights and self.weights_root is not None:
             self._ensure_weight_links()
 
+        patch_torch_load_for_boosttrack_weights()
         self._extend_boosttrack_python_path()
         with temporary_cwd(self.boosttrack_root):
             from default_settings import GeneralSettings
@@ -223,3 +226,33 @@ def _iou_xyxy(a: np.ndarray, b: np.ndarray) -> float:
     area_b = max(float(b[2] - b[0]), 0.0) * max(float(b[3] - b[1]), 0.0)
     union = area_a + area_b - inter
     return float(inter / union) if union > 0.0 else 0.0
+
+
+def patch_torch_load_for_boosttrack_weights() -> None:
+    """Make BoostTrack's old ReID checkpoints load under PyTorch >= 2.6.
+
+    PyTorch 2.6 changed torch.load's default weights_only value to True. The
+    BoostTrack ReID checkpoints are trusted local files supplied with the
+    project, but the third-party loader does not pass weights_only=False. This
+    wrapper only changes that default for known BoostTrack weight filenames.
+    """
+    global _ORIGINAL_TORCH_LOAD
+    if _ORIGINAL_TORCH_LOAD is not None:
+        return
+    _ORIGINAL_TORCH_LOAD = torch.load
+
+    def _wrapped_torch_load(f, *args, **kwargs):
+        if "weights_only" not in kwargs and _is_boosttrack_weight_path(f):
+            kwargs["weights_only"] = False
+        return _ORIGINAL_TORCH_LOAD(f, *args, **kwargs)
+
+    torch.load = _wrapped_torch_load
+
+
+def _is_boosttrack_weight_path(value) -> bool:
+    try:
+        text = str(value)
+    except Exception:
+        return False
+    normalized = text.replace("\\", "/")
+    return any(normalized.endswith(f"/{name}") or normalized == name for name in BOOSTTRACK_WEIGHT_NAMES)
