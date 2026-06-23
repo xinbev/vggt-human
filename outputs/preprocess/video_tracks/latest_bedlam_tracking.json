@@ -1,0 +1,13 @@
+{
+  "output_root": "outputs/preprocess/video_tracks/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000000",
+  "source_kind": "bedlam",
+  "source_name": "20221013_3_250_batch01hand_orbit_bigOffice_seq_000000",
+  "summary_json": "outputs/preprocess/video_tracks/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000000/summary.json",
+  "num_frames": 27,
+  "bedlam": {
+    "root": "/home/zhw/xyb_space/bedlam/processed_bedlam",
+    "split": "Training",
+    "sequence": "20221013_3_250_batch01hand_orbit_bigOffice_seq_000000",
+    "sequence_dir": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000000"
+  }
+}

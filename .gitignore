@@ -23,3 +23,4 @@ skyseg.onnx.tmp
 outputs/vis/hsi_bad_frame_after_translation_ray_refine_sequence_ply
 *.tar
 *.zip
+*.mp4
