@@ -2,6 +2,7 @@ checkpoints:
   # Required if configs/train_smpl.yaml checkpoint.load_vggt_baseline=true.
   # Expected: VGGT-Omega/VGGT baseline state_dict or checkpoint containing model/state_dict/model_state_dict.
   vggt_baseline: "/home/zhw/lab_users/xyb/home/projects/vggt-omega/checkpoints/vggt_omega_1b_512.pt"
+  yolo8x: "/home/zhw/lab_users/xyb/home/projects/vggt-omega/checkpoints/yolov8x.torchscript"
 
   # Optional future use; current training script does not require this checkpoint.
   sat_hmr_smpl: "/home/zhw/xyb_space/SAT-HMR/weights/sat_hmr/sat_644.pth"
