@@ -164,6 +164,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ply-top-k", type=int, default=3, help="Maximum ranked predictions to include in mesh PLY exports")
     parser.add_argument("--use-hsi-refined", action="store_true", help="Use HSI refined SMPL outputs when available")
     parser.add_argument("--export-hsi-comparison", action="store_true", help="Export base and HSI refined mesh comparison PLYs")
+    parser.add_argument("--export-pre-refine-comparison", action="store_true", help="Export base_pred_transl_cam mesh before the camera-ray translation refiner")
+    parser.add_argument("--export-translation-debug-json", action="store_true", help="Export per-query pre/post/HSI/GT translation values and L2 errors")
     parser.add_argument("--hsi-align-scene", action="store_true", help="Export scene mesh from HSI affine depth s*depth+b")
     parser.add_argument("--ply-use-vertices", action="store_true", help="Deprecated; mesh export is always enabled when --export-ply is set")
     parser.add_argument("--override", action="append", default=[], help="Override config values with dotted.key=value")
@@ -298,8 +300,11 @@ def collect_predictions(
     width, height = image_size
     confs = predictions["pred_confs"][0, 0, :, 0].detach().float().cpu()
     boxes = predictions["pred_boxes"][0, 0].detach().float().cpu().clamp(0.0, 1.0)
-    transl_cam = predictions.get("pred_transl_cam")
-    transl = transl_cam[0, 0].detach().float().cpu() if transl_cam is not None else None
+    transl_by_key = {}
+    for key in ("base_pred_transl_cam", "pred_transl_cam", "hsi_refined_pred_transl_cam"):
+        value = predictions.get(key)
+        if isinstance(value, torch.Tensor):
+            transl_by_key[key] = value[0, 0].detach().float().cpu()
     order = torch.argsort(confs, descending=True)
     results = []
     for rank, query_idx in enumerate(order[: max(top_k, 0)].tolist()):
@@ -320,8 +325,8 @@ def collect_predictions(
             "bbox_cxcywh_norm": [cx, cy, bw, bh],
             "bbox_xyxy_pixels": xyxy,
         }
-        if transl is not None:
-            item["pred_transl_cam"] = [float(v) for v in transl[query_idx]]
+        for key, transl in transl_by_key.items():
+            item[key] = [float(v) for v in transl[query_idx]]
         results.append(item)
     return results
 
@@ -421,15 +426,21 @@ def decode_pred_smpl_points(
     smpl_model_dir: str,
     device: torch.device,
     use_hsi_refined: bool = False,
+    pose_key: str | None = None,
+    betas_key: str | None = None,
+    transl_key: str | None = None,
 ) -> dict[str, torch.Tensor]:
     query_indices = [int(item["query_index"]) for item in results]
     if not query_indices:
         empty = torch.empty(0, 0, 3, device=device)
         return {"vertices": empty, "joints": empty, "query_indices": torch.empty(0, dtype=torch.long, device=device)}
     index_tensor = torch.as_tensor(query_indices, dtype=torch.long, device=device)
-    pose_key = "hsi_refined_pred_poses" if use_hsi_refined and "hsi_refined_pred_poses" in predictions else "pred_poses"
-    betas_key = "hsi_refined_pred_betas" if use_hsi_refined and "hsi_refined_pred_betas" in predictions else "pred_betas"
-    transl_key = "hsi_refined_pred_transl_cam" if use_hsi_refined and "hsi_refined_pred_transl_cam" in predictions else "pred_transl_cam"
+    pose_key = pose_key or ("hsi_refined_pred_poses" if use_hsi_refined and "hsi_refined_pred_poses" in predictions else "pred_poses")
+    betas_key = betas_key or ("hsi_refined_pred_betas" if use_hsi_refined and "hsi_refined_pred_betas" in predictions else "pred_betas")
+    transl_key = transl_key or ("hsi_refined_pred_transl_cam" if use_hsi_refined and "hsi_refined_pred_transl_cam" in predictions else "pred_transl_cam")
+    for key in (pose_key, betas_key, transl_key):
+        if key not in predictions:
+            raise ValueError(f"SMPL decode requires model output {key}")
     poses = predictions[pose_key][0, 0, index_tensor].detach()
     betas = predictions[betas_key][0, 0, index_tensor].detach()
     transl_cam = predictions[transl_key][0, 0, index_tensor].detach()
@@ -463,7 +474,108 @@ def decode_gt_smpl_points(
         "vertices": vertices + gt["transl_cam"][:, None, :],
         "joints": joints + gt["transl_cam"][:, None, :],
         "faces": torch.as_tensor(smpl.faces, dtype=torch.long, device=device),
+        "transl_cam": gt["transl_cam"],
     }
+
+
+def prediction_query_vector(predictions: dict[str, torch.Tensor], key: str, query_idx: int) -> list[float] | None:
+    value = predictions.get(key)
+    if not isinstance(value, torch.Tensor):
+        return None
+    tensor = value.detach().float().cpu()
+    while tensor.ndim > 2:
+        tensor = tensor[0]
+    if tensor.ndim != 2 or query_idx < 0 or query_idx >= tensor.shape[0]:
+        return None
+    return [float(v) for v in tensor[query_idx].reshape(-1).tolist()]
+
+
+def export_translation_debug_json(
+    selected: list[dict[str, Any]],
+    image_path: Path,
+    predictions: dict[str, torch.Tensor],
+    gt_points: dict[str, torch.Tensor] | None,
+    args: argparse.Namespace,
+    output_dir: Path,
+) -> str:
+    rows = []
+    gt_transl = gt_points.get("transl_cam") if gt_points is not None else None
+    if isinstance(gt_transl, torch.Tensor):
+        gt_transl_cpu = gt_transl.detach().float().cpu()
+    else:
+        gt_transl_cpu = None
+
+    transl_sources = {
+        "pre_refine_base": "base_pred_transl_cam",
+        "post_refine_pred": "pred_transl_cam",
+        "hsi_refined": "hsi_refined_pred_transl_cam",
+    }
+    component_sources = (
+        "base_pred_transl_ray_depth",
+        "pred_transl_ray_depth",
+        "base_pred_transl_tangent",
+        "pred_transl_tangent",
+        "pred_transl_ray_dir",
+        "pred_transl_tangent_x",
+        "pred_transl_tangent_y",
+        "pred_transl_box_prior_weight",
+    )
+
+    for item in selected:
+        query_idx = int(item["query_index"])
+        record: dict[str, Any] = {
+            "rank": int(item.get("rank", len(rows))),
+            "query_index": query_idx,
+            "confidence": float(item.get("confidence", 0.0)),
+            "bbox_cxcywh_norm": item.get("bbox_cxcywh_norm"),
+            "bbox_xyxy_pixels": item.get("bbox_xyxy_pixels"),
+            "translations": {},
+            "errors_l2_m": {},
+            "components": {},
+        }
+        gt_vec = None
+        if gt_transl_cpu is not None and query_idx < gt_transl_cpu.shape[0]:
+            gt_vec = [float(v) for v in gt_transl_cpu[query_idx].reshape(-1).tolist()]
+            record["translations"]["gt_query_slot"] = gt_vec
+
+        for label, key in transl_sources.items():
+            vec = prediction_query_vector(predictions, key, query_idx)
+            if vec is None:
+                continue
+            record["translations"][label] = vec
+            if gt_vec is not None:
+                record["errors_l2_m"][label] = float(np.linalg.norm(np.asarray(vec, dtype=np.float32) - np.asarray(gt_vec, dtype=np.float32)))
+
+        base_vec = record["translations"].get("pre_refine_base")
+        pred_vec = record["translations"].get("post_refine_pred")
+        hsi_vec = record["translations"].get("hsi_refined")
+        if base_vec is not None and pred_vec is not None:
+            record["refine_delta_l2_m"] = float(np.linalg.norm(np.asarray(pred_vec, dtype=np.float32) - np.asarray(base_vec, dtype=np.float32)))
+        if pred_vec is not None and hsi_vec is not None:
+            record["hsi_delta_l2_m"] = float(np.linalg.norm(np.asarray(hsi_vec, dtype=np.float32) - np.asarray(pred_vec, dtype=np.float32)))
+
+        for key in component_sources:
+            vec = prediction_query_vector(predictions, key, query_idx)
+            if vec is not None:
+                record["components"][key] = vec
+        rows.append(record)
+
+    debug = {
+        "image": str(image_path),
+        "checkpoint": str(getattr(args, "checkpoint", "")),
+        "gt_association": "BEDLAM GT slot is read by query_index; this is intended for GT box prior diagnostics.",
+        "translation_units": "meters",
+        "sources": {
+            "pre_refine_base": "predictions['base_pred_transl_cam'] before camera-ray translation refiner",
+            "post_refine_pred": "predictions['pred_transl_cam'] after camera-ray translation refiner when enabled",
+            "hsi_refined": "predictions['hsi_refined_pred_transl_cam'] after HSI when available",
+            "gt_query_slot": "BEDLAM smplx_transl at the same query/GT slot",
+        },
+        "records": rows,
+    }
+    path = output_dir / f"{image_path.stem}_translation_debug_top{len(selected):02d}.json"
+    path.write_text(json.dumps(debug, indent=2), encoding="utf-8")
+    return str(path)
 
 
 def export_prediction_gt_ply(
@@ -484,6 +596,9 @@ def export_prediction_gt_ply(
 
     smpl_model_dir = require_smpl_model_dir(config, args)
     pred_points = decode_pred_smpl_points(selected, predictions, smpl_model_dir, device)
+    pre_points = None
+    if getattr(args, "export_pre_refine_comparison", False) and "base_pred_transl_cam" in predictions:
+        pre_points = decode_pred_smpl_points(selected, predictions, smpl_model_dir, device, transl_key="base_pred_transl_cam")
     hsi_points = None
     if args.export_hsi_comparison and "hsi_refined_pred_poses" in predictions:
         hsi_points = decode_pred_smpl_points(selected, predictions, smpl_model_dir, device, use_hsi_refined=True)
@@ -496,18 +611,25 @@ def export_prediction_gt_ply(
     pred_meshes = [pred_points["vertices"][idx].detach().cpu().numpy() for idx in range(len(selected))]
     pred_faces = pred_points["faces"].detach().cpu().numpy()
     pred_colors = [COLORS[idx % len(COLORS)] for idx in range(len(pred_meshes))]
+    pre_meshes: list[np.ndarray] = []
+    if pre_points is not None:
+        pre_meshes = [pre_points["vertices"][idx].detach().cpu().numpy() for idx in range(len(selected))]
+        pre_path = output_dir / f"{image_path.stem}_pre_refine_mesh_top{len(pre_meshes):02d}.ply"
+        write_ply_meshes(pre_path, pre_meshes, pre_points["faces"].detach().cpu().numpy(), pred_colors)
+        written.append(str(pre_path))
     pred_path = output_dir / f"{image_path.stem}_pred_mesh_top{len(pred_meshes):02d}.ply"
     write_ply_meshes(pred_path, pred_meshes, pred_faces, pred_colors)
     written.append(str(pred_path))
+    hsi_meshes: list[np.ndarray] = []
     if hsi_points is not None:
         hsi_meshes = [hsi_points["vertices"][idx].detach().cpu().numpy() for idx in range(len(selected))]
         hsi_path = output_dir / f"{image_path.stem}_hsi_refined_mesh_top{len(hsi_meshes):02d}.ply"
         write_ply_meshes(hsi_path, hsi_meshes, hsi_points["faces"].detach().cpu().numpy(), pred_colors)
         written.append(str(hsi_path))
 
+    gt_meshes: list[np.ndarray] = []
+    gt_colors: list[tuple[int, int, int]] = []
     if gt_points is not None:
-        gt_meshes = []
-        gt_colors = []
         for idx, item in enumerate(selected):
             query_idx = int(item["query_index"])
             if query_idx >= gt_points["vertices"].shape[0]:
@@ -528,6 +650,27 @@ def export_prediction_gt_ply(
                 [(255, 64, 64)] * len(pred_meshes) + [(64, 255, 128)] * len(gt_meshes),
             )
             written.append(str(combined_path))
+
+    if pre_meshes or hsi_meshes:
+        comparison_meshes: list[np.ndarray] = []
+        comparison_colors: list[tuple[int, int, int]] = []
+        if pre_meshes:
+            comparison_meshes.extend(pre_meshes)
+            comparison_colors.extend([(255, 160, 32)] * len(pre_meshes))
+        comparison_meshes.extend(pred_meshes)
+        comparison_colors.extend([(255, 64, 64)] * len(pred_meshes))
+        if hsi_meshes:
+            comparison_meshes.extend(hsi_meshes)
+            comparison_colors.extend([(64, 192, 255)] * len(hsi_meshes))
+        if gt_meshes:
+            comparison_meshes.extend(gt_meshes)
+            comparison_colors.extend([(64, 255, 128)] * len(gt_meshes))
+        comparison_path = output_dir / f"{image_path.stem}_translation_stage_compare_top{len(selected):02d}.ply"
+        write_ply_meshes(comparison_path, comparison_meshes, pred_faces, comparison_colors)
+        written.append(str(comparison_path))
+
+    if getattr(args, "export_translation_debug_json", False) or getattr(args, "export_pre_refine_comparison", False):
+        written.append(export_translation_debug_json(selected, image_path, predictions, gt_points, args, output_dir))
 
     return written
 

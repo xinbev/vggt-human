@@ -40,6 +40,11 @@ class HungarianSMPLLoss(nn.Module):
         transl_refine_delta_reg_weight: float = 0.0,
         transl_refine_ray_depth_weight: float = 0.0,
         transl_refine_tangent_weight: float = 0.0,
+        transl_hard_topk_weight: float = 0.0,
+        transl_hard_severe_weight: float = 0.0,
+        transl_hard_topk_fraction: float = 0.25,
+        transl_hard_min_k: int = 1,
+        transl_hard_error_threshold_m: float = 0.20,
         projected_bbox_weight: float = 0.0,
         projected_giou_weight: float = 0.0,
         projected_bbox_source: str = "joints",
@@ -135,6 +140,11 @@ class HungarianSMPLLoss(nn.Module):
         self.transl_refine_delta_reg_weight = transl_refine_delta_reg_weight
         self.transl_refine_ray_depth_weight = transl_refine_ray_depth_weight
         self.transl_refine_tangent_weight = transl_refine_tangent_weight
+        self.transl_hard_topk_weight = transl_hard_topk_weight
+        self.transl_hard_severe_weight = transl_hard_severe_weight
+        self.transl_hard_topk_fraction = transl_hard_topk_fraction
+        self.transl_hard_min_k = transl_hard_min_k
+        self.transl_hard_error_threshold_m = transl_hard_error_threshold_m
         self.projected_bbox_weight = projected_bbox_weight
         self.projected_giou_weight = projected_giou_weight
         self.projected_bbox_source = projected_bbox_source
@@ -258,10 +268,17 @@ class HungarianSMPLLoss(nn.Module):
                     "loss_transl_refine_delta_reg": zero,
                     "loss_transl_refine_ray_depth": zero,
                     "loss_transl_refine_tangent": zero,
+                    "loss_transl_hard_topk": zero,
+                    "loss_transl_hard_severe": zero,
                     "loss_projected_bbox": zero,
                     "loss_projected_giou": zero,
                     "metric_joints3d_l1": zero.detach(),
                     "metric_projected_joints2d_l1": zero.detach(),
+                    "metric_transl_l2_mean": zero.detach(),
+                    "metric_transl_l2_topk_mean": zero.detach(),
+                    "metric_transl_l2_max": zero.detach(),
+                    "metric_transl_l2_over_threshold_rate": zero.detach(),
+                    "metric_transl_hard_count": zero.detach(),
                     "metric_base_transl_l1": zero.detach(),
                     "metric_refined_transl_l1": zero.detach(),
                     "metric_transl_refine_l1_delta": zero.detach(),
@@ -300,6 +317,7 @@ class HungarianSMPLLoss(nn.Module):
                 pred_transl_cam[frame_idx, src_idx],
                 matched["transl_cam"].to(dtype=pred_transl_cam.dtype),
             )
+            losses.update(self._translation_hard_tail_losses(pred_transl_cam, frame_idx, src_idx, matched))
             losses["loss_id"] = self._identity_loss(flat_id_embed, frame_idx, src_idx, matched)
             joint_losses = self._smpl_joint_losses(predictions, pred_betas, pred_transl_cam, frame_idx, src_idx, matched)
             losses.update(joint_losses)
@@ -321,6 +339,8 @@ class HungarianSMPLLoss(nn.Module):
             + self.transl_refine_delta_reg_weight * losses["loss_transl_refine_delta_reg"]
             + self.transl_refine_ray_depth_weight * losses["loss_transl_refine_ray_depth"]
             + self.transl_refine_tangent_weight * losses["loss_transl_refine_tangent"]
+            + self.transl_hard_topk_weight * losses["loss_transl_hard_topk"]
+            + self.transl_hard_severe_weight * losses["loss_transl_hard_severe"]
             + self.projected_bbox_weight * losses["loss_projected_bbox"]
             + self.projected_giou_weight * losses["loss_projected_giou"]
             + self.duplicate_conf_weight * losses["loss_duplicate_conf"]
@@ -602,6 +622,60 @@ class HungarianSMPLLoss(nn.Module):
             "loss_projected_joints2d": projected_l1,
             "metric_joints3d_l1": joints3d_l1.detach(),
             "metric_projected_joints2d_l1": projected_l1.detach(),
+        }
+
+    def _translation_hard_tail_losses(
+        self,
+        pred_transl_cam: torch.Tensor,
+        frame_idx: torch.Tensor,
+        src_idx: torch.Tensor,
+        matched: dict[str, torch.Tensor],
+    ) -> dict[str, torch.Tensor]:
+        target_transl = matched["transl_cam"].to(device=pred_transl_cam.device, dtype=pred_transl_cam.dtype)
+        pred_transl = pred_transl_cam[frame_idx, src_idx]
+        errors = torch.linalg.norm(pred_transl - target_transl, dim=-1)
+        if errors.numel() == 0:
+            zero = pred_transl_cam.sum() * 0.0
+            return {
+                "loss_transl_hard_topk": zero,
+                "loss_transl_hard_severe": zero,
+                "metric_transl_l2_mean": zero.detach(),
+                "metric_transl_l2_topk_mean": zero.detach(),
+                "metric_transl_l2_max": zero.detach(),
+                "metric_transl_l2_over_threshold_rate": zero.detach(),
+                "metric_transl_hard_count": zero.detach(),
+            }
+
+        min_k = max(int(self.transl_hard_min_k), 0)
+        fraction = max(float(self.transl_hard_topk_fraction), 0.0)
+        fraction_k = int(errors.numel() * fraction + 0.999999) if fraction > 0.0 else 0
+        hard_k = min(max(min_k, fraction_k), int(errors.numel()))
+        if hard_k > 0:
+            hard_values = torch.topk(errors, k=hard_k, largest=True).values
+            hard_topk = hard_values.mean()
+            hard_topk_metric = hard_topk
+        else:
+            hard_topk = errors.sum() * 0.0
+            hard_topk_metric = errors.mean()
+
+        threshold = float(self.transl_hard_error_threshold_m)
+        if threshold > 0.0:
+            over_threshold = errors > threshold
+            severe = F.relu(errors - threshold).mean()
+            over_rate = over_threshold.to(dtype=errors.dtype).mean()
+        else:
+            over_threshold = torch.ones_like(errors, dtype=torch.bool)
+            severe = errors.mean()
+            over_rate = torch.ones((), device=errors.device, dtype=errors.dtype)
+
+        return {
+            "loss_transl_hard_topk": hard_topk,
+            "loss_transl_hard_severe": severe,
+            "metric_transl_l2_mean": errors.detach().mean(),
+            "metric_transl_l2_topk_mean": hard_topk_metric.detach(),
+            "metric_transl_l2_max": errors.detach().max(),
+            "metric_transl_l2_over_threshold_rate": over_rate.detach(),
+            "metric_transl_hard_count": over_threshold.to(dtype=errors.dtype).detach().sum(),
         }
 
     def _translation_refine_losses(

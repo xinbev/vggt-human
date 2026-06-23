@@ -1,5 +1,6 @@
 import argparse
 import copy
+import csv
 import json
 import math
 import random
@@ -10,7 +11,7 @@ from typing import Any
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 #==============================================================================
 # Compatibility patch for old chumpy on Python 3.11+
 import inspect
@@ -153,6 +154,7 @@ def build_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoade
         boxes_root=boxes_root,
         require_boxes=bool(data_cfg.get("require_boxes", False)),
     )
+    dataset = maybe_subset_dataset(dataset, data_cfg, split)
     return DataLoader(
         dataset,
         batch_size=int(config["optim"]["batch_size"]),
@@ -162,6 +164,57 @@ def build_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoade
         collate_fn=bedlam_collate_fn,
         drop_last=shuffle,
     )
+
+
+def maybe_subset_dataset(dataset: BedlamDataset, data_cfg: dict[str, Any], split: str) -> BedlamDataset | Subset:
+    train_split = str(data_cfg.get("train_split", split))
+    if split != train_split and not bool(data_cfg.get("subset_apply_to_val", False)):
+        return dataset
+    subset_csv = str(data_cfg.get("subset_indices_csv", "") or "").strip()
+    if not subset_csv:
+        return dataset
+    subset_path = Path(subset_csv).expanduser()
+    if not subset_path.is_file():
+        raise FileNotFoundError(f"data.subset_indices_csv not found: {subset_path}")
+    column = str(data_cfg.get("subset_index_column", "dataset_index"))
+    unique = bool(data_cfg.get("subset_unique", False))
+    repeat = max(int(data_cfg.get("subset_repeat", 1) or 1), 1)
+    max_samples = int(data_cfg.get("subset_max_samples", 0) or 0)
+    indices = read_subset_indices_csv(subset_path, column)
+    if unique:
+        seen = set()
+        indices = [idx for idx in indices if not (idx in seen or seen.add(idx))]
+    valid = [idx for idx in indices if 0 <= idx < len(dataset)]
+    skipped = len(indices) - len(valid)
+    if not valid:
+        raise ValueError(f"No valid dataset indices found in {subset_path} column={column!r} for split={split!r}")
+    expanded = valid * repeat
+    if max_samples > 0:
+        expanded = expanded[:max_samples]
+    print(
+        "[data] subset "
+        f"split={split} csv={subset_path} column={column} rows={len(indices)} "
+        f"valid={len(valid)} skipped={skipped} unique={unique} repeat={repeat} final={len(expanded)}",
+        flush=True,
+    )
+    return Subset(dataset, expanded)
+
+
+def read_subset_indices_csv(path: Path, column: str) -> list[int]:
+    indices: list[int] = []
+    with path.open("r", encoding="utf-8", newline="") as file:
+        reader = csv.DictReader(file)
+        if reader.fieldnames is None or column not in reader.fieldnames:
+            raise ValueError(f"CSV {path} does not contain required column {column!r}")
+        for row in reader:
+            raw = str(row.get(column, "")).strip()
+            if not raw:
+                continue
+            try:
+                indices.append(int(float(raw)))
+            except ValueError as exc:
+                raise ValueError(f"Invalid dataset index {raw!r} in {path}") from exc
+    return indices
 
 
 def build_model(config: dict[str, Any]) -> VGGTOmega:

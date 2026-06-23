@@ -32,6 +32,8 @@ USE_GT_BOX_PRIOR="${USE_GT_BOX_PRIOR:-true}"
 DRAW_GT_SMPL_JOINTS="${DRAW_GT_SMPL_JOINTS:-true}"
 USE_HSI_REFINED="${USE_HSI_REFINED:-true}"
 EXPORT_HSI_COMPARISON="${EXPORT_HSI_COMPARISON:-true}"
+EXPORT_PRE_REFINE_COMPARISON="${EXPORT_PRE_REFINE_COMPARISON:-true}"
+EXPORT_TRANSLATION_DEBUG_JSON="${EXPORT_TRANSLATION_DEBUG_JSON:-true}"
 HSI_ALIGN_SCENE="${HSI_ALIGN_SCENE:-true}"
 ALIGN_SCENE_TO_SMPL="${ALIGN_SCENE_TO_SMPL:-true}"
 ALIGN_SCALE_MAX="${ALIGN_SCALE_MAX:-20.0}"
@@ -98,6 +100,12 @@ if [[ "${USE_HSI_REFINED}" == "true" ]]; then
 fi
 if [[ "${EXPORT_HSI_COMPARISON}" == "true" ]]; then
   HSI_ARGS+=(--export-hsi-comparison)
+fi
+if [[ "${EXPORT_PRE_REFINE_COMPARISON}" == "true" ]]; then
+  HSI_ARGS+=(--export-pre-refine-comparison)
+fi
+if [[ "${EXPORT_TRANSLATION_DEBUG_JSON}" == "true" ]]; then
+  HSI_ARGS+=(--export-translation-debug-json)
 fi
 if [[ "${HSI_ALIGN_SCENE}" == "true" ]]; then
   HSI_ARGS+=(--hsi-align-scene)
