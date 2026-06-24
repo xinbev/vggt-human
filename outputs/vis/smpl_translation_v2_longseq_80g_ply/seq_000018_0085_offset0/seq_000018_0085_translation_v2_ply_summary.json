@@ -1,0 +1,208 @@
+{
+  "target_image": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0085.png",
+  "target_frame_idx": 0,
+  "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_translation_v2_longseq_80g/stageC_temporal_27f_polish/checkpoint_latest.pt",
+  "num_frames": 27,
+  "frame_paths": [
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0085.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0090.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0095.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0100.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0105.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0110.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0115.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0120.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0125.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0130.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0135.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0140.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0145.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0150.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0155.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0160.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0165.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0170.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0175.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0180.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0185.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0190.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0195.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0200.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0205.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0210.png",
+    "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0215.png"
+  ],
+  "selected_pairs": [
+    {
+      "query_idx": 19,
+      "gt_idx": 1,
+      "source": "person_csv",
+      "rank": 0,
+      "csv_refined_l2_m": 1.0996372699737549,
+      "csv_base_l2_m": 0.362135112285614,
+      "csv_seed_l2_m": 1.0996372699737549,
+      "csv_track_id": "1000000001"
+    },
+    {
+      "query_idx": 0,
+      "gt_idx": 0,
+      "source": "person_csv",
+      "rank": 1,
+      "csv_refined_l2_m": 0.13339461386203766,
+      "csv_base_l2_m": 0.16307155787944794,
+      "csv_seed_l2_m": 0.13339461386203766,
+      "csv_track_id": "1000000000"
+    },
+    {
+      "query_idx": 2,
+      "gt_idx": 2,
+      "source": "person_csv",
+      "rank": 2,
+      "csv_refined_l2_m": 0.11528573930263519,
+      "csv_base_l2_m": 0.10696908831596375,
+      "csv_seed_l2_m": 0.11528573930263519,
+      "csv_track_id": "1000000002"
+    }
+  ],
+  "records": [
+    {
+      "query_idx": 19,
+      "gt_idx": 1,
+      "source": "person_csv",
+      "rank": 0,
+      "csv_refined_l2_m": 1.0996372699737549,
+      "csv_base_l2_m": 0.362135112285614,
+      "csv_seed_l2_m": 1.0996372699737549,
+      "csv_track_id": "1000000001",
+      "translations": {
+        "base": [
+          0.46942171454429626,
+          0.4242449998855591,
+          3.6842997074127197
+        ],
+        "seed": [
+          1.2567856311798096,
+          0.7733398675918579,
+          3.582731246948242
+        ],
+        "refined": [
+          1.25678551197052,
+          0.7733398079872131,
+          3.582731008529663
+        ],
+        "gt": [
+          0.2230643630027771,
+          0.4359113276004791,
+          3.4191322326660156
+        ]
+      },
+      "errors_l2_m": {
+        "base": 0.362135112285614,
+        "seed": 1.0996372699737549,
+        "refined": 1.0996372699737549,
+        "gt": 0.0
+      },
+      "refined_minus_seed_l2_m": 2.731428025981586e-07,
+      "refined_minus_base_l2_m": 0.867251455783844
+    },
+    {
+      "query_idx": 0,
+      "gt_idx": 0,
+      "source": "person_csv",
+      "rank": 1,
+      "csv_refined_l2_m": 0.13339461386203766,
+      "csv_base_l2_m": 0.16307155787944794,
+      "csv_seed_l2_m": 0.13339461386203766,
+      "csv_track_id": "1000000000",
+      "translations": {
+        "base": [
+          0.2191583663225174,
+          0.6953192949295044,
+          2.052993059158325
+        ],
+        "seed": [
+          0.24921953678131104,
+          0.6733626127243042,
+          2.011686086654663
+        ],
+        "refined": [
+          0.24921953678131104,
+          0.6733626127243042,
+          2.011686086654663
+        ],
+        "gt": [
+          0.19652652740478516,
+          0.6973601579666138,
+          1.8915125131607056
+        ]
+      },
+      "errors_l2_m": {
+        "base": 0.16307155787944794,
+        "seed": 0.13339461386203766,
+        "refined": 0.13339461386203766,
+        "gt": 0.0
+      },
+      "refined_minus_seed_l2_m": 0.0,
+      "refined_minus_base_l2_m": 0.05560607835650444
+    },
+    {
+      "query_idx": 2,
+      "gt_idx": 2,
+      "source": "person_csv",
+      "rank": 2,
+      "csv_refined_l2_m": 0.11528573930263519,
+      "csv_base_l2_m": 0.10696908831596375,
+      "csv_seed_l2_m": 0.11528573930263519,
+      "csv_track_id": "1000000002",
+      "translations": {
+        "base": [
+          -1.388629674911499,
+          0.3040618896484375,
+          4.349329471588135
+        ],
+        "seed": [
+          -1.5229380130767822,
+          0.3493645191192627,
+          4.400506496429443
+        ],
+        "refined": [
+          -1.5229380130767822,
+          0.3493644893169403,
+          4.400506496429443
+        ],
+        "gt": [
+          -1.4179834127426147,
+          0.3373299241065979,
+          4.446663856506348
+        ]
+      },
+      "errors_l2_m": {
+        "base": 0.10696908831596375,
+        "seed": 0.11528573930263519,
+        "refined": 0.11528573930263519,
+        "gt": 0.0
+      },
+      "refined_minus_seed_l2_m": 2.9802322387695312e-08,
+      "refined_minus_base_l2_m": 0.15069884061813354
+    }
+  ],
+  "overlay_files": [
+    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_translation_v2_longseq_80g_ply/seq_000018_0085_offset0/seq_000018_0085_translation_v2_overlay.jpg"
+  ],
+  "ply_files": [
+    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_translation_v2_longseq_80g_ply/seq_000018_0085_offset0/seq_000018_0085_rank00_q19_gt01_base_seed_refined_gt_mesh.ply",
+    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_translation_v2_longseq_80g_ply/seq_000018_0085_offset0/seq_000018_0085_rank00_q19_gt01_translation_only_compare.ply",
+    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_translation_v2_longseq_80g_ply/seq_000018_0085_offset0/seq_000018_0085_rank01_q00_gt00_base_seed_refined_gt_mesh.ply",
+    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_translation_v2_longseq_80g_ply/seq_000018_0085_offset0/seq_000018_0085_rank01_q00_gt00_translation_only_compare.ply",
+    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_translation_v2_longseq_80g_ply/seq_000018_0085_offset0/seq_000018_0085_rank02_q02_gt02_base_seed_refined_gt_mesh.ply",
+    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_translation_v2_longseq_80g_ply/seq_000018_0085_offset0/seq_000018_0085_rank02_q02_gt02_translation_only_compare.ply",
+    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_translation_v2_longseq_80g_ply/seq_000018_0085_offset0/seq_000018_0085_all_selected_base_seed_refined_gt_mesh.ply",
+    "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_translation_v2_longseq_80g_ply/seq_000018_0085_offset0/seq_000018_0085_all_selected_translation_only_compare.ply"
+  ],
+  "color_legend": {
+    "base": "orange: legacy/base_pred_transl_cam",
+    "seed": "cyan: ray/depth seed_pred_transl_cam",
+    "refined": "red: final temporal pred_transl_cam",
+    "gt": "green: BEDLAM GT SMPL/transl"
+  }
+}
