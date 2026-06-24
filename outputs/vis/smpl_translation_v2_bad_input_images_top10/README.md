@@ -7,8 +7,8 @@ Color/metric reminder: lower translation L2 is better. Values are meters.
 
 ## 01. 20221013_3_250_batch01hand_orbit_bigOffice_seq_000045 / seq_000045_0025
 
-- Image: `<not copied; run on server with BEDLAM images>`
-- Source: `\home\zhw\xyb_space\bedlam\processed_bedlam\Training\20221013_3_250_batch01hand_orbit_bigOffice_seq_000045\rgb\seq_000045_0025.png`
+- Image: `/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_translation_v2_bad_input_images_top10/01_20221013_3_250_batch01hand_orbit_bigOffice_seq_000045_seq_000045_0025.png`
+- Source: `/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000045/rgb/seq_000045_0025.png`
 - People: `3`
 - Frame max L2: base `0.589m`, seed `2.901m`, refined `2.899m`
 - Frame mean L2: base `0.360m`, seed `1.033m`, refined `1.034m`
@@ -21,8 +21,8 @@ Color/metric reminder: lower translation L2 is better. Values are meters.
 
 ## 02. 20221013_3_250_batch01hand_orbit_bigOffice_seq_000107 / seq_000107_0055
 
-- Image: `<not copied; run on server with BEDLAM images>`
-- Source: `\home\zhw\xyb_space\bedlam\processed_bedlam\Training\20221013_3_250_batch01hand_orbit_bigOffice_seq_000107\rgb\seq_000107_0055.png`
+- Image: `/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_translation_v2_bad_input_images_top10/02_20221013_3_250_batch01hand_orbit_bigOffice_seq_000107_seq_000107_0055.png`
+- Source: `/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000107/rgb/seq_000107_0055.png`
 - People: `3`
 - Frame max L2: base `1.038m`, seed `1.456m`, refined `1.451m`
 - Frame mean L2: base `0.474m`, seed `0.558m`, refined `0.537m`
@@ -35,8 +35,8 @@ Color/metric reminder: lower translation L2 is better. Values are meters.
 
 ## 03. 20221013_3_250_batch01hand_orbit_bigOffice_seq_000168 / seq_000168_0000
 
-- Image: `<not copied; run on server with BEDLAM images>`
-- Source: `\home\zhw\xyb_space\bedlam\processed_bedlam\Training\20221013_3_250_batch01hand_orbit_bigOffice_seq_000168\rgb\seq_000168_0000.png`
+- Image: `/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_translation_v2_bad_input_images_top10/03_20221013_3_250_batch01hand_orbit_bigOffice_seq_000168_seq_000168_0000.png`
+- Source: `/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000168/rgb/seq_000168_0000.png`
 - People: `3`
 - Frame max L2: base `0.304m`, seed `1.181m`, refined `1.181m`
 - Frame mean L2: base `0.182m`, seed `0.446m`, refined `0.446m`
@@ -49,8 +49,8 @@ Color/metric reminder: lower translation L2 is better. Values are meters.
 
 ## 04. 20221013_3_250_batch01hand_orbit_bigOffice_seq_000015 / seq_000015_0120
 
-- Image: `<not copied; run on server with BEDLAM images>`
-- Source: `\home\zhw\xyb_space\bedlam\processed_bedlam\Training\20221013_3_250_batch01hand_orbit_bigOffice_seq_000015\rgb\seq_000015_0120.png`
+- Image: `/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_translation_v2_bad_input_images_top10/04_20221013_3_250_batch01hand_orbit_bigOffice_seq_000015_seq_000015_0120.png`
+- Source: `/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000015/rgb/seq_000015_0120.png`
 - People: `3`
 - Frame max L2: base `0.898m`, seed `1.119m`, refined `1.137m`
 - Frame mean L2: base `0.760m`, seed `0.408m`, refined `0.412m`
@@ -63,8 +63,8 @@ Color/metric reminder: lower translation L2 is better. Values are meters.
 
 ## 05. 20221013_3_250_batch01hand_orbit_bigOffice_seq_000015 / seq_000015_0125
 
-- Image: `<not copied; run on server with BEDLAM images>`
-- Source: `\home\zhw\xyb_space\bedlam\processed_bedlam\Training\20221013_3_250_batch01hand_orbit_bigOffice_seq_000015\rgb\seq_000015_0125.png`
+- Image: `/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_translation_v2_bad_input_images_top10/05_20221013_3_250_batch01hand_orbit_bigOffice_seq_000015_seq_000015_0125.png`
+- Source: `/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000015/rgb/seq_000015_0125.png`
 - People: `3`
 - Frame max L2: base `0.954m`, seed `1.097m`, refined `1.117m`
 - Frame mean L2: base `0.829m`, seed `0.398m`, refined `0.403m`
@@ -77,8 +77,8 @@ Color/metric reminder: lower translation L2 is better. Values are meters.
 
 ## 06. 20221013_3_250_batch01hand_orbit_bigOffice_seq_000015 / seq_000015_0130
 
-- Image: `<not copied; run on server with BEDLAM images>`
-- Source: `\home\zhw\xyb_space\bedlam\processed_bedlam\Training\20221013_3_250_batch01hand_orbit_bigOffice_seq_000015\rgb\seq_000015_0130.png`
+- Image: `/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_translation_v2_bad_input_images_top10/06_20221013_3_250_batch01hand_orbit_bigOffice_seq_000015_seq_000015_0130.png`
+- Source: `/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000015/rgb/seq_000015_0130.png`
 - People: `3`
 - Frame max L2: base `0.954m`, seed `0.996m`, refined `1.009m`
 - Frame mean L2: base `0.868m`, seed `0.393m`, refined `0.397m`
@@ -91,8 +91,8 @@ Color/metric reminder: lower translation L2 is better. Values are meters.
 
 ## 07. 20221013_3_250_batch01hand_orbit_bigOffice_seq_000018 / seq_000018_0080
 
-- Image: `<not copied; run on server with BEDLAM images>`
-- Source: `\home\zhw\xyb_space\bedlam\processed_bedlam\Training\20221013_3_250_batch01hand_orbit_bigOffice_seq_000018\rgb\seq_000018_0080.png`
+- Image: `/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_translation_v2_bad_input_images_top10/07_20221013_3_250_batch01hand_orbit_bigOffice_seq_000018_seq_000018_0080.png`
+- Source: `/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000018/rgb/seq_000018_0080.png`
 - People: `3`
 - Frame max L2: base `0.705m`, seed `0.935m`, refined `0.867m`
 - Frame mean L2: base `0.340m`, seed `0.419m`, refined `0.408m`
@@ -105,8 +105,8 @@ Color/metric reminder: lower translation L2 is better. Values are meters.
 
 ## 08. 20221013_3_250_batch01hand_orbit_bigOffice_seq_000032 / seq_000032_0165
 
-- Image: `<not copied; run on server with BEDLAM images>`
-- Source: `\home\zhw\xyb_space\bedlam\processed_bedlam\Training\20221013_3_250_batch01hand_orbit_bigOffice_seq_000032\rgb\seq_000032_0165.png`
+- Image: `/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_translation_v2_bad_input_images_top10/08_20221013_3_250_batch01hand_orbit_bigOffice_seq_000032_seq_000032_0165.png`
+- Source: `/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000032/rgb/seq_000032_0165.png`
 - People: `3`
 - Frame max L2: base `1.030m`, seed `0.948m`, refined `0.852m`
 - Frame mean L2: base `0.660m`, seed `0.415m`, refined `0.418m`
@@ -119,8 +119,8 @@ Color/metric reminder: lower translation L2 is better. Values are meters.
 
 ## 09. 20221013_3_250_batch01hand_orbit_bigOffice_seq_000015 / seq_000015_0115
 
-- Image: `<not copied; run on server with BEDLAM images>`
-- Source: `\home\zhw\xyb_space\bedlam\processed_bedlam\Training\20221013_3_250_batch01hand_orbit_bigOffice_seq_000015\rgb\seq_000015_0115.png`
+- Image: `/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_translation_v2_bad_input_images_top10/09_20221013_3_250_batch01hand_orbit_bigOffice_seq_000015_seq_000015_0115.png`
+- Source: `/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000015/rgb/seq_000015_0115.png`
 - People: `3`
 - Frame max L2: base `0.848m`, seed `0.816m`, refined `0.830m`
 - Frame mean L2: base `0.697m`, seed `0.311m`, refined `0.308m`
@@ -133,8 +133,8 @@ Color/metric reminder: lower translation L2 is better. Values are meters.
 
 ## 10. 20221013_3_250_batch01hand_orbit_bigOffice_seq_000209 / seq_000209_0140
 
-- Image: `<not copied; run on server with BEDLAM images>`
-- Source: `\home\zhw\xyb_space\bedlam\processed_bedlam\Training\20221013_3_250_batch01hand_orbit_bigOffice_seq_000209\rgb\seq_000209_0140.png`
+- Image: `/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/smpl_translation_v2_bad_input_images_top10/10_20221013_3_250_batch01hand_orbit_bigOffice_seq_000209_seq_000209_0140.png`
+- Source: `/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000209/rgb/seq_000209_0140.png`
 - People: `3`
 - Frame max L2: base `0.825m`, seed `0.819m`, refined `0.828m`
 - Frame mean L2: base `0.556m`, seed `0.404m`, refined `0.388m`
