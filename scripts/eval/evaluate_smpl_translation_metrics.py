@@ -90,6 +90,7 @@ def main() -> None:
                 person_rows,
                 batch_indices,
                 frame_paths_by_index,
+                args.match_mode,
             )
             processed += batch_size
             if int(args.max_samples) > 0 and processed >= int(args.max_samples):
@@ -103,6 +104,7 @@ def main() -> None:
             "checkpoint": str(args.checkpoint),
             "num_samples": processed,
             "use_gt_box_prior": bool(args.use_gt_box_prior),
+            "match_mode": str(args.match_mode),
             "person_csv": str(output_dir / "smpl_translation_person_metrics.csv"),
             "worst_refined_transl_l2": top_rows(person_rows, "refined_transl_l2_m", args.top_worst),
             "worst_regression_transl_l2": top_rows(person_rows, "transl_l2_delta_m", args.top_worst),
@@ -131,6 +133,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--num-workers", type=int, default=2)
     parser.add_argument("--use-gt-box-prior", action="store_true")
+    parser.add_argument(
+        "--match-mode",
+        choices=("hungarian", "slot"),
+        default="hungarian",
+        help="Use normal Hungarian box/conf matching or force q_i to match gt_i for GT-box-prior diagnostics.",
+    )
     parser.add_argument("--subset-indices-csv", default="", help="Optional CSV with dataset_index rows to evaluate, e.g. old bad_frame_person_rows.csv")
     parser.add_argument("--subset-index-column", default="dataset_index")
     parser.add_argument("--subset-frame-csv", default="", help="Optional CSV with sequence_name/frame_name rows; selects windows containing those frames")
@@ -282,6 +290,7 @@ def evaluate_batch(
     person_rows: list[dict[str, Any]],
     batch_indices: list[int],
     frame_paths_by_index: dict[int, list[Path]],
+    match_mode: str = "hungarian",
 ) -> None:
     pred_confs = flatten_prediction(predictions["pred_confs"], 3)
     pred_boxes = flatten_prediction(predictions["pred_boxes"], 3)
@@ -302,7 +311,14 @@ def evaluate_batch(
     base_tangent = flatten_prediction(predictions.get("base_pred_transl_tangent"), 3)
 
     targets = flatten_smpl_targets(batch, device=pred_confs.device)
-    indices = matcher({"pred_confs": pred_confs, "pred_boxes": pred_boxes}, targets)
+    indices = match_smpl_predictions(
+        matcher=matcher,
+        outputs={"pred_confs": pred_confs, "pred_boxes": pred_boxes},
+        targets=targets,
+        device=pred_confs.device,
+        num_queries=int(pred_confs.shape[1]),
+        match_mode=match_mode,
+    )
     matched = collect_matches(indices, targets, pred_confs.device)
     if matched["frame_idx"].numel() == 0:
         return
@@ -395,6 +411,28 @@ def evaluate_batch(
         target_tan=target_tangent if ray_dir is not None and tangent_x is not None and tangent_y is not None else None,
         box_prior_weight=flat_box_prior_weight[frame_idx, src_idx] if flat_box_prior_weight is not None else None,
     )
+
+
+def match_smpl_predictions(
+    matcher: HungarianSMPLMatcher,
+    outputs: dict[str, torch.Tensor],
+    targets: list[dict[str, torch.Tensor]],
+    device: torch.device,
+    num_queries: int,
+    match_mode: str,
+) -> list[tuple[torch.Tensor, torch.Tensor]]:
+    if match_mode == "hungarian":
+        return matcher(outputs, targets)
+    if match_mode != "slot":
+        raise ValueError(f"Unsupported match mode: {match_mode}")
+    indices: list[tuple[torch.Tensor, torch.Tensor]] = []
+    for target in targets:
+        num_targets = int(target["transl_cam"].shape[0])
+        count = min(int(num_queries), num_targets)
+        src_idx = torch.arange(count, dtype=torch.long, device=device)
+        tgt_idx = torch.arange(count, dtype=torch.long, device=device)
+        indices.append((src_idx, tgt_idx))
+    return indices
 
 
 def collect_matches(indices, targets: list[dict[str, torch.Tensor]], device: torch.device) -> dict[str, torch.Tensor]:
