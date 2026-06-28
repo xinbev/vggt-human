@@ -31,6 +31,9 @@ class Aggregator(nn.Module):
         smpl_query_box_prior: bool = False,
         smpl_query_patch_pool: bool = False,
         smpl_query_patch_pool_expand: float = 0.10,
+        smpl_query_patch_pool_mode: str = "box",
+        smpl_query_mask_min_patch_count: int = 4,
+        smpl_query_mask_fallback_to_box: bool = True,
         register_attention_block_indices: list[int] = [2, 6, 9, 14, 20],
         cached_layer_indices: tuple[int, ...] = (4, 11, 17, 23),
     ) -> None:
@@ -88,6 +91,11 @@ class Aggregator(nn.Module):
         self.smpl_query_box_prior = smpl_query_box_prior
         self.smpl_query_patch_pool = smpl_query_patch_pool
         self.smpl_query_patch_pool_expand = smpl_query_patch_pool_expand
+        self.smpl_query_patch_pool_mode = str(smpl_query_patch_pool_mode or "box")
+        self.smpl_query_mask_min_patch_count = int(smpl_query_mask_min_patch_count)
+        self.smpl_query_mask_fallback_to_box = bool(smpl_query_mask_fallback_to_box)
+        if self.smpl_query_patch_pool_mode not in {"box", "mask", "mask_intersection"}:
+            raise ValueError(f"Unsupported smpl_query_patch_pool_mode: {self.smpl_query_patch_pool_mode}")
         self.cached_layer_indices = set(cached_layer_indices)
         self.camera_token = nn.Parameter(torch.empty(1, 2, 1, embed_dim))
         self.register_token = nn.Parameter(torch.empty(1, 2, num_register_tokens, embed_dim))
@@ -144,6 +152,7 @@ class Aggregator(nn.Module):
         images: torch.Tensor,
         smpl_query_boxes: torch.Tensor | None = None,
         smpl_query_boxes_mask: torch.Tensor | None = None,
+        smpl_query_patch_masks: torch.Tensor | None = None,
     ) -> tuple[list[torch.Tensor | None], AggregatorTokenLayout, torch.Tensor | None]:
         batch_size, num_frames, num_channels, height, width = images.shape
         if num_channels != 3:
@@ -184,6 +193,7 @@ class Aggregator(nn.Module):
             width,
             smpl_reference_boxes,
             smpl_query_boxes_mask,
+            smpl_query_patch_masks,
         )
 
         tokens = torch.cat([camera_token, register_token, smpl_query_token, patch_tokens], dim=1)
@@ -292,6 +302,7 @@ class Aggregator(nn.Module):
         width: int,
         smpl_reference_boxes: torch.Tensor | None,
         smpl_query_boxes_mask: torch.Tensor | None,
+        smpl_query_patch_masks: torch.Tensor | None,
     ) -> torch.Tensor:
         if self.smpl_patch_pool_embed is None or self.num_smpl_queries == 0:
             return smpl_query_token
@@ -302,12 +313,31 @@ class Aggregator(nn.Module):
             prior_mask = torch.zeros(batch_size, num_frames, self.num_smpl_queries, dtype=torch.bool, device=patch_tokens.device)
         else:
             prior_mask = smpl_query_boxes_mask.to(device=patch_tokens.device).bool()
+            if prior_mask.shape != (batch_size, num_frames, self.num_smpl_queries):
+                raise ValueError(
+                    "smpl_query_boxes_mask must have shape "
+                    f"(B, S, {self.num_smpl_queries}), got {tuple(prior_mask.shape)}"
+                )
+        flat_query_patch_masks = None
+        if smpl_query_patch_masks is not None:
+            expected = (batch_size, num_frames, self.num_smpl_queries)
+            if smpl_query_patch_masks.shape[:3] != expected:
+                raise ValueError(
+                    "smpl_query_patch_masks must have shape "
+                    f"(B, S, {self.num_smpl_queries}, P), got {tuple(smpl_query_patch_masks.shape)}"
+                )
+            flat_query_patch_masks = smpl_query_patch_masks.to(device=patch_tokens.device).reshape(
+                batch_size * num_frames,
+                self.num_smpl_queries,
+                -1,
+            )
         pooled = self._pool_box_patch_tokens(
             patch_tokens,
             boxes.reshape(batch_size * num_frames, self.num_smpl_queries, 4),
             prior_mask.reshape(batch_size * num_frames, self.num_smpl_queries),
             height,
             width,
+            flat_query_patch_masks,
         )
         prior_embed = self.smpl_patch_pool_embed(pooled).to(dtype=smpl_query_token.dtype)
         return smpl_query_token + prior_embed
@@ -319,6 +349,7 @@ class Aggregator(nn.Module):
         prior_mask: torch.Tensor,
         height: int,
         width: int,
+        query_patch_masks: torch.Tensor | None = None,
     ) -> torch.Tensor:
         patch_grid_size = (height // self.patch_size, width // self.patch_size)
         if patch_tokens.shape[1] != patch_grid_size[0] * patch_grid_size[1]:
@@ -326,7 +357,8 @@ class Aggregator(nn.Module):
                 "patch_tokens length does not match image patch grid: "
                 f"got {patch_tokens.shape[1]}, expected {patch_grid_size[0] * patch_grid_size[1]}"
             )
-        mask = self._patch_box_mask(boxes, prior_mask, patch_grid_size)
+        box_mask = self._patch_box_mask(boxes, prior_mask, patch_grid_size)
+        mask = self._combine_patch_pool_masks(box_mask, query_patch_masks, prior_mask, patch_grid_size)
         mask_f = mask.to(dtype=patch_tokens.dtype)
         selected = mask_f.sum(dim=-1, keepdim=True)
         has_selected = selected.squeeze(-1) > 0
@@ -343,6 +375,33 @@ class Aggregator(nn.Module):
         meta = torch.cat([boxes, valid[..., None].to(dtype=boxes.dtype), area[..., None]], dim=-1)
         meta = torch.where(valid[..., None], meta, torch.zeros_like(meta))
         return torch.cat([mean_pool, max_pool, meta.to(dtype=patch_tokens.dtype)], dim=-1)
+
+    def _combine_patch_pool_masks(
+        self,
+        box_mask: torch.Tensor,
+        query_patch_masks: torch.Tensor | None,
+        prior_mask: torch.Tensor,
+        patch_grid_size: tuple[int, int],
+    ) -> torch.Tensor:
+        if query_patch_masks is None or self.smpl_query_patch_pool_mode == "box":
+            return box_mask
+        expected_patches = patch_grid_size[0] * patch_grid_size[1]
+        if query_patch_masks.shape != box_mask.shape:
+            raise ValueError(
+                "smpl_query_patch_masks must have shape "
+                f"{tuple(box_mask.shape)}, got {tuple(query_patch_masks.shape)}"
+            )
+        sam_mask = query_patch_masks.to(device=box_mask.device).bool() & prior_mask[..., None]
+        if self.smpl_query_patch_pool_mode == "mask":
+            candidate = sam_mask
+        else:
+            candidate = box_mask & sam_mask
+        if expected_patches != box_mask.shape[-1]:
+            raise RuntimeError("Patch mask shape mismatch")
+        if not self.smpl_query_mask_fallback_to_box:
+            return candidate
+        enough = candidate.sum(dim=-1) >= max(int(self.smpl_query_mask_min_patch_count), 1)
+        return torch.where(enough[..., None], candidate, box_mask)
 
     def _patch_box_mask(
         self,

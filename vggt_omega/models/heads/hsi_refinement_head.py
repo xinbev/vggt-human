@@ -35,6 +35,8 @@ class HSIRefinementHead(nn.Module):
         temporal_momentum_decay: float = 0.7,
         temporal_momentum_detach: bool = True,
         temporal_momentum_use_track_ids: bool = True,
+        track_quality_min: float = 0.25,
+        track_gap_max: int = 30,
     ) -> None:
         super().__init__()
         if not smpl_model_dir:
@@ -54,6 +56,8 @@ class HSIRefinementHead(nn.Module):
         self.temporal_momentum_decay = float(temporal_momentum_decay)
         self.temporal_momentum_detach = bool(temporal_momentum_detach)
         self.temporal_momentum_use_track_ids = bool(temporal_momentum_use_track_ids)
+        self.track_quality_min = float(track_quality_min)
+        self.track_gap_max = int(track_gap_max)
         if self.probe_mode not in {"projected", "local_nearest"}:
             raise ValueError(f"Unsupported hsi_probe_mode: {self.probe_mode}")
         if self.affine_probe_mode not in {"projected", "local_nearest"}:
@@ -112,6 +116,8 @@ class HSIRefinementHead(nn.Module):
         pose_enc: torch.Tensor,
         track_ids: torch.Tensor | None = None,
         track_mask: torch.Tensor | None = None,
+        track_quality: torch.Tensor | None = None,
+        track_gap: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor]:
         required = ("pred_pose_6d", "pred_poses", "pred_betas", "pred_transl_cam", "pred_confs")
         for key in required:
@@ -130,6 +136,8 @@ class HSIRefinementHead(nn.Module):
                 pose_enc=pose_enc,
                 track_ids=track_ids,
                 track_mask=track_mask,
+                track_quality=track_quality,
+                track_gap=track_gap,
             )
 
         pose6d = smpl_outputs["pred_pose_6d"].float()
@@ -239,6 +247,8 @@ class HSIRefinementHead(nn.Module):
         pose_enc: torch.Tensor,
         track_ids: torch.Tensor | None = None,
         track_mask: torch.Tensor | None = None,
+        track_quality: torch.Tensor | None = None,
+        track_gap: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor]:
         pose6d = smpl_outputs["pred_pose_6d"].float()
         betas = smpl_outputs["pred_betas"].float()
@@ -287,7 +297,8 @@ class HSIRefinementHead(nn.Module):
                 frame_tokens,
                 memories,
                 track_ids[:, frame_idx] if track_ids is not None else None,
-                track_mask[:, frame_idx] if track_mask is not None else None,
+                self._effective_track_mask(track_mask, track_quality, frame_idx),
+                track_gap[:, frame_idx] if track_gap is not None else None,
                 frame_transl,
                 frame_scale=None,
                 frame_bias=None,
@@ -343,7 +354,7 @@ class HSIRefinementHead(nn.Module):
                 scene_scale[:, 0],
                 depth_bias[:, 0],
                 track_ids[:, frame_idx] if track_ids is not None else None,
-                track_mask[:, frame_idx] if track_mask is not None else None,
+                self._effective_track_mask(track_mask, track_quality, frame_idx),
             )
 
             refined_pose6d_frames.append(refined_pose6d)
@@ -528,6 +539,7 @@ class HSIRefinementHead(nn.Module):
         memories: list[dict[int, dict[str, torch.Tensor]]],
         track_ids: torch.Tensor | None,
         track_mask: torch.Tensor | None,
+        track_gap: torch.Tensor | None,
         frame_transl: torch.Tensor,
         frame_scale: torch.Tensor | None,
         frame_bias: torch.Tensor | None,
@@ -542,6 +554,9 @@ class HSIRefinementHead(nn.Module):
             fused_queries = []
             for query_idx in range(num_queries):
                 current = tokens[batch_idx, 0, query_idx]
+                if track_mask is not None and not bool(track_mask[batch_idx, query_idx].detach().cpu()):
+                    fused_queries.append(current)
+                    continue
                 key = self._temporal_memory_key(track_ids, track_mask, batch_idx, query_idx)
                 memory = memories[batch_idx].get(key)
                 if memory is None:
@@ -556,7 +571,12 @@ class HSIRefinementHead(nn.Module):
                 memory_input = torch.cat([previous_tokens, previous_contact, transl_delta, scale_bias], dim=-1)
                 memory_feature = self.temporal_memory_proj(memory_input)
                 gate = torch.sigmoid(self.temporal_memory_gate(torch.cat([current, memory_feature], dim=-1)))
-                fused_queries.append(current + gate * memory_feature)
+                memory_scale = 1.0
+                if track_gap is not None:
+                    gap_value = int(track_gap[batch_idx, query_idx].detach().cpu())
+                    if gap_value > self.track_gap_max:
+                        memory_scale = 0.25
+                fused_queries.append(current + float(memory_scale) * gate * memory_feature)
             fused_batches.append(torch.stack(fused_queries, dim=0))
         return torch.stack(fused_batches, dim=0).reshape(batch_size, 1, num_queries, num_tokens, hidden_dim)
 
@@ -577,6 +597,8 @@ class HSIRefinementHead(nn.Module):
             scale_value = scene_scale[batch_idx].reshape(-1)[0]
             bias_value = depth_bias[batch_idx].reshape(-1)[0]
             for query_idx in range(num_queries):
+                if track_mask is not None and not bool(track_mask[batch_idx, query_idx].detach().cpu()):
+                    continue
                 key = self._temporal_memory_key(track_ids, track_mask, batch_idx, query_idx)
                 current = {
                     "tokens": tokens[batch_idx, query_idx],
@@ -610,6 +632,22 @@ class HSIRefinementHead(nn.Module):
             if mask_ok and track_id >= 0:
                 return track_id
         return -(query_idx + 1)
+
+    def _effective_track_mask(
+        self,
+        track_mask: torch.Tensor | None,
+        track_quality: torch.Tensor | None,
+        frame_idx: int,
+    ) -> torch.Tensor | None:
+        if track_mask is None and track_quality is None:
+            return None
+        if track_mask is None:
+            frame_mask = torch.ones_like(track_quality[:, frame_idx], dtype=torch.bool)
+        else:
+            frame_mask = track_mask[:, frame_idx].bool()
+        if track_quality is not None:
+            frame_mask = frame_mask & (track_quality[:, frame_idx].float() >= self.track_quality_min)
+        return frame_mask
 
 
 class HSITransformerLayer(nn.Module):

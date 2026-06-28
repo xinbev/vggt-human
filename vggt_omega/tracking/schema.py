@@ -41,9 +41,13 @@ class Detection:
     class_id: int = 0
     class_name: str = "person"
     source: str = "detector"
+    det_id: int = -1
+    mask: dict[str, Any] | None = None
+    extra: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self, image_width: int | None = None, image_height: int | None = None) -> dict[str, Any]:
         out = {
+            "det_id": int(self.det_id),
             "bbox_xyxy_pixels": [float(v) for v in self.bbox_xyxy],
             "det_score": float(self.score),
             "class_id": int(self.class_id),
@@ -52,6 +56,9 @@ class Detection:
         }
         if image_width is not None and image_height is not None:
             out["bbox_cxcywh_norm"] = xyxy_to_cxcywh_norm(self.bbox_xyxy, image_width, image_height)
+        if self.mask is not None:
+            out["mask"] = self.mask
+        out.update(self.extra)
         return out
 
 

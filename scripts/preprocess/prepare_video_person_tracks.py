@@ -72,6 +72,21 @@ def main() -> None:
     frame_iter = iter_frames(args, source)
     for frame_index, frame_id, image_path, frame_bgr in frame_iter:
         detections = detector.detect(frame_bgr)
+        for det_idx, det in enumerate(detections):
+            det.det_id = det_idx
+        if mask_predictor is not None and detections:
+            masks, mask_meta = mask_predictor.predict_for_detections(frame_bgr, detections)
+            mask_path = output_root / "masks" / f"{frame_id}.npz"
+            save_frame_masks(mask_path, masks, prefix="det")
+            for det in detections:
+                meta = mask_meta.get(int(det.det_id))
+                if meta is not None:
+                    det.mask = {
+                        "format": "npz_bool",
+                        "path": str(mask_path),
+                        "array_key": f"det_{int(det.det_id):06d}",
+                        **meta,
+                    }
         tracks = tracker.update(
             frame_bgr=frame_bgr,
             detections=detections,
@@ -79,19 +94,6 @@ def main() -> None:
             frame_index=frame_index,
             video_name=source_name,
         )
-        if mask_predictor is not None and tracks:
-            masks, mask_meta = mask_predictor.predict_for_observations(frame_bgr, tracks)
-            mask_path = output_root / "masks" / f"{frame_id}.npz"
-            save_frame_masks(mask_path, masks)
-            for obs in tracks:
-                meta = mask_meta.get(int(obs.person_id))
-                if meta is not None:
-                    obs.mask = {
-                        "format": "npz_bool",
-                        "path": str(mask_path),
-                        "array_key": f"person_{obs.person_id}",
-                        **meta,
-                    }
 
         height, width = frame_bgr.shape[:2]
         frame = FrameObservations(

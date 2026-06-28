@@ -11,6 +11,7 @@ import torch.nn as nn
 
 from vggt_omega.models.aggregator import Aggregator
 from vggt_omega.models.heads import AggregatorSMPLHead, CameraHead, DenseHead, HSIRefinementHead, TextAlignmentHead
+from vggt_omega.tracking.smpl_track_assigner import BaseSMPLTrackAssigner
 from vggt_omega.utils.hsi_affine import apply_hsi_scene_affine_mode
 
 
@@ -50,6 +51,18 @@ class VGGTOmega(nn.Module):
         smpl_query_box_prior: bool = False,
         smpl_query_patch_pool: bool = False,
         smpl_query_patch_pool_expand: float = 0.10,
+        smpl_query_patch_pool_mode: str = "box",
+        smpl_query_mask_min_patch_count: int = 4,
+        smpl_query_mask_fallback_to_box: bool = True,
+        smpl_track_assignment_mode: str = "gt",
+        smpl_use_external_track_prior: bool = True,
+        smpl_enable_post_track_temporal_translation: bool = False,
+        smpl_track_assign_max_age: int = 90,
+        smpl_track_assign_min_quality: float = 0.25,
+        smpl_track_assign_max_center_distance_norm: float = 0.25,
+        smpl_track_assign_max_transl_distance_m: float = 1.50,
+        smpl_track_assign_max_beta_l1: float = 0.30,
+        smpl_track_assign_external_iou_min: float = 0.50,
         smpl_enable_temporal_translation: bool = False,
         smpl_temporal_translation_hidden_dim: int = 512,
         smpl_temporal_translation_max_velocity_delta_m: float = 0.25,
@@ -70,6 +83,8 @@ class VGGTOmega(nn.Module):
         hsi_temporal_momentum_decay: float = 0.7,
         hsi_temporal_momentum_detach: bool = True,
         hsi_temporal_momentum_use_track_ids: bool = True,
+        hsi_track_quality_min: float = 0.25,
+        hsi_track_gap_max: int = 30,
         hsi_scene_affine_mode: str = "per_frame",
         hsi_scene_affine_ema_alpha: float = 0.25,
         smpl_model_dir: str = "",
@@ -90,11 +105,31 @@ class VGGTOmega(nn.Module):
             smpl_query_box_prior=smpl_query_box_prior if enable_smpl else False,
             smpl_query_patch_pool=smpl_query_patch_pool if enable_smpl else False,
             smpl_query_patch_pool_expand=smpl_query_patch_pool_expand,
+            smpl_query_patch_pool_mode=smpl_query_patch_pool_mode,
+            smpl_query_mask_min_patch_count=smpl_query_mask_min_patch_count,
+            smpl_query_mask_fallback_to_box=smpl_query_mask_fallback_to_box,
         )
         self.freeze_aggregator_forward = freeze_aggregator_forward
         self.hsi_scene_affine_mode = str(hsi_scene_affine_mode or "per_frame")
         self.hsi_scene_affine_ema_alpha = float(hsi_scene_affine_ema_alpha)
         self.image_size = int(image_size)
+        self.smpl_track_assignment_mode = str(smpl_track_assignment_mode or "gt")
+        self.smpl_use_external_track_prior = bool(smpl_use_external_track_prior)
+        self.smpl_enable_post_track_temporal_translation = bool(smpl_enable_post_track_temporal_translation)
+        if self.smpl_track_assignment_mode not in {"none", "gt", "external_prior", "base_smpl"}:
+            raise ValueError(f"Unsupported smpl_track_assignment_mode: {self.smpl_track_assignment_mode}")
+        self.smpl_track_assigner = (
+            BaseSMPLTrackAssigner(
+                max_age=smpl_track_assign_max_age,
+                min_track_quality=smpl_track_assign_min_quality,
+                max_center_distance_norm=smpl_track_assign_max_center_distance_norm,
+                max_transl_distance_m=smpl_track_assign_max_transl_distance_m,
+                max_beta_l1=smpl_track_assign_max_beta_l1,
+                external_prior_iou_min=smpl_track_assign_external_iou_min,
+            )
+            if enable_smpl
+            else None
+        )
         _warn_if_rope_not_max(self.aggregator)
         self.camera_head = CameraHead(dim_in=2 * embed_dim) if enable_camera else None
         self.dense_head = DenseHead(dim_in=2 * embed_dim, patch_size=patch_size) if enable_depth else None
@@ -123,7 +158,7 @@ class VGGTOmega(nn.Module):
                 translation_refine_max_box_prior_weight=smpl_translation_refine_max_box_prior_weight,
                 translation_refine_human_height_prior_m=smpl_translation_refine_human_height_prior_m,
                 translation_refine_use_log_depth=smpl_translation_refine_use_log_depth,
-                enable_temporal_translation=smpl_enable_temporal_translation,
+                enable_temporal_translation=smpl_enable_temporal_translation or smpl_enable_post_track_temporal_translation,
                 temporal_translation_hidden_dim=smpl_temporal_translation_hidden_dim,
                 temporal_translation_max_velocity_delta_m=smpl_temporal_translation_max_velocity_delta_m,
                 temporal_translation_gate_bias=smpl_temporal_translation_gate_bias,
@@ -150,6 +185,8 @@ class VGGTOmega(nn.Module):
                 temporal_momentum_decay=hsi_temporal_momentum_decay,
                 temporal_momentum_detach=hsi_temporal_momentum_detach,
                 temporal_momentum_use_track_ids=hsi_temporal_momentum_use_track_ids,
+                track_quality_min=hsi_track_quality_min,
+                track_gap_max=hsi_track_gap_max,
                 smpl_model_dir=smpl_model_dir,
                 image_size=image_size,
             )
@@ -164,19 +201,34 @@ class VGGTOmega(nn.Module):
         images: torch.Tensor,
         smpl_query_boxes: torch.Tensor | None = None,
         smpl_query_boxes_mask: torch.Tensor | None = None,
+        smpl_query_patch_masks: torch.Tensor | None = None,
         smpl_track_ids: torch.Tensor | None = None,
         smpl_track_mask: torch.Tensor | None = None,
+        external_track_ids: torch.Tensor | None = None,
+        external_track_mask: torch.Tensor | None = None,
+        external_track_confidence: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor]:
         if len(images.shape) == 4:
             images = images.unsqueeze(0)
 
-        amp_dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
-        with torch.autocast(device_type="cuda", dtype=amp_dtype):
+        amp_enabled = images.device.type == "cuda"
+        amp_dtype = torch.bfloat16 if amp_enabled and torch.cuda.is_bf16_supported() else torch.float16
+        with torch.autocast(device_type=images.device.type, dtype=amp_dtype, enabled=amp_enabled):
             if self.freeze_aggregator_forward:
                 with torch.no_grad():
-                    aggregated_tokens_list, token_layout, smpl_reference_boxes = self.aggregator(images, smpl_query_boxes, smpl_query_boxes_mask)
+                    aggregated_tokens_list, token_layout, smpl_reference_boxes = self.aggregator(
+                        images,
+                        smpl_query_boxes,
+                        smpl_query_boxes_mask,
+                        smpl_query_patch_masks,
+                    )
             else:
-                aggregated_tokens_list, token_layout, smpl_reference_boxes = self.aggregator(images, smpl_query_boxes, smpl_query_boxes_mask)
+                aggregated_tokens_list, token_layout, smpl_reference_boxes = self.aggregator(
+                    images,
+                    smpl_query_boxes,
+                    smpl_query_boxes_mask,
+                    smpl_query_patch_masks,
+                )
 
         final_tokens = aggregated_tokens_list[-1]
         if final_tokens is None:
@@ -185,7 +237,7 @@ class VGGTOmega(nn.Module):
         predictions = {
             "camera_and_register_tokens": final_tokens[:, :, : token_layout.register_end].contiguous(),
         }
-        with torch.autocast(device_type="cuda", enabled=False):
+        with torch.autocast(device_type=images.device.type, enabled=False):
             if self.camera_head is not None:
                 predictions["pose_enc"] = self.camera_head(
                     aggregated_tokens_list,
@@ -216,10 +268,40 @@ class VGGTOmega(nn.Module):
                         token_layout=token_layout,
                         reference_boxes=smpl_reference_boxes,
                         pose_enc=predictions.get("pose_enc"),
-                        track_ids=smpl_track_ids,
-                        track_mask=smpl_track_mask,
+                        track_ids=None,
+                        track_mask=None,
+                        run_temporal_translation=False,
+                        return_temporal_hidden=self.smpl_enable_post_track_temporal_translation,
                     )
                 )
+                assigned = self._assign_smpl_tracks(
+                    predictions=predictions,
+                    reference_boxes=smpl_reference_boxes,
+                    query_mask=smpl_query_boxes_mask,
+                    smpl_track_ids=smpl_track_ids,
+                    smpl_track_mask=smpl_track_mask,
+                    external_track_ids=external_track_ids,
+                    external_track_mask=external_track_mask,
+                    external_track_confidence=external_track_confidence,
+                )
+                predictions.update(assigned)
+                if self.smpl_enable_post_track_temporal_translation and getattr(self.smpl_head, "temporal_translation_refiner", None) is not None:
+                    temporal_hidden = predictions.pop("smpl_temporal_hidden", None)
+                    if not isinstance(temporal_hidden, torch.Tensor):
+                        raise RuntimeError("Post-track temporal translation requires smpl_temporal_hidden")
+                    temporal_outputs = self.smpl_head.refine_translation_with_tracks(
+                        smpl_outputs=predictions,
+                        temporal_hidden=temporal_hidden,
+                        pose_enc=predictions.get("pose_enc"),
+                        track_ids=predictions.get("assigned_track_ids"),
+                        track_mask=predictions.get("assigned_track_mask"),
+                    )
+                    if isinstance(temporal_outputs.get("pred_transl_cam"), torch.Tensor):
+                        base_transl = predictions["pred_transl_cam"]
+                        refined_transl = temporal_outputs["pred_transl_cam"]
+                        predictions.update(temporal_outputs)
+                        predictions["base_pred_transl_cam_before_track_temporal"] = base_transl
+                        predictions["track_refined_pred_transl_cam"] = refined_transl
             if self.hsi_refinement_head is not None:
                 predictions.update(
                     self.hsi_refinement_head(
@@ -228,8 +310,10 @@ class VGGTOmega(nn.Module):
                         smpl_outputs=predictions,
                         depth=predictions["depth"],
                         pose_enc=predictions["pose_enc"],
-                        track_ids=smpl_track_ids,
-                        track_mask=smpl_track_mask,
+                        track_ids=predictions.get("assigned_track_ids"),
+                        track_mask=predictions.get("assigned_track_mask"),
+                        track_quality=predictions.get("assigned_track_quality"),
+                        track_gap=predictions.get("assigned_track_gap"),
                     )
                 )
                 apply_hsi_scene_affine_mode(
@@ -241,6 +325,75 @@ class VGGTOmega(nn.Module):
         if not self.training:
             predictions["images"] = images
         return predictions
+
+    def _assign_smpl_tracks(
+        self,
+        predictions: dict[str, torch.Tensor],
+        reference_boxes: torch.Tensor | None,
+        query_mask: torch.Tensor | None,
+        smpl_track_ids: torch.Tensor | None,
+        smpl_track_mask: torch.Tensor | None,
+        external_track_ids: torch.Tensor | None,
+        external_track_mask: torch.Tensor | None,
+        external_track_confidence: torch.Tensor | None,
+    ) -> dict[str, torch.Tensor]:
+        pred_transl = predictions.get("pred_transl_cam")
+        pred_betas = predictions.get("pred_betas")
+        pred_confs = predictions.get("pred_confs")
+        if not isinstance(pred_transl, torch.Tensor) or not isinstance(pred_betas, torch.Tensor) or not isinstance(pred_confs, torch.Tensor):
+            return {}
+        batch_size, num_frames, num_queries = pred_transl.shape[:3]
+        device = pred_transl.device
+        if query_mask is None:
+            query_mask = torch.ones(batch_size, num_frames, num_queries, dtype=torch.bool, device=device)
+        else:
+            query_mask = query_mask.to(device=device).bool()
+        mode = self.smpl_track_assignment_mode
+        if mode == "none":
+            ids = torch.full((batch_size, num_frames, num_queries), -1, dtype=torch.long, device=device)
+            return {
+                "assigned_track_ids": ids,
+                "assigned_track_mask": torch.zeros_like(query_mask),
+                "assigned_track_quality": torch.zeros(batch_size, num_frames, num_queries, dtype=torch.float32, device=device),
+                "assigned_track_gap": torch.zeros(batch_size, num_frames, num_queries, dtype=torch.long, device=device),
+                "assigned_track_source": torch.full((batch_size, num_frames, num_queries), -1, dtype=torch.long, device=device),
+            }
+        if mode == "gt" and smpl_track_ids is not None:
+            mask = smpl_track_mask.to(device=device).bool() if smpl_track_mask is not None else query_mask
+            return {
+                "assigned_track_ids": smpl_track_ids.to(device=device).long(),
+                "assigned_track_mask": mask & query_mask,
+                "assigned_track_quality": (mask & query_mask).to(dtype=torch.float32),
+                "assigned_track_gap": torch.zeros(batch_size, num_frames, num_queries, dtype=torch.long, device=device),
+                "assigned_track_source": torch.full((batch_size, num_frames, num_queries), 3, dtype=torch.long, device=device),
+            }
+        if mode == "external_prior" and external_track_ids is not None:
+            mask = external_track_mask.to(device=device).bool() if external_track_mask is not None else query_mask
+            quality = external_track_confidence.to(device=device).float() if external_track_confidence is not None else mask.to(dtype=torch.float32)
+            return {
+                "assigned_track_ids": external_track_ids.to(device=device).long(),
+                "assigned_track_mask": mask & query_mask,
+                "assigned_track_quality": quality * (mask & query_mask).to(dtype=quality.dtype),
+                "assigned_track_gap": torch.zeros(batch_size, num_frames, num_queries, dtype=torch.long, device=device),
+                "assigned_track_source": torch.full((batch_size, num_frames, num_queries), 2, dtype=torch.long, device=device),
+            }
+        boxes = predictions.get("pred_boxes")
+        if not isinstance(boxes, torch.Tensor):
+            boxes = reference_boxes
+        if not isinstance(boxes, torch.Tensor):
+            boxes = torch.zeros(batch_size, num_frames, num_queries, 4, dtype=pred_transl.dtype, device=device)
+        if self.smpl_track_assigner is None:
+            raise RuntimeError("SMPL track assigner is not initialized")
+        return self.smpl_track_assigner.assign(
+            boxes=boxes.to(device=device),
+            pred_betas=pred_betas,
+            pred_transl_cam=pred_transl,
+            pred_confs=pred_confs,
+            query_mask=query_mask,
+            external_track_ids=external_track_ids if self.smpl_use_external_track_prior else None,
+            external_track_mask=external_track_mask if self.smpl_use_external_track_prior else None,
+            external_track_confidence=external_track_confidence if self.smpl_use_external_track_prior else None,
+        )
 
 
 def _warn_if_rope_not_max(aggregator: nn.Module) -> None:

@@ -794,6 +794,8 @@ class AggregatorSMPLHead(nn.Module):
         pose_enc: torch.Tensor | None = None,
         track_ids: torch.Tensor | None = None,
         track_mask: torch.Tensor | None = None,
+        run_temporal_translation: bool = True,
+        return_temporal_hidden: bool = False,
     ) -> dict[str, torch.Tensor | dict[str, torch.Tensor]]:
         if token_layout.num_smpl_queries <= 0:
             raise ValueError("AggregatorSMPLHead requires token_layout with at least one SMPL query")
@@ -836,25 +838,58 @@ class AggregatorSMPLHead(nn.Module):
                 }
             else:
                 outputs[key] = value.reshape(batch_size, num_frames, *value.shape[1:])
-        if self.temporal_translation_refiner is not None:
+        final_hidden = hidden_states[-1].reshape(batch_size, num_frames, token_layout.num_smpl_queries, -1)
+        if return_temporal_hidden:
+            outputs["smpl_temporal_hidden"] = final_hidden
+        if self.temporal_translation_refiner is not None and run_temporal_translation:
             if pose_enc is None:
                 raise ValueError("Temporal SMPL translation requires pose_enc; set model.enable_camera=true")
-            final_hidden = hidden_states[-1].reshape(batch_size, num_frames, token_layout.num_smpl_queries, -1)
             seed_transl = outputs.get("seed_pred_transl_cam", outputs["pred_transl_cam"])
             if not isinstance(seed_transl, torch.Tensor):
                 raise RuntimeError("Temporal SMPL translation seed must be a tensor")
-            outputs["seed_pred_transl_cam"] = seed_transl
-            temporal_outputs = self.temporal_translation_refiner(
-                hidden=final_hidden,
-                seed_transl_cam=seed_transl,
-                pose_enc=pose_enc,
-                track_ids=track_ids,
-                track_mask=track_mask,
+            outputs.update(
+                self.refine_translation_with_tracks(
+                    smpl_outputs=outputs,
+                    temporal_hidden=final_hidden,
+                    pose_enc=pose_enc,
+                    track_ids=track_ids,
+                    track_mask=track_mask,
+                )
             )
-            outputs.update(temporal_outputs)
-            outputs["pred_cam"] = outputs["pred_transl_cam"]
-            _refresh_translation_ray_components(outputs)
         return outputs
+
+    def refine_translation_with_tracks(
+        self,
+        smpl_outputs: dict[str, torch.Tensor | dict[str, torch.Tensor]],
+        temporal_hidden: torch.Tensor,
+        pose_enc: torch.Tensor | None,
+        track_ids: torch.Tensor | None = None,
+        track_mask: torch.Tensor | None = None,
+    ) -> dict[str, torch.Tensor]:
+        if self.temporal_translation_refiner is None:
+            return {}
+        if pose_enc is None:
+            raise ValueError("Temporal SMPL translation requires pose_enc; set model.enable_camera=true")
+        seed_transl = smpl_outputs.get("seed_pred_transl_cam", smpl_outputs.get("pred_transl_cam"))
+        if not isinstance(seed_transl, torch.Tensor):
+            raise RuntimeError("Temporal SMPL translation seed must be a tensor")
+        temporal_outputs = self.temporal_translation_refiner(
+            hidden=temporal_hidden,
+            seed_transl_cam=seed_transl,
+            pose_enc=pose_enc,
+            track_ids=track_ids,
+            track_mask=track_mask,
+        )
+        updates: dict[str, torch.Tensor] = {"seed_pred_transl_cam": seed_transl, **temporal_outputs}
+        updates["pred_cam"] = updates["pred_transl_cam"]
+        refreshable = dict(smpl_outputs)
+        refreshable.update(updates)
+        _refresh_translation_ray_components(refreshable)
+        for key in ("pred_transl_ray_depth", "pred_transl_tangent_offset"):
+            value = refreshable.get(key)
+            if isinstance(value, torch.Tensor):
+                updates[key] = value
+        return updates
 
 
 def _refresh_translation_ray_components(outputs: dict[str, torch.Tensor | dict[str, torch.Tensor]]) -> None:

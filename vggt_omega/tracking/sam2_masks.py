@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 import torch
 
-from .schema import TrackObservation
+from .schema import Detection, TrackObservation
 
 
 class SAM2BoxMaskPredictor:
@@ -70,8 +70,43 @@ class SAM2BoxMaskPredictor:
                 }
         return masks, metadata
 
+    @torch.inference_mode()
+    def predict_for_detections(
+        self,
+        frame_bgr: np.ndarray,
+        detections: list[Detection],
+    ) -> tuple[dict[int, np.ndarray], dict[int, dict[str, float | int]]]:
+        if not detections:
+            return {}, {}
+        frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+        masks: dict[int, np.ndarray] = {}
+        metadata: dict[int, dict[str, float | int]] = {}
+        with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.device.type == "cuda"):
+            self.predictor.set_image(frame_rgb)
+            for det_idx, det in enumerate(detections):
+                det_id = int(det.det_id if det.det_id >= 0 else det_idx)
+                box = np.asarray(det.bbox_xyxy, dtype=np.float32)
+                pred_masks, pred_scores, _ = self.predictor.predict(
+                    box=box,
+                    multimask_output=self.multimask_output,
+                    return_logits=False,
+                )
+                best_idx = int(np.argmax(pred_scores))
+                mask = np.asarray(pred_masks[best_idx] > 0, dtype=np.bool_)
+                masks[det_id] = mask
+                metadata[det_id] = {
+                    "sam2_score": float(pred_scores[best_idx]),
+                    "mask_area": int(mask.sum()),
+                    "mask_height": int(mask.shape[0]),
+                    "mask_width": int(mask.shape[1]),
+                }
+        return masks, metadata
 
-def save_frame_masks(path: Path, masks: dict[int, np.ndarray]) -> None:
+
+def save_frame_masks(path: Path, masks: dict[int, np.ndarray], prefix: str = "person") -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    arrays = {f"person_{person_id}": mask.astype(np.uint8) for person_id, mask in sorted(masks.items())}
+    if prefix == "det":
+        arrays = {f"{prefix}_{item_id:06d}": mask.astype(np.uint8) for item_id, mask in sorted(masks.items())}
+    else:
+        arrays = {f"{prefix}_{item_id}": mask.astype(np.uint8) for item_id, mask in sorted(masks.items())}
     np.savez_compressed(path, **arrays)

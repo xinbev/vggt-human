@@ -255,6 +255,18 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         smpl_query_box_prior=bool(model_cfg.get("smpl_query_box_prior", False)),
         smpl_query_patch_pool=bool(model_cfg.get("smpl_query_patch_pool", False)),
         smpl_query_patch_pool_expand=float(model_cfg.get("smpl_query_patch_pool_expand", 0.10)),
+        smpl_query_patch_pool_mode=str(model_cfg.get("smpl_query_patch_pool_mode", "box")),
+        smpl_query_mask_min_patch_count=int(model_cfg.get("smpl_query_mask_min_patch_count", 4)),
+        smpl_query_mask_fallback_to_box=bool(model_cfg.get("smpl_query_mask_fallback_to_box", True)),
+        smpl_track_assignment_mode=str(model_cfg.get("smpl_track_assignment_mode", "gt")),
+        smpl_use_external_track_prior=bool(model_cfg.get("smpl_use_external_track_prior", True)),
+        smpl_enable_post_track_temporal_translation=bool(model_cfg.get("smpl_enable_post_track_temporal_translation", False)),
+        smpl_track_assign_max_age=int(model_cfg.get("smpl_track_assign_max_age", 90)),
+        smpl_track_assign_min_quality=float(model_cfg.get("smpl_track_assign_min_quality", 0.25)),
+        smpl_track_assign_max_center_distance_norm=float(model_cfg.get("smpl_track_assign_max_center_distance_norm", 0.25)),
+        smpl_track_assign_max_transl_distance_m=float(model_cfg.get("smpl_track_assign_max_transl_distance_m", 1.50)),
+        smpl_track_assign_max_beta_l1=float(model_cfg.get("smpl_track_assign_max_beta_l1", 0.30)),
+        smpl_track_assign_external_iou_min=float(model_cfg.get("smpl_track_assign_external_iou_min", 0.50)),
         smpl_enable_temporal_translation=bool(model_cfg.get("smpl_enable_temporal_translation", False)),
         smpl_temporal_translation_hidden_dim=int(model_cfg.get("smpl_temporal_translation_hidden_dim", 512)),
         smpl_temporal_translation_max_velocity_delta_m=float(model_cfg.get("smpl_temporal_translation_max_velocity_delta_m", 0.25)),
@@ -275,6 +287,8 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_temporal_momentum_decay=float(model_cfg.get("hsi_temporal_momentum_decay", 0.7)),
         hsi_temporal_momentum_detach=bool(model_cfg.get("hsi_temporal_momentum_detach", True)),
         hsi_temporal_momentum_use_track_ids=bool(model_cfg.get("hsi_temporal_momentum_use_track_ids", True)),
+        hsi_track_quality_min=float(model_cfg.get("hsi_track_quality_min", 0.25)),
+        hsi_track_gap_max=int(model_cfg.get("hsi_track_gap_max", 30)),
         hsi_scene_affine_mode=str(model_cfg.get("hsi_scene_affine_mode", "per_frame")),
         hsi_scene_affine_ema_alpha=float(model_cfg.get("hsi_scene_affine_ema_alpha", 0.25)),
         smpl_model_dir=str(config.get("assets", {}).get("smpl_model_dir", "")),
@@ -342,7 +356,10 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
     if smpl_head is not None and bool(model_cfg.get("train_smpl_temporal_translation", False)):
         temporal_translation_refiner = getattr(smpl_head, "temporal_translation_refiner", None)
         if temporal_translation_refiner is None:
-            raise ValueError("train_smpl_temporal_translation=true requires model.smpl_enable_temporal_translation=true")
+            raise ValueError(
+                "train_smpl_temporal_translation=true requires "
+                "model.smpl_enable_temporal_translation=true or model.smpl_enable_post_track_temporal_translation=true"
+            )
         unfreeze_module(temporal_translation_refiner)
     if smpl_head is not None and bool(model_cfg.get("train_smpl_box_heads", False)):
         regression_head = getattr(smpl_head, "regression_head", None)
@@ -609,8 +626,12 @@ def forward_model(model: torch.nn.Module, batch: dict[str, torch.Tensor], config
         batch["images"],
         smpl_query_boxes=boxes,
         smpl_query_boxes_mask=mask,
+        smpl_query_patch_masks=batch.get("smpl_query_patch_masks"),
         smpl_track_ids=batch.get("gt_track_ids", batch.get("person_ids")),
         smpl_track_mask=batch.get("gt_track_mask", batch.get("person_id_mask")),
+        external_track_ids=batch.get("external_track_ids"),
+        external_track_mask=batch.get("external_track_mask"),
+        external_track_confidence=batch.get("external_track_confidence"),
     )
 
 
