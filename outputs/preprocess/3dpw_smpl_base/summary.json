@@ -1,0 +1,32 @@
+{
+  "root": "/home/zhw/xyb_space/3DPW",
+  "output_root": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/3dpw_smpl_base",
+  "splits": {
+    "train": {
+      "sequences": 24,
+      "frames": 17642,
+      "persons": 22735,
+      "skipped_persons": 0,
+      "missing_images": 0,
+      "annotation": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/3dpw_smpl_base/train.pkl"
+    },
+    "validation": {
+      "sequences": 12,
+      "frames": 8345,
+      "persons": 10413,
+      "skipped_persons": 0,
+      "missing_images": 0,
+      "annotation": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/3dpw_smpl_base/validation.pkl"
+    },
+    "test": {
+      "sequences": 24,
+      "frames": 24547,
+      "persons": 35515,
+      "skipped_persons": 0,
+      "missing_images": 0,
+      "annotation": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/3dpw_smpl_base/test.pkl"
+    }
+  },
+  "min_keypoint_conf": 0.5,
+  "bbox_expand": 0.15
+}

@@ -6,6 +6,17 @@ import pickle
 import sys
 from pathlib import Path
 from typing import Any
+import inspect
+from collections import namedtuple
+
+if not hasattr(inspect, "getargspec"):
+    ArgSpec = namedtuple("ArgSpec", "args varargs keywords defaults")
+
+    def getargspec(func):
+        spec = inspect.getfullargspec(func)
+        return ArgSpec(spec.args, spec.varargs, spec.varkw, spec.defaults)
+
+    inspect.getargspec = getargspec
 
 import numpy as np
 import torch
