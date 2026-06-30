@@ -212,6 +212,7 @@ def main() -> None:
             "anchor": args.anchor_mode,
             "main_asset": "PLY depth point cloud + base SMPL mesh + foot-to-scene arrow",
             "box_source": "SAM2 mask bbox when auto-person-prior is enabled; model pred_boxes only as fallback",
+            "coordinate_note": "Model projection uses resized input coordinates. RGB colors are sampled after resizing the original image to the depth grid through the model input image.",
         },
         "people": people_meta,
         "files": files,
@@ -591,10 +592,30 @@ def export_person_assets(
             depth_source=depth_source,
         )
         out_files.append(ply_path.name)
+        env_path = output_dir / f"environment_{depth_source}_depth_{prefix}.ply"
+        env_stats = export_environment_ply(
+            env_path,
+            rgb,
+            probe,
+            scene_stride=scene_stride,
+            max_scene_depth=max_scene_depth,
+            depth_source=depth_source,
+        )
+        out_files.append(env_path.name)
+        smpl_path = output_dir / f"smpl_only_{prefix}.ply"
+        smpl_stats = export_smpl_only_ply(smpl_path, probe, query_idx)
+        out_files.append(smpl_path.name)
 
     metadata = build_person_metadata(predictions, probe, query_idx, anchor_idx, box)
     if export_ply:
-        metadata["ply"] = {"file": ply_path.name, **ply_stats}
+        metadata["ply"] = {
+            "combined_file": ply_path.name,
+            "environment_file": env_path.name,
+            "smpl_file": smpl_path.name,
+            "combined": ply_stats,
+            "environment": env_stats,
+            "smpl": smpl_stats,
+        }
     meta_path = output_dir / f"real_probe_values_{prefix}.json"
     meta_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
     out_files.append(meta_path.name)
@@ -881,6 +902,49 @@ def export_hsi_foot_scene_ply(
     }
 
 
+def export_environment_ply(
+    path: Path,
+    rgb: Image.Image,
+    probe: dict[str, torch.Tensor],
+    scene_stride: int,
+    max_scene_depth: float,
+    depth_source: str,
+) -> dict[str, Any]:
+    depth_key = "hsi_depth_hw" if depth_source == "hsi" and "hsi_depth_hw" in probe else "depth_hw"
+    vertices, colors, faces = depth_to_surface_mesh(
+        depth=probe[depth_key][0, 0],
+        intrinsics=probe["intrinsics"],
+        rgb=rgb,
+        image_size=int(probe["image_size"].detach().cpu()),
+        stride=max(int(scene_stride), 1),
+        max_depth=float(max_scene_depth),
+    )
+    mesh = MeshBuilder()
+    if vertices.size:
+        mesh.add_mesh(vertices, faces, colors)
+    mesh.write(path)
+    return {
+        "file": path.name,
+        "depth_source": "hsi" if depth_key == "hsi_depth_hw" else "raw",
+        "vertices": int(vertices.shape[0]),
+        "faces": int(faces.shape[0]),
+        "color_source": "input_rgb_resized_to_depth_grid",
+    }
+
+
+def export_smpl_only_ply(path: Path, probe: dict[str, torch.Tensor], query_idx: int) -> dict[str, Any]:
+    vertices = probe["smpl_vertices"][0, 0, query_idx].detach().float().cpu().numpy()
+    faces = probe["smpl_faces"].detach().cpu().numpy()
+    mesh = MeshBuilder()
+    mesh.add_mesh(vertices, faces, (232, 142, 82))
+    mesh.write(path)
+    return {
+        "file": path.name,
+        "vertices": int(vertices.shape[0]),
+        "faces": int(faces.shape[0]),
+    }
+
+
 def select_visual_body_scene_points(
     probe: dict[str, torch.Tensor],
     query_idx: int,
@@ -1007,8 +1071,6 @@ def depth_to_surface_mesh(
     rgb_small = np.asarray(rgb.resize((width, height), Image.BILINEAR).convert("RGB"), dtype=np.uint8)
     colors = rgb_small[yy.detach().cpu().numpy(), xx.detach().cpu().numpy()]
     colors = colors[valid_np]
-    scene_tint = np.asarray([120, 170, 235], dtype=np.float32)
-    colors = (0.45 * colors.astype(np.float32) + 0.55 * scene_tint).clip(0, 255).astype(np.uint8)
 
     faces: list[list[int]] = []
     depth_np = z.detach().float().cpu().numpy()
@@ -1105,6 +1167,14 @@ def build_person_metadata(
         "offset_scene_minus_anchor_xyz": tensor_list(probe["offset"][0, 0, query_idx, anchor_idx]),
         "distance_m": float(probe["distance"][0, 0, query_idx, anchor_idx].detach().float().cpu()),
         "depth_residual_m": float(probe["depth_residual"][0, 0, query_idx, anchor_idx].detach().float().cpu()),
+        "coordinate_frames": {
+            "model_input_size": int(probe["image_size"].detach().cpu()),
+            "raw_depth_hw": [int(v) for v in probe["depth_hw"].shape[-2:]],
+            "hsi_depth_hw": [int(v) for v in probe["hsi_depth_hw"].shape[-2:]] if "hsi_depth_hw" in probe else None,
+            "projection_uv_units": "model_input_pixels",
+            "depth_uv_units": "depth_grid_pixels",
+            "environment_color_source": "original RGB resized to model input/depth grid",
+        },
     }
     for key in ("hsi_anchor_depth_residual", "hsi_scene_scale", "hsi_scene_depth_bias", "hsi_refine_gate"):
         if key in predictions:

@@ -41,6 +41,11 @@ For each selected person/query, the script writes:
   surface mesh, the selected base SMPL mesh, a foot-sole SMPL vertex sphere,
   the probed scene point sphere, and an arrow from the human foot point to the
   scene point.
+- `environment_hsi_depth_person*_q*_a*.ply`
+  Environment only. It is built from HSI-adjusted depth by default and uses RGB
+  colors sampled from the resized input image, not depth colormap colors.
+- `smpl_only_person*_q*_a*.ply`
+  Selected base SMPL mesh only.
 - `05a_real_depth_patch_window_person*_q*_a*.png`
   Real VGGT depth heatmap with the HSI 3x3 local patch-token window highlighted.
 - `05b_real_anchor_project_to_depth_person*_q*_a*.png`
@@ -96,6 +101,12 @@ point. Set `PLY_DEPTH_SOURCE=raw` only for debugging the uncorrected VGGT depth.
 For PLY screenshots, the red human point is not the abstract HSI joint token. It
 is selected from SMPL foot-sole surface vertices, so the point lies on the
 visible SMPL mesh. The HSI foot anchor is still recorded in JSON for reference.
+
+Coordinate note: the original image is resized to the model input size before
+VGGT inference. Camera projection produces coordinates in model-input pixels;
+those coordinates are then scaled into the actual dense-depth grid. The
+environment PLY colors are sampled from the RGB image after the same resize path
+to keep color/depth alignment.
 
 The 2D boxes used for auxiliary PNGs and query priors come from SAM2 mask
 bounding boxes, not the model-predicted `pred_boxes`, so they should cover the
