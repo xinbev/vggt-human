@@ -155,7 +155,14 @@
       "hsi_anchor_depth_residual": -3.5179123878479004,
       "hsi_scene_scale": 5.1918463706970215,
       "hsi_scene_depth_bias": 0.756402313709259,
-      "hsi_refine_gate": 0.9820137619972229
+      "hsi_refine_gate": 0.9820137619972229,
+      "ply": {
+        "file": "05_06_real_hsi_foot_scene_person0_q0_a7.ply",
+        "scene_vertices": 16384,
+        "scene_faces": 29268,
+        "total_vertices": 23768,
+        "total_faces": 43860
+      }
     }
   ],
   "files": [
