@@ -562,7 +562,7 @@ def export_person_assets(
 
     if export_ply:
         ply_path = output_dir / f"05_06_real_hsi_foot_scene_{prefix}.ply"
-        export_hsi_foot_scene_ply(
+        ply_stats = export_hsi_foot_scene_ply(
             ply_path,
             rgb,
             probe,
@@ -574,6 +574,8 @@ def export_person_assets(
         out_files.append(ply_path.name)
 
     metadata = build_person_metadata(predictions, probe, query_idx, anchor_idx, box)
+    if export_ply:
+        metadata["ply"] = {"file": ply_path.name, **ply_stats}
     meta_path = output_dir / f"real_probe_values_{prefix}.json"
     meta_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
     out_files.append(meta_path.name)
@@ -807,9 +809,9 @@ def export_hsi_foot_scene_ply(
     anchor_idx: int,
     scene_stride: int = 4,
     max_scene_depth: float = 30.0,
-) -> None:
+) -> dict[str, int]:
     mesh = MeshBuilder()
-    scene_points, scene_colors = depth_to_point_cloud(
+    scene_points, scene_colors, scene_faces = depth_to_surface_mesh(
         depth=probe["depth_hw"][0, 0],
         intrinsics=probe["intrinsics"],
         rgb=rgb,
@@ -818,7 +820,7 @@ def export_hsi_foot_scene_ply(
         max_depth=float(max_scene_depth),
     )
     if scene_points.size:
-        mesh.add_mesh(scene_points, np.empty((0, 3), dtype=np.int64), scene_colors)
+        mesh.add_mesh(scene_points, scene_faces, scene_colors)
 
     smpl_vertices = probe["smpl_vertices"][0, 0, query_idx].detach().float().cpu().numpy()
     smpl_faces = probe["smpl_faces"].detach().cpu().numpy()
@@ -845,16 +847,23 @@ def export_hsi_foot_scene_ply(
             head_length=body_scale * 0.035,
         )
     mesh.write(path)
+    vertices, _, faces = mesh.as_arrays()
+    return {
+        "scene_vertices": int(scene_points.shape[0]),
+        "scene_faces": int(scene_faces.shape[0]),
+        "total_vertices": int(vertices.shape[0]),
+        "total_faces": int(faces.shape[0]),
+    }
 
 
-def depth_to_point_cloud(
+def depth_to_surface_mesh(
     depth: torch.Tensor,
     intrinsics: torch.Tensor,
     rgb: Image.Image,
     image_size: int,
     stride: int,
     max_depth: float,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     depth_hw = depth.detach().float()
     height, width = depth_hw.shape[-2:]
     ys = torch.arange(0, height, stride, device=depth_hw.device)
@@ -863,7 +872,7 @@ def depth_to_point_cloud(
     z = depth_hw[yy, xx]
     valid = torch.isfinite(z) & (z > 1e-6) & (z <= float(max_depth))
     if not bool(valid.any()):
-        return np.empty((0, 3), dtype=np.float32), np.empty((0, 3), dtype=np.uint8)
+        return np.empty((0, 3), dtype=np.float32), np.empty((0, 3), dtype=np.uint8), np.empty((0, 3), dtype=np.int64)
     xx_f = xx.to(dtype=depth_hw.dtype) * (float(image_size) / float(width))
     yy_f = yy.to(dtype=depth_hw.dtype) * (float(image_size) / float(height))
     intr = intrinsics.reshape(-1, 3, 3)[0].to(device=depth_hw.device, dtype=depth_hw.dtype)
@@ -872,14 +881,83 @@ def depth_to_point_cloud(
     cx = intr[0, 2]
     cy = intr[1, 2]
     points = torch.stack([(xx_f - cx) / fx * z, (yy_f - cy) / fy * z, z], dim=-1)
-    points_np = points[valid].detach().float().cpu().numpy().astype(np.float32, copy=False)
+    points_grid = points.detach().float().cpu().numpy().astype(np.float32, copy=False)
+    valid_np = valid.detach().cpu().numpy()
+    index_map = -np.ones(valid_np.shape, dtype=np.int64)
+    index_map[valid_np] = np.arange(int(valid_np.sum()), dtype=np.int64)
+    points_np = points_grid[valid_np]
 
     rgb_small = np.asarray(rgb.resize((width, height), Image.BILINEAR).convert("RGB"), dtype=np.uint8)
     colors = rgb_small[yy.detach().cpu().numpy(), xx.detach().cpu().numpy()]
-    colors = colors[valid.detach().cpu().numpy()]
+    colors = colors[valid_np]
     scene_tint = np.asarray([120, 170, 235], dtype=np.float32)
     colors = (0.45 * colors.astype(np.float32) + 0.55 * scene_tint).clip(0, 255).astype(np.uint8)
-    return points_np, colors
+
+    faces: list[list[int]] = []
+    depth_np = z.detach().float().cpu().numpy()
+    rows, cols = valid_np.shape
+    for row in range(rows - 1):
+        for col in range(cols - 1):
+            ids = [
+                index_map[row, col],
+                index_map[row, col + 1],
+                index_map[row + 1, col],
+                index_map[row + 1, col + 1],
+            ]
+            if min(ids) < 0:
+                continue
+            d = np.asarray(
+                [
+                    depth_np[row, col],
+                    depth_np[row, col + 1],
+                    depth_np[row + 1, col],
+                    depth_np[row + 1, col + 1],
+                ],
+                dtype=np.float32,
+            )
+            d_mean = max(float(np.mean(np.abs(d))), 1e-6)
+            if float(d.max() - d.min()) / d_mean > 0.08:
+                continue
+            a, b, c, d_idx = [int(v) for v in ids]
+            faces.append([a, c, b])
+            faces.append([b, c, d_idx])
+    faces_np = np.asarray(faces, dtype=np.int64).reshape(-1, 3)
+    if faces_np.size == 0 and points_np.shape[0] > 0:
+        points_np, colors, faces_np = point_splat_mesh(points_np, colors, radius=estimate_splat_radius(points_np))
+    return points_np, colors, faces_np
+
+
+def estimate_splat_radius(points: np.ndarray) -> float:
+    if points.shape[0] < 2:
+        return 0.01
+    extent = np.nanmax(points, axis=0) - np.nanmin(points, axis=0)
+    return max(float(np.linalg.norm(extent)) * 0.0015, 0.003)
+
+
+def point_splat_mesh(points: np.ndarray, colors: np.ndarray, radius: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Fallback visible point cloud as tiny triangular billboards."""
+    verts = []
+    faces = []
+    out_colors = []
+    r = float(radius)
+    for idx, (point, color) in enumerate(zip(points, colors, strict=True)):
+        base = len(verts)
+        verts.extend(
+            [
+                [point[0] - r, point[1], point[2]],
+                [point[0] + r, point[1], point[2]],
+                [point[0], point[1] + r, point[2]],
+            ]
+        )
+        faces.append([base, base + 1, base + 2])
+        out_colors.extend([color.tolist(), color.tolist(), color.tolist()])
+        if idx >= 6000:
+            break
+    return (
+        np.asarray(verts, dtype=np.float32).reshape(-1, 3),
+        np.asarray(out_colors, dtype=np.uint8).reshape(-1, 3),
+        np.asarray(faces, dtype=np.int64).reshape(-1, 3),
+    )
 
 
 def build_person_metadata(
