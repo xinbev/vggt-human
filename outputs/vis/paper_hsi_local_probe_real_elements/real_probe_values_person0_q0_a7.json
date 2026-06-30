@@ -49,8 +49,11 @@
   "ply": {
     "file": "05_06_real_hsi_foot_scene_person0_q0_a7.ply",
     "scene_vertices": 16384,
-    "scene_faces": 29268,
+    "scene_faces": 29544,
     "total_vertices": 23768,
-    "total_faces": 43860
+    "total_faces": 44136,
+    "depth_source": "hsi",
+    "visual_vertex_index": 3461,
+    "visual_body_point_source": "foot_sole_vertex"
   }
 }
