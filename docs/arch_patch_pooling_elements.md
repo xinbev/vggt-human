@@ -163,12 +163,15 @@ Faded input image with a light patch grid. Use this for the "image patches" or
 
 ```text
 02_person_patch_highlight.png
+02b_person_patch_highlight_no_box.png
 ```
 
 Faded input image with selected person-overlapping patches marked in light red.
 When a mask is provided, the red region follows the human silhouette and patch
 selection is based on per-patch mask coverage, not bbox coverage. Use this for
-"SAM2 person mask" or "person-aware patch selection".
+"SAM2 person mask" or "person-aware patch selection". The `02b` version omits
+the person bbox outline and is usually cleaner for the final architecture
+figure.
 
 ```text
 03_person_patches_extracted.png

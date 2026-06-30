@@ -717,6 +717,17 @@ def main() -> None:
     highlighted = draw_boxes(highlighted, boxes)
     save_with_scale(highlighted, out_dir / "02_person_patch_highlight.png")
 
+    highlighted_no_box = draw_patch_grid(
+        image,
+        args.patch_size,
+        selected=selected,
+        pixel_mask=pixel_mask,
+        show_image=True,
+        instance_masks=instance_masks,
+        instance_labels=instance_labels,
+    )
+    save_with_scale(highlighted_no_box, out_dir / "02b_person_patch_highlight_no_box.png")
+
     person_only = create_person_patch_only(
         image,
         args.patch_size,
@@ -758,6 +769,7 @@ def main() -> None:
         "files": [
             "01_image_patch_grid_faded.png",
             "02_person_patch_highlight.png",
+            "02b_person_patch_highlight_no_box.png",
             "03_person_patches_extracted.png",
             "04_patch_token_grid.png",
             "04_patch_token_grid.svg",
