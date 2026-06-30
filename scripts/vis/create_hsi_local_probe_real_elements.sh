@@ -21,6 +21,7 @@ PERSON_SELECT="${PERSON_SELECT:-rightmost}"
 ANCHOR_MODE="${ANCHOR_MODE:-foot}"
 DETECTOR_IMAGE_SIZE="${DETECTOR_IMAGE_SIZE:-640}"
 PLY_SCENE_STRIDE="${PLY_SCENE_STRIDE:-4}"
+PLY_DEPTH_SOURCE="${PLY_DEPTH_SOURCE:-hsi}"
 
 cd "${REPO_ROOT}"
 mkdir -p "${OUTPUT_DIR}"
@@ -45,6 +46,7 @@ args=(
   --person-select "${PERSON_SELECT}"
   --detector-image-size "${DETECTOR_IMAGE_SIZE}"
   --ply-scene-stride "${PLY_SCENE_STRIDE}"
+  --ply-depth-source "${PLY_DEPTH_SOURCE}"
   --auto-person-prior
 )
 

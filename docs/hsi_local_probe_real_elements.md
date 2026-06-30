@@ -37,9 +37,10 @@ Server output directory by default:
 For each selected person/query, the script writes:
 
 - `05_06_real_hsi_foot_scene_person*_q*_a*.ply`
-  Main paper-figure geometry asset. It contains the VGGT depth point cloud,
-  the selected base SMPL mesh, a foot/body anchor sphere, the probed scene
-  point sphere, and an arrow from the human anchor to the scene point.
+  Main paper-figure geometry asset. It contains the HSI-corrected VGGT depth
+  surface mesh, the selected base SMPL mesh, a foot-sole SMPL vertex sphere,
+  the probed scene point sphere, and an arrow from the human foot point to the
+  scene point.
 - `05a_real_depth_patch_window_person*_q*_a*.png`
   Real VGGT depth heatmap with the HSI 3x3 local patch-token window highlighted.
 - `05b_real_anchor_project_to_depth_person*_q*_a*.png`
@@ -75,6 +76,7 @@ AUTO_TOP_K=2 \
 DETECTOR_IMAGE_SIZE=640 \
 PERSON_SELECT=rightmost \
 ANCHOR_MODE=foot \
+PLY_DEPTH_SOURCE=hsi \
 PERSON_INDEX=-1 \
 ANCHOR_INDEX=-1 \
 bash scripts/vis/create_hsi_local_probe_real_elements.sh
@@ -86,6 +88,14 @@ This is the default for the provided two-person `f2.jpg` image.
 `ANCHOR_MODE=foot` picks among the SMPL/HSI foot-side anchors and chooses the
 visible foot anchor closest to the probed depth surface. Set `ANCHOR_INDEX=...`
 to force a specific HSI token/anchor.
+
+`PLY_DEPTH_SOURCE=hsi` applies `hsi_scene_scale` and `hsi_scene_depth_bias` to
+the VGGT depth before creating the environment surface and probing the scene
+point. Set `PLY_DEPTH_SOURCE=raw` only for debugging the uncorrected VGGT depth.
+
+For PLY screenshots, the red human point is not the abstract HSI joint token. It
+is selected from SMPL foot-sole surface vertices, so the point lies on the
+visible SMPL mesh. The HSI foot anchor is still recorded in JSON for reference.
 
 The 2D boxes used for auxiliary PNGs and query priors come from SAM2 mask
 bounding boxes, not the model-predicted `pred_boxes`, so they should cover the

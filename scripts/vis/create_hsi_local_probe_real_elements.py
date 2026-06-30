@@ -116,6 +116,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--side-view-window", type=int, default=13)
     parser.add_argument("--ply-scene-stride", type=int, default=4, help="Stride for VGGT depth point cloud vertices.")
     parser.add_argument("--ply-max-scene-depth", type=float, default=30.0)
+    parser.add_argument("--ply-depth-source", choices=("hsi", "raw"), default="hsi")
     parser.add_argument("--no-export-ply", action="store_true")
     parser.add_argument("--override", action="append", default=[])
     return parser.parse_args()
@@ -174,6 +175,7 @@ def main() -> None:
             export_ply=not args.no_export_ply,
             scene_stride=args.ply_scene_stride,
             max_scene_depth=args.ply_max_scene_depth,
+            depth_source=args.ply_depth_source,
         )
         files.extend(meta["files"])
         people_meta.append(meta["metadata"])
@@ -408,6 +410,16 @@ def compute_hsi_probe(predictions: dict[str, torch.Tensor], model: torch.nn.Modu
     transl = predictions["pred_transl_cam"].float()
     depth_hw = _canonical_depth(predictions["depth"]).float()
     height, width = depth_hw.shape[-2:]
+    hsi_scale = predictions.get("hsi_scene_scale")
+    hsi_bias = predictions.get("hsi_scene_depth_bias")
+    if isinstance(hsi_scale, torch.Tensor) and isinstance(hsi_bias, torch.Tensor):
+        hsi_scale_hw = hsi_scale.to(device=depth_hw.device, dtype=depth_hw.dtype).reshape(*depth_hw.shape[:2], 1, 1)
+        hsi_bias_hw = hsi_bias.to(device=depth_hw.device, dtype=depth_hw.dtype).reshape(*depth_hw.shape[:2], 1, 1)
+        hsi_depth_hw = depth_hw * hsi_scale_hw + hsi_bias_hw
+    else:
+        hsi_scale_hw = torch.ones(*depth_hw.shape[:2], 1, 1, device=depth_hw.device, dtype=depth_hw.dtype)
+        hsi_bias_hw = torch.zeros(*depth_hw.shape[:2], 1, 1, device=depth_hw.device, dtype=depth_hw.dtype)
+        hsi_depth_hw = depth_hw
     intrinsics = _flatten_intrinsics(predictions["pose_enc"], input_size).to(device=pose6d.device, dtype=pose6d.dtype)
     anchors = head._anchors_cam(pose6d, betas, transl)
     poses_aa = rot6d_to_axis_angle(pose6d.reshape(-1, 24, 6)).reshape(-1, 72)
@@ -416,6 +428,7 @@ def compute_hsi_probe(predictions: dict[str, torch.Tensor], model: torch.nn.Modu
     smpl_joints = smpl_joints[:, :24].to(device=pose6d.device, dtype=pose6d.dtype) + transl.reshape(-1, 1, 3)
     smpl_vertices = smpl_vertices.reshape(*pose6d.shape[:3], smpl_vertices.shape[-2], 3)
     smpl_joints = smpl_joints.reshape(*pose6d.shape[:3], smpl_joints.shape[-2], 3)
+    foot_sole_indices = torch.argsort(head.smpl.layer.v_template.detach().float().reshape(-1, 3)[:, 1])[:160].long().to(device=pose6d.device)
     batch_size, num_frames, num_queries, _, _ = anchors.shape
     flat_anchors = anchors.reshape(batch_size * num_frames * num_queries, 24, 3)
     projected = _project_points(flat_anchors, intrinsics.repeat_interleave(num_queries, dim=0)).reshape(
@@ -450,10 +463,14 @@ def compute_hsi_probe(predictions: dict[str, torch.Tensor], model: torch.nn.Modu
         "distance": distance.detach(),
         "depth_residual": depth_residual.detach(),
         "depth_hw": depth_hw.detach(),
+        "hsi_depth_hw": hsi_depth_hw.detach(),
+        "hsi_scene_scale_hw": hsi_scale_hw.detach(),
+        "hsi_scene_depth_bias_hw": hsi_bias_hw.detach(),
         "intrinsics": intrinsics.detach(),
         "smpl_vertices": smpl_vertices.detach(),
         "smpl_joints": smpl_joints.detach(),
         "smpl_faces": torch.as_tensor(head.smpl.faces, dtype=torch.long, device=pose6d.device),
+        "foot_sole_indices": foot_sole_indices.detach(),
         "patch_center_x": center_x.detach(),
         "patch_center_y": center_y.detach(),
         "patch_grid_hw": torch.tensor([grid_h, grid_w], device=pose6d.device),
@@ -538,6 +555,7 @@ def export_person_assets(
     export_ply: bool,
     scene_stride: int,
     max_scene_depth: float,
+    depth_source: str,
 ) -> dict[str, Any]:
     depth = probe["depth_hw"][0, 0].detach().float().cpu().numpy()
     depth_img = depth_to_rgba(depth)
@@ -570,6 +588,7 @@ def export_person_assets(
             anchor_idx,
             scene_stride=scene_stride,
             max_scene_depth=max_scene_depth,
+            depth_source=depth_source,
         )
         out_files.append(ply_path.name)
 
@@ -809,10 +828,12 @@ def export_hsi_foot_scene_ply(
     anchor_idx: int,
     scene_stride: int = 4,
     max_scene_depth: float = 30.0,
-) -> dict[str, int]:
+    depth_source: str = "hsi",
+) -> dict[str, Any]:
     mesh = MeshBuilder()
+    depth_key = "hsi_depth_hw" if depth_source == "hsi" and "hsi_depth_hw" in probe else "depth_hw"
     scene_points, scene_colors, scene_faces = depth_to_surface_mesh(
-        depth=probe["depth_hw"][0, 0],
+        depth=probe[depth_key][0, 0],
         intrinsics=probe["intrinsics"],
         rgb=rgb,
         image_size=int(probe["image_size"].detach().cpu()),
@@ -826,9 +847,10 @@ def export_hsi_foot_scene_ply(
     smpl_faces = probe["smpl_faces"].detach().cpu().numpy()
     mesh.add_mesh(smpl_vertices, smpl_faces, (232, 142, 82))
 
-    anchor = probe["anchors"][0, 0, query_idx, anchor_idx].detach().float().cpu().numpy()
-    scene = probe["scene_points"][0, 0, query_idx, anchor_idx].detach().float().cpu().numpy()
-    normal = probe["scene_normals"][0, 0, query_idx, anchor_idx].detach().float().cpu().numpy()
+    visual = select_visual_body_scene_points(probe, query_idx, anchor_idx, depth_key)
+    anchor = visual["body_point"]
+    scene = visual["scene_point"]
+    normal = visual["normal"]
     body_scale = max(float(np.linalg.norm(np.nanmax(smpl_vertices, axis=0) - np.nanmin(smpl_vertices, axis=0))), 1e-3)
     sphere_radius = body_scale * 0.025
     arrow_radius = body_scale * 0.006
@@ -853,7 +875,102 @@ def export_hsi_foot_scene_ply(
         "scene_faces": int(scene_faces.shape[0]),
         "total_vertices": int(vertices.shape[0]),
         "total_faces": int(faces.shape[0]),
+        "depth_source": "hsi" if depth_key == "hsi_depth_hw" else "raw",
+        "visual_vertex_index": int(visual.get("vertex_index", -1)),
+        "visual_body_point_source": str(visual.get("source", "")),
     }
+
+
+def select_visual_body_scene_points(
+    probe: dict[str, torch.Tensor],
+    query_idx: int,
+    anchor_idx: int,
+    depth_key: str,
+) -> dict[str, Any]:
+    depth = probe[depth_key][0, 0]
+    height, width = depth.shape[-2:]
+    vertices = probe["smpl_vertices"][0, 0, query_idx]
+    sole_indices = probe["foot_sole_indices"].to(device=vertices.device).long()
+    sole = vertices[sole_indices]
+    intr = probe["intrinsics"].reshape(-1, 3, 3)[0].to(device=vertices.device, dtype=vertices.dtype)
+    projected = _project_points(sole.reshape(1, -1, 3), intr.reshape(1, 3, 3))[0]
+    projected_depth = _scale_points_to_depth(
+        projected.reshape(1, 1, 1, -1, 2),
+        int(probe["image_size"].detach().cpu()),
+        height,
+        width,
+    ).reshape(-1, 2)
+    px = projected_depth[:, 0].round().long()
+    py = projected_depth[:, 1].round().long()
+    valid = (
+        torch.isfinite(sole).all(dim=-1)
+        & (sole[:, 2] > 1e-6)
+        & torch.isfinite(projected_depth).all(dim=-1)
+        & (px >= 0)
+        & (px < width)
+        & (py >= 0)
+        & (py < height)
+    )
+    sampled = depth.new_zeros(sole.shape[0])
+    if bool(valid.any()):
+        sampled[valid] = depth[py[valid], px[valid]]
+    valid = valid & torch.isfinite(sampled) & (sampled > 1e-6)
+    if bool(valid.any()):
+        delta = torch.abs(sampled - sole[:, 2])
+        score = torch.where(valid, delta, torch.full_like(delta, float("inf")))
+        local_idx = int(torch.argmin(score).detach().cpu())
+        body_point = sole[local_idx]
+        image_uv = projected[local_idx]
+        scene_z = sampled[local_idx]
+        scene_point = unproject_one(image_uv, scene_z, intr)
+        normal = estimate_normal_at(depth, int(px[local_idx].detach().cpu()), int(py[local_idx].detach().cpu()))
+        return {
+            "body_point": body_point.detach().float().cpu().numpy(),
+            "scene_point": scene_point.detach().float().cpu().numpy(),
+            "normal": normal.detach().float().cpu().numpy(),
+            "vertex_index": int(sole_indices[local_idx].detach().cpu()),
+            "source": "foot_sole_vertex",
+        }
+
+    body_point = probe["anchors"][0, 0, query_idx, anchor_idx]
+    projected = probe["projected"][0, 0, query_idx, anchor_idx]
+    projected_depth = probe["projected_depth"][0, 0, query_idx, anchor_idx]
+    px0 = int(round(float(projected_depth[0].detach().cpu())))
+    py0 = int(round(float(projected_depth[1].detach().cpu())))
+    px0 = max(0, min(width - 1, px0))
+    py0 = max(0, min(height - 1, py0))
+    scene_z = depth[py0, px0]
+    scene_point = unproject_one(projected, scene_z, intr)
+    normal = estimate_normal_at(depth, px0, py0)
+    return {
+        "body_point": body_point.detach().float().cpu().numpy(),
+        "scene_point": scene_point.detach().float().cpu().numpy(),
+        "normal": normal.detach().float().cpu().numpy(),
+        "vertex_index": -1,
+        "source": "hsi_anchor_fallback",
+    }
+
+
+def unproject_one(image_uv: torch.Tensor, z: torch.Tensor, intrinsics: torch.Tensor) -> torch.Tensor:
+    fx = intrinsics[0, 0].clamp(min=1e-6)
+    fy = intrinsics[1, 1].clamp(min=1e-6)
+    cx = intrinsics[0, 2]
+    cy = intrinsics[1, 2]
+    x = (image_uv[0].to(dtype=z.dtype) - cx.to(dtype=z.dtype)) / fx.to(dtype=z.dtype) * z
+    y = (image_uv[1].to(dtype=z.dtype) - cy.to(dtype=z.dtype)) / fy.to(dtype=z.dtype) * z
+    return torch.stack([x, y, z])
+
+
+def estimate_normal_at(depth: torch.Tensor, px: int, py: int) -> torch.Tensor:
+    height, width = depth.shape[-2:]
+    x0 = max(0, min(width - 1, px - 1))
+    x1 = max(0, min(width - 1, px + 1))
+    y0 = max(0, min(height - 1, py - 1))
+    y1 = max(0, min(height - 1, py + 1))
+    dzdx = (depth[py, x1] - depth[py, x0]) * 0.5
+    dzdy = (depth[y1, px] - depth[y0, px]) * 0.5
+    normal = torch.stack([-dzdx, -dzdy, torch.ones_like(dzdx)])
+    return normal / torch.linalg.norm(normal).clamp(min=1e-6)
 
 
 def depth_to_surface_mesh(
