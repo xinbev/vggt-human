@@ -144,7 +144,7 @@ def resolve_config_path(config: dict, override: str | None, dotted_key: str) -> 
     return str(resolve_project_path(require_path(config, dotted_key)))
 
 
-def auto_sam2_person_mask(args: argparse.Namespace) -> tuple[np.ndarray, list[Box], dict]:
+def auto_sam2_person_mask(args: argparse.Namespace) -> tuple[np.ndarray, list[Box], dict, dict[str, np.ndarray]]:
     try:
         import cv2
     except ImportError as exc:
@@ -198,7 +198,11 @@ def auto_sam2_person_mask(args: argparse.Namespace) -> tuple[np.ndarray, list[Bo
     masks, mask_meta = predictor.predict_for_detections(frame_bgr, selected_detections)
     if not masks:
         raise RuntimeError("SAM2 did not return any person masks.")
-    pixel_mask = np.logical_or.reduce([np.asarray(mask).astype(bool) for _, mask in sorted(masks.items())])
+    instance_masks = {
+        f"person_auto_{idx}": np.asarray(mask).astype(bool)
+        for idx, (_, mask) in enumerate(sorted(masks.items()))
+    }
+    pixel_mask = np.logical_or.reduce(list(instance_masks.values()))
     boxes = [Box(*[float(v) for v in det.bbox_xyxy]) for det in selected_detections]
     auto_meta = {
         "enabled": True,
@@ -215,24 +219,35 @@ def auto_sam2_person_mask(args: argparse.Namespace) -> tuple[np.ndarray, list[Bo
             "checkpoint": sam2_checkpoint,
             "model_cfg": args.sam2_model_cfg,
             "metadata": mask_meta,
+            "mask_keys": ["person_auto", *instance_masks.keys()],
         },
     }
-    return pixel_mask, boxes, auto_meta
+    return pixel_mask, boxes, auto_meta, instance_masks
 
 
-def save_mask_artifacts(output_dir: Path, mask: np.ndarray | None, auto_meta: dict, suffix: str) -> dict:
+def save_mask_artifacts(
+    output_dir: Path,
+    mask: np.ndarray | None,
+    auto_meta: dict,
+    suffix: str,
+    instance_masks: dict[str, np.ndarray] | None = None,
+) -> dict:
     if mask is None:
         return {}
     output_dir.mkdir(parents=True, exist_ok=True)
     key = "person_auto" if bool(auto_meta.get("enabled", False)) else "person_mask"
     mask_path = output_dir / f"{suffix}.npz"
-    np.savez_compressed(mask_path, **{key: np.asarray(mask).astype(np.uint8)})
+    arrays = {key: np.asarray(mask).astype(np.uint8)}
+    for instance_key, instance_mask in sorted((instance_masks or {}).items()):
+        arrays[instance_key] = np.asarray(instance_mask).astype(np.uint8)
+    np.savez_compressed(mask_path, **arrays)
     png_path = output_dir / f"{suffix}.png"
     Image.fromarray((np.asarray(mask).astype(np.uint8) * 255), mode="L").save(png_path)
     return {
         "npz": str(mask_path),
         "png": str(png_path),
         "array_key": key,
+        "array_keys": list(arrays.keys()),
         "height": int(mask.shape[0]),
         "width": int(mask.shape[1]),
         "area": int(np.asarray(mask).sum()),
@@ -541,7 +556,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--auto-top-k",
         type=int,
-        default=0,
+        default=2,
         help="When >0, OR-combine SAM2 masks for the top-k detected people instead of using --auto-person-index.",
     )
     return parser.parse_args()
@@ -557,11 +572,18 @@ def main() -> None:
     boxes = load_boxes(args.boxes_json, args.bbox)
     pixel_mask = load_mask(args.mask, args.mask_key)
     auto_meta = {"enabled": False}
+    auto_instance_masks: dict[str, np.ndarray] = {}
     if not boxes and pixel_mask is None:
-        pixel_mask, boxes, auto_meta = auto_sam2_person_mask(args)
+        pixel_mask, boxes, auto_meta, auto_instance_masks = auto_sam2_person_mask(args)
     original_mask_artifact = {}
     if bool(auto_meta.get("enabled", False)) and pixel_mask is not None:
-        original_mask_artifact = save_mask_artifacts(out_dir, pixel_mask, auto_meta, "auto_sam2_mask_original")
+        original_mask_artifact = save_mask_artifacts(
+            out_dir,
+            pixel_mask,
+            auto_meta,
+            "auto_sam2_mask_original",
+            instance_masks=auto_instance_masks,
+        )
     image, boxes, pixel_mask = resize_inputs(image, boxes, pixel_mask, args.long_side)
     width, height = image.size
     boxes = [box.clipped(width, height) for box in boxes]

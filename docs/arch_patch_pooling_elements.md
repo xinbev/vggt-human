@@ -47,6 +47,14 @@ third_party.sam2_root
 third_party.sam2_checkpoint
 ```
 
+Automatic mode defaults to the top 2 detected people, which is usually the
+right setting for a two-person architecture example. To force a single person,
+use:
+
+```text
+--auto-top-k 0 --auto-person-index 0
+```
+
 Reuse an existing SAM2 mask:
 
 ```text
@@ -113,7 +121,7 @@ Useful automatic-mode overrides:
 DEVICE=cuda
 DET_CONF=0.25
 AUTO_PERSON_INDEX=0
-AUTO_TOP_K=0
+AUTO_TOP_K=2
 YOLO_CHECKPOINT=/path/to/yolov8x.torchscript
 SAM2_ROOT=/path/to/sam2
 SAM2_CHECKPOINT=/path/to/sam2.1_hiera_large.pt
@@ -135,7 +143,9 @@ auto_sam2_mask_resized.png
 ```
 
 These can be reused later with `--mask ... --mask-key person_auto` to redraw
-the same figure assets without rerunning YOLO+SAM2.
+the same two-person figure assets without rerunning YOLO+SAM2. Automatic mode
+also stores per-person keys such as `person_auto_0` and `person_auto_1` in
+`auto_sam2_mask_original.npz`, so a single person can be redrawn if needed.
 
 ## Outputs
 

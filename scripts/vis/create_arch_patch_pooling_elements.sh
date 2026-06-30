@@ -29,7 +29,7 @@ SAM2_MODEL_CFG="${SAM2_MODEL_CFG:-configs/sam2.1/sam2.1_hiera_l.yaml}"
 DET_CONF="${DET_CONF:-0.25}"
 DET_IOU="${DET_IOU:-0.7}"
 AUTO_PERSON_INDEX="${AUTO_PERSON_INDEX:-0}"
-AUTO_TOP_K="${AUTO_TOP_K:-0}"
+AUTO_TOP_K="${AUTO_TOP_K:-2}"
 
 cd "${REPO_ROOT}"
 mkdir -p "${OUTPUT_DIR}"
