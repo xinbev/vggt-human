@@ -1,0 +1,138 @@
+# Architecture Patch Pooling Elements
+
+This script generates paper-figure visual elements for the step:
+
+```text
+image -> patch grid -> SAM2 person mask -> person patches -> pooled person query
+```
+
+It is meant for architecture diagrams, not for model evaluation. The script
+does not run a detector or SAM2; it visualizes a provided person mask as
+patch-level pooling evidence. A bbox can still be used as a fallback, but the
+paper figure should prefer SAM2 masks because the real project uses mask-aware
+patch pooling instead of a full rectangular person box.
+
+## Code
+
+Local Python script:
+
+```text
+scripts/vis/create_arch_patch_pooling_elements.py
+```
+
+Server wrapper:
+
+```text
+scripts/vis/create_arch_patch_pooling_elements.sh
+```
+
+## Local Example
+
+```text
+python scripts/vis/create_arch_patch_pooling_elements.py \
+  --image path/to/frame.png \
+  --mask path/to/sam2_masks.npz \
+  --mask-key person_1 \
+  --output-dir outputs/vis/paper_arch_patch_pooling_elements \
+  --patch-size 32
+```
+
+SAM2 masks saved by this project use compressed `.npz` files. The keys usually
+look like:
+
+```text
+person_1
+person_2
+det_000001
+```
+
+Use `--mask-key` to select one instance. If no key is given for an `.npz`, all
+arrays are OR-combined.
+
+Fallback bbox mode is still available:
+
+```text
+python scripts/vis/create_arch_patch_pooling_elements.py \
+  --image path/to/frame.png \
+  --bbox 120,80,360,500 \
+  --output-dir outputs/vis/paper_arch_patch_pooling_elements
+```
+
+`--bbox` uses pixel coordinates `x1,y1,x2,y2`. Multiple people can be shown by
+repeating `--bbox`, but this draws a rectangular approximation and should not be
+used for the main paper mechanism if a SAM2 mask is available.
+
+## Server Example
+
+After syncing to:
+
+```text
+/home/zhw/lab_users/xyb/home/projects/vggt-human
+```
+
+run:
+
+```text
+IMAGE_PATH=/path/to/frame.png \
+PERSON_MASK=/path/to/sam2_masks.npz \
+MASK_KEY=person_1 \
+bash scripts/vis/create_arch_patch_pooling_elements.sh
+```
+
+Default output:
+
+```text
+outputs/vis/paper_arch_patch_pooling_elements/
+```
+
+## Outputs
+
+```text
+01_image_patch_grid_faded.png
+```
+
+Faded input image with a light patch grid. Use this for the "image patches" or
+"VGGT patch tokens" input element.
+
+```text
+02_person_patch_highlight.png
+```
+
+Faded input image with selected person-overlapping patches marked in light red.
+When a mask is provided, the red region follows the human silhouette and patch
+selection is based on per-patch mask coverage, not bbox coverage. Use this for
+"SAM2 person mask" or "person-aware patch selection".
+
+```text
+03_person_patches_extracted.png
+```
+
+Only the selected person patches remain visually active. With a mask input,
+non-human pixels inside selected patches stay pale, so the element does not
+look like full-box pooling. Use this before a pooling arrow.
+
+```text
+04_patch_token_grid.png
+04_patch_token_grid.svg
+```
+
+Abstract patch-token grid with selected tokens highlighted. The SVG version is
+useful for final paper layout because it remains editable. Unselected tokens
+are omitted: the PNG has a transparent background and the SVG only contains the
+selected red token cells.
+
+```text
+05_pool_to_person_query.png
+```
+
+Selected patch tokens pooled into several query chips. Use this as the visual
+element for "pooling person features to construct query".
+
+## Notes
+
+- Keep final text labels in the architecture SVG/PDF, not baked into these
+  PNG elements.
+- This is a visualization of the mechanism, not a replacement for SAM2,
+  detection, tracking, or model inference.
+- Use `--mask` for the main paper figure. Use `--bbox` only when a mask is not
+  available or when drawing a deliberately simplified fallback.
