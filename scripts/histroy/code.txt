@@ -1,0 +1,1 @@
+IMAGE_PATH=/home/zhw/lab_users/xyb/home/projects/vggt-human/assets/image/f2/f2.jpg  bash scripts/vis/create_arch_patch_pooling_elements.sh
