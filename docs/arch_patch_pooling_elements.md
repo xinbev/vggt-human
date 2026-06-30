@@ -6,11 +6,13 @@ This script generates paper-figure visual elements for the step:
 image -> patch grid -> SAM2 person mask -> person patches -> pooled person query
 ```
 
-It is meant for architecture diagrams, not for model evaluation. The script
-does not run a detector or SAM2; it visualizes a provided person mask as
-patch-level pooling evidence. A bbox can still be used as a fallback, but the
-paper figure should prefer SAM2 masks because the real project uses mask-aware
-patch pooling instead of a full rectangular person box.
+It is meant for architecture diagrams, not for model evaluation. If no mask or
+bbox is provided, the script runs the project YOLO TorchScript detector and
+SAM2 box-prompt predictor to create a person mask from the image. A precomputed
+mask can still be passed to skip that heavier step. A bbox can be used as a
+last-resort fallback, but the paper figure should prefer SAM2 masks because
+the real project uses mask-aware patch pooling instead of a full rectangular
+person box.
 
 ## Code
 
@@ -27,6 +29,25 @@ scripts/vis/create_arch_patch_pooling_elements.sh
 ```
 
 ## Local Example
+
+Automatic mode:
+
+```text
+python scripts/vis/create_arch_patch_pooling_elements.py \
+  --image path/to/frame.png \
+  --output-dir outputs/vis/paper_arch_patch_pooling_elements \
+  --patch-size 32
+```
+
+This reads these defaults from `configs/path.yaml`:
+
+```text
+checkpoints.yolo8x
+third_party.sam2_root
+third_party.sam2_checkpoint
+```
+
+Reuse an existing SAM2 mask:
 
 ```text
 python scripts/vis/create_arch_patch_pooling_elements.py \
@@ -74,9 +95,28 @@ run:
 
 ```text
 IMAGE_PATH=/path/to/frame.png \
+bash scripts/vis/create_arch_patch_pooling_elements.sh
+```
+
+To reuse an existing SAM2 mask instead of running YOLO+SAM2:
+
+```text
+IMAGE_PATH=/path/to/frame.png \
 PERSON_MASK=/path/to/sam2_masks.npz \
 MASK_KEY=person_1 \
 bash scripts/vis/create_arch_patch_pooling_elements.sh
+```
+
+Useful automatic-mode overrides:
+
+```text
+DEVICE=cuda
+DET_CONF=0.25
+AUTO_PERSON_INDEX=0
+AUTO_TOP_K=0
+YOLO_CHECKPOINT=/path/to/yolov8x.torchscript
+SAM2_ROOT=/path/to/sam2
+SAM2_CHECKPOINT=/path/to/sam2.1_hiera_large.pt
 ```
 
 Default output:
@@ -84,6 +124,18 @@ Default output:
 ```text
 outputs/vis/paper_arch_patch_pooling_elements/
 ```
+
+In automatic mode, the script also writes reusable SAM2 mask artifacts:
+
+```text
+auto_sam2_mask_original.npz
+auto_sam2_mask_original.png
+auto_sam2_mask_resized.npz
+auto_sam2_mask_resized.png
+```
+
+These can be reused later with `--mask ... --mask-key person_auto` to redraw
+the same figure assets without rerunning YOLO+SAM2.
 
 ## Outputs
 
@@ -132,7 +184,9 @@ element for "pooling person features to construct query".
 
 - Keep final text labels in the architecture SVG/PDF, not baked into these
   PNG elements.
-- This is a visualization of the mechanism, not a replacement for SAM2,
-  detection, tracking, or model inference.
-- Use `--mask` for the main paper figure. Use `--bbox` only when a mask is not
-  available or when drawing a deliberately simplified fallback.
+- Automatic mode uses the project YOLO TorchScript detector followed by SAM2.
+  It requires the configured checkpoints and SAM2 dependency to exist on the
+  machine where the script runs.
+- Use `--mask` when you already have a SAM2 mask and want a faster deterministic
+  redraw. Use `--bbox` only when a mask is not available or when drawing a
+  deliberately simplified fallback.

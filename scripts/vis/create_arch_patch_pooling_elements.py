@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
 """Create paper-figure visual elements for image patch pooling into person queries.
 
-This script intentionally does not run a detector or SAM2. It visualizes the
-mechanism from a given image and person boxes/SAM2 masks so the assets can be
-composed into a paper architecture figure.
+If no region is provided, this script runs the project YOLO TorchScript person
+detector followed by SAM2 box-prompt segmentation. Existing SAM2 masks can also
+be passed directly for faster deterministic redraws.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 
 CANVAS_BG = (248, 250, 252)
@@ -108,6 +113,130 @@ def load_mask(mask_path: Path | None, mask_keys: list[str]) -> np.ndarray | None
         return np.asarray(mask).squeeze().astype(bool)
     image = Image.open(mask_path).convert("L")
     return np.asarray(image) > 0
+
+
+def resolve_project_path(value: str | Path) -> Path:
+    path = Path(value).expanduser()
+    candidates: list[Path] = []
+    if path.is_absolute():
+        candidates.append(path)
+        for marker in ("vggt-omega", "vggt-human"):
+            parts = path.parts
+            if marker in parts:
+                marker_idx = parts.index(marker)
+                suffix = Path(*parts[marker_idx + 1 :])
+                candidates.append(ROOT / suffix)
+                break
+    else:
+        candidates.append(ROOT / path)
+        candidates.append(path)
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
+
+
+def resolve_config_path(config: dict, override: str | None, dotted_key: str) -> str:
+    if override:
+        return str(resolve_project_path(override))
+    from vggt_omega.training.config import require_path
+
+    return str(resolve_project_path(require_path(config, dotted_key)))
+
+
+def auto_sam2_person_mask(args: argparse.Namespace) -> tuple[np.ndarray, list[Box], dict]:
+    try:
+        import cv2
+    except ImportError as exc:
+        raise RuntimeError("Automatic mask generation requires opencv-python/cv2.") from exc
+    from vggt_omega.tracking.detectors import TorchScriptYOLOPersonDetector
+    from vggt_omega.tracking.sam2_masks import SAM2BoxMaskPredictor
+    from vggt_omega.training.config import load_yaml_config
+
+    config = load_yaml_config(args.path_config)
+    yolo_checkpoint = resolve_config_path(config, args.yolo_checkpoint, "checkpoints.yolo8x")
+    sam2_root = resolve_config_path(config, args.sam2_root, "third_party.sam2_root")
+    sam2_checkpoint = resolve_config_path(config, args.sam2_checkpoint, "third_party.sam2_checkpoint")
+
+    frame_bgr = cv2.imread(str(args.image), cv2.IMREAD_COLOR)
+    if frame_bgr is None:
+        raise ValueError(f"Failed to read image with cv2: {args.image}")
+
+    detector = TorchScriptYOLOPersonDetector(
+        checkpoint=yolo_checkpoint,
+        device=args.device,
+        image_size=args.detector_image_size,
+        conf_threshold=args.det_conf,
+        iou_threshold=args.det_iou,
+        person_class_id=0,
+        half=args.det_half,
+    )
+    detections = detector.detect(frame_bgr)
+    if not detections:
+        raise RuntimeError(
+            "No person detected. Provide --bbox/--mask manually or lower --det-conf for this figure asset."
+        )
+    detections = sorted(detections, key=lambda item: item.score, reverse=True)
+    if args.auto_top_k > 0:
+        selected_detections = detections[: args.auto_top_k]
+    else:
+        if args.auto_person_index < 0 or args.auto_person_index >= len(detections):
+            raise IndexError(
+                f"--auto-person-index={args.auto_person_index} out of range for {len(detections)} detections"
+            )
+        selected_detections = [detections[args.auto_person_index]]
+    for det_idx, det in enumerate(selected_detections):
+        det.det_id = det_idx
+
+    predictor = SAM2BoxMaskPredictor(
+        sam2_root=sam2_root,
+        checkpoint=sam2_checkpoint,
+        model_cfg=args.sam2_model_cfg,
+        device=args.device,
+        multimask_output=not args.sam2_single_mask,
+    )
+    masks, mask_meta = predictor.predict_for_detections(frame_bgr, selected_detections)
+    if not masks:
+        raise RuntimeError("SAM2 did not return any person masks.")
+    pixel_mask = np.logical_or.reduce([np.asarray(mask).astype(bool) for _, mask in sorted(masks.items())])
+    boxes = [Box(*[float(v) for v in det.bbox_xyxy]) for det in selected_detections]
+    auto_meta = {
+        "enabled": True,
+        "detector": {
+            "checkpoint": yolo_checkpoint,
+            "conf_threshold": float(args.det_conf),
+            "iou_threshold": float(args.det_iou),
+            "num_detections": len(detections),
+            "selected_scores": [float(det.score) for det in selected_detections],
+            "selected_boxes_xyxy": [[float(v) for v in det.bbox_xyxy] for det in selected_detections],
+        },
+        "sam2": {
+            "root": sam2_root,
+            "checkpoint": sam2_checkpoint,
+            "model_cfg": args.sam2_model_cfg,
+            "metadata": mask_meta,
+        },
+    }
+    return pixel_mask, boxes, auto_meta
+
+
+def save_mask_artifacts(output_dir: Path, mask: np.ndarray | None, auto_meta: dict, suffix: str) -> dict:
+    if mask is None:
+        return {}
+    output_dir.mkdir(parents=True, exist_ok=True)
+    key = "person_auto" if bool(auto_meta.get("enabled", False)) else "person_mask"
+    mask_path = output_dir / f"{suffix}.npz"
+    np.savez_compressed(mask_path, **{key: np.asarray(mask).astype(np.uint8)})
+    png_path = output_dir / f"{suffix}.png"
+    Image.fromarray((np.asarray(mask).astype(np.uint8) * 255), mode="L").save(png_path)
+    return {
+        "npz": str(mask_path),
+        "png": str(png_path),
+        "array_key": key,
+        "height": int(mask.shape[0]),
+        "width": int(mask.shape[1]),
+        "area": int(np.asarray(mask).sum()),
+    }
 
 
 def resize_mask(mask: np.ndarray, size: tuple[int, int]) -> np.ndarray:
@@ -392,6 +521,29 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--long-side", type=int, default=768)
     parser.add_argument("--min-overlap", type=float, default=0.12)
     parser.add_argument("--num-query-chips", type=int, default=6)
+    parser.add_argument("--path-config", default="configs/path.yaml", help="Path config for automatic YOLO+SAM2 mode.")
+    parser.add_argument("--yolo-checkpoint", default=None)
+    parser.add_argument("--sam2-root", default=None)
+    parser.add_argument("--sam2-checkpoint", default=None)
+    parser.add_argument("--sam2-model-cfg", default="configs/sam2.1/sam2.1_hiera_l.yaml")
+    parser.add_argument("--sam2-single-mask", action="store_true")
+    parser.add_argument("--device", default="cuda")
+    parser.add_argument("--detector-image-size", type=int, default=640)
+    parser.add_argument("--det-conf", type=float, default=0.25)
+    parser.add_argument("--det-iou", type=float, default=0.7)
+    parser.add_argument("--det-half", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument(
+        "--auto-person-index",
+        type=int,
+        default=0,
+        help="When auto-generating a mask, select this detection after sorting by confidence.",
+    )
+    parser.add_argument(
+        "--auto-top-k",
+        type=int,
+        default=0,
+        help="When >0, OR-combine SAM2 masks for the top-k detected people instead of using --auto-person-index.",
+    )
     return parser.parse_args()
 
 
@@ -399,11 +551,17 @@ def main() -> None:
     args = parse_args()
     if args.patch_size <= 0:
         raise ValueError("--patch-size must be positive")
+    out_dir = args.output_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
     image = Image.open(args.image).convert("RGB")
     boxes = load_boxes(args.boxes_json, args.bbox)
     pixel_mask = load_mask(args.mask, args.mask_key)
+    auto_meta = {"enabled": False}
     if not boxes and pixel_mask is None:
-        raise ValueError("Please provide a person region with --mask, --bbox, or --boxes-json.")
+        pixel_mask, boxes, auto_meta = auto_sam2_person_mask(args)
+    original_mask_artifact = {}
+    if bool(auto_meta.get("enabled", False)) and pixel_mask is not None:
+        original_mask_artifact = save_mask_artifacts(out_dir, pixel_mask, auto_meta, "auto_sam2_mask_original")
     image, boxes, pixel_mask = resize_inputs(image, boxes, pixel_mask, args.long_side)
     width, height = image.size
     boxes = [box.clipped(width, height) for box in boxes]
@@ -414,8 +572,9 @@ def main() -> None:
     else:
         selected = selected_patch_mask_from_boxes(width, height, args.patch_size, boxes, args.min_overlap)
 
-    out_dir = args.output_dir
-    out_dir.mkdir(parents=True, exist_ok=True)
+    resized_mask_artifact = {}
+    if bool(auto_meta.get("enabled", False)) and pixel_mask is not None:
+        resized_mask_artifact = save_mask_artifacts(out_dir, pixel_mask, auto_meta, "auto_sam2_mask_resized")
 
     grid = draw_patch_grid(image, args.patch_size, selected=None, show_image=True)
     save_with_scale(grid, out_dir / "01_image_patch_grid_faded.png")
@@ -443,6 +602,11 @@ def main() -> None:
         "selection_source": "mask" if pixel_mask is not None else "bbox",
         "mask": None if args.mask is None else str(args.mask),
         "mask_keys": args.mask_key,
+        "auto_sam2": auto_meta,
+        "auto_mask_artifacts": {
+            "original": original_mask_artifact,
+            "resized": resized_mask_artifact,
+        },
         "boxes": [box.__dict__ for box in boxes],
         "files": [
             "01_image_patch_grid_faded.png",
