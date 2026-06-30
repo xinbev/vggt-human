@@ -145,6 +145,8 @@ def parse_args() -> argparse.Namespace:
     source.add_argument("--bedlam-sequence", default=None, help="BEDLAM sequence name relative to <bedlam-root>/<split>")
     source.add_argument("--bedlam-sequence-index", type=int, default=None, help="BEDLAM sequence index under <bedlam-root>/<split>")
     parser.add_argument("--output-root", default="outputs/preprocess/video_tracks")
+    parser.add_argument("--source-name", default="", help="Optional source name override for summaries/tracker tags")
+    parser.add_argument("--output-subdir", default="", help="Optional output subdirectory under --output-root")
     parser.add_argument("--path-config", default="configs/path.yaml")
     parser.add_argument("--bedlam-root", default=None)
     parser.add_argument("--bedlam-split", default="Training")
@@ -282,12 +284,15 @@ def resolve_source(args: argparse.Namespace, config: dict[str, Any]) -> dict[str
                 )
             seq_dir = candidates[0]
         rel = str(seq_dir.relative_to(split_dir)).replace("\\", "/")
+        source_name = str(args.source_name or rel.replace("/", "__"))
+        output_subdir = Path(args.output_subdir) if args.output_subdir else Path(args.bedlam_split) / rel
+        _validate_relative_output_subdir(output_subdir)
         return {
             "kind": "bedlam",
             "video": None,
             "frames_dir": seq_dir / "rgb",
-            "source_name": rel.replace("/", "__"),
-            "output_subdir": Path(args.bedlam_split) / rel,
+            "source_name": source_name,
+            "output_subdir": output_subdir,
             "bedlam": {
                 "root": str(bedlam_root),
                 "split": args.bedlam_split,
@@ -298,22 +303,33 @@ def resolve_source(args: argparse.Namespace, config: dict[str, Any]) -> dict[str
 
     if args.frames_dir:
         frames_dir = Path(args.frames_dir).expanduser()
+        source_name = str(args.source_name or frames_dir.name)
+        output_subdir = Path(args.output_subdir) if args.output_subdir else Path(source_name)
+        _validate_relative_output_subdir(output_subdir)
         return {
             "kind": "frames",
             "video": None,
             "frames_dir": frames_dir,
-            "source_name": frames_dir.name,
-            "output_subdir": Path(frames_dir.name),
+            "source_name": source_name,
+            "output_subdir": output_subdir,
         }
 
     video = Path(args.video).expanduser()
+    source_name = str(args.source_name or video.stem)
+    output_subdir = Path(args.output_subdir) if args.output_subdir else Path(source_name)
+    _validate_relative_output_subdir(output_subdir)
     return {
         "kind": "video",
         "video": video,
         "frames_dir": None,
-        "source_name": video.stem,
-        "output_subdir": Path(video.stem),
+        "source_name": source_name,
+        "output_subdir": output_subdir,
     }
+
+
+def _validate_relative_output_subdir(path: Path) -> None:
+    if path.is_absolute() or any(part == ".." for part in path.parts):
+        raise ValueError(f"--output-subdir must be relative and stay under --output-root, got: {path}")
 
 
 def resolve_config_path(

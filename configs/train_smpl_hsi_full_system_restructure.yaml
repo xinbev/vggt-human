@@ -12,8 +12,11 @@ data:
   stride: 1
   image_size: 518
   max_humans: 20
-  boxes_root_key: datasets.bedlam_boxes_root
+  boxes_root_key: datasets.bedlam_tracks_root
   require_boxes: true
+  query_source: detections
+  mask_patch_threshold: 0.10
+  min_mask_patches: 4
   require_smpl: true
   require_depth: true
   num_workers: 4

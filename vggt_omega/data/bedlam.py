@@ -8,6 +8,7 @@ from PIL import Image
 from torch.utils.data import Dataset
 import sys
 from vggt_omega.data.bedlam_boxes import extract_person_id
+from vggt_omega.tracking.query_builder import pixel_mask_to_patch_mask
 from vggt_omega.utils.rotation import axis_angle_to_rot6d
 import numpy
 import numpy.core
@@ -53,6 +54,10 @@ class BedlamDataset(Dataset):
         require_depth: bool = False,
         boxes_root: str | Path | None = None,
         require_boxes: bool = False,
+        query_source: str = "persons",
+        patch_size: int = 16,
+        mask_patch_threshold: float = 0.10,
+        min_mask_patches: int = 4,
     ) -> None:
         super().__init__()
         self.root = Path(root).expanduser()
@@ -65,6 +70,12 @@ class BedlamDataset(Dataset):
         self.require_depth = require_depth
         self.boxes_root = Path(boxes_root).expanduser() if boxes_root else None
         self.require_boxes = require_boxes
+        self.query_source = str(query_source or "persons")
+        self.patch_size = int(patch_size)
+        self.mask_patch_threshold = float(mask_patch_threshold)
+        self.min_mask_patches = int(min_mask_patches)
+        if self.query_source not in {"persons", "detections"}:
+            raise ValueError(f"Unsupported BEDLAM query_source: {self.query_source!r}")
         if self.sequence_length <= 0:
             raise ValueError(f"sequence_length must be positive, got {sequence_length}")
         if self.stride <= 0:
@@ -95,6 +106,7 @@ class BedlamDataset(Dataset):
         intrinsics = []
         persons_per_frame = []
         boxes_per_frame = []
+        box_frames = []
         for frame_id in selected:
             rgb_path = seq_dir / "rgb" / f"{frame_id}.png"
             depth_path = seq_dir / "depth" / f"{frame_id}.npy"
@@ -107,11 +119,13 @@ class BedlamDataset(Dataset):
             depths.append(_load_depth_tensor(depth_path, self.image_size, self.require_depth))
             intrinsics.append(_load_intrinsics(cam_path, orig_hw, self.image_size))
             persons_per_frame.append(_load_persons(smpl_path, self.require_smpl))
-            boxes_per_frame.append(_load_box_persons(box_path, self.require_boxes) if box_path is not None else None)
+            box_frame = _load_box_frame(box_path, self.require_boxes) if box_path is not None else None
+            box_frames.append(box_frame)
+            boxes_per_frame.append(_frame_persons(box_frame))
 
         smpl = _build_smpl_targets(persons_per_frame, self.max_humans)
         boxes = _build_box_targets(boxes_per_frame, persons_per_frame, self.max_humans, self.require_boxes)
-        return {
+        sample = {
             "images": torch.stack(images, dim=0),
             "gt_depth": torch.stack(depths, dim=0),
             "K_scal3r": torch.stack(intrinsics, dim=0),
@@ -129,6 +143,20 @@ class BedlamDataset(Dataset):
             "gt_track_source": boxes["gt_track_source"],
             "gt_track_quality": boxes["gt_track_quality"],
         }
+        if self.query_source == "detections":
+            query = _build_detection_query_targets(
+                box_frames=box_frames,
+                max_humans=self.max_humans,
+                image_size=self.image_size,
+                patch_size=self.patch_size,
+                mask_patch_threshold=self.mask_patch_threshold,
+                min_mask_patches=self.min_mask_patches,
+                sidecar_root=self.boxes_root,
+            )
+            external = _build_external_prior_targets(box_frames, query["smpl_query_boxes"], query["smpl_query_boxes_mask"])
+            sample.update(query)
+            sample.update(external)
+        return sample
 
     def _box_path(self, seq_dir: Path, frame_id: str) -> Path:
         sequence_name = seq_dir.relative_to(self.root / self.split)
@@ -216,16 +244,26 @@ def _load_persons(path: Path, require_smpl: bool) -> list[dict[str, Any]]:
     return persons
 
 
-def _load_box_persons(path: Path, require_boxes: bool) -> list[dict[str, Any]] | None:
+def _load_box_frame(path: Path | None, require_boxes: bool) -> dict[str, Any] | None:
+    if path is None:
+        return None
     if not path.is_file():
         if require_boxes:
             raise FileNotFoundError(f"Preprocessed bbox annotation not found: {path}. Run scripts/preprocess/prepare_bedlam_boxes.py first.")
         return None
     with path.open("rb") as file:
         data = pickle.load(file)
-    persons = data.get("persons") if isinstance(data, dict) else None
+    if not isinstance(data, dict):
+        raise TypeError(f"Preprocessed bbox annotation must be a frame dict: {path}")
+    return data
+
+
+def _frame_persons(frame: dict[str, Any] | None) -> list[dict[str, Any]] | None:
+    if frame is None:
+        return None
+    persons = frame.get("persons")
     if not isinstance(persons, list):
-        raise TypeError(f"Preprocessed bbox annotation must contain a persons list: {path}")
+        return None
     return persons
 
 
@@ -322,6 +360,112 @@ def _build_box_targets(
         "gt_track_mask": track_mask,
         "gt_track_source": track_source,
         "gt_track_quality": track_quality,
+    }
+
+
+def _build_detection_query_targets(
+    box_frames: list[dict[str, Any] | None],
+    max_humans: int,
+    image_size: int,
+    patch_size: int,
+    mask_patch_threshold: float,
+    min_mask_patches: int,
+    sidecar_root: Path | None,
+) -> dict[str, torch.Tensor]:
+    num_frames = len(box_frames)
+    grid_h = int(image_size) // int(patch_size)
+    grid_w = int(image_size) // int(patch_size)
+    num_patches = grid_h * grid_w
+    boxes = torch.zeros(num_frames, max_humans, 4, dtype=torch.float32)
+    box_mask = torch.zeros(num_frames, max_humans, dtype=torch.bool)
+    scores = torch.zeros(num_frames, max_humans, dtype=torch.float32)
+    det_ids = torch.full((num_frames, max_humans), -1, dtype=torch.long)
+    patch_masks = torch.zeros(num_frames, max_humans, num_patches, dtype=torch.bool)
+    patch_masks_valid = torch.zeros(num_frames, max_humans, dtype=torch.bool)
+
+    for frame_idx, frame in enumerate(box_frames):
+        if frame is None:
+            continue
+        image_h, image_w = _frame_hw(frame)
+        detections = sorted(
+            _frame_detections(frame),
+            key=lambda det: (float(det.get("det_score", det.get("score", 0.0))), _det_area(det)),
+            reverse=True,
+        )[:max_humans]
+        for slot, det in enumerate(detections):
+            boxes[frame_idx, slot] = torch.as_tensor(_det_cxcywh(det, image_w, image_h), dtype=torch.float32).clamp(0.0, 1.0)
+            box_mask[frame_idx, slot] = True
+            scores[frame_idx, slot] = float(det.get("det_score", det.get("score", 0.0)))
+            det_ids[frame_idx, slot] = int(det.get("det_id", slot))
+            patch_mask = _load_detection_patch_mask(
+                det,
+                sidecar_root=sidecar_root,
+                image_size=image_size,
+                patch_size=patch_size,
+                threshold=mask_patch_threshold,
+                min_mask_patches=min_mask_patches,
+            )
+            if patch_mask is not None:
+                patch_masks[frame_idx, slot] = torch.as_tensor(patch_mask.reshape(-1), dtype=torch.bool)
+                patch_masks_valid[frame_idx, slot] = True
+    return {
+        "smpl_query_boxes": boxes,
+        "smpl_query_boxes_mask": box_mask,
+        "smpl_query_scores": scores,
+        "smpl_query_det_ids": det_ids,
+        "smpl_query_patch_masks": patch_masks,
+        "smpl_query_patch_masks_valid": patch_masks_valid,
+    }
+
+
+def _build_external_prior_targets(
+    box_frames: list[dict[str, Any] | None],
+    query_boxes: torch.Tensor,
+    query_mask: torch.Tensor,
+    iou_threshold: float = 0.50,
+) -> dict[str, torch.Tensor]:
+    num_frames, max_humans = query_boxes.shape[:2]
+    ids = torch.full((num_frames, max_humans), -1, dtype=torch.long)
+    mask = torch.zeros(num_frames, max_humans, dtype=torch.bool)
+    conf = torch.zeros(num_frames, max_humans, dtype=torch.float32)
+    for frame_idx, frame in enumerate(box_frames):
+        if frame is None:
+            continue
+        image_h, image_w = _frame_hw(frame)
+        persons = [
+            person
+            for person in frame.get("persons", [])
+            if person.get("valid", True)
+            and person.get("person_id_valid", True)
+            and int(person.get("person_id", -1)) >= 0
+            and person.get("bbox_valid", True)
+        ]
+        used: set[int] = set()
+        for slot in range(max_humans):
+            if not bool(query_mask[frame_idx, slot]):
+                continue
+            q_xyxy = _cxcywh_norm_to_xyxy(query_boxes[frame_idx, slot].numpy(), image_w, image_h)
+            best_idx = -1
+            best_iou = 0.0
+            for person_idx, person in enumerate(persons):
+                if person_idx in used:
+                    continue
+                p_xyxy = np.asarray(person.get("bbox_xyxy_pixels", [0, 0, 0, 0]), dtype=np.float32)
+                iou = _box_iou(q_xyxy, p_xyxy)
+                if iou > best_iou:
+                    best_iou = iou
+                    best_idx = person_idx
+            if best_idx < 0 or best_iou < float(iou_threshold):
+                continue
+            person = persons[best_idx]
+            used.add(best_idx)
+            ids[frame_idx, slot] = int(person["person_id"])
+            mask[frame_idx, slot] = True
+            conf[frame_idx, slot] = float(person.get("track_confidence", person.get("det_score", best_iou)))
+    return {
+        "external_track_ids": ids,
+        "external_track_mask": mask,
+        "external_track_confidence": conf,
     }
 
 
@@ -428,3 +572,106 @@ def _require_tensor(value: Any, key: str) -> torch.Tensor:
     if not isinstance(value, torch.Tensor):
         raise TypeError(f"Batch field {key!r} must be a torch.Tensor, got {type(value)!r}")
     return value
+
+
+def _frame_hw(frame: dict[str, Any]) -> tuple[int, int]:
+    if "image_hw" in frame:
+        h, w = frame["image_hw"]
+        return int(h), int(w)
+    persons = frame.get("persons", [])
+    if persons:
+        return int(persons[0].get("image_height", 0)), int(persons[0].get("image_width", 0))
+    return 0, 0
+
+
+def _frame_detections(frame: dict[str, Any]) -> list[dict[str, Any]]:
+    detections = frame.get("detections", [])
+    if isinstance(detections, list) and detections:
+        return [dict(det, det_id=int(det.get("det_id", idx))) for idx, det in enumerate(detections)]
+    out = []
+    for idx, person in enumerate(frame.get("persons", [])):
+        if not person.get("bbox_valid", person.get("valid", True)):
+            continue
+        out.append(
+            {
+                "det_id": int(person.get("det_id", idx)),
+                "bbox_xyxy_pixels": person.get("bbox_xyxy_pixels"),
+                "bbox_cxcywh_norm": person.get("bbox_cxcywh_norm"),
+                "det_score": float(person.get("det_score", person.get("track_confidence", 0.0))),
+                "mask": person.get("mask"),
+            }
+        )
+    return out
+
+
+def _det_area(det: dict[str, Any]) -> float:
+    if "bbox_xyxy_pixels" in det:
+        x1, y1, x2, y2 = np.asarray(det["bbox_xyxy_pixels"], dtype=np.float32).reshape(4)
+        return float(max(x2 - x1, 0.0) * max(y2 - y1, 0.0))
+    box = np.asarray(det.get("bbox_cxcywh_norm", [0, 0, 0, 0]), dtype=np.float32)
+    return float(max(box[2], 0.0) * max(box[3], 0.0))
+
+
+def _det_cxcywh(det: dict[str, Any], image_w: int, image_h: int) -> list[float]:
+    if "bbox_cxcywh_norm" in det:
+        return [float(v) for v in det["bbox_cxcywh_norm"]]
+    if "bbox_xyxy_pixels" in det:
+        x1, y1, x2, y2 = np.asarray(det["bbox_xyxy_pixels"], dtype=np.float32).reshape(4)
+        width = max(float(image_w), 1.0)
+        height = max(float(image_h), 1.0)
+        bw = max(float(x2 - x1), 0.0)
+        bh = max(float(y2 - y1), 0.0)
+        return [float((x1 + 0.5 * bw) / width), float((y1 + 0.5 * bh) / height), float(bw / width), float(bh / height)]
+    raise ValueError("Detection is missing bbox_cxcywh_norm and bbox_xyxy_pixels")
+
+
+def _load_detection_patch_mask(
+    det: dict[str, Any],
+    sidecar_root: Path | None,
+    image_size: int,
+    patch_size: int,
+    threshold: float,
+    min_mask_patches: int,
+) -> np.ndarray | None:
+    meta = det.get("mask")
+    if not isinstance(meta, dict):
+        return None
+    path = Path(str(meta.get("path", ""))).expanduser()
+    if not path.is_absolute() and sidecar_root is not None:
+        direct = (sidecar_root / path).resolve()
+        path = direct if direct.is_file() else (sidecar_root.parent / path).resolve()
+    if not path.is_file():
+        return None
+    key = str(meta.get("array_key", ""))
+    if not key:
+        return None
+    with np.load(path) as data:
+        if key not in data:
+            return None
+        pixel_mask = np.asarray(data[key]).astype(bool)
+    patch_mask = pixel_mask_to_patch_mask(pixel_mask, image_size, patch_size, threshold)
+    if int(patch_mask.sum()) < int(min_mask_patches):
+        return None
+    return patch_mask
+
+
+def _cxcywh_norm_to_xyxy(box: np.ndarray, image_w: int, image_h: int) -> np.ndarray:
+    cx, cy, w, h = [float(v) for v in box.reshape(4)]
+    bw = w * float(max(image_w, 1))
+    bh = h * float(max(image_h, 1))
+    x1 = (cx * float(max(image_w, 1))) - 0.5 * bw
+    y1 = (cy * float(max(image_h, 1))) - 0.5 * bh
+    return np.asarray([x1, y1, x1 + bw, y1 + bh], dtype=np.float32)
+
+
+def _box_iou(a: np.ndarray, b: np.ndarray) -> float:
+    ax1, ay1, ax2, ay2 = [float(v) for v in a.reshape(4)]
+    bx1, by1, bx2, by2 = [float(v) for v in b.reshape(4)]
+    ix1 = max(ax1, bx1)
+    iy1 = max(ay1, by1)
+    ix2 = min(ax2, bx2)
+    iy2 = min(ay2, by2)
+    inter = max(ix2 - ix1, 0.0) * max(iy2 - iy1, 0.0)
+    area_a = max(ax2 - ax1, 0.0) * max(ay2 - ay1, 0.0)
+    area_b = max(bx2 - bx1, 0.0) * max(by2 - by1, 0.0)
+    return float(inter / max(area_a + area_b - inter, 1e-6))

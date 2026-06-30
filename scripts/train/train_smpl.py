@@ -4,6 +4,7 @@ import csv
 import json
 import math
 import random
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -40,7 +41,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from vggt_omega.data import BedlamDataset, bedlam_collate_fn
+from vggt_omega.data import BedlamDataset, ThreeDPWDataset, bedlam_collate_fn, threedpw_collate_fn
 from vggt_omega.models import VGGTOmega
 from vggt_omega.training import HungarianSMPLLoss, HungarianSMPLMatcher, SMPLSlotLoss
 from vggt_omega.training.config import deep_update, load_yaml_config, require_path
@@ -67,6 +68,7 @@ def main() -> None:
             val_loader = build_loader(config, split=config["data"]["val_split"], shuffle=False)
         except FileNotFoundError as exc:
             print(f"[warn] validation split skipped: {exc}")
+    topk_state = init_topk_state(output_dir, config)
 
     model = build_model(config).to(device)
     load_initial_checkpoint(model, config, device)
@@ -122,7 +124,8 @@ def main() -> None:
             total_epochs=epochs,
         )
         if val_loader is not None and (epoch + 1) % int(config["optim"].get("val_interval", 1)) == 0:
-            validate(model, criterion, val_loader, device, epoch, config, teacher_model=teacher_model)
+            val_losses = validate(model, criterion, val_loader, device, epoch, config, teacher_model=teacher_model)
+            maybe_save_topk_checkpoint(model, optimizer, epoch + 1, global_step, config, output_dir, topk_state, val_losses)
         if should_save_checkpoint(config, epoch + 1, epochs):
             checkpoint_cfg = config.get("checkpoint", {})
             if bool(checkpoint_cfg.get("save_epoch_checkpoint", True)):
@@ -142,6 +145,11 @@ def parse_args() -> argparse.Namespace:
 
 def build_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoader:
     data_cfg = config["data"]
+    dataset_name = str(data_cfg.get("dataset", "bedlam")).lower()
+    if dataset_name in {"3dpw", "threedpw"}:
+        return build_3dpw_loader(config, split=split, shuffle=shuffle)
+    if dataset_name != "bedlam":
+        raise ValueError(f"Unsupported data.dataset: {data_cfg.get('dataset')!r}")
     root = require_path(config, data_cfg.get("root_key", "datasets.bedlam_root"))
     boxes_root = None
     if data_cfg.get("boxes_root_key"):
@@ -157,6 +165,10 @@ def build_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoade
         require_depth=bool(data_cfg.get("require_depth", False)),
         boxes_root=boxes_root,
         require_boxes=bool(data_cfg.get("require_boxes", False)),
+        query_source=str(data_cfg.get("query_source", "persons")),
+        patch_size=int(config.get("model", {}).get("patch_size", 16)),
+        mask_patch_threshold=float(data_cfg.get("mask_patch_threshold", 0.10)),
+        min_mask_patches=int(data_cfg.get("min_mask_patches", 4)),
     )
     dataset = maybe_subset_dataset(dataset, data_cfg, split)
     return DataLoader(
@@ -170,7 +182,32 @@ def build_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoade
     )
 
 
-def maybe_subset_dataset(dataset: BedlamDataset, data_cfg: dict[str, Any], split: str) -> BedlamDataset | Subset:
+def build_3dpw_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoader:
+    data_cfg = config["data"]
+    dataset = ThreeDPWDataset(
+        root=require_path(config, data_cfg.get("root_key", "datasets.threedpw_root")),
+        annotation_root=require_path(config, data_cfg.get("annotation_root_key", "datasets.threedpw_smpl_base_root")),
+        split=split,
+        sequence_length=int(data_cfg["sequence_length"]),
+        stride=int(data_cfg["stride"]),
+        image_size=int(data_cfg["image_size"]),
+        max_humans=int(data_cfg.get("max_humans", 2)),
+        require_smpl=bool(data_cfg.get("require_smpl", True)),
+        require_boxes=bool(data_cfg.get("require_boxes", True)),
+    )
+    dataset = maybe_subset_dataset(dataset, data_cfg, split)
+    return DataLoader(
+        dataset,
+        batch_size=int(config["optim"]["batch_size"]),
+        shuffle=shuffle,
+        num_workers=int(data_cfg.get("num_workers", 0)),
+        pin_memory=bool(data_cfg.get("pin_memory", True)),
+        collate_fn=threedpw_collate_fn,
+        drop_last=shuffle,
+    )
+
+
+def maybe_subset_dataset(dataset: Any, data_cfg: dict[str, Any], split: str) -> Any | Subset:
     train_split = str(data_cfg.get("train_split", split))
     if split != train_split and not bool(data_cfg.get("subset_apply_to_val", False)):
         return dataset
@@ -586,7 +623,7 @@ def validate(
     epoch: int,
     config: dict[str, Any],
     teacher_model: torch.nn.Module | None = None,
-) -> None:
+) -> dict[str, float]:
     model.eval()
     totals: dict[str, float] = {}
     count = 0
@@ -601,6 +638,7 @@ def validate(
         count += 1
     averaged = {key: value / max(count, 1) for key, value in totals.items()}
     print(format_log("val", epoch, 0, len(loader), 0, averaged))
+    return averaged
 
 
 def move_to_device(batch: dict[str, torch.Tensor], device: torch.device) -> dict[str, torch.Tensor]:
@@ -610,8 +648,8 @@ def move_to_device(batch: dict[str, torch.Tensor], device: torch.device) -> dict
 def forward_model(model: torch.nn.Module, batch: dict[str, torch.Tensor], config: dict[str, Any]) -> dict[str, torch.Tensor]:
     if not bool(config.get("model", {}).get("smpl_query_box_prior", False)):
         return model(batch["images"])
-    boxes = batch.get("gt_boxes")
-    mask = batch.get("boxes_mask")
+    boxes = batch.get("smpl_query_boxes", batch.get("gt_boxes"))
+    mask = batch.get("smpl_query_boxes_mask", batch.get("boxes_mask"))
     if model.training:
         prior_cfg = config.get("training_prior", {})
         if prior_cfg:
@@ -896,6 +934,50 @@ def save_checkpoint(
         path,
     )
     print(f"[ckpt] saved: {path}")
+
+
+def init_topk_state(output_dir: Path, config: dict[str, Any]) -> list[dict[str, Any]]:
+    _ = output_dir
+    _ = config
+    return []
+
+
+def maybe_save_topk_checkpoint(
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+    epoch: int,
+    global_step: int,
+    config: dict[str, Any],
+    output_dir: Path,
+    topk_state: list[dict[str, Any]],
+    val_losses: dict[str, float],
+) -> None:
+    ckpt_cfg = config.get("checkpoint", {})
+    top_k = int(ckpt_cfg.get("save_top_k", 0) or 0)
+    if top_k <= 0:
+        return
+    monitor = str(ckpt_cfg.get("monitor", "loss_total"))
+    mode = str(ckpt_cfg.get("monitor_mode", "min")).lower()
+    if monitor not in val_losses:
+        print(f"[ckpt] top-k skipped: monitor={monitor!r} not found in validation losses")
+        return
+    metric = float(val_losses[monitor])
+    better = (lambda a, b: a < b) if mode == "min" else (lambda a, b: a > b)
+    if len(topk_state) >= top_k and not better(metric, float(topk_state[-1]["metric"])):
+        return
+    raw_path = output_dir / f"checkpoint_top_epoch_{epoch:04d}_{monitor}_{metric:.6f}.pt"
+    save_checkpoint(model, optimizer, epoch, global_step, config, raw_path)
+    topk_state.append({"metric": metric, "epoch": int(epoch), "path": raw_path})
+    topk_state.sort(key=lambda item: float(item["metric"]), reverse=(mode == "max"))
+    while len(topk_state) > top_k:
+        removed = topk_state.pop()
+        path = Path(removed["path"])
+        if path.exists():
+            path.unlink()
+    for rank, item in enumerate(topk_state, start=1):
+        stable_path = output_dir / f"checkpoint_top{rank:02d}.pt"
+        shutil.copyfile(item["path"], stable_path)
+        print(f"[ckpt] top{rank:02d} {monitor}={float(item['metric']):.6f}: {stable_path}")
 
 
 def should_save_checkpoint(config: dict[str, Any], epoch: int, total_epochs: int) -> bool:
