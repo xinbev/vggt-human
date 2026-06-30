@@ -36,6 +36,10 @@ Server output directory by default:
 
 For each selected person/query, the script writes:
 
+- `05_06_real_hsi_foot_scene_person*_q*_a*.ply`
+  Main paper-figure geometry asset. It contains the VGGT depth point cloud,
+  the selected base SMPL mesh, a foot/body anchor sphere, the probed scene
+  point sphere, and an arrow from the human anchor to the scene point.
 - `05a_real_depth_patch_window_person*_q*_a*.png`
   Real VGGT depth heatmap with the HSI 3x3 local patch-token window highlighted.
 - `05b_real_anchor_project_to_depth_person*_q*_a*.png`
@@ -50,8 +54,9 @@ For each selected person/query, the script writes:
 - `manifest.json`
   Full provenance and file list.
 
-The PNGs are visual elements; the numeric JSON is the source of truth for the
-actual HSI quantities used to draw them.
+The PLY is the recommended main asset for screenshots. The PNGs are auxiliary
+debug/inset assets; the numeric JSON is the source of truth for the actual HSI
+quantities used to draw them.
 
 ## Server Command
 
@@ -65,19 +70,26 @@ Useful overrides:
 
 ```bash
 IMAGE=/path/to/frame.jpg \
-TOP_K=2 \
+TOP_K=1 \
 AUTO_TOP_K=2 \
 DETECTOR_IMAGE_SIZE=640 \
+PERSON_SELECT=rightmost \
+ANCHOR_MODE=foot \
 PERSON_INDEX=-1 \
 ANCHOR_INDEX=-1 \
 bash scripts/vis/create_hsi_local_probe_real_elements.sh
 ```
 
-`PERSON_INDEX=-1` exports all selected people up to `TOP_K`.
+`PERSON_SELECT=rightmost` picks the right-side person from the detected people.
+This is the default for the provided two-person `f2.jpg` image.
 
-`ANCHOR_INDEX=-1` automatically picks the visible HSI anchor with the largest
-absolute depth residual for that person. Set `ANCHOR_INDEX=...` to force a
-specific HSI token/anchor.
+`ANCHOR_MODE=foot` picks among the SMPL/HSI foot-side anchors and chooses the
+visible foot anchor closest to the probed depth surface. Set `ANCHOR_INDEX=...`
+to force a specific HSI token/anchor.
+
+The 2D boxes used for auxiliary PNGs and query priors come from SAM2 mask
+bounding boxes, not the model-predicted `pred_boxes`, so they should cover the
+person similarly to the earlier patch-pooling素材.
 
 ## Local Verification
 

@@ -12,12 +12,15 @@ OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/outputs/vis/paper_hsi_local_probe_real_el
 CHECKPOINT="${CHECKPOINT:-}"
 BASELINE_CHECKPOINT="${BASELINE_CHECKPOINT:-}"
 DEVICE="${DEVICE:-cuda}"
-TOP_K="${TOP_K:-2}"
+TOP_K="${TOP_K:-1}"
 AUTO_TOP_K="${AUTO_TOP_K:-2}"
 CONF_THRESHOLD="${CONF_THRESHOLD:-0.05}"
 ANCHOR_INDEX="${ANCHOR_INDEX:--1}"
 PERSON_INDEX="${PERSON_INDEX:--1}"
+PERSON_SELECT="${PERSON_SELECT:-rightmost}"
+ANCHOR_MODE="${ANCHOR_MODE:-foot}"
 DETECTOR_IMAGE_SIZE="${DETECTOR_IMAGE_SIZE:-640}"
+PLY_SCENE_STRIDE="${PLY_SCENE_STRIDE:-4}"
 
 cd "${REPO_ROOT}"
 mkdir -p "${OUTPUT_DIR}"
@@ -37,8 +40,11 @@ args=(
   --auto-top-k "${AUTO_TOP_K}"
   --conf-threshold "${CONF_THRESHOLD}"
   --anchor-index "${ANCHOR_INDEX}"
+  --anchor-mode "${ANCHOR_MODE}"
   --person-index "${PERSON_INDEX}"
+  --person-select "${PERSON_SELECT}"
   --detector-image-size "${DETECTOR_IMAGE_SIZE}"
+  --ply-scene-stride "${PLY_SCENE_STRIDE}"
   --auto-person-prior
 )
 

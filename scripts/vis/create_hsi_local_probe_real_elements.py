@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import inspect
 import json
+import math
 import sys
 from collections import namedtuple
 from pathlib import Path
@@ -49,6 +50,11 @@ from scripts.vis.create_arch_patch_pooling_elements import (  # noqa: E402
     resize_mask,
     save_mask_artifacts,
 )
+from scripts.vis.create_hsi_paper_ply_elements import (  # noqa: E402
+    MeshBuilder,
+    add_arrow as add_ply_arrow,
+    add_uv_sphere,
+)
 from scripts.vis.visualize_smpl_inference import (  # noqa: E402
     extract_state_dict,
     load_image,
@@ -63,6 +69,7 @@ from vggt_omega.models.heads.hsi_refinement_head import (  # noqa: E402
     _unproject_pixels,
 )
 from vggt_omega.training.config import deep_update, require_path  # noqa: E402
+from vggt_omega.utils.rotation import rot6d_to_axis_angle  # noqa: E402
 
 
 PALETTE = [
@@ -88,9 +95,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, default=Path("outputs/vis/paper_hsi_local_probe_real_elements"))
     parser.add_argument("--device", default="")
     parser.add_argument("--image-size", type=int, default=518)
-    parser.add_argument("--person-index", type=int, default=-1, help="-1 exports all selected query priors/top predictions.")
-    parser.add_argument("--anchor-index", type=int, default=-1, help="-1 chooses the visible anchor with max depth residual.")
-    parser.add_argument("--top-k", type=int, default=2, help="Number of people to export when --person-index=-1.")
+    parser.add_argument("--person-index", type=int, default=-1, help="Index after person selection candidates; overrides --person-select when >=0.")
+    parser.add_argument("--person-select", choices=("rightmost", "leftmost", "confidence", "all"), default="rightmost")
+    parser.add_argument("--anchor-index", type=int, default=-1, help="-1 chooses according to --anchor-mode.")
+    parser.add_argument("--anchor-mode", choices=("foot", "max_residual", "nearest", "full_body"), default="foot")
+    parser.add_argument("--top-k", type=int, default=1, help="Number of people to export when --person-select=all/confidence.")
     parser.add_argument("--conf-threshold", type=float, default=0.05)
     parser.add_argument("--auto-person-prior", action="store_true", help="Use project YOLO+SAM2 to create query priors.")
     parser.add_argument("--auto-top-k", type=int, default=2, help="Top detected people used as query priors.")
@@ -105,6 +114,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sam2-single-mask", action="store_true")
     parser.add_argument("--patch-mask-min-overlap", type=float, default=0.02)
     parser.add_argument("--side-view-window", type=int, default=13)
+    parser.add_argument("--ply-scene-stride", type=int, default=4, help="Stride for VGGT depth point cloud vertices.")
+    parser.add_argument("--ply-max-scene-depth", type=float, default=30.0)
+    parser.add_argument("--no-export-ply", action="store_true")
     parser.add_argument("--override", action="append", default=[])
     return parser.parse_args()
 
@@ -144,7 +156,7 @@ def main() -> None:
     files: list[str] = []
     people_meta = []
     for out_rank, query_idx in enumerate(query_indices):
-        anchor_idx = choose_anchor_index(probe, query_idx, args.anchor_index)
+        anchor_idx = choose_anchor_index(probe, query_idx, args.anchor_index, args.anchor_mode)
         prefix = f"person{out_rank}_q{query_idx}_a{anchor_idx}"
         colors = PALETTE[out_rank % len(PALETTE)]
         meta = export_person_assets(
@@ -158,6 +170,10 @@ def main() -> None:
             patch_size=patch_size,
             colors=colors,
             side_view_window=args.side_view_window,
+            priors=priors,
+            export_ply=not args.no_export_ply,
+            scene_stride=args.ply_scene_stride,
+            max_scene_depth=args.ply_max_scene_depth,
         )
         files.extend(meta["files"])
         people_meta.append(meta["metadata"])
@@ -189,6 +205,12 @@ def main() -> None:
             "offset = scene xyz - anchor xyz",
             "depth_residual = scene_z - anchor_z",
         ],
+        "default_visualization_choice": {
+            "person": args.person_select,
+            "anchor": args.anchor_mode,
+            "main_asset": "PLY depth point cloud + base SMPL mesh + foot-to-scene arrow",
+            "box_source": "SAM2 mask bbox when auto-person-prior is enabled; model pred_boxes only as fallback",
+        },
         "people": people_meta,
         "files": files,
     }
@@ -297,6 +319,7 @@ def build_query_priors(
     image = Image.open(image_path).convert("RGB")
     width, height = image.size
     selected = list(range(min(len(boxes), max_queries)))
+    prior_boxes_xyxy_input: dict[int, list[float]] = {}
 
     boxes_tensor = torch.zeros(1, 1, max_queries, 4, dtype=torch.float32, device=device)
     mask_tensor = torch.zeros(1, 1, max_queries, dtype=torch.bool, device=device)
@@ -306,14 +329,22 @@ def build_query_priors(
 
     resized_masks = []
     for idx in selected:
-        box = boxes[idx].clipped(width, height)
+        key = sorted(instance_masks.keys())[idx]
+        box = mask_bbox(np.asarray(instance_masks[key]).astype(bool)).clipped(width, height)
+        if box.area <= 0:
+            box = boxes[idx].clipped(width, height)
         cx = ((box.x1 + box.x2) * 0.5) / max(float(width), 1.0)
         cy = ((box.y1 + box.y2) * 0.5) / max(float(height), 1.0)
         bw = (box.x2 - box.x1) / max(float(width), 1.0)
         bh = (box.y2 - box.y1) / max(float(height), 1.0)
         boxes_tensor[0, 0, idx] = torch.tensor([cx, cy, bw, bh], dtype=torch.float32, device=device).clamp(0.0, 1.0)
         mask_tensor[0, 0, idx] = True
-        key = sorted(instance_masks.keys())[idx]
+        prior_boxes_xyxy_input[idx] = [
+            float(box.x1) * float(input_size) / max(float(width), 1.0),
+            float(box.y1) * float(input_size) / max(float(height), 1.0),
+            float(box.x2) * float(input_size) / max(float(width), 1.0),
+            float(box.y2) * float(input_size) / max(float(height), 1.0),
+        ]
         resized = resize_mask(np.asarray(instance_masks[key]).astype(bool), (input_size, input_size))
         resized_masks.append(resized)
         patch_tensor[0, 0, idx] = torch.from_numpy(mask_to_patch_grid(resized, grid_h, grid_w, patch_size, args.patch_mask_min_overlap)).to(device)
@@ -332,14 +363,27 @@ def build_query_priors(
         "valid_query_indices": selected,
         "patch_grid_hw": [grid_h, grid_w],
         "patch_pool_mode_for_visualization": "mask_intersection",
+        "prior_boxes_xyxy_input_pixels": {str(k): v for k, v in prior_boxes_xyxy_input.items()},
     }
     return {
         "boxes": boxes_tensor,
         "mask": mask_tensor,
         "patch_masks": patch_tensor,
         "valid_indices": selected,
+        "prior_boxes_xyxy_input_pixels": prior_boxes_xyxy_input,
         "meta": auto_meta,
     }
+
+
+def mask_bbox(mask: np.ndarray):
+    ys, xs = np.nonzero(mask)
+    if xs.size == 0:
+        from scripts.vis.create_arch_patch_pooling_elements import Box
+
+        return Box(0.0, 0.0, 0.0, 0.0)
+    from scripts.vis.create_arch_patch_pooling_elements import Box
+
+    return Box(float(xs.min()), float(ys.min()), float(xs.max() + 1), float(ys.max() + 1))
 
 
 def mask_to_patch_grid(mask: np.ndarray, grid_h: int, grid_w: int, patch_size: int, min_overlap: float) -> np.ndarray:
@@ -366,6 +410,12 @@ def compute_hsi_probe(predictions: dict[str, torch.Tensor], model: torch.nn.Modu
     height, width = depth_hw.shape[-2:]
     intrinsics = _flatten_intrinsics(predictions["pose_enc"], input_size).to(device=pose6d.device, dtype=pose6d.dtype)
     anchors = head._anchors_cam(pose6d, betas, transl)
+    poses_aa = rot6d_to_axis_angle(pose6d.reshape(-1, 24, 6)).reshape(-1, 72)
+    smpl_vertices, smpl_joints = head.smpl(poses_aa.float(), betas.reshape(-1, betas.shape[-1]).float())
+    smpl_vertices = smpl_vertices.to(device=pose6d.device, dtype=pose6d.dtype) + transl.reshape(-1, 1, 3)
+    smpl_joints = smpl_joints[:, :24].to(device=pose6d.device, dtype=pose6d.dtype) + transl.reshape(-1, 1, 3)
+    smpl_vertices = smpl_vertices.reshape(*pose6d.shape[:3], smpl_vertices.shape[-2], 3)
+    smpl_joints = smpl_joints.reshape(*pose6d.shape[:3], smpl_joints.shape[-2], 3)
     batch_size, num_frames, num_queries, _, _ = anchors.shape
     flat_anchors = anchors.reshape(batch_size * num_frames * num_queries, 24, 3)
     projected = _project_points(flat_anchors, intrinsics.repeat_interleave(num_queries, dim=0)).reshape(
@@ -401,6 +451,9 @@ def compute_hsi_probe(predictions: dict[str, torch.Tensor], model: torch.nn.Modu
         "depth_residual": depth_residual.detach(),
         "depth_hw": depth_hw.detach(),
         "intrinsics": intrinsics.detach(),
+        "smpl_vertices": smpl_vertices.detach(),
+        "smpl_joints": smpl_joints.detach(),
+        "smpl_faces": torch.as_tensor(head.smpl.faces, dtype=torch.long, device=pose6d.device),
         "patch_center_x": center_x.detach(),
         "patch_center_y": center_y.detach(),
         "patch_grid_hw": torch.tensor([grid_h, grid_w], device=pose6d.device),
@@ -419,10 +472,23 @@ def choose_query_indices(predictions: dict[str, torch.Tensor], priors: dict[str,
         if args.person_index >= len(candidates):
             raise IndexError(f"--person-index {args.person_index} out of range for {len(candidates)} candidates")
         return [int(candidates[args.person_index])]
+    prior_boxes = priors.get("prior_boxes_xyxy_input_pixels") or {}
+    if args.person_select in {"rightmost", "leftmost"} and prior_boxes:
+        scored = []
+        for query_idx in candidates:
+            box = prior_boxes.get(int(query_idx))
+            if box is None:
+                continue
+            scored.append((0.5 * (float(box[0]) + float(box[2])), int(query_idx)))
+        if scored:
+            scored = sorted(scored, reverse=args.person_select == "rightmost")
+            return [scored[0][1]]
+    if args.person_select == "all":
+        return [int(i) for i in candidates[: max(args.top_k, 1)]]
     return [int(i) for i in candidates[: max(args.top_k, 1)]]
 
 
-def choose_anchor_index(probe: dict[str, torch.Tensor], query_idx: int, requested: int) -> int:
+def choose_anchor_index(probe: dict[str, torch.Tensor], query_idx: int, requested: int, mode: str = "foot") -> int:
     if requested >= 0:
         return int(requested)
     projected = probe["projected_depth"][0, 0, query_idx]
@@ -441,6 +507,18 @@ def choose_anchor_index(probe: dict[str, torch.Tensor], query_idx: int, requeste
     )
     if not bool(valid.any()):
         return 23
+    if mode == "full_body":
+        return 23
+    if mode == "foot":
+        foot_candidates = torch.tensor([6, 7, 9, 10], device=residual.device)
+        foot_valid = valid[foot_candidates]
+        if bool(foot_valid.any()):
+            foot_scores = torch.where(foot_valid, residual[foot_candidates].abs(), torch.full_like(foot_candidates, float("inf"), dtype=residual.dtype))
+            return int(foot_candidates[torch.argmin(foot_scores)].detach().cpu())
+    if mode == "nearest":
+        distance = probe["distance"][0, 0, query_idx].detach().float()
+        score = torch.where(valid, distance, torch.full_like(distance, float("inf")))
+        return int(torch.argmin(score).detach().cpu())
     score = torch.where(valid, residual.abs(), torch.full_like(residual, -1.0))
     return int(torch.argmax(score).detach().cpu())
 
@@ -456,10 +534,14 @@ def export_person_assets(
     patch_size: int,
     colors: dict[str, tuple[int, int, int]],
     side_view_window: int,
+    priors: dict[str, Any],
+    export_ply: bool,
+    scene_stride: int,
+    max_scene_depth: float,
 ) -> dict[str, Any]:
     depth = probe["depth_hw"][0, 0].detach().float().cpu().numpy()
     depth_img = depth_to_rgba(depth)
-    box = predicted_box_pixels(predictions, query_idx, rgb.size)
+    box = prior_box_pixels(priors, query_idx) or predicted_box_pixels(predictions, query_idx, rgb.size)
     out_files = []
 
     depth_path = output_dir / f"05a_real_depth_patch_window_{prefix}.png"
@@ -477,6 +559,19 @@ def export_person_assets(
     residual_path = output_dir / f"06a_real_body_scene_residual_{prefix}.png"
     create_body_scene_residual(probe, query_idx, anchor_idx, colors, side_view_window).save(residual_path)
     out_files.append(residual_path.name)
+
+    if export_ply:
+        ply_path = output_dir / f"05_06_real_hsi_foot_scene_{prefix}.ply"
+        export_hsi_foot_scene_ply(
+            ply_path,
+            rgb,
+            probe,
+            query_idx,
+            anchor_idx,
+            scene_stride=scene_stride,
+            max_scene_depth=max_scene_depth,
+        )
+        out_files.append(ply_path.name)
 
     metadata = build_person_metadata(predictions, probe, query_idx, anchor_idx, box)
     meta_path = output_dir / f"real_probe_values_{prefix}.json"
@@ -680,6 +775,16 @@ def local_depth_side_points(probe: dict[str, torch.Tensor], query_idx: int, anch
     return points[valid]
 
 
+def prior_box_pixels(priors: dict[str, Any], query_idx: int) -> list[float] | None:
+    boxes = priors.get("prior_boxes_xyxy_input_pixels") or {}
+    box = boxes.get(int(query_idx))
+    if box is None:
+        box = boxes.get(str(int(query_idx)))
+    if box is None:
+        return None
+    return [float(v) for v in box]
+
+
 def predicted_box_pixels(predictions: dict[str, torch.Tensor], query_idx: int, image_size: tuple[int, int]) -> list[float] | None:
     if "pred_boxes" not in predictions:
         return None
@@ -692,6 +797,89 @@ def predicted_box_pixels(predictions: dict[str, torch.Tensor], query_idx: int, i
         (cx + 0.5 * bw) * width,
         (cy + 0.5 * bh) * height,
     ]
+
+
+def export_hsi_foot_scene_ply(
+    path: Path,
+    rgb: Image.Image,
+    probe: dict[str, torch.Tensor],
+    query_idx: int,
+    anchor_idx: int,
+    scene_stride: int = 4,
+    max_scene_depth: float = 30.0,
+) -> None:
+    mesh = MeshBuilder()
+    scene_points, scene_colors = depth_to_point_cloud(
+        depth=probe["depth_hw"][0, 0],
+        intrinsics=probe["intrinsics"],
+        rgb=rgb,
+        image_size=int(probe["image_size"].detach().cpu()),
+        stride=max(int(scene_stride), 1),
+        max_depth=float(max_scene_depth),
+    )
+    if scene_points.size:
+        mesh.add_mesh(scene_points, np.empty((0, 3), dtype=np.int64), scene_colors)
+
+    smpl_vertices = probe["smpl_vertices"][0, 0, query_idx].detach().float().cpu().numpy()
+    smpl_faces = probe["smpl_faces"].detach().cpu().numpy()
+    mesh.add_mesh(smpl_vertices, smpl_faces, (232, 142, 82))
+
+    anchor = probe["anchors"][0, 0, query_idx, anchor_idx].detach().float().cpu().numpy()
+    scene = probe["scene_points"][0, 0, query_idx, anchor_idx].detach().float().cpu().numpy()
+    normal = probe["scene_normals"][0, 0, query_idx, anchor_idx].detach().float().cpu().numpy()
+    body_scale = max(float(np.linalg.norm(np.nanmax(smpl_vertices, axis=0) - np.nanmin(smpl_vertices, axis=0))), 1e-3)
+    sphere_radius = body_scale * 0.025
+    arrow_radius = body_scale * 0.006
+    add_uv_sphere(mesh, anchor, sphere_radius, (220, 64, 64))
+    add_uv_sphere(mesh, scene, sphere_radius, (37, 99, 180))
+    add_ply_arrow(mesh, anchor, scene, arrow_radius, (220, 64, 64), head_radius=arrow_radius * 3.0, head_length=body_scale * 0.055)
+    normal_norm = float(np.linalg.norm(normal))
+    if normal_norm > 1e-6:
+        add_ply_arrow(
+            mesh,
+            scene,
+            scene + normal / normal_norm * body_scale * 0.12,
+            arrow_radius * 0.65,
+            (26, 166, 166),
+            head_radius=arrow_radius * 2.1,
+            head_length=body_scale * 0.035,
+        )
+    mesh.write(path)
+
+
+def depth_to_point_cloud(
+    depth: torch.Tensor,
+    intrinsics: torch.Tensor,
+    rgb: Image.Image,
+    image_size: int,
+    stride: int,
+    max_depth: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    depth_hw = depth.detach().float()
+    height, width = depth_hw.shape[-2:]
+    ys = torch.arange(0, height, stride, device=depth_hw.device)
+    xs = torch.arange(0, width, stride, device=depth_hw.device)
+    yy, xx = torch.meshgrid(ys, xs, indexing="ij")
+    z = depth_hw[yy, xx]
+    valid = torch.isfinite(z) & (z > 1e-6) & (z <= float(max_depth))
+    if not bool(valid.any()):
+        return np.empty((0, 3), dtype=np.float32), np.empty((0, 3), dtype=np.uint8)
+    xx_f = xx.to(dtype=depth_hw.dtype) * (float(image_size) / float(width))
+    yy_f = yy.to(dtype=depth_hw.dtype) * (float(image_size) / float(height))
+    intr = intrinsics.reshape(-1, 3, 3)[0].to(device=depth_hw.device, dtype=depth_hw.dtype)
+    fx = intr[0, 0].clamp(min=1e-6)
+    fy = intr[1, 1].clamp(min=1e-6)
+    cx = intr[0, 2]
+    cy = intr[1, 2]
+    points = torch.stack([(xx_f - cx) / fx * z, (yy_f - cy) / fy * z, z], dim=-1)
+    points_np = points[valid].detach().float().cpu().numpy().astype(np.float32, copy=False)
+
+    rgb_small = np.asarray(rgb.resize((width, height), Image.BILINEAR).convert("RGB"), dtype=np.uint8)
+    colors = rgb_small[yy.detach().cpu().numpy(), xx.detach().cpu().numpy()]
+    colors = colors[valid.detach().cpu().numpy()]
+    scene_tint = np.asarray([120, 170, 235], dtype=np.float32)
+    colors = (0.45 * colors.astype(np.float32) + 0.55 * scene_tint).clip(0, 255).astype(np.uint8)
+    return points_np, colors
 
 
 def build_person_metadata(
@@ -709,7 +897,7 @@ def build_person_metadata(
         "query_index": int(query_idx),
         "anchor_index": int(anchor_idx),
         "confidence": conf,
-        "pred_box_xyxy_input_pixels": box,
+        "box_xyxy_input_pixels": box,
         "anchor_cam_xyz": tensor_list(probe["anchors"][0, 0, query_idx, anchor_idx]),
         "projected_uv_input": tensor_list(probe["projected"][0, 0, query_idx, anchor_idx]),
         "projected_uv_depth": tensor_list(probe["projected_depth"][0, 0, query_idx, anchor_idx]),
