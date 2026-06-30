@@ -17,6 +17,7 @@ AUTO_TOP_K="${AUTO_TOP_K:-2}"
 CONF_THRESHOLD="${CONF_THRESHOLD:-0.05}"
 ANCHOR_INDEX="${ANCHOR_INDEX:--1}"
 PERSON_INDEX="${PERSON_INDEX:--1}"
+DETECTOR_IMAGE_SIZE="${DETECTOR_IMAGE_SIZE:-640}"
 
 cd "${REPO_ROOT}"
 mkdir -p "${OUTPUT_DIR}"
@@ -37,6 +38,7 @@ args=(
   --conf-threshold "${CONF_THRESHOLD}"
   --anchor-index "${ANCHOR_INDEX}"
   --person-index "${PERSON_INDEX}"
+  --detector-image-size "${DETECTOR_IMAGE_SIZE}"
   --auto-person-prior
 )
 

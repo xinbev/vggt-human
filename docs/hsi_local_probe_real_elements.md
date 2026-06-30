@@ -67,6 +67,7 @@ Useful overrides:
 IMAGE=/path/to/frame.jpg \
 TOP_K=2 \
 AUTO_TOP_K=2 \
+DETECTOR_IMAGE_SIZE=640 \
 PERSON_INDEX=-1 \
 ANCHOR_INDEX=-1 \
 bash scripts/vis/create_hsi_local_probe_real_elements.sh

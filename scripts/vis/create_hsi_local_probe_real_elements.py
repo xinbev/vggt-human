@@ -96,7 +96,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--auto-top-k", type=int, default=2, help="Top detected people used as query priors.")
     parser.add_argument("--det-conf", type=float, default=0.25)
     parser.add_argument("--det-iou", type=float, default=0.50)
-    parser.add_argument("--detector-image-size", type=int, default=1024)
+    parser.add_argument("--detector-image-size", type=int, default=640)
     parser.add_argument("--det-half", action="store_true")
     parser.add_argument("--yolo-checkpoint", default=None)
     parser.add_argument("--sam2-root", default=None)
@@ -278,7 +278,21 @@ def build_query_priors(
         auto_top_k=args.auto_top_k,
         auto_person_index=0,
     )
-    pixel_mask, boxes, auto_meta, instance_masks = auto_sam2_person_mask(auto_args)
+    try:
+        pixel_mask, boxes, auto_meta, instance_masks = auto_sam2_person_mask(auto_args)
+    except RuntimeError as exc:
+        message = str(exc)
+        fixed_size_mismatch = "The size of tensor" in message and "must match the size of tensor" in message
+        if not fixed_size_mismatch or int(auto_args.detector_image_size) == 640:
+            raise
+        print(
+            "[auto-prior] YOLO TorchScript failed at "
+            f"detector_image_size={auto_args.detector_image_size}; retrying with 640. "
+            "This usually means the TorchScript export has fixed anchors."
+        )
+        auto_args.detector_image_size = 640
+        pixel_mask, boxes, auto_meta, instance_masks = auto_sam2_person_mask(auto_args)
+        auto_meta.setdefault("detector", {})["fallback_from_image_size"] = int(args.detector_image_size)
     save_mask_artifacts(output_dir, pixel_mask, auto_meta, "real_auto_sam2_mask_original", instance_masks=instance_masks)
     image = Image.open(image_path).convert("RGB")
     width, height = image.size
