@@ -28,6 +28,13 @@ PATCH_FILL = (255, 255, 255)
 PERSON_PATCH = (255, 205, 205)
 PERSON_PATCH_STRONG = (244, 124, 124)
 PERSON_BORDER = (220, 64, 64)
+INSTANCE_PALETTE = [
+    ((255, 205, 205), (244, 124, 124), (220, 64, 64)),
+    ((197, 225, 255), (80, 150, 235), (37, 99, 180)),
+    ((216, 242, 206), (91, 180, 91), (47, 125, 72)),
+    ((245, 219, 255), (181, 116, 219), (126, 72, 168)),
+    ((255, 231, 184), (235, 170, 70), (181, 111, 32)),
+]
 TOKEN_GREEN = (42, 168, 107)
 TOKEN_GREEN_LIGHT = (194, 239, 217)
 TEXT_DARK = (31, 41, 51)
@@ -93,26 +100,28 @@ def load_boxes(path: Path | None, manual_boxes: list[str]) -> list[Box]:
     return boxes
 
 
-def load_mask(mask_path: Path | None, mask_keys: list[str]) -> np.ndarray | None:
+def load_masks(mask_path: Path | None, mask_keys: list[str]) -> tuple[np.ndarray | None, dict[str, np.ndarray]]:
     if mask_path is None:
-        return None
+        return None, {}
     suffix = mask_path.suffix.lower()
     if suffix == ".npz":
         with np.load(mask_path) as data:
             keys = mask_keys or list(data.keys())
-            masks = []
+            masks = {}
             for key in keys:
                 if key not in data:
                     raise KeyError(f"Mask key {key!r} not found in {mask_path}. Available keys: {list(data.keys())}")
-                masks.append(np.asarray(data[key]).astype(bool))
+                masks[str(key)] = np.asarray(data[key]).astype(bool)
         if not masks:
             raise ValueError(f"No masks found in {mask_path}")
-        return np.logical_or.reduce(masks)
+        return np.logical_or.reduce(list(masks.values())), masks
     if suffix == ".npy":
         mask = np.load(mask_path)
-        return np.asarray(mask).squeeze().astype(bool)
+        mask = np.asarray(mask).squeeze().astype(bool)
+        return mask, {"person_mask": mask}
     image = Image.open(mask_path).convert("L")
-    return np.asarray(image) > 0
+    mask = np.asarray(image) > 0
+    return mask, {"person_mask": mask}
 
 
 def resolve_project_path(value: str | Path) -> Path:
@@ -260,11 +269,22 @@ def resize_mask(mask: np.ndarray, size: tuple[int, int]) -> np.ndarray:
     return np.asarray(mask_image) > 0
 
 
+def resize_instance_masks(instance_masks: dict[str, np.ndarray], size: tuple[int, int]) -> dict[str, np.ndarray]:
+    return {key: resize_mask(mask, size) for key, mask in sorted(instance_masks.items())}
+
+
 def boxes_from_mask(mask: np.ndarray) -> list[Box]:
     ys, xs = np.nonzero(mask)
     if xs.size == 0:
         return []
     return [Box(float(xs.min()), float(ys.min()), float(xs.max() + 1), float(ys.max() + 1))]
+
+
+def boxes_from_instance_masks(instance_masks: dict[str, np.ndarray]) -> list[Box]:
+    boxes = []
+    for _, mask in sorted(instance_masks.items()):
+        boxes.extend(boxes_from_mask(mask))
+    return boxes
 
 
 def resize_inputs(
@@ -341,6 +361,33 @@ def selected_patch_mask_from_pixel_mask(pixel_mask: np.ndarray, patch_size: int,
     return selected
 
 
+def instance_label_grid(
+    instance_masks: dict[str, np.ndarray],
+    patch_size: int,
+    min_overlap: float,
+) -> tuple[np.ndarray | None, list[str]]:
+    if not instance_masks:
+        return None, []
+    keys = list(sorted(instance_masks.keys()))
+    first = np.asarray(instance_masks[keys[0]])
+    rows = int(np.ceil(first.shape[0] / patch_size))
+    cols = int(np.ceil(first.shape[1] / patch_size))
+    labels = -np.ones((rows, cols), dtype=np.int32)
+    for row, col, patch in patch_boxes(first.shape[1], first.shape[0], patch_size):
+        best_idx = -1
+        best_score = 0.0
+        for idx, key in enumerate(keys):
+            mask = np.asarray(instance_masks[key]).astype(bool)
+            crop = mask[int(patch.y1) : int(patch.y2), int(patch.x1) : int(patch.x2)]
+            score = float(crop.mean()) if crop.size else 0.0
+            if score > best_score:
+                best_idx = idx
+                best_score = score
+        if best_idx >= 0 and best_score >= float(min_overlap):
+            labels[row, col] = best_idx
+    return labels, keys
+
+
 def draw_patch_grid(
     image: Image.Image,
     patch_size: int,
@@ -349,6 +396,8 @@ def draw_patch_grid(
     show_image: bool = True,
     selected_alpha: int = 150,
     grid_width: int = 1,
+    instance_masks: dict[str, np.ndarray] | None = None,
+    instance_labels: np.ndarray | None = None,
 ) -> Image.Image:
     base = fade_image(image, 0.25) if show_image else Image.new("RGB", image.size, PATCH_FILL)
     overlay = Image.new("RGBA", image.size, (0, 0, 0, 0))
@@ -356,7 +405,15 @@ def draw_patch_grid(
     width, height = image.size
     rows = int(np.ceil(height / patch_size))
     cols = int(np.ceil(width / patch_size))
-    if pixel_mask is not None:
+    if instance_masks:
+        for idx, key in enumerate(sorted(instance_masks.keys())):
+            fill, _, _ = INSTANCE_PALETTE[idx % len(INSTANCE_PALETTE)]
+            mask_layer = Image.fromarray((np.asarray(instance_masks[key]).astype(np.uint8) * selected_alpha), mode="L")
+            color_layer = Image.new("RGBA", image.size, (*fill, 0))
+            color_layer.putalpha(mask_layer)
+            overlay = Image.alpha_composite(overlay, color_layer)
+        draw = ImageDraw.Draw(overlay)
+    elif pixel_mask is not None:
         mask_layer = Image.fromarray((np.asarray(pixel_mask).astype(np.uint8) * selected_alpha), mode="L")
         red = Image.new("RGBA", image.size, (*PERSON_PATCH, 0))
         red.putalpha(mask_layer)
@@ -375,23 +432,27 @@ def draw_patch_grid(
         draw.line([(x, 0), (x, height)], fill=(*GRID_LINE, 230), width=grid_width)
     for y in range(0, height + 1, patch_size):
         draw.line([(0, y), (width, y)], fill=(*GRID_LINE, 230), width=grid_width)
-    if pixel_mask is not None and selected is not None:
+    if selected is not None and (pixel_mask is not None or instance_labels is not None):
         for row in range(rows):
             for col in range(cols):
                 if bool(selected[row, col]):
+                    _, outline, _ = INSTANCE_PALETTE[0]
+                    if instance_labels is not None and int(instance_labels[row, col]) >= 0:
+                        _, outline, _ = INSTANCE_PALETTE[int(instance_labels[row, col]) % len(INSTANCE_PALETTE)]
                     x1 = col * patch_size
                     y1 = row * patch_size
                     x2 = min(width, x1 + patch_size)
                     y2 = min(height, y1 + patch_size)
-                    draw.rectangle([x1, y1, x2, y2], outline=(*PERSON_PATCH_STRONG, 210), width=max(1, grid_width + 1))
+                    draw.rectangle([x1, y1, x2, y2], outline=(*outline, 210), width=max(1, grid_width + 1))
     return Image.alpha_composite(base.convert("RGBA"), overlay).convert("RGB")
 
 
 def draw_boxes(image: Image.Image, boxes: list[Box], width: int = 3) -> Image.Image:
     out = image.convert("RGB").copy()
     draw = ImageDraw.Draw(out)
-    for box in boxes:
-        draw.rectangle([box.x1, box.y1, box.x2, box.y2], outline=PERSON_BORDER, width=width)
+    for idx, box in enumerate(boxes):
+        _, _, border = INSTANCE_PALETTE[idx % len(INSTANCE_PALETTE)]
+        draw.rectangle([box.x1, box.y1, box.x2, box.y2], outline=border, width=width)
     return out
 
 
@@ -401,6 +462,8 @@ def create_person_patch_only(
     selected: np.ndarray,
     boxes: list[Box],
     pixel_mask: np.ndarray | None = None,
+    instance_masks: dict[str, np.ndarray] | None = None,
+    instance_labels: np.ndarray | None = None,
 ) -> Image.Image:
     width, height = image.size
     out = Image.new("RGB", (width, height), CANVAS_BG)
@@ -410,7 +473,16 @@ def create_person_patch_only(
         rect = (int(patch.x1), int(patch.y1), int(patch.x2), int(patch.y2))
         if bool(selected[row, col]):
             crop = source.crop(rect)
-            if pixel_mask is not None:
+            label = -1 if instance_labels is None else int(instance_labels[row, col])
+            if instance_masks and label >= 0:
+                key = sorted(instance_masks.keys())[label]
+                fill, _, _ = INSTANCE_PALETTE[label % len(INSTANCE_PALETTE)]
+                crop_mask = instance_masks[key][rect[1] : rect[3], rect[0] : rect[2]]
+                tinted = Image.blend(Image.new("RGB", crop.size, fill), crop, 0.38)
+                patch_canvas = Image.new("RGB", crop.size, (255, 255, 255))
+                patch_canvas.paste(tinted, (0, 0), Image.fromarray((crop_mask.astype(np.uint8) * 255), mode="L"))
+                crop = patch_canvas
+            elif pixel_mask is not None:
                 crop_mask = pixel_mask[rect[1] : rect[3], rect[0] : rect[2]]
                 tinted = Image.blend(Image.new("RGB", crop.size, PERSON_PATCH), crop, 0.38)
                 patch_canvas = Image.new("RGB", crop.size, (255, 255, 255))
@@ -425,14 +497,23 @@ def create_person_patch_only(
         rect = [patch.x1, patch.y1, patch.x2, patch.y2]
         line = (*GRID_LINE, 220)
         if bool(selected[row, col]):
-            line = (*PERSON_PATCH_STRONG, 240)
+            label = -1 if instance_labels is None else int(instance_labels[row, col])
+            _, outline, _ = INSTANCE_PALETTE[label % len(INSTANCE_PALETTE)] if label >= 0 else INSTANCE_PALETTE[0]
+            line = (*outline, 240)
         draw.rectangle(rect, outline=line, width=1)
-    for box in boxes:
-        draw.rectangle([box.x1, box.y1, box.x2, box.y2], outline=(*PERSON_BORDER, 255), width=3)
+    for idx, box in enumerate(boxes):
+        _, _, border = INSTANCE_PALETTE[idx % len(INSTANCE_PALETTE)]
+        draw.rectangle([box.x1, box.y1, box.x2, box.y2], outline=(*border, 255), width=3)
     return out
 
 
-def create_token_grid(selected: np.ndarray, cell: int = 32, gap: int = 6, pad: int = 18) -> Image.Image:
+def create_token_grid(
+    selected: np.ndarray,
+    cell: int = 32,
+    gap: int = 6,
+    pad: int = 18,
+    instance_labels: np.ndarray | None = None,
+) -> Image.Image:
     rows, cols = selected.shape
     width = pad * 2 + cols * cell + (cols - 1) * gap
     height = pad * 2 + rows * cell + (rows - 1) * gap
@@ -446,18 +527,20 @@ def create_token_grid(selected: np.ndarray, cell: int = 32, gap: int = 6, pad: i
             y1 = pad + row * (cell + gap)
             x2 = x1 + cell
             y2 = y1 + cell
+            label = -1 if instance_labels is None else int(instance_labels[row, col])
+            fill, outline, _ = INSTANCE_PALETTE[label % len(INSTANCE_PALETTE)] if label >= 0 else INSTANCE_PALETTE[0]
             draw.rounded_rectangle(
                 [x1, y1, x2, y2],
                 radius=4,
-                fill=(*PERSON_PATCH, 210),
-                outline=(*PERSON_PATCH_STRONG, 245),
+                fill=(*fill, 210),
+                outline=(*outline, 245),
                 width=2,
             )
     return out
 
 
-def create_query_pooling(selected: np.ndarray, num_queries: int = 6) -> Image.Image:
-    token_grid = create_token_grid(selected, cell=26, gap=5, pad=14)
+def create_query_pooling(selected: np.ndarray, num_queries: int = 6, instance_labels: np.ndarray | None = None) -> Image.Image:
+    token_grid = create_token_grid(selected, cell=26, gap=5, pad=14, instance_labels=instance_labels)
     width = token_grid.width + 360
     height = max(token_grid.height, 240)
     out = Image.new("RGB", (width, height), CANVAS_BG)
@@ -484,7 +567,14 @@ def svg_color(color: tuple[int, int, int]) -> str:
     return f"rgb({color[0]},{color[1]},{color[2]})"
 
 
-def write_token_grid_svg(path: Path, selected: np.ndarray, cell: int = 28, gap: int = 6, pad: int = 16) -> None:
+def write_token_grid_svg(
+    path: Path,
+    selected: np.ndarray,
+    cell: int = 28,
+    gap: int = 6,
+    pad: int = 16,
+    instance_labels: np.ndarray | None = None,
+) -> None:
     rows, cols = selected.shape
     width = pad * 2 + cols * cell + (cols - 1) * gap
     height = pad * 2 + rows * cell + (rows - 1) * gap
@@ -497,8 +587,10 @@ def write_token_grid_svg(path: Path, selected: np.ndarray, cell: int = 28, gap: 
                 continue
             x = pad + col * (cell + gap)
             y = pad + row * (cell + gap)
-            fill = svg_color(PERSON_PATCH)
-            stroke = svg_color(PERSON_PATCH_STRONG)
+            label = -1 if instance_labels is None else int(instance_labels[row, col])
+            fill_color, stroke_color, _ = INSTANCE_PALETTE[label % len(INSTANCE_PALETTE)] if label >= 0 else INSTANCE_PALETTE[0]
+            fill = svg_color(fill_color)
+            stroke = svg_color(stroke_color)
             parts.append(
                 f'<rect x="{x}" y="{y}" width="{cell}" height="{cell}" rx="4" '
                 f'fill="{fill}" fill-opacity="0.82" stroke="{stroke}" stroke-width="2"/>'
@@ -570,11 +662,12 @@ def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     image = Image.open(args.image).convert("RGB")
     boxes = load_boxes(args.boxes_json, args.bbox)
-    pixel_mask = load_mask(args.mask, args.mask_key)
+    pixel_mask, input_instance_masks = load_masks(args.mask, args.mask_key)
     auto_meta = {"enabled": False}
     auto_instance_masks: dict[str, np.ndarray] = {}
     if not boxes and pixel_mask is None:
         pixel_mask, boxes, auto_meta, auto_instance_masks = auto_sam2_person_mask(args)
+    instance_masks = auto_instance_masks if auto_instance_masks else input_instance_masks
     original_mask_artifact = {}
     if bool(auto_meta.get("enabled", False)) and pixel_mask is not None:
         original_mask_artifact = save_mask_artifacts(
@@ -585,34 +678,61 @@ def main() -> None:
             instance_masks=auto_instance_masks,
         )
     image, boxes, pixel_mask = resize_inputs(image, boxes, pixel_mask, args.long_side)
+    if instance_masks:
+        if pixel_mask is None:
+            raise ValueError("Internal error: instance masks exist but combined pixel_mask is None")
+        instance_masks = resize_instance_masks(instance_masks, image.size)
     width, height = image.size
     boxes = [box.clipped(width, height) for box in boxes]
     if pixel_mask is not None:
         selected = selected_patch_mask_from_pixel_mask(pixel_mask, args.patch_size, args.min_overlap)
         if not boxes:
-            boxes = boxes_from_mask(pixel_mask)
+            boxes = boxes_from_instance_masks(instance_masks) if instance_masks else boxes_from_mask(pixel_mask)
     else:
         selected = selected_patch_mask_from_boxes(width, height, args.patch_size, boxes, args.min_overlap)
+    instance_labels, instance_keys = instance_label_grid(instance_masks, args.patch_size, args.min_overlap)
 
     resized_mask_artifact = {}
     if bool(auto_meta.get("enabled", False)) and pixel_mask is not None:
-        resized_mask_artifact = save_mask_artifacts(out_dir, pixel_mask, auto_meta, "auto_sam2_mask_resized")
+        resized_mask_artifact = save_mask_artifacts(
+            out_dir,
+            pixel_mask,
+            auto_meta,
+            "auto_sam2_mask_resized",
+            instance_masks=instance_masks,
+        )
 
     grid = draw_patch_grid(image, args.patch_size, selected=None, show_image=True)
     save_with_scale(grid, out_dir / "01_image_patch_grid_faded.png")
 
-    highlighted = draw_patch_grid(image, args.patch_size, selected=selected, pixel_mask=pixel_mask, show_image=True)
+    highlighted = draw_patch_grid(
+        image,
+        args.patch_size,
+        selected=selected,
+        pixel_mask=pixel_mask,
+        show_image=True,
+        instance_masks=instance_masks,
+        instance_labels=instance_labels,
+    )
     highlighted = draw_boxes(highlighted, boxes)
     save_with_scale(highlighted, out_dir / "02_person_patch_highlight.png")
 
-    person_only = create_person_patch_only(image, args.patch_size, selected, boxes, pixel_mask=pixel_mask)
+    person_only = create_person_patch_only(
+        image,
+        args.patch_size,
+        selected,
+        boxes,
+        pixel_mask=pixel_mask,
+        instance_masks=instance_masks,
+        instance_labels=instance_labels,
+    )
     save_with_scale(person_only, out_dir / "03_person_patches_extracted.png")
 
-    token_grid = create_token_grid(selected)
+    token_grid = create_token_grid(selected, instance_labels=instance_labels)
     save_with_scale(token_grid, out_dir / "04_patch_token_grid.png")
-    write_token_grid_svg(out_dir / "04_patch_token_grid.svg", selected)
+    write_token_grid_svg(out_dir / "04_patch_token_grid.svg", selected, instance_labels=instance_labels)
 
-    pooling = create_query_pooling(selected, num_queries=args.num_query_chips)
+    pooling = create_query_pooling(selected, num_queries=args.num_query_chips, instance_labels=instance_labels)
     save_with_scale(pooling, out_dir / "05_pool_to_person_query.png")
 
     manifest = {
@@ -622,6 +742,11 @@ def main() -> None:
         "grid_shape": list(selected.shape),
         "num_selected_patches": int(selected.sum()),
         "selection_source": "mask" if pixel_mask is not None else "bbox",
+        "instance_keys": instance_keys,
+        "instance_patch_counts": {
+            key: int((instance_labels == idx).sum()) if instance_labels is not None else 0
+            for idx, key in enumerate(instance_keys)
+        },
         "mask": None if args.mask is None else str(args.mask),
         "mask_keys": args.mask_key,
         "auto_sam2": auto_meta,

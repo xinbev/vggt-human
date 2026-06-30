@@ -78,6 +78,11 @@ det_000001
 Use `--mask-key` to select one instance. If no key is given for an `.npz`, all
 arrays are OR-combined.
 
+When multiple mask keys are provided, each person instance is drawn with a
+different color. Patch-token cells are assigned to the instance with the
+largest mask coverage in that patch, so `04_patch_token_grid.png/svg` keeps
+multi-person query evidence visually separated.
+
 Fallback bbox mode is still available:
 
 ```text

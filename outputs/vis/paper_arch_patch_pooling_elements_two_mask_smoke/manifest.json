@@ -1,0 +1,56 @@
+{
+  "image": "outputs\\debug\\arch_patch_pooling_two_mask_input.png",
+  "resized_size": [
+    720,
+    430
+  ],
+  "patch_size": 32,
+  "grid_shape": [
+    14,
+    23
+  ],
+  "num_selected_patches": 95,
+  "selection_source": "mask",
+  "instance_keys": [
+    "person_1",
+    "person_2"
+  ],
+  "instance_patch_counts": {
+    "person_1": 47,
+    "person_2": 48
+  },
+  "mask": "outputs\\debug\\arch_patch_pooling_two_mask_sam2.npz",
+  "mask_keys": [
+    "person_1",
+    "person_2"
+  ],
+  "auto_sam2": {
+    "enabled": false
+  },
+  "auto_mask_artifacts": {
+    "original": {},
+    "resized": {}
+  },
+  "boxes": [
+    {
+      "x1": 98.0,
+      "y1": 75.0,
+      "x2": 328.0,
+      "y2": 401.0
+    },
+    {
+      "x1": 379.0,
+      "y1": 82.0,
+      "x2": 632.0,
+      "y2": 404.0
+    }
+  ],
+  "files": [
+    "01_image_patch_grid_faded.png",
+    "02_person_patch_highlight.png",
+    "03_person_patches_extracted.png",
+    "04_patch_token_grid.png",
+    "04_patch_token_grid.svg",
+    "05_pool_to_person_query.png"
+  ]
+}
