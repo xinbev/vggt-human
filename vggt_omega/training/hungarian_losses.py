@@ -54,6 +54,7 @@ class HungarianSMPLLoss(nn.Module):
         projected_giou_weight: float = 0.0,
         projected_bbox_source: str = "joints",
         use_vggt_camera_projection: bool = False,
+        projection_camera_source: str = "vggt",
         smpl_model_dir: str = "",
         projection_image_size: int = 518,
         hsi_pose_weight: float = 0.0,
@@ -159,6 +160,7 @@ class HungarianSMPLLoss(nn.Module):
         self.projected_giou_weight = projected_giou_weight
         self.projected_bbox_source = projected_bbox_source
         self.use_vggt_camera_projection = use_vggt_camera_projection
+        self.projection_camera_source = str(projection_camera_source or "vggt")
         self.smpl_model_dir = smpl_model_dir
         self.projection_image_size = projection_image_size
         self.hsi_pose_weight = hsi_pose_weight
@@ -231,6 +233,8 @@ class HungarianSMPLLoss(nn.Module):
             raise ValueError(f"Unsupported conf_target_type: {self.conf_target_type}")
         if self.projected_bbox_source not in {"joints", "vertices"}:
             raise ValueError(f"Unsupported projected_bbox_source: {self.projected_bbox_source}")
+        if self.projection_camera_source not in {"vggt", "gt", "auto"}:
+            raise ValueError(f"Unsupported projection_camera_source: {self.projection_camera_source}")
         if self._uses_projected_bbox and not self.smpl_model_dir:
             raise ValueError("Projected SMPL bbox loss requires loss.smpl_model_dir or assets.smpl_model_dir")
         self.register_buffer(
@@ -338,11 +342,11 @@ class HungarianSMPLLoss(nn.Module):
             )
             losses.update(self._translation_hard_tail_losses(pred_transl_cam, frame_idx, src_idx, matched))
             losses["loss_id"] = self._identity_loss(flat_id_embed, frame_idx, src_idx, matched)
-            joint_losses = self._smpl_joint_losses(predictions, pred_betas, pred_transl_cam, frame_idx, src_idx, matched)
+            joint_losses = self._smpl_joint_losses(predictions, batch, pred_betas, pred_transl_cam, frame_idx, src_idx, matched)
             losses.update(joint_losses)
             losses.update(self._translation_refine_losses(predictions, pred_transl_cam, frame_idx, src_idx, matched))
             losses.update(self._translation_temporal_losses(predictions, batch, pred_transl_cam, frame_idx, src_idx, matched))
-            projected = self._projected_bbox_losses(predictions, pred_betas, pred_transl_cam, frame_idx, src_idx, target_boxes)
+            projected = self._projected_bbox_losses(predictions, batch, pred_betas, pred_transl_cam, frame_idx, src_idx, target_boxes)
             losses.update(projected)
             losses.update(self._hsi_refined_losses(predictions, batch, frame_idx, src_idx, matched))
 
@@ -407,6 +411,23 @@ class HungarianSMPLLoss(nn.Module):
     @property
     def _uses_projected_bbox(self) -> bool:
         return self.use_vggt_camera_projection and (self.projected_bbox_weight != 0.0 or self.projected_giou_weight != 0.0)
+
+    def _projection_intrinsics(
+        self,
+        predictions: dict[str, torch.Tensor],
+        batch: dict[str, torch.Tensor],
+        device: torch.device,
+        dtype: torch.dtype,
+    ) -> torch.Tensor:
+        if self.projection_camera_source in {"gt", "auto"}:
+            batch_intrinsics = batch.get("gt_intrinsics", batch.get("K_scal3r"))
+            if batch_intrinsics is not None:
+                return _flatten_batch_intrinsics(batch_intrinsics, device=device, dtype=dtype)
+            if self.projection_camera_source == "gt":
+                raise ValueError("projection_camera_source='gt' requires batch['gt_intrinsics'] or batch['K_scal3r']")
+        if "pose_enc" not in predictions:
+            raise ValueError("VGGT projection camera requires model output pose_enc; set model.enable_camera=true")
+        return _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), self.projection_image_size).to(device=device, dtype=dtype)
 
     def _confidence_loss(self, pred_confs: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         pred_confs = pred_confs.clamp(1e-6, 1.0 - 1e-6)
@@ -550,6 +571,7 @@ class HungarianSMPLLoss(nn.Module):
     def _projected_bbox_losses(
         self,
         predictions: dict[str, torch.Tensor],
+        batch: dict[str, torch.Tensor],
         pred_betas: torch.Tensor,
         pred_transl_cam: torch.Tensor,
         frame_idx: torch.Tensor,
@@ -563,12 +585,11 @@ class HungarianSMPLLoss(nn.Module):
                 "loss_projected_giou": zero,
                 "metric_projected_bbox_iou_mean": zero.detach(),
             }
-        if "pose_enc" not in predictions or "pred_poses" not in predictions:
-            raise ValueError("Projected SMPL bbox loss requires model outputs pose_enc and pred_poses; set model.enable_camera=true")
+        if "pred_poses" not in predictions:
+            raise ValueError("Projected SMPL bbox loss requires model output pred_poses")
 
         pred_poses = _flatten_prediction(_require_prediction(predictions, "pred_poses"), unframed_ndim=3)
-        pose_enc = _require_prediction(predictions, "pose_enc")
-        intrinsics = _flatten_intrinsics(pose_enc, self.projection_image_size)
+        intrinsics = self._projection_intrinsics(predictions, batch, device=pred_betas.device, dtype=pred_betas.dtype)
         smpl = self._get_smpl_layer(pred_betas.device)
 
         poses = pred_poses[frame_idx, src_idx].reshape(-1, 72)
@@ -591,6 +612,7 @@ class HungarianSMPLLoss(nn.Module):
     def _smpl_joint_losses(
         self,
         predictions: dict[str, torch.Tensor],
+        batch: dict[str, torch.Tensor],
         pred_betas: torch.Tensor,
         pred_transl_cam: torch.Tensor,
         frame_idx: torch.Tensor,
@@ -629,9 +651,7 @@ class HungarianSMPLLoss(nn.Module):
             zero = pred_betas.sum() * 0.0
             projected_l1 = zero
         else:
-            if "pose_enc" not in predictions:
-                raise ValueError("Projected joint loss requires model output pose_enc; set model.enable_camera=true")
-            intrinsics = _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), self.projection_image_size)
+            intrinsics = self._projection_intrinsics(predictions, batch, device=pred_betas.device, dtype=pred_betas.dtype)
             pred_2d = _project_points(pred_joints_cam, intrinsics[frame_idx].to(dtype=pred_joints_cam.dtype)) / float(self.projection_image_size)
             gt_2d = _project_points(gt_joints_cam, intrinsics[frame_idx].to(dtype=gt_joints_cam.dtype)) / float(self.projection_image_size)
             valid = (pred_joints_cam[..., 2] > 1e-4) & (gt_joints_cam[..., 2] > 1e-4)
@@ -2003,6 +2023,18 @@ def _flatten_intrinsics(pose_enc: torch.Tensor, image_size: int) -> torch.Tensor
     if intrinsics is None:
         raise RuntimeError("encoding_to_camera did not return intrinsics")
     return intrinsics.reshape(-1, 3, 3)
+
+
+def _flatten_batch_intrinsics(intrinsics: torch.Tensor, device: torch.device, dtype: torch.dtype) -> torch.Tensor:
+    if intrinsics.ndim == 4:
+        flat = intrinsics.reshape(intrinsics.shape[0] * intrinsics.shape[1], 3, 3)
+    elif intrinsics.ndim == 3:
+        flat = intrinsics
+    else:
+        raise ValueError(f"Unsupported intrinsics shape: {tuple(intrinsics.shape)}")
+    if flat.shape[-2:] != (3, 3):
+        raise ValueError(f"Expected intrinsics ending in (3, 3), got {tuple(intrinsics.shape)}")
+    return flat.to(device=device, dtype=dtype)
 
 
 def _canonical_depth(depth: torch.Tensor) -> torch.Tensor:

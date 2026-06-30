@@ -71,7 +71,7 @@ def main() -> None:
             "checkpoint": str(args.checkpoint),
             "num_windows": int(processed),
             "num_matches": len(rows),
-            "metric_protocol": "project_native_smpl24_camera_pelvis_aligned",
+            "metric_protocol": "project_native_smpl24_camera_pelvis_aligned_plus_camera_translation",
             "rows_csv": str(output_dir / "3dpw_smpl_base_metric_rows.csv"),
         }
     )
@@ -141,6 +141,7 @@ def evaluate_batch(
     pred_boxes = flatten_prediction(predictions["pred_boxes"], 3)
     pred_poses = flatten_prediction(predictions["pred_poses"], 3)
     pred_betas = flatten_prediction(predictions["pred_betas"], 3)
+    pred_transl = flatten_prediction(predictions["pred_transl_cam"], 3)
     targets = flatten_smpl_targets(batch, device=pred_confs.device)
     indices = matcher({"pred_confs": pred_confs, "pred_boxes": pred_boxes}, targets)
     matched = collect_matches(indices, targets, pred_confs.device)
@@ -154,14 +155,31 @@ def evaluate_batch(
     gt_vertices, gt_joints = smpl(gt_pose.float(), gt_betas.float())
     pred_joints = pred_joints[:, :24].to(dtype=pred_vertices.dtype)
     gt_joints = gt_joints[:, :24].to(dtype=gt_vertices.dtype)
+    pred_transl_matched = pred_transl[frame_idx, src_idx].to(dtype=pred_joints.dtype)
+    gt_transl_matched = matched["transl_cam"].to(device=pred_transl_matched.device, dtype=pred_transl_matched.dtype)
+    pred_joints_cam = pred_joints + pred_transl_matched[:, None, :]
+    gt_joints_cam = gt_joints + gt_transl_matched[:, None, :]
+    pred_vertices_cam = pred_vertices.to(dtype=pred_joints_cam.dtype) + pred_transl_matched[:, None, :]
+    gt_vertices_cam = gt_vertices.to(dtype=gt_joints_cam.dtype) + gt_transl_matched[:, None, :]
     pred_joints_a, gt_joints_a, pred_vertices_a, gt_vertices_a = align_by_pelvis(pred_joints, gt_joints, pred_vertices, gt_vertices)
     mpjpe = torch.linalg.norm(pred_joints_a - gt_joints_a, dim=-1).mean(dim=-1)
     pve = torch.linalg.norm(pred_vertices_a - gt_vertices_a, dim=-1).mean(dim=-1)
     pa = procrustes_mpjpe(pred_joints_a, gt_joints_a)
+    transl_delta = pred_transl_matched - gt_transl_matched
+    transl_l2 = torch.linalg.norm(transl_delta, dim=-1)
+    transl_xy = torch.linalg.norm(transl_delta[:, :2], dim=-1)
+    transl_z = transl_delta[:, 2].abs()
+    cam_mpjpe = torch.linalg.norm(pred_joints_cam - gt_joints_cam, dim=-1).mean(dim=-1)
+    cam_pve = torch.linalg.norm(pred_vertices_cam - gt_vertices_cam, dim=-1).mean(dim=-1)
     totals.add("mpjpe_mm", mpjpe.mean() * 1000.0, int(mpjpe.numel()))
     totals.add("pa_mpjpe_mm", pa.mean() * 1000.0, int(pa.numel()))
     totals.add("pve_mm", pve.mean() * 1000.0, int(pve.numel()))
-    append_rows(rows, selected_indices, batch, matched, src_idx, mpjpe, pa, pve)
+    totals.add("transl_l2_mm", transl_l2.mean() * 1000.0, int(transl_l2.numel()))
+    totals.add("transl_xy_l2_mm", transl_xy.mean() * 1000.0, int(transl_xy.numel()))
+    totals.add("transl_z_abs_mm", transl_z.mean() * 1000.0, int(transl_z.numel()))
+    totals.add("cam_mpjpe_no_align_mm", cam_mpjpe.mean() * 1000.0, int(cam_mpjpe.numel()))
+    totals.add("cam_pve_no_align_mm", cam_pve.mean() * 1000.0, int(cam_pve.numel()))
+    append_rows(rows, selected_indices, batch, matched, src_idx, mpjpe, pa, pve, transl_l2, transl_xy, transl_z, cam_mpjpe, cam_pve)
 
 
 def collect_matches(indices, targets: list[dict[str, torch.Tensor]], device: torch.device) -> dict[str, torch.Tensor]:
@@ -230,6 +248,11 @@ def append_rows(
     mpjpe: torch.Tensor,
     pa: torch.Tensor,
     pve: torch.Tensor,
+    transl_l2: torch.Tensor,
+    transl_xy: torch.Tensor,
+    transl_z: torch.Tensor,
+    cam_mpjpe: torch.Tensor,
+    cam_pve: torch.Tensor,
 ) -> None:
     num_frames = int(batch["images"].shape[1])
     frame_idx = matched["frame_idx"]
@@ -248,6 +271,11 @@ def append_rows(
                 "mpjpe_mm": float(mpjpe[row_idx].detach().cpu() * 1000.0),
                 "pa_mpjpe_mm": float(pa[row_idx].detach().cpu() * 1000.0),
                 "pve_mm": float(pve[row_idx].detach().cpu() * 1000.0),
+                "transl_l2_mm": float(transl_l2[row_idx].detach().cpu() * 1000.0),
+                "transl_xy_l2_mm": float(transl_xy[row_idx].detach().cpu() * 1000.0),
+                "transl_z_abs_mm": float(transl_z[row_idx].detach().cpu() * 1000.0),
+                "cam_mpjpe_no_align_mm": float(cam_mpjpe[row_idx].detach().cpu() * 1000.0),
+                "cam_pve_no_align_mm": float(cam_pve[row_idx].detach().cpu() * 1000.0),
             }
         )
 
@@ -282,7 +310,21 @@ def move_to_device(batch: dict[str, torch.Tensor], device: torch.device) -> dict
 
 
 def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
-    fields = ["dataset_index", "frame_offset", "query_idx", "gt_idx", "person_id", "mpjpe_mm", "pa_mpjpe_mm", "pve_mm"]
+    fields = [
+        "dataset_index",
+        "frame_offset",
+        "query_idx",
+        "gt_idx",
+        "person_id",
+        "mpjpe_mm",
+        "pa_mpjpe_mm",
+        "pve_mm",
+        "transl_l2_mm",
+        "transl_xy_l2_mm",
+        "transl_z_abs_mm",
+        "cam_mpjpe_no_align_mm",
+        "cam_pve_no_align_mm",
+    ]
     with path.open("w", encoding="utf-8", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=fields)
         writer.writeheader()

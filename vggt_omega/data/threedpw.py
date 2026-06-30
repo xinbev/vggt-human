@@ -91,10 +91,12 @@ class ThreeDPWDataset(Dataset):
             persons_per_frame.append(frame.get("persons", []))
 
         targets = _build_targets(persons_per_frame, self.max_humans, self.require_boxes, self.require_smpl)
+        intrinsics_tensor = torch.stack(intrinsics, dim=0)
         return {
             "images": torch.stack(images, dim=0),
             "gt_depth": torch.zeros(self.sequence_length, 1, self.image_size, self.image_size, dtype=torch.float32),
-            "K_scal3r": torch.stack(intrinsics, dim=0),
+            "K_scal3r": intrinsics_tensor,
+            "gt_intrinsics": intrinsics_tensor,
             **targets,
         }
 
