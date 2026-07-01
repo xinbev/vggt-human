@@ -41,7 +41,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from vggt_omega.data import BedlamDataset, ThreeDPWDataset, bedlam_collate_fn, threedpw_collate_fn
+from vggt_omega.data import BedlamDataset, HFBedlamDataset, ThreeDPWDataset, bedlam_collate_fn, hf_bedlam_collate_fn, threedpw_collate_fn
 from vggt_omega.models import VGGTOmega
 from vggt_omega.training import HungarianSMPLLoss, HungarianSMPLMatcher, SMPLSlotLoss
 from vggt_omega.training.config import deep_update, load_yaml_config, require_path
@@ -148,6 +148,8 @@ def build_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoade
     dataset_name = str(data_cfg.get("dataset", "bedlam")).lower()
     if dataset_name in {"3dpw", "threedpw"}:
         return build_3dpw_loader(config, split=split, shuffle=shuffle)
+    if dataset_name in {"hf_bedlam", "hfb_edlam", "bedlam_hf"}:
+        return build_hf_bedlam_loader(config, split=split, shuffle=shuffle)
     if dataset_name != "bedlam":
         raise ValueError(f"Unsupported data.dataset: {data_cfg.get('dataset')!r}")
     root = require_path(config, data_cfg.get("root_key", "datasets.bedlam_root"))
@@ -203,6 +205,33 @@ def build_3dpw_loader(config: dict[str, Any], split: str, shuffle: bool) -> Data
         num_workers=int(data_cfg.get("num_workers", 0)),
         pin_memory=bool(data_cfg.get("pin_memory", True)),
         collate_fn=threedpw_collate_fn,
+        drop_last=shuffle,
+    )
+
+
+def build_hf_bedlam_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoader:
+    data_cfg = config["data"]
+    dataset = HFBedlamDataset(
+        images_root=require_path(config, data_cfg.get("images_root_key", "datasets.hf_bedlam_images_root")),
+        npz_root=require_path(config, data_cfg.get("npz_root_key", "datasets.hf_bedlam_npz_root")),
+        sequence_length=int(data_cfg["sequence_length"]),
+        stride=int(data_cfg["stride"]),
+        image_size=int(data_cfg["image_size"]),
+        max_humans=int(data_cfg.get("max_humans", 20)),
+        require_smpl=bool(data_cfg.get("require_smpl", True)),
+        require_boxes=bool(data_cfg.get("require_boxes", True)),
+        bbox_expand=float(data_cfg.get("bbox_expand", 0.15)),
+        max_npz_files=int(data_cfg.get("max_npz_files", 0) or 0),
+        max_frames=int(data_cfg.get("max_frames", 0) or 0),
+    )
+    dataset = maybe_subset_dataset(dataset, data_cfg, split)
+    return DataLoader(
+        dataset,
+        batch_size=int(config["optim"]["batch_size"]),
+        shuffle=shuffle,
+        num_workers=int(data_cfg.get("num_workers", 0)),
+        pin_memory=bool(data_cfg.get("pin_memory", True)),
+        collate_fn=hf_bedlam_collate_fn,
         drop_last=shuffle,
     )
 

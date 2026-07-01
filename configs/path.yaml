@@ -30,6 +30,13 @@ datasets:
   # Expected to include detections[], optional detections[].mask, and persons[] external track priors.
   bedlam_tracks_root: "outputs/preprocess/video_tracks"
 
+  # HuggingFace BEDLAM raw image/NPZ layout.
+  # Expected:
+  #   <hf_bedlam_images_root>/<scene>/png/<seq_name>/*.png
+  #   <hf_bedlam_npz_root>/<scene>.npz
+  hf_bedlam_images_root: "/home/zhw/xyb_space/bedlam/hf_bedlam/training_images"
+  hf_bedlam_npz_root: "/home/zhw/xyb_space/bedlam/all_npz_12_training"
+
   # GVHMR/Human3R-style evaluation support files. Expected support layouts:
   #   <emdb_hmr4d_support_root>/emdb_vit_v4.pt
   #   <rich_hmr4d_support_root>/rich_test_labels.pt
