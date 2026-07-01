@@ -53,6 +53,7 @@ class HFBedlamDataset(Dataset):
         require_smpl: bool = True,
         bbox_expand: float = 0.15,
         transl_add_cam_ext: bool = True,
+        skip_missing_images: bool = True,
         max_npz_files: int = 0,
         max_frames: int = 0,
     ) -> None:
@@ -67,6 +68,7 @@ class HFBedlamDataset(Dataset):
         self.require_smpl = bool(require_smpl)
         self.bbox_expand = float(bbox_expand)
         self.transl_add_cam_ext = bool(transl_add_cam_ext)
+        self.skip_missing_images = bool(skip_missing_images)
         self.max_npz_files = int(max_npz_files)
         self.max_frames = int(max_frames)
         if self.sequence_length <= 0:
@@ -132,7 +134,17 @@ class HFBedlamDataset(Dataset):
     def _build_frames(self) -> dict[str, dict[str, Any]]:
         frames: dict[str, dict[str, Any]] = {}
         allowed_limited_frames: set[str] = set()
+        skipped_npz_missing_scene = 0
+        skipped_rows_missing_image = 0
         for npz_path in self._npz_files:
+            scene_dir = self.images_root / npz_path.stem
+            if not scene_dir.is_dir():
+                if self.skip_missing_images:
+                    skipped_npz_missing_scene += 1
+                    continue
+                raise FileNotFoundError(
+                    f"HF BEDLAM scene image directory not found for {npz_path.name}: {scene_dir}"
+                )
             with np.load(npz_path, allow_pickle=True) as data:
                 image_key = _first_key(data, IMAGE_KEYS)
                 if image_key is None:
@@ -145,6 +157,11 @@ class HFBedlamDataset(Dataset):
                     rel = _normalize_image_relpath(raw_name, npz_path.stem)
                     image_path = _resolve_image_path(self.images_root, rel, npz_path.stem)
                     frame_key = _frame_key(rel, npz_path.stem)
+                    if not Path(image_path).is_file():
+                        if self.skip_missing_images:
+                            skipped_rows_missing_image += 1
+                            continue
+                        raise FileNotFoundError(f"HF BEDLAM image not found for frame {frame_key}: {image_path}")
                     if self.max_frames > 0:
                         if frame_key not in allowed_limited_frames and len(allowed_limited_frames) >= self.max_frames:
                             continue
@@ -159,9 +176,12 @@ class HFBedlamDataset(Dataset):
                         },
                     )
                     record["person_indices"].append(person_idx)
-        for key, frame in frames.items():
-            if not Path(frame["image_path"]).is_file():
-                raise FileNotFoundError(f"HF BEDLAM image not found for frame {key}: {frame['image_path']}")
+        if skipped_npz_missing_scene or skipped_rows_missing_image:
+            print(
+                "[hf_bedlam] skipped missing images: "
+                f"npz_files={skipped_npz_missing_scene} rows={skipped_rows_missing_image}",
+                flush=True,
+            )
         return frames
 
     def _build_sequence_index(self) -> list[tuple[str, list[str]]]:

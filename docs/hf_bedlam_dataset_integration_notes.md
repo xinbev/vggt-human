@@ -63,6 +63,21 @@ The loader resolves this to:
 training_images/<scene>/png/seq_000000/seq_000000_0000.png
 ```
 
+`all_npz_12_training` is not guaranteed to be a strict one-to-one match with
+`hf_bedlam/training_images`. For example, an NPZ scene can exist while the
+matching image scene directory is absent. The current loader defaults to:
+
+```yaml
+data:
+  skip_missing_images: true
+```
+
+and will skip those missing-image NPZ files/rows while printing:
+
+```text
+[hf_bedlam] skipped missing images: npz_files=... rows=...
+```
+
 ## Translation Handling
 
 Do not use raw `trans_cam` directly as the project `gt_transl_cam`.
