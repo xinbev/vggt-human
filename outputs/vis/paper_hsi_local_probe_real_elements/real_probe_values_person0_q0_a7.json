@@ -65,20 +65,22 @@
     "environment_file": "environment_hsi_depth_person0_q0_a7.ply",
     "smpl_file": "smpl_only_person0_q0_a7.ply",
     "combined": {
-      "scene_vertices": 16384,
-      "scene_faces": 29544,
-      "total_vertices": 23768,
-      "total_faces": 44136,
+      "scene_vertices": 65536,
+      "scene_faces": 123914,
+      "total_vertices": 72920,
+      "total_faces": 138506,
       "depth_source": "hsi",
+      "depth_upsample": 2,
       "visual_vertex_index": 3461,
       "visual_body_point_source": "foot_sole_vertex"
     },
     "environment": {
       "file": "environment_hsi_depth_person0_q0_a7.ply",
       "depth_source": "hsi",
-      "vertices": 16384,
-      "faces": 29544,
-      "color_source": "input_rgb_resized_to_depth_grid"
+      "vertices": 65536,
+      "faces": 123914,
+      "color_source": "input_rgb_resized_to_depth_grid",
+      "depth_upsample": 2
     },
     "smpl": {
       "file": "smpl_only_person0_q0_a7.ply",

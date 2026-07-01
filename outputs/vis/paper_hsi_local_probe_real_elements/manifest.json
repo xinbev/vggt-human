@@ -102,7 +102,7 @@
     "depth_residual = scene_z - anchor_z"
   ],
   "default_visualization_choice": {
-    "person": "rightmost",
+    "person": "all",
     "anchor": "foot",
     "main_asset": "PLY depth point cloud + base SMPL mesh + foot-to-scene arrow",
     "box_source": "SAM2 mask bbox when auto-person-prior is enabled; model pred_boxes only as fallback",
@@ -176,23 +176,116 @@
         "environment_file": "environment_hsi_depth_person0_q0_a7.ply",
         "smpl_file": "smpl_only_person0_q0_a7.ply",
         "combined": {
-          "scene_vertices": 16384,
-          "scene_faces": 29544,
-          "total_vertices": 23768,
-          "total_faces": 44136,
+          "scene_vertices": 65536,
+          "scene_faces": 123914,
+          "total_vertices": 72920,
+          "total_faces": 138506,
           "depth_source": "hsi",
+          "depth_upsample": 2,
           "visual_vertex_index": 3461,
           "visual_body_point_source": "foot_sole_vertex"
         },
         "environment": {
           "file": "environment_hsi_depth_person0_q0_a7.ply",
           "depth_source": "hsi",
-          "vertices": 16384,
-          "faces": 29544,
-          "color_source": "input_rgb_resized_to_depth_grid"
+          "vertices": 65536,
+          "faces": 123914,
+          "color_source": "input_rgb_resized_to_depth_grid",
+          "depth_upsample": 2
         },
         "smpl": {
           "file": "smpl_only_person0_q0_a7.ply",
+          "vertices": 6890,
+          "faces": 13776
+        }
+      }
+    },
+    {
+      "query_index": 1,
+      "anchor_index": 7,
+      "confidence": 0.8690302968025208,
+      "box_xyxy_input_pixels": [
+        165.8954248366013,
+        116.80392156862744,
+        229.37581699346404,
+        435.47549019607845
+      ],
+      "anchor_cam_xyz": [
+        -0.7006795406341553,
+        0.7784730195999146,
+        4.124471187591553
+      ],
+      "projected_uv_input": [
+        102.72909545898438,
+        497.9775390625
+      ],
+      "projected_uv_depth": [
+        101.5391845703125,
+        492.2094421386719
+      ],
+      "patch_center_xy": [
+        6,
+        30
+      ],
+      "scene_cam_xyz": [
+        -0.12402307242155075,
+        0.13779284060001373,
+        0.730047881603241
+      ],
+      "scene_normal": [
+        0.0009369534091092646,
+        0.001769539318047464,
+        0.9999980926513672
+      ],
+      "offset_scene_minus_anchor_xyz": [
+        0.5766564607620239,
+        -0.640680193901062,
+        -3.394423246383667
+      ],
+      "distance_m": 3.5021584033966064,
+      "depth_residual_m": -3.394423246383667,
+      "coordinate_frames": {
+        "model_input_size": 518,
+        "raw_depth_hw": [
+          512,
+          512
+        ],
+        "hsi_depth_hw": [
+          512,
+          512
+        ],
+        "projection_uv_units": "model_input_pixels",
+        "depth_uv_units": "depth_grid_pixels",
+        "environment_color_source": "original RGB resized to model input/depth grid"
+      },
+      "hsi_anchor_depth_residual": -3.394423246383667,
+      "hsi_scene_scale": 5.1918463706970215,
+      "hsi_scene_depth_bias": 0.756402313709259,
+      "hsi_refine_gate": 0.9820137619972229,
+      "ply": {
+        "combined_file": "05_06_real_hsi_foot_scene_person1_q1_a7.ply",
+        "environment_file": "environment_hsi_depth_person1_q1_a7.ply",
+        "smpl_file": "smpl_only_person1_q1_a7.ply",
+        "combined": {
+          "scene_vertices": 65536,
+          "scene_faces": 123914,
+          "total_vertices": 72920,
+          "total_faces": 138506,
+          "depth_source": "hsi",
+          "depth_upsample": 2,
+          "visual_vertex_index": 3356,
+          "visual_body_point_source": "foot_sole_vertex"
+        },
+        "environment": {
+          "file": "environment_hsi_depth_person1_q1_a7.ply",
+          "depth_source": "hsi",
+          "vertices": 65536,
+          "faces": 123914,
+          "color_source": "input_rgb_resized_to_depth_grid",
+          "depth_upsample": 2
+        },
+        "smpl": {
+          "file": "smpl_only_person1_q1_a7.ply",
           "vertices": 6890,
           "faces": 13776
         }
@@ -207,6 +300,14 @@
     "05_06_real_hsi_foot_scene_person0_q0_a7.ply",
     "environment_hsi_depth_person0_q0_a7.ply",
     "smpl_only_person0_q0_a7.ply",
-    "real_probe_values_person0_q0_a7.json"
+    "real_probe_values_person0_q0_a7.json",
+    "05a_real_depth_patch_window_person1_q1_a7.png",
+    "05b_real_anchor_project_to_depth_person1_q1_a7.png",
+    "05c_real_local_scene_probe_person1_q1_a7.png",
+    "06a_real_body_scene_residual_person1_q1_a7.png",
+    "05_06_real_hsi_foot_scene_person1_q1_a7.ply",
+    "environment_hsi_depth_person1_q1_a7.ply",
+    "smpl_only_person1_q1_a7.ply",
+    "real_probe_values_person1_q1_a7.json"
   ]
 }
