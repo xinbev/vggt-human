@@ -4,6 +4,13 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "${ROOT_DIR}"
 
+if [[ "${DEVICE:-}" =~ ^cuda:([0-9]+)$ ]]; then
+  if [[ -z "${CUDA_VISIBLE_DEVICES:-}" ]]; then
+    export CUDA_VISIBLE_DEVICES="${BASH_REMATCH[1]}"
+  fi
+  DEVICE=cuda
+fi
+
 ARGS=(
   --path-config "${PATH_CONFIG:-configs/path.yaml}"
   --train-config "${TRAIN_CONFIG:-configs/train_smpl_base_hf_bedlam_ray_refine.yaml}"

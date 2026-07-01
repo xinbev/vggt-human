@@ -4,7 +4,18 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "${ROOT_DIR}"
 
-export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-${CUDA_VISIBLE_DEVICES_VALUE:-0}}"
+REQUESTED_DEVICE="${DEVICE:-cuda}"
+TRAIN_DEVICE="${REQUESTED_DEVICE}"
+
+if [[ "${REQUESTED_DEVICE}" =~ ^cuda:([0-9]+)$ ]]; then
+  REQUESTED_GPU_ID="${BASH_REMATCH[1]}"
+  if [[ -z "${CUDA_VISIBLE_DEVICES:-}" && -z "${CUDA_VISIBLE_DEVICES_VALUE:-}" && -z "${GPU_ID:-}" ]]; then
+    GPU_ID="${REQUESTED_GPU_ID}"
+  fi
+  TRAIN_DEVICE="cuda"
+fi
+
+export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-${CUDA_VISIBLE_DEVICES_VALUE:-${GPU_ID:-0}}}"
 export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 
 PATH_CONFIG="${PATH_CONFIG:-configs/path.yaml}"
@@ -18,8 +29,8 @@ TEST_OUT_DIR="${TEST_OUT_DIR:-outputs/eval/stageD_3dpw_test_from_hf_bedlam}"
 
 HF_BATCH_SIZE="${HF_BATCH_SIZE:-2}"
 THREEDPW_BATCH_SIZE="${THREEDPW_BATCH_SIZE:-2}"
-HF_EPOCHS="${HF_EPOCHS:-5}"
-THREEDPW_EPOCHS="${THREEDPW_EPOCHS:-20}"
+HF_EPOCHS="${HF_EPOCHS:-15}"
+THREEDPW_EPOCHS="${THREEDPW_EPOCHS:-5}"
 NUM_WORKERS="${NUM_WORKERS:-8}"
 
 RUN_CHECKS="${RUN_CHECKS:-1}"
@@ -29,6 +40,7 @@ RUN_EVAL="${RUN_EVAL:-1}"
 
 echo "========== SMPL Base Pipeline: HF BEDLAM -> 3DPW =========="
 echo "CUDA devices       : ${CUDA_VISIBLE_DEVICES}"
+echo "Torch device       : ${TRAIN_DEVICE}"
 echo "Path config        : ${PATH_CONFIG}"
 echo "HF config          : ${HF_CONFIG}"
 echo "3DPW config        : ${THREEDPW_CONFIG}"
@@ -58,7 +70,7 @@ if [[ "${RUN_HF_TRAIN}" == "1" ]]; then
   NUM_WORKERS="${NUM_WORKERS}" \
   SAVE_LATEST=true \
   SAVE_FINAL=true \
-  DEVICE="${DEVICE:-cuda}" \
+  DEVICE="${TRAIN_DEVICE}" \
   bash scripts/train/train_smpl_base_hf_bedlam_ray_refine.sh
 fi
 
@@ -92,7 +104,7 @@ if [[ "${RUN_3DPW_FINETUNE}" == "1" ]]; then
   SAVE_TOP_K=3 \
   CHECKPOINT_MONITOR=loss_total \
   CHECKPOINT_MONITOR_MODE=min \
-  DEVICE="${DEVICE:-cuda}" \
+  DEVICE="${TRAIN_DEVICE}" \
   bash scripts/train/train_smpl_base_3dpw_ray_refine.sh
 fi
 
@@ -117,6 +129,7 @@ if [[ "${RUN_EVAL}" == "1" ]]; then
   SPLIT=validation \
   BATCH_SIZE=1 \
   NUM_WORKERS="${NUM_WORKERS}" \
+  DEVICE="${TRAIN_DEVICE}" \
   bash scripts/eval/evaluate_3dpw_smpl_base_metrics.sh
 
   echo "========== Stage D: 3DPW test eval =========="
@@ -127,6 +140,7 @@ if [[ "${RUN_EVAL}" == "1" ]]; then
   SPLIT=test \
   BATCH_SIZE=1 \
   NUM_WORKERS="${NUM_WORKERS}" \
+  DEVICE="${TRAIN_DEVICE}" \
   bash scripts/eval/evaluate_3dpw_smpl_base_metrics.sh
 fi
 

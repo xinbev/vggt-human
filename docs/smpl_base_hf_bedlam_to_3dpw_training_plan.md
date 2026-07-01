@@ -22,6 +22,16 @@ Run on the server:
 DEVICE=cuda bash scripts/train/train_smpl_base_hf_bedlam_then_3dpw.sh
 ```
 
+To use a specific physical GPU, prefer:
+
+```bash
+GPU_ID=5 DEVICE=cuda bash scripts/train/train_smpl_base_hf_bedlam_then_3dpw.sh
+```
+
+`DEVICE=cuda:5` is also accepted by the wrapper; it is normalized to
+`CUDA_VISIBLE_DEVICES=5` plus internal `DEVICE=cuda`, avoiding PyTorch visible
+ordinal mismatches.
+
 The script uses:
 
 ```text
@@ -46,8 +56,8 @@ The script defaults to:
 HF_BATCH_SIZE=2
 THREEDPW_BATCH_SIZE=2
 NUM_WORKERS=8
-HF_EPOCHS=5
-THREEDPW_EPOCHS=20
+HF_EPOCHS=15
+THREEDPW_EPOCHS=5
 ```
 
 If CUDA OOM happens, rerun with:
