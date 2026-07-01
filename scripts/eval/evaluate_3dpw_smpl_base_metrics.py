@@ -37,8 +37,8 @@ def main() -> None:
     model.eval()
     smpl = SMPLLayer(require_path(config, "assets.smpl_model_dir"), gender="neutral").to(device).eval()
     dataset = build_dataset(config, args)
-    indices = list(range(len(dataset)))
-    total_dataset_windows = len(indices)
+    indices = select_indices(args, len(dataset))
+    total_dataset_windows = len(dataset)
     if int(args.max_samples) > 0:
         indices = indices[int(args.start_index) : int(args.start_index) + int(args.max_samples)]
     else:
@@ -81,7 +81,7 @@ def main() -> None:
             "checkpoint": str(args.checkpoint),
             "num_windows": int(processed),
             "num_matches": len(rows),
-            "metric_protocol": "project_native_smpl24_camera_pelvis_aligned_plus_camera_translation",
+            "metric_protocol": "project_native_smpl24_camera_pelvis_aligned_plus_camera_translation_oracle_decomposition",
             "rows_csv": str(output_dir / "3dpw_smpl_base_metric_rows.csv"),
         }
     )
@@ -103,8 +103,46 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--start-index", type=int, default=0)
     parser.add_argument("--max-samples", type=int, default=0)
     parser.add_argument("--log-interval", type=int, default=50)
+    parser.add_argument("--subset-indices-csv", default="")
+    parser.add_argument("--subset-index-column", default="dataset_index")
+    parser.add_argument("--subset-unique", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--override", action="append", default=[])
     return parser.parse_args()
+
+
+def select_indices(args: argparse.Namespace, dataset_len: int) -> list[int]:
+    subset_csv = str(args.subset_indices_csv or "").strip()
+    if subset_csv:
+        indices = read_subset_indices_csv(Path(subset_csv).expanduser(), str(args.subset_index_column))
+        if bool(args.subset_unique):
+            seen = set()
+            indices = [idx for idx in indices if not (idx in seen or seen.add(idx))]
+        indices = [idx for idx in indices if 0 <= idx < int(dataset_len)]
+        if int(args.max_samples) > 0:
+            indices = indices[: int(args.max_samples)]
+        if not indices:
+            raise ValueError(f"No valid dataset indices selected from {subset_csv}")
+        return indices
+    indices = list(range(int(dataset_len)))
+    if int(args.max_samples) > 0:
+        return indices[int(args.start_index) : int(args.start_index) + int(args.max_samples)]
+    return indices[int(args.start_index) :]
+
+
+def read_subset_indices_csv(path: Path, column: str) -> list[int]:
+    if not path.is_file():
+        raise FileNotFoundError(f"Subset CSV not found: {path}")
+    indices: list[int] = []
+    with path.open("r", encoding="utf-8", newline="") as file:
+        reader = csv.DictReader(file)
+        if reader.fieldnames is None or column not in reader.fieldnames:
+            raise ValueError(f"CSV {path} does not contain required column {column!r}")
+        for row in reader:
+            raw = str(row.get(column, "")).strip()
+            if not raw:
+                continue
+            indices.append(int(float(raw)))
+    return indices
 
 
 def build_dataset(config: dict[str, Any], args: argparse.Namespace) -> ThreeDPWDataset:
@@ -171,6 +209,10 @@ def evaluate_batch(
     gt_joints_cam = gt_joints + gt_transl_matched[:, None, :]
     pred_vertices_cam = pred_vertices.to(dtype=pred_joints_cam.dtype) + pred_transl_matched[:, None, :]
     gt_vertices_cam = gt_vertices.to(dtype=gt_joints_cam.dtype) + gt_transl_matched[:, None, :]
+    pred_joints_gt_transl_cam = pred_joints + gt_transl_matched[:, None, :]
+    pred_vertices_gt_transl_cam = pred_vertices.to(dtype=pred_joints_cam.dtype) + gt_transl_matched[:, None, :]
+    gt_joints_pred_transl_cam = gt_joints + pred_transl_matched[:, None, :]
+    gt_vertices_pred_transl_cam = gt_vertices.to(dtype=gt_joints_cam.dtype) + pred_transl_matched[:, None, :]
     pred_joints_a, gt_joints_a, pred_vertices_a, gt_vertices_a = align_by_pelvis(pred_joints, gt_joints, pred_vertices, gt_vertices)
     mpjpe = torch.linalg.norm(pred_joints_a - gt_joints_a, dim=-1).mean(dim=-1)
     pve = torch.linalg.norm(pred_vertices_a - gt_vertices_a, dim=-1).mean(dim=-1)
@@ -181,6 +223,10 @@ def evaluate_batch(
     transl_z = transl_delta[:, 2].abs()
     cam_mpjpe = torch.linalg.norm(pred_joints_cam - gt_joints_cam, dim=-1).mean(dim=-1)
     cam_pve = torch.linalg.norm(pred_vertices_cam - gt_vertices_cam, dim=-1).mean(dim=-1)
+    oracle_pred_pose_gt_transl_mpjpe = torch.linalg.norm(pred_joints_gt_transl_cam - gt_joints_cam, dim=-1).mean(dim=-1)
+    oracle_pred_pose_gt_transl_pve = torch.linalg.norm(pred_vertices_gt_transl_cam - gt_vertices_cam, dim=-1).mean(dim=-1)
+    oracle_gt_pose_pred_transl_mpjpe = torch.linalg.norm(gt_joints_pred_transl_cam - gt_joints_cam, dim=-1).mean(dim=-1)
+    oracle_gt_pose_pred_transl_pve = torch.linalg.norm(gt_vertices_pred_transl_cam - gt_vertices_cam, dim=-1).mean(dim=-1)
     totals.add("mpjpe_mm", mpjpe.mean() * 1000.0, int(mpjpe.numel()))
     totals.add("pa_mpjpe_mm", pa.mean() * 1000.0, int(pa.numel()))
     totals.add("pve_mm", pve.mean() * 1000.0, int(pve.numel()))
@@ -189,7 +235,29 @@ def evaluate_batch(
     totals.add("transl_z_abs_mm", transl_z.mean() * 1000.0, int(transl_z.numel()))
     totals.add("cam_mpjpe_no_align_mm", cam_mpjpe.mean() * 1000.0, int(cam_mpjpe.numel()))
     totals.add("cam_pve_no_align_mm", cam_pve.mean() * 1000.0, int(cam_pve.numel()))
-    append_rows(rows, selected_indices, batch, matched, src_idx, mpjpe, pa, pve, transl_l2, transl_xy, transl_z, cam_mpjpe, cam_pve)
+    totals.add("oracle_pred_pose_gt_transl_mpjpe_mm", oracle_pred_pose_gt_transl_mpjpe.mean() * 1000.0, int(oracle_pred_pose_gt_transl_mpjpe.numel()))
+    totals.add("oracle_pred_pose_gt_transl_pve_mm", oracle_pred_pose_gt_transl_pve.mean() * 1000.0, int(oracle_pred_pose_gt_transl_pve.numel()))
+    totals.add("oracle_gt_pose_pred_transl_mpjpe_mm", oracle_gt_pose_pred_transl_mpjpe.mean() * 1000.0, int(oracle_gt_pose_pred_transl_mpjpe.numel()))
+    totals.add("oracle_gt_pose_pred_transl_pve_mm", oracle_gt_pose_pred_transl_pve.mean() * 1000.0, int(oracle_gt_pose_pred_transl_pve.numel()))
+    append_rows(
+        rows,
+        selected_indices,
+        batch,
+        matched,
+        src_idx,
+        mpjpe,
+        pa,
+        pve,
+        transl_l2,
+        transl_xy,
+        transl_z,
+        cam_mpjpe,
+        cam_pve,
+        oracle_pred_pose_gt_transl_mpjpe,
+        oracle_pred_pose_gt_transl_pve,
+        oracle_gt_pose_pred_transl_mpjpe,
+        oracle_gt_pose_pred_transl_pve,
+    )
 
 
 def collect_matches(indices, targets: list[dict[str, torch.Tensor]], device: torch.device) -> dict[str, torch.Tensor]:
@@ -267,6 +335,10 @@ def append_rows(
     transl_z: torch.Tensor,
     cam_mpjpe: torch.Tensor,
     cam_pve: torch.Tensor,
+    oracle_pred_pose_gt_transl_mpjpe: torch.Tensor,
+    oracle_pred_pose_gt_transl_pve: torch.Tensor,
+    oracle_gt_pose_pred_transl_mpjpe: torch.Tensor,
+    oracle_gt_pose_pred_transl_pve: torch.Tensor,
 ) -> None:
     num_frames = int(batch["images"].shape[1])
     frame_idx = matched["frame_idx"]
@@ -290,6 +362,10 @@ def append_rows(
                 "transl_z_abs_mm": float(transl_z[row_idx].detach().cpu() * 1000.0),
                 "cam_mpjpe_no_align_mm": float(cam_mpjpe[row_idx].detach().cpu() * 1000.0),
                 "cam_pve_no_align_mm": float(cam_pve[row_idx].detach().cpu() * 1000.0),
+                "oracle_pred_pose_gt_transl_mpjpe_mm": float(oracle_pred_pose_gt_transl_mpjpe[row_idx].detach().cpu() * 1000.0),
+                "oracle_pred_pose_gt_transl_pve_mm": float(oracle_pred_pose_gt_transl_pve[row_idx].detach().cpu() * 1000.0),
+                "oracle_gt_pose_pred_transl_mpjpe_mm": float(oracle_gt_pose_pred_transl_mpjpe[row_idx].detach().cpu() * 1000.0),
+                "oracle_gt_pose_pred_transl_pve_mm": float(oracle_gt_pose_pred_transl_pve[row_idx].detach().cpu() * 1000.0),
             }
         )
 
@@ -338,6 +414,10 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         "transl_z_abs_mm",
         "cam_mpjpe_no_align_mm",
         "cam_pve_no_align_mm",
+        "oracle_pred_pose_gt_transl_mpjpe_mm",
+        "oracle_pred_pose_gt_transl_pve_mm",
+        "oracle_gt_pose_pred_transl_mpjpe_mm",
+        "oracle_gt_pose_pred_transl_pve_mm",
     ]
     with path.open("w", encoding="utf-8", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=fields)

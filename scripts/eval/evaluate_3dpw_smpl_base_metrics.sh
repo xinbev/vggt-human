@@ -31,5 +31,11 @@ fi
 if [[ -n "${LOG_INTERVAL:-}" ]]; then
   ARGS+=(--log-interval "${LOG_INTERVAL}")
 fi
+if [[ -n "${SUBSET_INDICES_CSV:-}" ]]; then
+  ARGS+=(--subset-indices-csv "${SUBSET_INDICES_CSV}")
+fi
+if [[ -n "${SUBSET_INDEX_COLUMN:-}" ]]; then
+  ARGS+=(--subset-index-column "${SUBSET_INDEX_COLUMN}")
+fi
 
 python scripts/eval/evaluate_3dpw_smpl_base_metrics.py "${ARGS[@]}"
