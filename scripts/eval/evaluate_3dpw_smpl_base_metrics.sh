@@ -25,5 +25,11 @@ fi
 if [[ -n "${MAX_SAMPLES:-}" ]]; then
   ARGS+=(--max-samples "${MAX_SAMPLES}")
 fi
+if [[ -n "${START_INDEX:-}" ]]; then
+  ARGS+=(--start-index "${START_INDEX}")
+fi
+if [[ -n "${LOG_INTERVAL:-}" ]]; then
+  ARGS+=(--log-interval "${LOG_INTERVAL}")
+fi
 
 python scripts/eval/evaluate_3dpw_smpl_base_metrics.py "${ARGS[@]}"

@@ -38,10 +38,20 @@ def main() -> None:
     smpl = SMPLLayer(require_path(config, "assets.smpl_model_dir"), gender="neutral").to(device).eval()
     dataset = build_dataset(config, args)
     indices = list(range(len(dataset)))
+    total_dataset_windows = len(indices)
     if int(args.max_samples) > 0:
         indices = indices[int(args.start_index) : int(args.start_index) + int(args.max_samples)]
     else:
         indices = indices[int(args.start_index) :]
+    print(
+        "[eval] "
+        f"split={args.split} "
+        f"dataset_windows={total_dataset_windows} "
+        f"start_index={int(args.start_index)} "
+        f"selected_windows={len(indices)} "
+        f"batch_size={int(args.batch_size)}",
+        flush=True,
+    )
     loader = DataLoader(
         Subset(dataset, indices),
         batch_size=int(args.batch_size),
@@ -221,22 +231,26 @@ def align_by_pelvis(
 def procrustes_mpjpe(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     pred_center = pred.mean(dim=1, keepdim=True)
     target_center = target.mean(dim=1, keepdim=True)
-    x = pred - pred_center
-    y = target - target_center
-    x_norm = torch.linalg.norm(x.reshape(x.shape[0], -1), dim=1).clamp_min(1e-8)
-    y_norm = torch.linalg.norm(y.reshape(y.shape[0], -1), dim=1).clamp_min(1e-8)
-    x = x / x_norm[:, None, None]
-    y = y / y_norm[:, None, None]
-    h = x.transpose(1, 2) @ y
-    u, _, vh = torch.linalg.svd(h)
-    r = vh.transpose(1, 2) @ u.transpose(1, 2)
+    pred0 = pred - pred_center
+    target0 = target - target_center
+    pred_norm = torch.linalg.norm(pred0.reshape(pred0.shape[0], -1), dim=1).clamp_min(1e-8)
+    target_norm = torch.linalg.norm(target0.reshape(target0.shape[0], -1), dim=1).clamp_min(1e-8)
+    pred0n = pred0 / pred_norm[:, None, None]
+    target0n = target0 / target_norm[:, None, None]
+    h = target0n.transpose(1, 2) @ pred0n
+    u, singular_values, vh = torch.linalg.svd(h)
+    v = vh.transpose(1, 2)
+    r = v @ u.transpose(1, 2)
     det = torch.det(r)
     if bool((det < 0).any()):
-        vh = vh.clone()
-        vh[det < 0, -1, :] *= -1.0
-        r = vh.transpose(1, 2) @ u.transpose(1, 2)
-    x_aligned = (x @ r) * y_norm[:, None, None] + target_center
-    return torch.linalg.norm(x_aligned - target, dim=-1).mean(dim=-1)
+        v = v.clone()
+        singular_values = singular_values.clone()
+        v[det < 0, :, -1] *= -1.0
+        singular_values[det < 0, -1] *= -1.0
+        r = v @ u.transpose(1, 2)
+    scale = singular_values.sum(dim=1) * target_norm / pred_norm
+    pred_aligned = scale[:, None, None] * (pred0 @ r) + target_center
+    return torch.linalg.norm(pred_aligned - target, dim=-1).mean(dim=-1)
 
 
 def append_rows(
