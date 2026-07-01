@@ -53,9 +53,9 @@ outputs/eval/stageD_3dpw_test_from_hf_bedlam
 The script defaults to:
 
 ```text
-HF_BATCH_SIZE=2
-THREEDPW_BATCH_SIZE=2
-NUM_WORKERS=8
+HF_BATCH_SIZE=8
+THREEDPW_BATCH_SIZE=6
+NUM_WORKERS=16
 HF_EPOCHS=15
 THREEDPW_EPOCHS=5
 ```
@@ -63,7 +63,7 @@ THREEDPW_EPOCHS=5
 If CUDA OOM happens, rerun with:
 
 ```bash
-HF_BATCH_SIZE=1 THREEDPW_BATCH_SIZE=1 \
+HF_BATCH_SIZE=4 THREEDPW_BATCH_SIZE=3 \
 DEVICE=cuda bash scripts/train/train_smpl_base_hf_bedlam_then_3dpw.sh
 ```
 

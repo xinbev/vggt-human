@@ -179,10 +179,9 @@ def build_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoade
         dataset,
         batch_size=int(config["optim"]["batch_size"]),
         shuffle=shuffle,
-        num_workers=int(data_cfg.get("num_workers", 0)),
-        pin_memory=bool(data_cfg.get("pin_memory", True)),
         collate_fn=bedlam_collate_fn,
         drop_last=shuffle,
+        **build_dataloader_runtime_kwargs(data_cfg),
     )
 
 
@@ -204,10 +203,9 @@ def build_3dpw_loader(config: dict[str, Any], split: str, shuffle: bool) -> Data
         dataset,
         batch_size=int(config["optim"]["batch_size"]),
         shuffle=shuffle,
-        num_workers=int(data_cfg.get("num_workers", 0)),
-        pin_memory=bool(data_cfg.get("pin_memory", True)),
         collate_fn=threedpw_collate_fn,
         drop_last=shuffle,
+        **build_dataloader_runtime_kwargs(data_cfg),
     )
 
 
@@ -233,11 +231,24 @@ def build_hf_bedlam_loader(config: dict[str, Any], split: str, shuffle: bool) ->
         dataset,
         batch_size=int(config["optim"]["batch_size"]),
         shuffle=shuffle,
-        num_workers=int(data_cfg.get("num_workers", 0)),
-        pin_memory=bool(data_cfg.get("pin_memory", True)),
         collate_fn=hf_bedlam_collate_fn,
         drop_last=shuffle,
+        **build_dataloader_runtime_kwargs(data_cfg),
     )
+
+
+def build_dataloader_runtime_kwargs(data_cfg: dict[str, Any]) -> dict[str, Any]:
+    num_workers = int(data_cfg.get("num_workers", 0))
+    kwargs: dict[str, Any] = {
+        "num_workers": num_workers,
+        "pin_memory": bool(data_cfg.get("pin_memory", True)),
+    }
+    if num_workers > 0:
+        kwargs["persistent_workers"] = bool(data_cfg.get("persistent_workers", True))
+        prefetch_factor = int(data_cfg.get("prefetch_factor", 4) or 0)
+        if prefetch_factor > 0:
+            kwargs["prefetch_factor"] = prefetch_factor
+    return kwargs
 
 
 def maybe_subset_dataset(dataset: Any, data_cfg: dict[str, Any], split: str) -> Any | Subset:

@@ -27,11 +27,13 @@ THREEDPW_OUT_DIR="${THREEDPW_OUT_DIR:-outputs/train/stageB_3dpw_smpl_base_ray_re
 VAL_OUT_DIR="${VAL_OUT_DIR:-outputs/eval/stageC_3dpw_validation_from_hf_bedlam}"
 TEST_OUT_DIR="${TEST_OUT_DIR:-outputs/eval/stageD_3dpw_test_from_hf_bedlam}"
 
-HF_BATCH_SIZE="${HF_BATCH_SIZE:-2}"
-THREEDPW_BATCH_SIZE="${THREEDPW_BATCH_SIZE:-2}"
+HF_BATCH_SIZE="${HF_BATCH_SIZE:-8}"
+THREEDPW_BATCH_SIZE="${THREEDPW_BATCH_SIZE:-6}"
 HF_EPOCHS="${HF_EPOCHS:-15}"
 THREEDPW_EPOCHS="${THREEDPW_EPOCHS:-5}"
-NUM_WORKERS="${NUM_WORKERS:-8}"
+NUM_WORKERS="${NUM_WORKERS:-16}"
+PREFETCH_FACTOR="${PREFETCH_FACTOR:-4}"
+PERSISTENT_WORKERS="${PERSISTENT_WORKERS:-true}"
 
 RUN_CHECKS="${RUN_CHECKS:-1}"
 RUN_HF_TRAIN="${RUN_HF_TRAIN:-1}"
@@ -49,6 +51,7 @@ echo "3DPW out           : ${THREEDPW_OUT_DIR}"
 echo "HF epochs/batch    : ${HF_EPOCHS} / ${HF_BATCH_SIZE}"
 echo "3DPW epochs/batch  : ${THREEDPW_EPOCHS} / ${THREEDPW_BATCH_SIZE}"
 echo "Workers            : ${NUM_WORKERS}"
+echo "Prefetch/persistent: ${PREFETCH_FACTOR} / ${PERSISTENT_WORKERS}"
 
 if [[ "${RUN_CHECKS}" == "1" ]]; then
   echo "========== Stage 0: HF BEDLAM data smoke check =========="
@@ -68,6 +71,8 @@ if [[ "${RUN_HF_TRAIN}" == "1" ]]; then
   BATCH_SIZE="${HF_BATCH_SIZE}" \
   EPOCHS="${HF_EPOCHS}" \
   NUM_WORKERS="${NUM_WORKERS}" \
+  PREFETCH_FACTOR="${PREFETCH_FACTOR}" \
+  PERSISTENT_WORKERS="${PERSISTENT_WORKERS}" \
   SAVE_LATEST=true \
   SAVE_FINAL=true \
   DEVICE="${TRAIN_DEVICE}" \
@@ -98,6 +103,8 @@ if [[ "${RUN_3DPW_FINETUNE}" == "1" ]]; then
   BATCH_SIZE="${THREEDPW_BATCH_SIZE}" \
   EPOCHS="${THREEDPW_EPOCHS}" \
   NUM_WORKERS="${NUM_WORKERS}" \
+  PREFETCH_FACTOR="${PREFETCH_FACTOR}" \
+  PERSISTENT_WORKERS="${PERSISTENT_WORKERS}" \
   RESUME="${HF_CKPT}" \
   RESET_EPOCH=true \
   RESUME_OPTIMIZER=false \

@@ -28,6 +28,12 @@ fi
 if [[ -n "${NUM_WORKERS:-}" ]]; then
   ARGS+=(--override "data.num_workers=${NUM_WORKERS}")
 fi
+if [[ -n "${PREFETCH_FACTOR:-}" ]]; then
+  ARGS+=(--override "data.prefetch_factor=${PREFETCH_FACTOR}")
+fi
+if [[ -n "${PERSISTENT_WORKERS:-}" ]]; then
+  ARGS+=(--override "data.persistent_workers=${PERSISTENT_WORKERS}")
+fi
 if [[ -n "${OUT_DIR:-}" ]]; then
   ARGS+=(--override "experiment.output_dir=${OUT_DIR}")
 fi

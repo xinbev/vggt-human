@@ -21,8 +21,10 @@ data:
   skip_missing_images: true
   max_npz_files: 0
   max_frames: 0
-  num_workers: 4
+  num_workers: 16
   pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 4
 
 model:
   patch_size: 16
@@ -76,8 +78,8 @@ checkpoint:
   monitor_mode: min
 
 optim:
-  batch_size: 1
-  epochs: 5
+  batch_size: 8
+  epochs: 15
   lr: 0.00002
   weight_decay: 0.05
   grad_clip_norm: 1.0
