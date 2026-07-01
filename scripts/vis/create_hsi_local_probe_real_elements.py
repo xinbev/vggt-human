@@ -96,10 +96,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", default="")
     parser.add_argument("--image-size", type=int, default=518)
     parser.add_argument("--person-index", type=int, default=-1, help="Index after person selection candidates; overrides --person-select when >=0.")
-    parser.add_argument("--person-select", choices=("rightmost", "leftmost", "confidence", "all"), default="rightmost")
+    parser.add_argument("--person-select", choices=("rightmost", "leftmost", "confidence", "all"), default="all")
     parser.add_argument("--anchor-index", type=int, default=-1, help="-1 chooses according to --anchor-mode.")
     parser.add_argument("--anchor-mode", choices=("foot", "max_residual", "nearest", "full_body"), default="foot")
-    parser.add_argument("--top-k", type=int, default=1, help="Number of people to export when --person-select=all/confidence.")
+    parser.add_argument("--top-k", type=int, default=2, help="Number of people to export when --person-select=all/confidence.")
     parser.add_argument("--conf-threshold", type=float, default=0.05)
     parser.add_argument("--auto-person-prior", action="store_true", help="Use project YOLO+SAM2 to create query priors.")
     parser.add_argument("--auto-top-k", type=int, default=2, help="Top detected people used as query priors.")
@@ -115,6 +115,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--patch-mask-min-overlap", type=float, default=0.02)
     parser.add_argument("--side-view-window", type=int, default=13)
     parser.add_argument("--ply-scene-stride", type=int, default=4, help="Stride for VGGT depth point cloud vertices.")
+    parser.add_argument("--ply-depth-upsample", type=int, default=2, help="Visualization-only depth/RGB upsampling factor for denser PLY surfaces.")
     parser.add_argument("--ply-max-scene-depth", type=float, default=30.0)
     parser.add_argument("--ply-depth-source", choices=("hsi", "raw"), default="hsi")
     parser.add_argument("--no-export-ply", action="store_true")
@@ -174,6 +175,7 @@ def main() -> None:
             priors=priors,
             export_ply=not args.no_export_ply,
             scene_stride=args.ply_scene_stride,
+            depth_upsample=args.ply_depth_upsample,
             max_scene_depth=args.ply_max_scene_depth,
             depth_source=args.ply_depth_source,
         )
@@ -555,6 +557,7 @@ def export_person_assets(
     priors: dict[str, Any],
     export_ply: bool,
     scene_stride: int,
+    depth_upsample: int,
     max_scene_depth: float,
     depth_source: str,
 ) -> dict[str, Any]:
@@ -588,6 +591,7 @@ def export_person_assets(
             query_idx,
             anchor_idx,
             scene_stride=scene_stride,
+            depth_upsample=depth_upsample,
             max_scene_depth=max_scene_depth,
             depth_source=depth_source,
         )
@@ -598,6 +602,7 @@ def export_person_assets(
             rgb,
             probe,
             scene_stride=scene_stride,
+            depth_upsample=depth_upsample,
             max_scene_depth=max_scene_depth,
             depth_source=depth_source,
         )
@@ -848,6 +853,7 @@ def export_hsi_foot_scene_ply(
     query_idx: int,
     anchor_idx: int,
     scene_stride: int = 4,
+    depth_upsample: int = 1,
     max_scene_depth: float = 30.0,
     depth_source: str = "hsi",
 ) -> dict[str, Any]:
@@ -859,6 +865,7 @@ def export_hsi_foot_scene_ply(
         rgb=rgb,
         image_size=int(probe["image_size"].detach().cpu()),
         stride=max(int(scene_stride), 1),
+        upsample=max(int(depth_upsample), 1),
         max_depth=float(max_scene_depth),
     )
     if scene_points.size:
@@ -897,6 +904,7 @@ def export_hsi_foot_scene_ply(
         "total_vertices": int(vertices.shape[0]),
         "total_faces": int(faces.shape[0]),
         "depth_source": "hsi" if depth_key == "hsi_depth_hw" else "raw",
+        "depth_upsample": int(max(depth_upsample, 1)),
         "visual_vertex_index": int(visual.get("vertex_index", -1)),
         "visual_body_point_source": str(visual.get("source", "")),
     }
@@ -907,6 +915,7 @@ def export_environment_ply(
     rgb: Image.Image,
     probe: dict[str, torch.Tensor],
     scene_stride: int,
+    depth_upsample: int,
     max_scene_depth: float,
     depth_source: str,
 ) -> dict[str, Any]:
@@ -917,6 +926,7 @@ def export_environment_ply(
         rgb=rgb,
         image_size=int(probe["image_size"].detach().cpu()),
         stride=max(int(scene_stride), 1),
+        upsample=max(int(depth_upsample), 1),
         max_depth=float(max_scene_depth),
     )
     mesh = MeshBuilder()
@@ -929,6 +939,7 @@ def export_environment_ply(
         "vertices": int(vertices.shape[0]),
         "faces": int(faces.shape[0]),
         "color_source": "input_rgb_resized_to_depth_grid",
+        "depth_upsample": int(max(depth_upsample, 1)),
     }
 
 
@@ -1043,9 +1054,17 @@ def depth_to_surface_mesh(
     rgb: Image.Image,
     image_size: int,
     stride: int,
+    upsample: int,
     max_depth: float,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     depth_hw = depth.detach().float()
+    if int(upsample) > 1:
+        depth_hw = torch.nn.functional.interpolate(
+            depth_hw.reshape(1, 1, *depth_hw.shape[-2:]),
+            scale_factor=int(upsample),
+            mode="bilinear",
+            align_corners=False,
+        )[0, 0]
     height, width = depth_hw.shape[-2:]
     ys = torch.arange(0, height, stride, device=depth_hw.device)
     xs = torch.arange(0, width, stride, device=depth_hw.device)

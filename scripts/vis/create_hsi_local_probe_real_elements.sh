@@ -12,15 +12,16 @@ OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/outputs/vis/paper_hsi_local_probe_real_el
 CHECKPOINT="${CHECKPOINT:-}"
 BASELINE_CHECKPOINT="${BASELINE_CHECKPOINT:-}"
 DEVICE="${DEVICE:-cuda}"
-TOP_K="${TOP_K:-1}"
+TOP_K="${TOP_K:-2}"
 AUTO_TOP_K="${AUTO_TOP_K:-2}"
 CONF_THRESHOLD="${CONF_THRESHOLD:-0.05}"
 ANCHOR_INDEX="${ANCHOR_INDEX:--1}"
 PERSON_INDEX="${PERSON_INDEX:--1}"
-PERSON_SELECT="${PERSON_SELECT:-rightmost}"
+PERSON_SELECT="${PERSON_SELECT:-all}"
 ANCHOR_MODE="${ANCHOR_MODE:-foot}"
 DETECTOR_IMAGE_SIZE="${DETECTOR_IMAGE_SIZE:-640}"
 PLY_SCENE_STRIDE="${PLY_SCENE_STRIDE:-4}"
+PLY_DEPTH_UPSAMPLE="${PLY_DEPTH_UPSAMPLE:-2}"
 PLY_DEPTH_SOURCE="${PLY_DEPTH_SOURCE:-hsi}"
 
 cd "${REPO_ROOT}"
@@ -46,6 +47,7 @@ args=(
   --person-select "${PERSON_SELECT}"
   --detector-image-size "${DETECTOR_IMAGE_SIZE}"
   --ply-scene-stride "${PLY_SCENE_STRIDE}"
+  --ply-depth-upsample "${PLY_DEPTH_UPSAMPLE}"
   --ply-depth-source "${PLY_DEPTH_SOURCE}"
   --auto-person-prior
 )

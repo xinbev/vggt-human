@@ -76,19 +76,20 @@ Useful overrides:
 
 ```bash
 IMAGE=/path/to/frame.jpg \
-TOP_K=1 \
+TOP_K=2 \
 AUTO_TOP_K=2 \
 DETECTOR_IMAGE_SIZE=640 \
-PERSON_SELECT=rightmost \
+PERSON_SELECT=all \
 ANCHOR_MODE=foot \
 PLY_DEPTH_SOURCE=hsi \
+PLY_DEPTH_UPSAMPLE=2 \
 PERSON_INDEX=-1 \
 ANCHOR_INDEX=-1 \
 bash scripts/vis/create_hsi_local_probe_real_elements.sh
 ```
 
-`PERSON_SELECT=rightmost` picks the right-side person from the detected people.
-This is the default for the provided two-person `f2.jpg` image.
+`PERSON_SELECT=all` with `TOP_K=2` exports both detected people separately.
+Use `PERSON_SELECT=rightmost` when only the right-side person is needed.
 
 `ANCHOR_MODE=foot` picks among the SMPL/HSI foot-side anchors and chooses the
 visible foot anchor closest to the probed depth surface. Set `ANCHOR_INDEX=...`
@@ -97,6 +98,13 @@ to force a specific HSI token/anchor.
 `PLY_DEPTH_SOURCE=hsi` applies `hsi_scene_scale` and `hsi_scene_depth_bias` to
 the VGGT depth before creating the environment surface and probing the scene
 point. Set `PLY_DEPTH_SOURCE=raw` only for debugging the uncorrected VGGT depth.
+
+`PLY_DEPTH_UPSAMPLE=2` upsamples the HSI-adjusted depth only for visualization
+before building the PLY surface. With the default `image_size=518` and
+`patch_size=16`, the dense head's native depth is `512x512` because the patch
+grid is `floor(518/16)=32` and the dense decoder returns `32*16=512`. Increasing
+the PLY upsample factor makes the exported surface denser/smoother, but it does
+not add new model-predicted depth detail.
 
 For PLY screenshots, the red human point is not the abstract HSI joint token. It
 is selected from SMPL foot-sole surface vertices, so the point lies on the
