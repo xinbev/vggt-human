@@ -375,6 +375,7 @@ def build_query_priors(
         "mask": mask_tensor,
         "patch_masks": patch_tensor,
         "valid_indices": selected,
+        "person_mask_input": resized_union,
         "prior_boxes_xyxy_input_pixels": prior_boxes_xyxy_input,
         "meta": auto_meta,
     }
@@ -594,8 +595,23 @@ def export_person_assets(
             depth_upsample=depth_upsample,
             max_scene_depth=max_scene_depth,
             depth_source=depth_source,
+            remove_mask_input=None,
         )
         out_files.append(ply_path.name)
+        ply_no_people_path = output_dir / f"05_06_real_hsi_foot_scene_no_people_depth_{prefix}.ply"
+        ply_no_people_stats = export_hsi_foot_scene_ply(
+            ply_no_people_path,
+            rgb,
+            probe,
+            query_idx,
+            anchor_idx,
+            scene_stride=scene_stride,
+            depth_upsample=depth_upsample,
+            max_scene_depth=max_scene_depth,
+            depth_source=depth_source,
+            remove_mask_input=priors.get("person_mask_input"),
+        )
+        out_files.append(ply_no_people_path.name)
         env_path = output_dir / f"environment_{depth_source}_depth_{prefix}.ply"
         env_stats = export_environment_ply(
             env_path,
@@ -605,8 +621,21 @@ def export_person_assets(
             depth_upsample=depth_upsample,
             max_scene_depth=max_scene_depth,
             depth_source=depth_source,
+            remove_mask_input=None,
         )
         out_files.append(env_path.name)
+        env_no_people_path = output_dir / f"environment_{depth_source}_depth_no_people_{prefix}.ply"
+        env_no_people_stats = export_environment_ply(
+            env_no_people_path,
+            rgb,
+            probe,
+            scene_stride=scene_stride,
+            depth_upsample=depth_upsample,
+            max_scene_depth=max_scene_depth,
+            depth_source=depth_source,
+            remove_mask_input=priors.get("person_mask_input"),
+        )
+        out_files.append(env_no_people_path.name)
         smpl_path = output_dir / f"smpl_only_{prefix}.ply"
         smpl_stats = export_smpl_only_ply(smpl_path, probe, query_idx)
         out_files.append(smpl_path.name)
@@ -615,10 +644,14 @@ def export_person_assets(
     if export_ply:
         metadata["ply"] = {
             "combined_file": ply_path.name,
+            "combined_no_people_depth_file": ply_no_people_path.name,
             "environment_file": env_path.name,
+            "environment_no_people_file": env_no_people_path.name,
             "smpl_file": smpl_path.name,
             "combined": ply_stats,
+            "combined_no_people_depth": ply_no_people_stats,
             "environment": env_stats,
+            "environment_no_people": env_no_people_stats,
             "smpl": smpl_stats,
         }
     meta_path = output_dir / f"real_probe_values_{prefix}.json"
@@ -856,6 +889,7 @@ def export_hsi_foot_scene_ply(
     depth_upsample: int = 1,
     max_scene_depth: float = 30.0,
     depth_source: str = "hsi",
+    remove_mask_input: np.ndarray | None = None,
 ) -> dict[str, Any]:
     mesh = MeshBuilder()
     depth_key = "hsi_depth_hw" if depth_source == "hsi" and "hsi_depth_hw" in probe else "depth_hw"
@@ -867,6 +901,7 @@ def export_hsi_foot_scene_ply(
         stride=max(int(scene_stride), 1),
         upsample=max(int(depth_upsample), 1),
         max_depth=float(max_scene_depth),
+        remove_mask_input=remove_mask_input,
     )
     if scene_points.size:
         mesh.add_mesh(scene_points, scene_faces, scene_colors)
@@ -905,6 +940,7 @@ def export_hsi_foot_scene_ply(
         "total_faces": int(faces.shape[0]),
         "depth_source": "hsi" if depth_key == "hsi_depth_hw" else "raw",
         "depth_upsample": int(max(depth_upsample, 1)),
+        "person_mask_removed": bool(remove_mask_input is not None),
         "visual_vertex_index": int(visual.get("vertex_index", -1)),
         "visual_body_point_source": str(visual.get("source", "")),
     }
@@ -918,6 +954,7 @@ def export_environment_ply(
     depth_upsample: int,
     max_scene_depth: float,
     depth_source: str,
+    remove_mask_input: np.ndarray | None,
 ) -> dict[str, Any]:
     depth_key = "hsi_depth_hw" if depth_source == "hsi" and "hsi_depth_hw" in probe else "depth_hw"
     vertices, colors, faces = depth_to_surface_mesh(
@@ -928,6 +965,7 @@ def export_environment_ply(
         stride=max(int(scene_stride), 1),
         upsample=max(int(depth_upsample), 1),
         max_depth=float(max_scene_depth),
+        remove_mask_input=remove_mask_input,
     )
     mesh = MeshBuilder()
     if vertices.size:
@@ -940,6 +978,7 @@ def export_environment_ply(
         "faces": int(faces.shape[0]),
         "color_source": "input_rgb_resized_to_depth_grid",
         "depth_upsample": int(max(depth_upsample, 1)),
+        "person_mask_removed": bool(remove_mask_input is not None),
     }
 
 
@@ -1056,6 +1095,7 @@ def depth_to_surface_mesh(
     stride: int,
     upsample: int,
     max_depth: float,
+    remove_mask_input: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     depth_hw = depth.detach().float()
     if int(upsample) > 1:
@@ -1071,6 +1111,10 @@ def depth_to_surface_mesh(
     yy, xx = torch.meshgrid(ys, xs, indexing="ij")
     z = depth_hw[yy, xx]
     valid = torch.isfinite(z) & (z > 1e-6) & (z <= float(max_depth))
+    if remove_mask_input is not None:
+        remove_mask = resize_bool_mask(np.asarray(remove_mask_input).astype(bool), (width, height))
+        remove_tensor = torch.from_numpy(remove_mask).to(device=depth_hw.device, dtype=torch.bool)
+        valid = valid & (~remove_tensor[yy, xx])
     if not bool(valid.any()):
         return np.empty((0, 3), dtype=np.float32), np.empty((0, 3), dtype=np.uint8), np.empty((0, 3), dtype=np.int64)
     xx_f = xx.to(dtype=depth_hw.dtype) * (float(image_size) / float(width))
@@ -1130,6 +1174,12 @@ def estimate_splat_radius(points: np.ndarray) -> float:
         return 0.01
     extent = np.nanmax(points, axis=0) - np.nanmin(points, axis=0)
     return max(float(np.linalg.norm(extent)) * 0.0015, 0.003)
+
+
+def resize_bool_mask(mask: np.ndarray, size: tuple[int, int]) -> np.ndarray:
+    mask_image = Image.fromarray((np.asarray(mask).astype(np.uint8) * 255), mode="L")
+    mask_image = mask_image.resize(size, Image.Resampling.NEAREST)
+    return np.asarray(mask_image) > 0
 
 
 def point_splat_mesh(points: np.ndarray, colors: np.ndarray, radius: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:

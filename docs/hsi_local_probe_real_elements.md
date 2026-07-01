@@ -41,9 +41,15 @@ For each selected person/query, the script writes:
   surface mesh, the selected base SMPL mesh, a foot-sole SMPL vertex sphere,
   the probed scene point sphere, and an arrow from the human foot point to the
   scene point.
+- `05_06_real_hsi_foot_scene_no_people_depth_person*_q*_a*.ply`
+  Same combined asset, but the environment surface has SAM2 human-mask regions
+  removed before mesh construction. The SMPL mesh is still kept.
 - `environment_hsi_depth_person*_q*_a*.ply`
   Environment only. It is built from HSI-adjusted depth by default and uses RGB
   colors sampled from the resized input image, not depth colormap colors.
+- `environment_hsi_depth_no_people_person*_q*_a*.ply`
+  Environment only with SAM2 human-mask regions removed. Use this when the
+  scene point cloud should not contain human-shaped depth artifacts.
 - `smpl_only_person*_q*_a*.ply`
   Selected base SMPL mesh only.
 - `05a_real_depth_patch_window_person*_q*_a*.png`
