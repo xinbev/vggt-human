@@ -18,8 +18,11 @@ ROOT_KEYS = ("root_orient", "global_orient", "smplx_root_pose", "smpl_root_pose"
 BODY_KEYS = ("body_pose", "smplx_body_pose", "smpl_body_pose")
 BETA_KEYS = ("shape", "betas", "beta", "smplx_shape", "smpl_shape")
 TRANSL_KEYS = ("trans_cam", "transl_cam", "cam_trans", "trans", "translation", "smplx_transl", "smpl_transl")
+CAM_EXT_KEYS = ("cam_ext", "camera_ext", "extrinsics", "cam_extrinsics")
 INTRINSIC_KEYS = ("cam_int", "cam_intrinsics", "intrinsics", "K", "camera_intrinsics")
 BBOX_KEYS = ("bbox", "bbox_xyxy", "bboxes", "person_bbox", "box")
+CENTER_KEYS = ("center", "bbox_center")
+SCALE_KEYS = ("scale", "bbox_scale")
 J2D_KEYS = ("joints2d", "joints_2d", "keypoints2d", "gtkps", "j2d")
 PERSON_ID_KEYS = ("person_id", "person_ids", "track_id", "subject_id", "sub")
 
@@ -48,6 +51,7 @@ class HFBedlamDataset(Dataset):
         require_boxes: bool = True,
         require_smpl: bool = True,
         bbox_expand: float = 0.15,
+        transl_add_cam_ext: bool = True,
         max_npz_files: int = 0,
         max_frames: int = 0,
     ) -> None:
@@ -61,6 +65,7 @@ class HFBedlamDataset(Dataset):
         self.require_boxes = bool(require_boxes)
         self.require_smpl = bool(require_smpl)
         self.bbox_expand = float(bbox_expand)
+        self.transl_add_cam_ext = bool(transl_add_cam_ext)
         self.max_npz_files = int(max_npz_files)
         self.max_frames = int(max_frames)
         if self.sequence_length <= 0:
@@ -110,7 +115,7 @@ class HFBedlamDataset(Dataset):
             images.append(image)
             data = self._load_npz(frame["npz_path"])
             intrinsics.append(_scale_intrinsics(_frame_intrinsics(data, frame["person_indices"][0], self.image_size), orig_hw, self.image_size))
-            persons = [_load_person(data, person_idx, orig_hw, self.bbox_expand) for person_idx in frame["person_indices"]]
+            persons = [_load_person(data, person_idx, orig_hw, self.bbox_expand, self.transl_add_cam_ext) for person_idx in frame["person_indices"]]
             persons_per_frame.append(persons)
 
         targets = _build_targets(persons_per_frame, self.max_humans, self.require_boxes, self.require_smpl)
@@ -184,10 +189,16 @@ def hf_bedlam_collate_fn(batch: list[dict[str, torch.Tensor]]) -> dict[str, torc
     return {key: torch.stack([_require_tensor(item[key], key) for item in batch], dim=0) for key in batch[0].keys()}
 
 
-def _load_person(data: dict[str, np.ndarray], person_idx: int, orig_hw: tuple[int, int], bbox_expand: float) -> dict[str, Any]:
+def _load_person(
+    data: dict[str, np.ndarray],
+    person_idx: int,
+    orig_hw: tuple[int, int],
+    bbox_expand: float,
+    transl_add_cam_ext: bool,
+) -> dict[str, Any]:
     pose_aa = _person_pose_axis_angle(data, person_idx)
     betas = _field_value(data, BETA_KEYS, person_idx, required=True).reshape(-1)[:10].astype(np.float32)
-    transl = _field_value(data, TRANSL_KEYS, person_idx, required=True).reshape(-1)[:3].astype(np.float32)
+    transl = _person_translation(data, person_idx, transl_add_cam_ext)
     bbox = _person_bbox(data, person_idx, orig_hw, bbox_expand)
     person_id = _person_id(data, person_idx)
     return {
@@ -199,6 +210,17 @@ def _load_person(data: dict[str, np.ndarray], person_idx: int, orig_hw: tuple[in
         "person_id": person_id,
         "person_id_valid": person_id >= 0,
     }
+
+
+def _person_translation(data: dict[str, np.ndarray], person_idx: int, transl_add_cam_ext: bool) -> np.ndarray:
+    transl = _field_value(data, TRANSL_KEYS, person_idx, required=True).reshape(-1)[:3].astype(np.float32)
+    if not transl_add_cam_ext:
+        return transl
+    cam_ext = _field_value(data, CAM_EXT_KEYS, person_idx, required=False)
+    if cam_ext is None:
+        return transl
+    cam_ext = np.asarray(cam_ext, dtype=np.float32).reshape(4, 4)
+    return (transl + cam_ext[:3, 3].astype(np.float32)).astype(np.float32)
 
 
 def _person_pose_axis_angle(data: dict[str, np.ndarray], person_idx: int) -> np.ndarray:
@@ -221,6 +243,10 @@ def _person_bbox(data: dict[str, np.ndarray], person_idx: int, orig_hw: tuple[in
     bbox = _field_value(data, BBOX_KEYS, person_idx, required=False)
     if bbox is not None:
         return _bbox_to_cxcywh_norm(np.asarray(bbox).reshape(-1)[:4], orig_hw, bbox_expand)
+    center = _field_value(data, CENTER_KEYS, person_idx, required=False)
+    scale = _field_value(data, SCALE_KEYS, person_idx, required=False)
+    if center is not None and scale is not None:
+        return _center_scale_to_cxcywh_norm(center, scale, orig_hw)
     j2d = _field_value(data, J2D_KEYS, person_idx, required=False)
     if j2d is None:
         return None
@@ -361,6 +387,28 @@ def _bbox_to_cxcywh_norm(raw_box: np.ndarray, orig_hw: tuple[int, int], expand: 
     else:
         xyxy = np.asarray([x0, y0, x0 + max(a, 0.0), y0 + max(b, 0.0)], dtype=np.float32)
     return _xyxy_to_cxcywh_norm(xyxy, orig_hw, expand)
+
+
+def _center_scale_to_cxcywh_norm(center: np.ndarray, scale: np.ndarray, orig_hw: tuple[int, int]) -> np.ndarray:
+    h, w = orig_hw
+    center_arr = np.asarray(center, dtype=np.float32).reshape(-1)
+    scale_arr = np.asarray(scale, dtype=np.float32).reshape(-1)
+    if center_arr.size < 2 or scale_arr.size < 1:
+        raise ValueError(f"Invalid center/scale bbox values: center={center_arr.shape} scale={scale_arr.shape}")
+    cx, cy = float(center_arr[0]), float(center_arr[1])
+    side = float(scale_arr[0]) * 200.0
+    side = max(side, 1.0)
+    x1 = cx - 0.5 * side
+    y1 = cy - 0.5 * side
+    x2 = cx + 0.5 * side
+    y2 = cy + 0.5 * side
+    x1 = max(x1, 0.0)
+    y1 = max(y1, 0.0)
+    x2 = min(x2, float(max(w - 1, 1)))
+    y2 = min(y2, float(max(h - 1, 1)))
+    bw = max(x2 - x1, 1.0)
+    bh = max(y2 - y1, 1.0)
+    return np.asarray([(x1 + 0.5 * bw) / max(w, 1), (y1 + 0.5 * bh) / max(h, 1), bw / max(w, 1), bh / max(h, 1)], dtype=np.float32)
 
 
 def _xyxy_to_cxcywh_norm(xyxy: np.ndarray, orig_hw: tuple[int, int], expand: float) -> np.ndarray:

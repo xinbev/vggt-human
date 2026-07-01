@@ -221,6 +221,7 @@ def build_hf_bedlam_loader(config: dict[str, Any], split: str, shuffle: bool) ->
         require_smpl=bool(data_cfg.get("require_smpl", True)),
         require_boxes=bool(data_cfg.get("require_boxes", True)),
         bbox_expand=float(data_cfg.get("bbox_expand", 0.15)),
+        transl_add_cam_ext=bool(data_cfg.get("transl_add_cam_ext", True)),
         max_npz_files=int(data_cfg.get("max_npz_files", 0) or 0),
         max_frames=int(data_cfg.get("max_frames", 0) or 0),
     )

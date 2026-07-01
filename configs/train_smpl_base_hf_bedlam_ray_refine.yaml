@@ -17,6 +17,7 @@ data:
   require_smpl: true
   require_depth: false
   bbox_expand: 0.15
+  transl_add_cam_ext: true
   max_npz_files: 0
   max_frames: 0
   num_workers: 4

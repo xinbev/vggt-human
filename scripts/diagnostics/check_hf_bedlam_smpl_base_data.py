@@ -33,6 +33,7 @@ def main() -> None:
         require_boxes=bool(data_cfg.get("require_boxes", True)),
         require_smpl=bool(data_cfg.get("require_smpl", True)),
         bbox_expand=float(data_cfg.get("bbox_expand", 0.15)),
+        transl_add_cam_ext=bool(data_cfg.get("transl_add_cam_ext", True)),
         max_npz_files=int(args.max_npz_files or data_cfg.get("max_npz_files", 0) or 0),
         max_frames=int(args.max_frames or data_cfg.get("max_frames", 0) or 0),
     )
@@ -61,6 +62,8 @@ def main() -> None:
         "smpl_valid_count": int(batch["smpl_mask"].sum().item()),
         "box_valid_count": int(batch["boxes_mask"].sum().item()),
         "transl_mean": tensor_mean(batch["gt_transl_cam"], batch["smpl_mask"]),
+        "transl_min_xyz": tensor_reduce_xyz(batch["gt_transl_cam"], batch["smpl_mask"], "min"),
+        "transl_max_xyz": tensor_reduce_xyz(batch["gt_transl_cam"], batch["smpl_mask"], "max"),
         "box_mean": tensor_mean(batch["gt_boxes"], batch["boxes_mask"]),
     }
     print(json.dumps(summary, indent=2, ensure_ascii=False))
@@ -88,6 +91,22 @@ def tensor_mean(value: torch.Tensor, mask: torch.Tensor) -> float:
     if not bool(mask.any()):
         return 0.0
     return float(value[mask].float().mean().item())
+
+
+def tensor_reduce_xyz(value: torch.Tensor, mask: torch.Tensor, mode: str) -> list[float]:
+    mask = mask.bool()
+    if value.ndim != mask.ndim + 1:
+        raise ValueError(f"Expected value shape ending in xyz and mask one dim fewer, got value={tuple(value.shape)} mask={tuple(mask.shape)}")
+    if not bool(mask.any()):
+        return [0.0, 0.0, 0.0]
+    selected = value[mask].float()
+    if mode == "min":
+        out = selected.min(dim=0).values
+    elif mode == "max":
+        out = selected.max(dim=0).values
+    else:
+        raise ValueError(f"Unsupported reduce mode: {mode}")
+    return [float(x) for x in out.detach().cpu().tolist()]
 
 
 if __name__ == "__main__":
