@@ -53,17 +53,28 @@ outputs/eval/stageD_3dpw_test_from_hf_bedlam
 The script defaults to:
 
 ```text
-HF_BATCH_SIZE=8
-THREEDPW_BATCH_SIZE=6
-NUM_WORKERS=16
+HF_BATCH_SIZE=32
+THREEDPW_BATCH_SIZE=12
+NUM_WORKERS=24
 HF_EPOCHS=15
 THREEDPW_EPOCHS=5
 ```
 
+HF BEDLAM pretrain freezes the VGGT aggregator forward path, so VRAM can remain
+modest even when GPU utilization is high. Use samples/sec and epoch time as the
+main throughput signal; do not try to fill 80G VRAM just for its own sake.
+
 If CUDA OOM happens, rerun with:
 
 ```bash
-HF_BATCH_SIZE=4 THREEDPW_BATCH_SIZE=3 \
+HF_BATCH_SIZE=12 THREEDPW_BATCH_SIZE=8 NUM_WORKERS=20 \
+DEVICE=cuda bash scripts/train/train_smpl_base_hf_bedlam_then_3dpw.sh
+```
+
+If the machine still has CPU/DataLoader headroom, try:
+
+```bash
+HF_BATCH_SIZE=48 THREEDPW_BATCH_SIZE=16 NUM_WORKERS=28 \
 DEVICE=cuda bash scripts/train/train_smpl_base_hf_bedlam_then_3dpw.sh
 ```
 
