@@ -1,0 +1,27 @@
+{
+  "cam_mpjpe_no_align_mm": 1376.5611047795503,
+  "cam_pve_no_align_mm": 1395.1566910610659,
+  "mpjpe_mm": 231.36357834730185,
+  "pa_mpjpe_mm": 259.55874425852346,
+  "pve_mm": 291.38827770200396,
+  "transl_l2_mm": 1345.5212336501152,
+  "transl_xy_l2_mm": 261.6177219241904,
+  "transl_z_abs_mm": 1296.7332448214456,
+  "count": {
+    "mpjpe_mm": 35515,
+    "pa_mpjpe_mm": 35515,
+    "pve_mm": 35515,
+    "transl_l2_mm": 35515,
+    "transl_xy_l2_mm": 35515,
+    "transl_z_abs_mm": 35515,
+    "cam_mpjpe_no_align_mm": 35515,
+    "cam_pve_no_align_mm": 35515
+  },
+  "dataset": "3dpw",
+  "split": "test",
+  "checkpoint": "outputs/train/smpl_base_3dpw_ray_refine/checkpoint_top01.pt",
+  "num_windows": 24547,
+  "num_matches": 35515,
+  "metric_protocol": "project_native_smpl24_camera_pelvis_aligned_plus_camera_translation",
+  "rows_csv": "outputs/eval/3dpw_smpl_base/3dpw_smpl_base_metric_rows.csv"
+}
