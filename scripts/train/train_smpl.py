@@ -132,6 +132,8 @@ def main() -> None:
                 save_checkpoint(model, optimizer, epoch + 1, global_step, config, output_dir / f"checkpoint_epoch_{epoch + 1:04d}.pt")
             if bool(checkpoint_cfg.get("save_latest", True)):
                 save_checkpoint(model, optimizer, epoch + 1, global_step, config, output_dir / "checkpoint_latest.pt")
+            if bool(checkpoint_cfg.get("save_final", False)) and (epoch + 1) == epochs:
+                save_checkpoint(model, optimizer, epoch + 1, global_step, config, output_dir / "checkpoint_final.pt")
 
 
 def parse_args() -> argparse.Namespace:

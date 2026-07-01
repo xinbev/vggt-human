@@ -23,6 +23,7 @@ INTRINSIC_KEYS = ("cam_int", "cam_intrinsics", "intrinsics", "K", "camera_intrin
 BBOX_KEYS = ("bbox", "bbox_xyxy", "bboxes", "person_bbox", "box")
 CENTER_KEYS = ("center", "bbox_center")
 SCALE_KEYS = ("scale", "bbox_scale")
+PROJ_VERTS_KEYS = ("proj_verts", "projected_vertices", "verts2d", "vertices2d")
 J2D_KEYS = ("joints2d", "joints_2d", "keypoints2d", "gtkps", "j2d")
 PERSON_ID_KEYS = ("person_id", "person_ids", "track_id", "subject_id", "sub")
 
@@ -130,6 +131,7 @@ class HFBedlamDataset(Dataset):
 
     def _build_frames(self) -> dict[str, dict[str, Any]]:
         frames: dict[str, dict[str, Any]] = {}
+        allowed_limited_frames: set[str] = set()
         for npz_path in self._npz_files:
             with np.load(npz_path, allow_pickle=True) as data:
                 image_key = _first_key(data, IMAGE_KEYS)
@@ -143,6 +145,10 @@ class HFBedlamDataset(Dataset):
                     rel = _normalize_image_relpath(raw_name, npz_path.stem)
                     image_path = _resolve_image_path(self.images_root, rel, npz_path.stem)
                     frame_key = _frame_key(rel, npz_path.stem)
+                    if self.max_frames > 0:
+                        if frame_key not in allowed_limited_frames and len(allowed_limited_frames) >= self.max_frames:
+                            continue
+                        allowed_limited_frames.add(frame_key)
                     record = frames.setdefault(
                         frame_key,
                         {
@@ -153,10 +159,6 @@ class HFBedlamDataset(Dataset):
                         },
                     )
                     record["person_indices"].append(person_idx)
-                    if self.max_frames > 0 and len(frames) >= self.max_frames:
-                        break
-            if self.max_frames > 0 and len(frames) >= self.max_frames:
-                break
         for key, frame in frames.items():
             if not Path(frame["image_path"]).is_file():
                 raise FileNotFoundError(f"HF BEDLAM image not found for frame {key}: {frame['image_path']}")
@@ -243,14 +245,25 @@ def _person_bbox(data: dict[str, np.ndarray], person_idx: int, orig_hw: tuple[in
     bbox = _field_value(data, BBOX_KEYS, person_idx, required=False)
     if bbox is not None:
         return _bbox_to_cxcywh_norm(np.asarray(bbox).reshape(-1)[:4], orig_hw, bbox_expand)
+    proj_verts = _field_value(data, PROJ_VERTS_KEYS, person_idx, required=False)
+    if proj_verts is not None:
+        box = _points_to_cxcywh_norm(proj_verts, orig_hw, bbox_expand)
+        if box is not None:
+            return box
+    j2d = _field_value(data, J2D_KEYS, person_idx, required=False)
+    if j2d is not None:
+        box = _points_to_cxcywh_norm(j2d, orig_hw, bbox_expand)
+        if box is not None:
+            return box
     center = _field_value(data, CENTER_KEYS, person_idx, required=False)
     scale = _field_value(data, SCALE_KEYS, person_idx, required=False)
     if center is not None and scale is not None:
         return _center_scale_to_cxcywh_norm(center, scale, orig_hw)
-    j2d = _field_value(data, J2D_KEYS, person_idx, required=False)
-    if j2d is None:
-        return None
-    points = np.asarray(j2d, dtype=np.float32)
+    return None
+
+
+def _points_to_cxcywh_norm(points_value: np.ndarray, orig_hw: tuple[int, int], bbox_expand: float) -> np.ndarray | None:
+    points = np.asarray(points_value, dtype=np.float32)
     if points.ndim != 2 or points.shape[1] < 2:
         points = points.reshape(-1, points.shape[-1])
     xy = points[:, :2]

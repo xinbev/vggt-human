@@ -45,6 +45,9 @@ def main() -> None:
                 center_box = center_scale_box(data["center"][person_idx], data["scale"][person_idx], image.size)
                 gtkps_box = points_box(data["gtkps"][person_idx], image.size) if "gtkps" in data.files else None
                 proj_verts_box = points_box(data["proj_verts"][person_idx], image.size) if "proj_verts" in data.files else None
+                base_training_box = proj_verts_box if proj_verts_box is not None else (gtkps_box if gtkps_box is not None else center_box)
+                training_box = expanded_box(base_training_box, image.size, float(args.bbox_expand))
+                draw_box(draw, training_box, (255, 225, 40), width=5)
                 draw_box(draw, center_box, (255, 60, 60), width=4)
                 if gtkps_box is not None:
                     draw_box(draw, gtkps_box, (40, 220, 90), width=3)
@@ -57,6 +60,7 @@ def main() -> None:
                         "person_index": int(person_idx),
                         "center": to_list(data["center"][person_idx]),
                         "scale": float(np.asarray(data["scale"][person_idx]).reshape(-1)[0]),
+                        "training_box_xyxy": to_list(training_box),
                         "center_scale_box_xyxy": to_list(center_box),
                         "gtkps_box_xyxy": to_list(gtkps_box) if gtkps_box is not None else None,
                         "proj_verts_box_xyxy": to_list(proj_verts_box) if proj_verts_box is not None else None,
@@ -81,6 +85,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", default="outputs/vis/hf_bedlam_box_samples")
     parser.add_argument("--num-samples", type=int, default=10)
     parser.add_argument("--start-index", type=int, default=0)
+    parser.add_argument("--bbox-expand", type=float, default=0.15)
     return parser.parse_args()
 
 
@@ -139,6 +144,24 @@ def points_box(points: np.ndarray, image_size: tuple[int, int]) -> np.ndarray | 
     return np.asarray([x1, y1, x2, y2], dtype=np.float32)
 
 
+def expanded_box(box: np.ndarray, image_size: tuple[int, int], expand: float) -> np.ndarray:
+    width, height = image_size
+    x1, y1, x2, y2 = [float(v) for v in box.reshape(4)]
+    bw = max(x2 - x1, 1.0)
+    bh = max(y2 - y1, 1.0)
+    pad_x = 0.5 * float(expand) * bw
+    pad_y = 0.5 * float(expand) * bh
+    return np.asarray(
+        [
+            max(x1 - pad_x, 0.0),
+            max(y1 - pad_y, 0.0),
+            min(x2 + pad_x, float(width - 1)),
+            min(y2 + pad_y, float(height - 1)),
+        ],
+        dtype=np.float32,
+    )
+
+
 def draw_box(draw: ImageDraw.ImageDraw, box: np.ndarray, color: tuple[int, int, int], width: int) -> None:
     x1, y1, x2, y2 = [float(v) for v in box.reshape(4)]
     for offset in range(width):
@@ -146,10 +169,11 @@ def draw_box(draw: ImageDraw.ImageDraw, box: np.ndarray, color: tuple[int, int, 
 
 
 def draw_legend(draw: ImageDraw.ImageDraw) -> None:
-    draw.rectangle((10, 10, 390, 82), fill=(0, 0, 0))
-    draw.text((20, 18), "red: center/scale training box", fill=(255, 60, 60))
-    draw.text((20, 40), "green: gtkps min/max box", fill=(40, 220, 90))
-    draw.text((20, 62), "blue: proj_verts min/max box", fill=(70, 130, 255))
+    draw.rectangle((10, 10, 430, 104), fill=(0, 0, 0))
+    draw.text((20, 18), "yellow: current loader training box", fill=(255, 225, 40))
+    draw.text((20, 40), "red: center/scale HMR crop box", fill=(255, 60, 60))
+    draw.text((20, 62), "green: gtkps min/max box", fill=(40, 220, 90))
+    draw.text((20, 84), "blue: proj_verts min/max box", fill=(70, 130, 255))
 
 
 def to_list(value: np.ndarray | None) -> list[float] | None:
