@@ -62,7 +62,9 @@
   "hsi_refine_gate": 0.9820137619972229,
   "ply": {
     "combined_file": "05_06_real_hsi_foot_scene_person1_q1_a7.ply",
+    "combined_no_people_depth_file": "05_06_real_hsi_foot_scene_no_people_depth_person1_q1_a7.ply",
     "environment_file": "environment_hsi_depth_person1_q1_a7.ply",
+    "environment_no_people_file": "environment_hsi_depth_no_people_person1_q1_a7.ply",
     "smpl_file": "smpl_only_person1_q1_a7.ply",
     "combined": {
       "scene_vertices": 65536,
@@ -71,6 +73,18 @@
       "total_faces": 138506,
       "depth_source": "hsi",
       "depth_upsample": 2,
+      "person_mask_removed": false,
+      "visual_vertex_index": 3356,
+      "visual_body_point_source": "foot_sole_vertex"
+    },
+    "combined_no_people_depth": {
+      "scene_vertices": 59167,
+      "scene_faces": 110272,
+      "total_vertices": 66551,
+      "total_faces": 124864,
+      "depth_source": "hsi",
+      "depth_upsample": 2,
+      "person_mask_removed": true,
       "visual_vertex_index": 3356,
       "visual_body_point_source": "foot_sole_vertex"
     },
@@ -80,7 +94,17 @@
       "vertices": 65536,
       "faces": 123914,
       "color_source": "input_rgb_resized_to_depth_grid",
-      "depth_upsample": 2
+      "depth_upsample": 2,
+      "person_mask_removed": false
+    },
+    "environment_no_people": {
+      "file": "environment_hsi_depth_no_people_person1_q1_a7.ply",
+      "depth_source": "hsi",
+      "vertices": 59167,
+      "faces": 110272,
+      "color_source": "input_rgb_resized_to_depth_grid",
+      "depth_upsample": 2,
+      "person_mask_removed": true
     },
     "smpl": {
       "file": "smpl_only_person1_q1_a7.ply",
