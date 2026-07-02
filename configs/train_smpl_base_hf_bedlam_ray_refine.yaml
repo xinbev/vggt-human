@@ -69,6 +69,7 @@ checkpoint:
   load_vggt_baseline: true
   strict: false
   resume_strict: false
+  resume_adapt_query_tensors: true
   resume_optimizer: false
   save_epoch_checkpoint: false
   save_latest: true

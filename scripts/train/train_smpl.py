@@ -575,6 +575,14 @@ def resume_training_checkpoint(
     state_dict = extract_state_dict(checkpoint)
     ckpt_cfg = config.get("checkpoint", {})
     strict = bool(ckpt_cfg.get("resume_strict", True))
+    if not strict:
+        state_dict, shape_report = make_state_dict_loadable(
+            state_dict,
+            model.state_dict(),
+            adapt_query_tensors=bool(ckpt_cfg.get("resume_adapt_query_tensors", True)),
+        )
+    else:
+        shape_report = {"adapted": [], "skipped": []}
     missing, unexpected = model.load_state_dict(state_dict, strict=strict)
     if bool(ckpt_cfg.get("resume_optimizer", True)):
         if "optimizer" not in checkpoint:
@@ -582,7 +590,64 @@ def resume_training_checkpoint(
         optimizer.load_state_dict(checkpoint["optimizer"])
     print(f"[ckpt] resumed model: {checkpoint_path}")
     print(f"[ckpt] resume_missing={len(missing)} resume_unexpected={len(unexpected)} strict={strict}")
+    if shape_report["adapted"]:
+        print("[ckpt] adapted shape-mismatched tensors:")
+        for item in shape_report["adapted"][:20]:
+            print(f"  - {item}")
+        if len(shape_report["adapted"]) > 20:
+            print(f"  ... {len(shape_report['adapted']) - 20} more")
+    if shape_report["skipped"]:
+        print("[ckpt] skipped shape-mismatched tensors:")
+        for item in shape_report["skipped"][:20]:
+            print(f"  - {item}")
+        if len(shape_report["skipped"]) > 20:
+            print(f"  ... {len(shape_report['skipped']) - 20} more")
     return int(checkpoint.get("epoch", 0)), int(checkpoint.get("global_step", 0))
+
+
+def make_state_dict_loadable(
+    checkpoint_state: dict[str, torch.Tensor],
+    model_state: dict[str, torch.Tensor],
+    adapt_query_tensors: bool = True,
+) -> tuple[dict[str, torch.Tensor], dict[str, list[str]]]:
+    loadable: dict[str, torch.Tensor] = {}
+    adapted: list[str] = []
+    skipped: list[str] = []
+    for key, value in checkpoint_state.items():
+        target = model_state.get(key)
+        if target is None or not isinstance(value, torch.Tensor):
+            loadable[key] = value
+            continue
+        if tuple(value.shape) == tuple(target.shape):
+            loadable[key] = value
+            continue
+        adapted_value = None
+        if adapt_query_tensors:
+            adapted_value = adapt_tensor_by_slicing(value, target)
+        if adapted_value is not None:
+            loadable[key] = adapted_value
+            adapted.append(f"{key}: {tuple(value.shape)} -> {tuple(target.shape)}")
+        else:
+            skipped.append(f"{key}: {tuple(value.shape)} -> {tuple(target.shape)}")
+    return loadable, {"adapted": adapted, "skipped": skipped}
+
+
+def adapt_tensor_by_slicing(source: torch.Tensor, target: torch.Tensor) -> torch.Tensor | None:
+    if source.ndim != target.ndim or source.dtype != target.dtype:
+        return None
+    slices: list[slice] = []
+    changed = False
+    for src_size, dst_size in zip(source.shape, target.shape):
+        if src_size == dst_size:
+            slices.append(slice(None))
+        elif src_size > dst_size:
+            slices.append(slice(0, dst_size))
+            changed = True
+        else:
+            return None
+    if not changed:
+        return None
+    return source[tuple(slices)].clone()
 
 
 def extract_state_dict(checkpoint: Any) -> dict[str, torch.Tensor]:

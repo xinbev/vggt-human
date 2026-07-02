@@ -12,7 +12,7 @@ data:
   sequence_length: 1
   stride: 1
   image_size: 518
-  max_humans: 2
+  max_humans: 20
   require_boxes: true
   require_smpl: true
   require_depth: false
@@ -29,7 +29,7 @@ model:
   enable_alignment: false
   enable_smpl: true
   enable_hsi_refine: false
-  num_smpl_queries: 2
+  num_smpl_queries: 20
   freeze_aggregator: true
   freeze_camera_head: true
   freeze_aggregator_forward: false
@@ -64,6 +64,7 @@ checkpoint:
   load_vggt_baseline: true
   strict: false
   resume_strict: false
+  resume_adapt_query_tensors: true
   resume_optimizer: false
   save_epoch_checkpoint: false
   save_latest: true

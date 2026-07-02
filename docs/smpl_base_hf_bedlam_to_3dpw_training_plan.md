@@ -64,6 +64,11 @@ HF BEDLAM pretrain freezes the VGGT aggregator forward path, so VRAM can remain
 modest even when GPU utilization is high. Use samples/sec and epoch time as the
 main throughput signal; do not try to fill 80G VRAM just for its own sake.
 
+Both HF BEDLAM and 3DPW use `num_smpl_queries=20` / `max_humans=20`. Real person
+counts remain dynamic through `boxes_mask` / `smpl_mask`; for example, a 3DPW
+frame with two people only enables two slots and leaves the other 18 slots
+masked out. This keeps the model structure stable between Stage A and Stage B.
+
 If CUDA OOM happens, rerun with:
 
 ```bash
