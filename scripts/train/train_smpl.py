@@ -432,7 +432,10 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
         regression_head = getattr(smpl_head, "regression_head", None)
         translation_decode_heads = getattr(regression_head, "translation_decode_heads", None)
         if translation_decode_heads is None:
-            raise ValueError("train_smpl_translation_decode_heads=true requires model.smpl_translation_output_mode=ray_offset_depth")
+            raise ValueError(
+                "train_smpl_translation_decode_heads=true requires "
+                "model.smpl_translation_output_mode=ray_offset_depth or simple_ray_depth"
+            )
         unfreeze_module(translation_decode_heads)
     if smpl_head is not None and bool(model_cfg.get("train_smpl_temporal_translation", False)):
         temporal_translation_refiner = getattr(smpl_head, "temporal_translation_refiner", None)
@@ -574,6 +577,15 @@ def resume_training_checkpoint(
     checkpoint = torch.load(checkpoint_path, map_location=device)
     state_dict = extract_state_dict(checkpoint)
     ckpt_cfg = config.get("checkpoint", {})
+    skip_prefixes = normalize_string_list(ckpt_cfg.get("resume_skip_prefixes", []))
+    if skip_prefixes:
+        before = len(state_dict)
+        state_dict = {
+            key: value
+            for key, value in state_dict.items()
+            if not any(key.startswith(prefix) for prefix in skip_prefixes)
+        }
+        print(f"[ckpt] skipped_by_prefix={before - len(state_dict)} prefixes={skip_prefixes}")
     strict = bool(ckpt_cfg.get("resume_strict", True))
     if not strict:
         state_dict, shape_report = make_state_dict_loadable(
@@ -603,6 +615,16 @@ def resume_training_checkpoint(
         if len(shape_report["skipped"]) > 20:
             print(f"  ... {len(shape_report['skipped']) - 20} more")
     return int(checkpoint.get("epoch", 0)), int(checkpoint.get("global_step", 0))
+
+
+def normalize_string_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [item.strip() for item in value.split(",") if item.strip()]
+    if isinstance(value, (list, tuple)):
+        return [str(item).strip() for item in value if str(item).strip()]
+    return [str(value).strip()]
 
 
 def make_state_dict_loadable(

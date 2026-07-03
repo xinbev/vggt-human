@@ -279,6 +279,103 @@ class RayOffsetDepthTranslationDecoder(nn.Module):
         }
 
 
+class SimpleRayDepthTranslationDecoder(nn.Module):
+    """Stable bbox-ray translation seed for SMPL base training.
+
+    Compared with RayOffsetDepthTranslationDecoder this branch deliberately
+    removes pose/beta conditioning and the additive ray-depth residual.  The
+    bbox center and intrinsics define the camera ray, bbox height gives a
+    positive depth prior, and the token only predicts a bounded log-depth scale
+    plus two small tangent-plane offsets.  This keeps the base translation
+    simple and positive-depth while preserving the ROI pooled token path that is
+    important for pose and shape.
+    """
+
+    def __init__(
+        self,
+        dim_in: int,
+        hidden_dim: int = 512,
+        max_log_depth_delta: float = 0.65,
+        max_tangent_offset_m: float = 0.45,
+        human_height_prior_m: float = 1.70,
+        image_size: int = 518,
+    ) -> None:
+        super().__init__()
+        self.image_size = int(image_size)
+        self.max_log_depth_delta = float(max_log_depth_delta)
+        self.max_tangent_offset_m = float(max_tangent_offset_m)
+        self.human_height_prior_m = float(human_height_prior_m)
+        extra_dim = 4 + 3 + 4 + 1 + 2
+        self.hidden_norm = nn.LayerNorm(dim_in, eps=1e-5)
+        self.mlp = nn.Sequential(
+            nn.Linear(dim_in + extra_dim, hidden_dim),
+            nn.GELU(),
+            nn.LayerNorm(hidden_dim),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.GELU(),
+            nn.Linear(hidden_dim, 3),
+        )
+        _zero_last_linear(self.mlp)
+
+    def forward(
+        self,
+        hidden: torch.Tensor,
+        boxes: torch.Tensor,
+        intrinsics: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        if hidden.ndim != 3 or boxes.ndim != 3:
+            raise ValueError(
+                "SimpleRayDepthTranslationDecoder expects hidden/boxes with "
+                f"(N,Q,C)/(N,Q,4), got {hidden.shape}/{boxes.shape}"
+            )
+        if intrinsics.ndim != 3 or intrinsics.shape[-2:] != (3, 3):
+            raise ValueError(f"Expected intrinsics shape (N,3,3), got {intrinsics.shape}")
+        if hidden.shape[:2] != boxes.shape[:2]:
+            raise ValueError("Simple ray-depth decoder hidden/boxes must share (N,Q)")
+
+        boxes = boxes.to(device=hidden.device, dtype=hidden.dtype).clamp(0.0, 1.0)
+        intrinsics = intrinsics.to(device=hidden.device, dtype=hidden.dtype)
+        ray, tangent_x, tangent_y, k_features = _camera_ray_basis(boxes, intrinsics, self.image_size)
+        box_depth_prior = _bbox_height_depth_prior(
+            boxes=boxes,
+            intrinsics=intrinsics,
+            image_size=self.image_size,
+            human_height_prior_m=self.human_height_prior_m,
+        )
+        box_area = (boxes[..., 2:3] * boxes[..., 3:4]).clamp(min=1e-6)
+        box_aspect = boxes[..., 2:3] / boxes[..., 3:4].clamp(min=1e-6)
+        features = torch.cat(
+            [
+                self.hidden_norm(hidden.float()).to(dtype=hidden.dtype),
+                boxes,
+                ray,
+                k_features,
+                torch.log(box_depth_prior.clamp(min=1e-4)),
+                torch.log(box_area),
+                torch.log(box_aspect.clamp(min=1e-6)),
+            ],
+            dim=-1,
+        )
+        raw = self.mlp(features.float()).to(dtype=hidden.dtype)
+        log_depth_delta = torch.tanh(raw[..., 0:1]) * self.max_log_depth_delta
+        tangent = torch.tanh(raw[..., 1:3]) * self.max_tangent_offset_m
+        ray_depth = box_depth_prior * torch.exp(log_depth_delta)
+        transl = ray_depth * ray + tangent[..., 0:1] * tangent_x + tangent[..., 1:2] * tangent_y
+        return {
+            "pred_transl_cam": transl,
+            "seed_pred_transl_cam": transl,
+            "simple_ray_pred_transl_cam": transl,
+            "pred_transl_ray_delta": torch.cat([tangent, log_depth_delta], dim=-1),
+            "pred_transl_ray_dir": ray,
+            "pred_transl_tangent_x": tangent_x,
+            "pred_transl_tangent_y": tangent_y,
+            "pred_transl_ray_depth": ray_depth,
+            "pred_transl_tangent": tangent,
+            "pred_transl_box_depth_prior": box_depth_prior,
+            "simple_ray_log_depth_delta": log_depth_delta,
+        }
+
+
 class TrackTemporalTranslationRefiner(nn.Module):
     """Track-aware camera/world translation trajectory refiner.
 
@@ -494,7 +591,7 @@ class SMPLRegressionHead(nn.Module):
         self.image_size = int(image_size)
         if self.bbox_mode not in {"direct", "reference_residual"}:
             raise ValueError(f"Unsupported bbox_mode: {self.bbox_mode}")
-        if self.translation_output_mode not in {"direct", "ray_offset_depth"}:
+        if self.translation_output_mode not in {"direct", "ray_offset_depth", "simple_ray_depth"}:
             raise ValueError(f"Unsupported translation_output_mode: {self.translation_output_mode}")
         pose_dim = num_joints * 6
 
@@ -509,6 +606,18 @@ class SMPLRegressionHead(nn.Module):
                     hidden_dim=translation_decode_hidden_dim,
                     max_log_depth_delta=translation_decode_max_log_depth_delta,
                     max_ray_delta_m=translation_decode_max_ray_delta_m,
+                    max_tangent_offset_m=translation_decode_max_tangent_offset_m,
+                    human_height_prior_m=translation_decode_human_height_prior_m,
+                    image_size=image_size,
+                ),
+                num_layers,
+            )
+        elif self.translation_output_mode == "simple_ray_depth":
+            self.translation_decode_heads = _get_clones(
+                SimpleRayDepthTranslationDecoder(
+                    dim_in=dim_in,
+                    hidden_dim=translation_decode_hidden_dim,
+                    max_log_depth_delta=translation_decode_max_log_depth_delta,
                     max_tangent_offset_m=translation_decode_max_tangent_offset_m,
                     human_height_prior_m=translation_decode_human_height_prior_m,
                     image_size=image_size,
@@ -607,7 +716,10 @@ class SMPLRegressionHead(nn.Module):
         intrinsics_for_translation = None
         if self.translation_decode_heads is not None:
             if pose_enc is None:
-                raise ValueError("translation_output_mode='ray_offset_depth' requires pose_enc; set model.enable_camera=true")
+                raise ValueError(
+                    f"translation_output_mode={self.translation_output_mode!r} requires pose_enc; "
+                    "set model.enable_camera=true"
+                )
             intrinsics_for_translation = _flatten_intrinsics_from_pose_enc(pose_enc, image_size=self.image_size)
         for layer_idx in range(self.num_layers):
             hidden = self.norm(hidden_states[layer_idx].float())
@@ -628,16 +740,25 @@ class SMPLRegressionHead(nn.Module):
                 if boxes_for_translation is None and pred_boxes is not None:
                     boxes_for_translation = pred_boxes.detach()
                 if boxes_for_translation is None:
-                    raise ValueError("translation_output_mode='ray_offset_depth' requires reference_boxes or pred_boxes")
+                    raise ValueError(
+                        f"translation_output_mode={self.translation_output_mode!r} requires reference_boxes or pred_boxes"
+                    )
                 if intrinsics_for_translation is None:
-                    raise RuntimeError("Ray-offset-depth translation missing intrinsics")
-                translation_decode_outputs = self.translation_decode_heads[layer_idx](
-                    hidden=hidden,
-                    pose6d=pose_6d,
-                    betas=shape,
-                    boxes=boxes_for_translation,
-                    intrinsics=intrinsics_for_translation,
-                )
+                    raise RuntimeError(f"{self.translation_output_mode} translation missing intrinsics")
+                if self.translation_output_mode == "simple_ray_depth":
+                    translation_decode_outputs = self.translation_decode_heads[layer_idx](
+                        hidden=hidden,
+                        boxes=boxes_for_translation,
+                        intrinsics=intrinsics_for_translation,
+                    )
+                else:
+                    translation_decode_outputs = self.translation_decode_heads[layer_idx](
+                        hidden=hidden,
+                        pose6d=pose_6d,
+                        betas=shape,
+                        boxes=boxes_for_translation,
+                        intrinsics=intrinsics_for_translation,
+                    )
                 pred_transl_cam = translation_decode_outputs["pred_transl_cam"]
             else:
                 pred_transl_cam = legacy_pred_transl_cam

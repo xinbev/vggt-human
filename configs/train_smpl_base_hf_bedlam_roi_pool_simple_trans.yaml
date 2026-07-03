@@ -1,0 +1,153 @@
+experiment:
+  name: smpl_base_hf_bedlam_roi_pool_simple_trans
+  output_dir: outputs/train/smpl_base_hf_bedlam_roi_pool_simple_trans
+  seed: 42
+
+data:
+  dataset: hf_bedlam
+  images_root_key: datasets.hf_bedlam_images_root
+  npz_root_key: datasets.hf_bedlam_npz_root
+  train_split: train
+  val_split: ""
+  sequence_length: 1
+  stride: 1
+  image_size: 518
+  max_humans: 20
+  require_boxes: true
+  require_smpl: true
+  require_depth: false
+  bbox_expand: 0.15
+  transl_add_cam_ext: true
+  skip_missing_images: true
+  max_npz_files: 0
+  max_frames: 0
+  num_workers: 24
+  pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 4
+
+model:
+  patch_size: 16
+  embed_dim: 1024
+  enable_camera: true
+  enable_depth: false
+  enable_alignment: false
+  enable_smpl: true
+  enable_hsi_refine: false
+  num_smpl_queries: 20
+  freeze_aggregator: true
+  freeze_camera_head: true
+  freeze_aggregator_forward: false
+  freeze_smpl_head: true
+  train_smpl_query_token: false
+  train_smpl_box_prior_embed: false
+  train_smpl_patch_pool_embed: false
+  train_smpl_translation_decode_heads: true
+  predict_boxes: true
+  smpl_bbox_mode: reference_residual
+  predict_id_embed: false
+  smpl_return_aux: true
+  smpl_query_box_prior: true
+  smpl_query_patch_pool: true
+  smpl_query_patch_pool_expand: 0.12
+  smpl_query_patch_pool_mode: box
+  smpl_track_assignment_mode: none
+  smpl_translation_output_mode: simple_ray_depth
+  smpl_translation_decode_hidden_dim: 512
+  smpl_translation_decode_max_log_depth_delta: 0.65
+  smpl_translation_decode_max_ray_delta_m: 0.0
+  smpl_translation_decode_max_tangent_offset_m: 0.45
+  smpl_translation_decode_human_height_prior_m: 1.70
+  smpl_enable_translation_refine: false
+  smpl_enable_temporal_translation: false
+  smpl_enable_post_track_temporal_translation: false
+  id_embed_dim: 256
+
+checkpoint:
+  resume: ""
+  load_vggt_baseline: true
+  strict: false
+  resume_strict: false
+  resume_adapt_query_tensors: true
+  resume_skip_prefixes:
+    - smpl_head.regression_head.translation_decode_heads.
+    - smpl_head.regression_head.translation_refiner.
+    - smpl_head.temporal_translation_refiner.
+  resume_optimizer: false
+  save_epoch_checkpoint: false
+  save_latest: true
+  save_final: true
+  save_top_k: 3
+  monitor: loss_total
+  monitor_mode: min
+
+optim:
+  batch_size: 24
+  epochs: 3
+  lr: 0.00003
+  weight_decay: 0.05
+  grad_clip_norm: 1.0
+  log_interval: 20
+  save_interval: 0
+  val_interval: 1
+  log_style: progress
+  progress_log_keys:
+    - loss_total
+    - loss_transl_cam
+    - loss_joints3d
+    - loss_projected_joints2d
+    - loss_transl_refine_ray_depth
+    - loss_transl_refine_tangent
+    - metric_transl_l2_mean
+    - metric_base_transl_l1
+    - metric_refined_transl_l1
+
+training_prior:
+  center_noise: 0.02
+  size_noise: 0.05
+  drop_prob: 0.00
+
+loss:
+  type: hungarian
+  pose_weight: 0.0
+  betas_weight: 0.0
+  transl_cam_weight: 3.0
+  joints3d_weight: 2.0
+  projected_joints2d_weight: 0.10
+  transl_refine_delta_reg_weight: 0.0
+  transl_refine_ray_depth_weight: 0.50
+  transl_refine_tangent_weight: 0.25
+  transl_hard_topk_weight: 0.0
+  transl_hard_severe_weight: 0.0
+  transl_hard_topk_fraction: 0.25
+  transl_hard_min_k: 1
+  transl_hard_error_threshold_m: 0.20
+  conf_weight: 0.0
+  conf_loss_type: focal
+  conf_focal_alpha: 0.25
+  conf_focal_gamma: 2.0
+  conf_target_type: matched_iou
+  conf_iou_min: 0.3
+  conf_iou_power: 1.0
+  duplicate_conf_weight: 0.0
+  duplicate_iou_threshold: 0.5
+  aux_weight: 0.0
+  aux_conf_weight: 0.0
+  aux_bbox_weight: 0.0
+  aux_giou_weight: 0.0
+  bbox_weight: 0.0
+  giou_weight: 0.0
+  projected_bbox_weight: 0.0
+  projected_giou_weight: 0.0
+  projected_bbox_source: joints
+  use_vggt_camera_projection: true
+  projection_camera_source: gt
+  id_weight: 0.0
+  id_temperature: 0.07
+
+matching:
+  enabled: true
+  cost_conf: 0.5
+  cost_bbox: 8.0
+  cost_giou: 4.0
+  cost_kpts: 0.0
