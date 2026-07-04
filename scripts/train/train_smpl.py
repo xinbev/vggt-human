@@ -197,6 +197,8 @@ def build_3dpw_loader(config: dict[str, Any], split: str, shuffle: bool) -> Data
         max_humans=int(data_cfg.get("max_humans", 2)),
         require_smpl=bool(data_cfg.get("require_smpl", True)),
         require_boxes=bool(data_cfg.get("require_boxes", True)),
+        sam2_patch_masks_root=resolve_optional_data_path(config, data_cfg, "sam2_patch_masks_root", "sam2_patch_masks_root_key"),
+        require_sam2_patch_masks=bool(data_cfg.get("require_sam2_patch_masks", False)),
     )
     dataset = maybe_subset_dataset(dataset, data_cfg, split)
     return DataLoader(
@@ -207,6 +209,21 @@ def build_3dpw_loader(config: dict[str, Any], split: str, shuffle: bool) -> Data
         drop_last=shuffle,
         **build_dataloader_runtime_kwargs(data_cfg),
     )
+
+
+def resolve_optional_data_path(
+    config: dict[str, Any],
+    data_cfg: dict[str, Any],
+    value_key: str,
+    path_key: str,
+) -> str:
+    value = str(data_cfg.get(value_key, "") or "").strip()
+    if value:
+        return value
+    key = str(data_cfg.get(path_key, "") or "").strip()
+    if not key:
+        return ""
+    return require_path(config, key, allow_empty=not bool(data_cfg.get("require_sam2_patch_masks", False)))
 
 
 def build_hf_bedlam_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoader:
@@ -416,6 +433,15 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
     smpl_head = getattr(model, "smpl_head", None)
     if smpl_head is not None and bool(model_cfg.get("freeze_smpl_head", False)):
         freeze_module(smpl_head)
+    if smpl_head is not None and bool(model_cfg.get("freeze_smpl_translation", False)):
+        regression_head = getattr(smpl_head, "regression_head", None)
+        for name in ("transl_cam_heads", "translation_decode_heads", "translation_refiner"):
+            module = getattr(regression_head, name, None) if regression_head is not None else None
+            if module is not None:
+                freeze_module(module)
+        temporal_translation_refiner = getattr(smpl_head, "temporal_translation_refiner", None)
+        if temporal_translation_refiner is not None:
+            freeze_module(temporal_translation_refiner)
     if smpl_head is not None and bool(model_cfg.get("train_smpl_translation_heads", False)):
         regression_head = getattr(smpl_head, "regression_head", None)
         transl_heads = getattr(regression_head, "transl_cam_heads", None)
@@ -1013,6 +1039,8 @@ def compact_loss_name(key: str) -> str:
         "metric_hsi_scene_log_scale_delta": "dLogS",
         "metric_hsi_scene_bias_delta": "dBias",
         "loss_transl_refine_delta_reg": "tDeltaReg",
+        "loss_local_joints3d": "localJ",
+        "loss_local_vertices": "localV",
         "loss_transl_refine_ray_depth": "rayD",
         "loss_transl_refine_tangent": "tan",
         "loss_transl_temporal_velocity": "tVel",

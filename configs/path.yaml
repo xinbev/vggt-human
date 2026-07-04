@@ -46,6 +46,7 @@ datasets:
   threedpw_hmr4d_support_root: "/home/zhw/xyb_space/3DPW/hmr4d_support"
   threedpw_root: "/home/zhw/xyb_space/3DPW"
   threedpw_smpl_base_root: "outputs/preprocess/3dpw_smpl_base"
+  threedpw_sam2_patch_masks_root: "outputs/preprocess/3dpw_sam2_patch_masks"
 
   # RGB frames extracted from the support videos by scripts/preprocess/extract_hmr4d_eval_frames.py.
   hmr4d_eval_frames_root: "outputs/preprocess/hmr4d_eval_frames"

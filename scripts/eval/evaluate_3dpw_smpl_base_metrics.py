@@ -157,7 +157,19 @@ def build_dataset(config: dict[str, Any], args: argparse.Namespace) -> ThreeDPWD
         max_humans=int(data_cfg.get("max_humans", 2)),
         require_boxes=True,
         require_smpl=True,
+        sam2_patch_masks_root=resolve_optional_data_path(config, data_cfg, "sam2_patch_masks_root", "sam2_patch_masks_root_key"),
+        require_sam2_patch_masks=bool(data_cfg.get("require_sam2_patch_masks", False)),
     )
+
+
+def resolve_optional_data_path(config: dict[str, Any], data_cfg: dict[str, Any], value_key: str, path_key: str) -> str:
+    value = str(data_cfg.get(value_key, "") or "").strip()
+    if value:
+        return value
+    key = str(data_cfg.get(path_key, "") or "").strip()
+    if not key:
+        return ""
+    return require_path(config, key, allow_empty=not bool(data_cfg.get("require_sam2_patch_masks", False)))
 
 
 def load_training_checkpoint(model: torch.nn.Module, checkpoint_path: Path, device: torch.device) -> None:

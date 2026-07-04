@@ -44,5 +44,8 @@ fi
 if [[ -n "${SUBSET_INDEX_COLUMN:-}" ]]; then
   ARGS+=(--subset-index-column "${SUBSET_INDEX_COLUMN}")
 fi
+if [[ -n "${SAM2_PATCH_MASKS_ROOT:-}" ]]; then
+  ARGS+=(--override "data.sam2_patch_masks_root=${SAM2_PATCH_MASKS_ROOT}")
+fi
 
 python scripts/eval/evaluate_3dpw_smpl_base_metrics.py "${ARGS[@]}"

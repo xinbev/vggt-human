@@ -36,6 +36,8 @@ class HungarianSMPLLoss(nn.Module):
         aux_bbox_weight: float | None = None,
         aux_giou_weight: float | None = None,
         joints3d_weight: float = 0.0,
+        local_joints3d_weight: float = 0.0,
+        local_vertices_weight: float = 0.0,
         projected_joints2d_weight: float = 0.0,
         transl_refine_delta_reg_weight: float = 0.0,
         transl_refine_ray_depth_weight: float = 0.0,
@@ -142,6 +144,8 @@ class HungarianSMPLLoss(nn.Module):
         self.aux_bbox_weight = bbox_weight if aux_bbox_weight is None else aux_bbox_weight
         self.aux_giou_weight = giou_weight if aux_giou_weight is None else aux_giou_weight
         self.joints3d_weight = joints3d_weight
+        self.local_joints3d_weight = local_joints3d_weight
+        self.local_vertices_weight = local_vertices_weight
         self.projected_joints2d_weight = projected_joints2d_weight
         self.transl_refine_delta_reg_weight = transl_refine_delta_reg_weight
         self.transl_refine_ray_depth_weight = transl_refine_ray_depth_weight
@@ -278,6 +282,8 @@ class HungarianSMPLLoss(nn.Module):
                     "loss_transl_cam": zero,
                     "loss_id": zero,
                     "loss_joints3d": zero,
+                    "loss_local_joints3d": zero,
+                    "loss_local_vertices": zero,
                     "loss_projected_joints2d": zero,
                     "loss_transl_refine_delta_reg": zero,
                     "loss_transl_refine_ray_depth": zero,
@@ -290,6 +296,8 @@ class HungarianSMPLLoss(nn.Module):
                     "loss_projected_bbox": zero,
                     "loss_projected_giou": zero,
                     "metric_joints3d_l1": zero.detach(),
+                    "metric_local_joints3d_l1": zero.detach(),
+                    "metric_local_vertices_l1": zero.detach(),
                     "metric_projected_joints2d_l1": zero.detach(),
                     "metric_transl_l2_mean": zero.detach(),
                     "metric_transl_l2_topk_mean": zero.detach(),
@@ -344,6 +352,7 @@ class HungarianSMPLLoss(nn.Module):
             losses["loss_id"] = self._identity_loss(flat_id_embed, frame_idx, src_idx, matched)
             joint_losses = self._smpl_joint_losses(predictions, batch, pred_betas, pred_transl_cam, frame_idx, src_idx, matched)
             losses.update(joint_losses)
+            losses.update(self._smpl_local_losses(predictions, pred_betas, frame_idx, src_idx, matched))
             losses.update(self._translation_refine_losses(predictions, pred_transl_cam, frame_idx, src_idx, matched))
             losses.update(self._translation_temporal_losses(predictions, batch, pred_transl_cam, frame_idx, src_idx, matched))
             projected = self._projected_bbox_losses(predictions, batch, pred_betas, pred_transl_cam, frame_idx, src_idx, target_boxes)
@@ -359,6 +368,8 @@ class HungarianSMPLLoss(nn.Module):
             + self.transl_cam_weight * losses["loss_transl_cam"]
             + self.id_weight * losses["loss_id"]
             + self.joints3d_weight * losses["loss_joints3d"]
+            + self.local_joints3d_weight * losses["loss_local_joints3d"]
+            + self.local_vertices_weight * losses["loss_local_vertices"]
             + self.projected_joints2d_weight * losses["loss_projected_joints2d"]
             + self.transl_refine_delta_reg_weight * losses["loss_transl_refine_delta_reg"]
             + self.transl_refine_ray_depth_weight * losses["loss_transl_refine_ray_depth"]
@@ -665,6 +676,55 @@ class HungarianSMPLLoss(nn.Module):
             "loss_projected_joints2d": projected_l1,
             "metric_joints3d_l1": joints3d_l1.detach(),
             "metric_projected_joints2d_l1": projected_l1.detach(),
+        }
+
+    def _smpl_local_losses(
+        self,
+        predictions: dict[str, torch.Tensor],
+        pred_betas: torch.Tensor,
+        frame_idx: torch.Tensor,
+        src_idx: torch.Tensor,
+        matched: dict[str, torch.Tensor],
+    ) -> dict[str, torch.Tensor]:
+        zero = pred_betas.sum() * 0.0
+        if self.local_joints3d_weight == 0.0 and self.local_vertices_weight == 0.0:
+            return {
+                "loss_local_joints3d": zero,
+                "loss_local_vertices": zero,
+                "metric_local_joints3d_l1": zero.detach(),
+                "metric_local_vertices_l1": zero.detach(),
+            }
+        if not self.smpl_model_dir:
+            raise ValueError("Local SMPL losses require loss.smpl_model_dir or assets.smpl_model_dir")
+        if "pred_poses" not in predictions:
+            raise ValueError("Local SMPL losses require model output pred_poses")
+
+        pred_poses = _flatten_prediction(_require_prediction(predictions, "pred_poses"), unframed_ndim=3)
+        pred_poses_matched = pred_poses[frame_idx, src_idx].reshape(-1, 72)
+        pred_betas_matched = pred_betas[frame_idx, src_idx]
+        gt_poses = rot6d_to_axis_angle(matched["pose_6d"].to(device=pred_betas.device, dtype=pred_betas.dtype)).reshape(-1, 72)
+        gt_betas = matched["betas"].to(device=pred_betas.device, dtype=pred_betas.dtype)
+
+        smpl = self._get_smpl_layer(pred_betas.device)
+        pred_vertices, pred_joints = smpl(pred_poses_matched.float(), pred_betas_matched.float())
+        gt_vertices, gt_joints = smpl(gt_poses.float(), gt_betas.float())
+        pred_joints = pred_joints[:, :24].to(dtype=pred_betas.dtype)
+        gt_joints = gt_joints[:, :24].to(dtype=pred_betas.dtype)
+        pred_vertices = pred_vertices.to(dtype=pred_betas.dtype)
+        gt_vertices = gt_vertices.to(dtype=pred_betas.dtype)
+        pred_root = pred_joints[:, :1]
+        gt_root = gt_joints[:, :1]
+        pred_joints_local = pred_joints - pred_root
+        gt_joints_local = gt_joints - gt_root
+        pred_vertices_local = pred_vertices - pred_root
+        gt_vertices_local = gt_vertices - gt_root
+        joints_l1 = F.l1_loss(pred_joints_local, gt_joints_local)
+        vertices_l1 = F.l1_loss(pred_vertices_local, gt_vertices_local)
+        return {
+            "loss_local_joints3d": joints_l1,
+            "loss_local_vertices": vertices_l1,
+            "metric_local_joints3d_l1": joints_l1.detach(),
+            "metric_local_vertices_l1": vertices_l1.detach(),
         }
 
     def _translation_hard_tail_losses(
