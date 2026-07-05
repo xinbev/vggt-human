@@ -1,0 +1,44 @@
+{
+  "root": "/home/zhw/xyb_space/3DPW",
+  "annotation_root": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/3dpw_smpl_base",
+  "output_root": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/3dpw_sam2_patch_masks",
+  "image_size": 518,
+  "patch_size": 16,
+  "mask_patch_threshold": 0.1,
+  "min_mask_patches": 4,
+  "splits": {
+    "train": {
+      "frames": 17642,
+      "persons": 22735,
+      "valid_masks": 22735,
+      "too_small_masks": 0,
+      "missing_boxes": 0,
+      "missing_images": 0,
+      "cache": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/3dpw_sam2_patch_masks/train.pkl",
+      "cache_frames": 17642,
+      "num_patches": 1024
+    },
+    "validation": {
+      "frames": 8345,
+      "persons": 10413,
+      "valid_masks": 10412,
+      "too_small_masks": 1,
+      "missing_boxes": 0,
+      "missing_images": 0,
+      "cache": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/3dpw_sam2_patch_masks/validation.pkl",
+      "cache_frames": 8345,
+      "num_patches": 1024
+    },
+    "test": {
+      "frames": 24547,
+      "persons": 35515,
+      "valid_masks": 35514,
+      "too_small_masks": 1,
+      "missing_boxes": 0,
+      "missing_images": 0,
+      "cache": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/3dpw_sam2_patch_masks/test.pkl",
+      "cache_frames": 24546,
+      "num_patches": 1024
+    }
+  }
+}
