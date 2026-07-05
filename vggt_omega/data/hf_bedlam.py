@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import pickle
 from pathlib import Path
 from typing import Any
 
@@ -56,6 +57,9 @@ class HFBedlamDataset(Dataset):
         skip_missing_images: bool = True,
         max_npz_files: int = 0,
         max_frames: int = 0,
+        sam2_patch_masks_root: str | Path | None = None,
+        sam2_patch_masks_split: str = "train",
+        require_sam2_patch_masks: bool = False,
     ) -> None:
         super().__init__()
         self.images_root = Path(images_root).expanduser()
@@ -71,6 +75,7 @@ class HFBedlamDataset(Dataset):
         self.skip_missing_images = bool(skip_missing_images)
         self.max_npz_files = int(max_npz_files)
         self.max_frames = int(max_frames)
+        self.require_sam2_patch_masks = bool(require_sam2_patch_masks)
         if self.sequence_length <= 0:
             raise ValueError(f"sequence_length must be positive, got {sequence_length}")
         if self.stride <= 0:
@@ -87,6 +92,11 @@ class HFBedlamDataset(Dataset):
             raise RuntimeError(f"No .npz annotation files found under {self.npz_root}")
 
         self._frames = self._build_frames()
+        self.sam2_patch_masks = _load_sam2_patch_masks(
+            sam2_patch_masks_root,
+            split=str(sam2_patch_masks_split or "train"),
+            require=self.require_sam2_patch_masks,
+        )
         self._sequences = self._build_sequence_index()
         self._index: list[tuple[int, int]] = []
         for seq_idx, (_, frame_ids) in enumerate(self._sequences):
@@ -112,6 +122,7 @@ class HFBedlamDataset(Dataset):
         images = []
         intrinsics = []
         persons_per_frame = []
+        patch_masks_per_frame = []
         for frame_id in selected:
             frame = self._frames[frame_id]
             image, orig_hw = _load_rgb_tensor(frame["image_path"], self.image_size)
@@ -120,8 +131,17 @@ class HFBedlamDataset(Dataset):
             intrinsics.append(_scale_intrinsics(_frame_intrinsics(data, frame["person_indices"][0], self.image_size), orig_hw, self.image_size))
             persons = [_load_person(data, person_idx, orig_hw, self.bbox_expand, self.transl_add_cam_ext) for person_idx in frame["person_indices"]]
             persons_per_frame.append(persons)
+            if self.sam2_patch_masks is not None:
+                patch_masks_per_frame.append(self.sam2_patch_masks["frames"].get(frame_id, {}))
 
-        targets = _build_targets(persons_per_frame, self.max_humans, self.require_boxes, self.require_smpl)
+        targets = _build_targets(
+            persons_per_frame,
+            self.max_humans,
+            self.require_boxes,
+            self.require_smpl,
+            patch_masks_per_frame if self.sam2_patch_masks is not None else None,
+            self.sam2_patch_masks["num_patches"] if self.sam2_patch_masks is not None else 0,
+        )
         intrinsics_tensor = torch.stack(intrinsics, dim=0)
         return {
             "images": torch.stack(images, dim=0),
@@ -465,6 +485,8 @@ def _build_targets(
     max_humans: int,
     require_boxes: bool,
     require_smpl: bool,
+    patch_masks_per_frame: list[dict[int, np.ndarray]] | None = None,
+    num_patches: int = 0,
 ) -> dict[str, torch.Tensor]:
     pose_frames = []
     beta_frames = []
@@ -476,7 +498,9 @@ def _build_targets(
     id_mask_frames = []
     source_frames = []
     quality_frames = []
-    for persons in persons_per_frame:
+    patch_mask_frames = []
+    patch_mask_valid_frames = []
+    for frame_idx, persons in enumerate(persons_per_frame):
         poses = torch.zeros(max_humans, 144, dtype=torch.float32)
         betas = torch.zeros(max_humans, 10, dtype=torch.float32)
         transl = torch.zeros(max_humans, 3, dtype=torch.float32)
@@ -487,6 +511,9 @@ def _build_targets(
         ids_mask = torch.zeros(max_humans, dtype=torch.bool)
         source = torch.full((max_humans,), 2, dtype=torch.long)
         quality = torch.zeros(max_humans, dtype=torch.float32)
+        patch_masks = torch.zeros(max_humans, int(num_patches), dtype=torch.bool) if num_patches > 0 else None
+        patch_masks_valid = torch.zeros(max_humans, dtype=torch.bool) if num_patches > 0 else None
+        frame_patch_masks = patch_masks_per_frame[frame_idx] if patch_masks_per_frame is not None else {}
         sorted_persons = sorted(persons, key=lambda item: float(np.asarray(item["transl_cam"]).reshape(3)[2]))
         for slot, person in enumerate(sorted_persons[:max_humans]):
             aa_22 = torch.as_tensor(person["pose_aa"], dtype=torch.float32).reshape(22, 3)
@@ -499,6 +526,11 @@ def _build_targets(
             ids[slot] = int(person.get("person_id", slot))
             ids_mask[slot] = True
             quality[slot] = 1.0
+            if patch_masks is not None and patch_masks_valid is not None:
+                mask = frame_patch_masks.get(int(ids[slot].item()))
+                if mask is not None:
+                    patch_masks[slot] = torch.as_tensor(mask, dtype=torch.bool).reshape(-1)
+                    patch_masks_valid[slot] = bool(patch_masks[slot].any())
             if person.get("bbox_valid", False) and person.get("bbox_cxcywh_norm") is not None:
                 boxes[slot] = torch.as_tensor(person["bbox_cxcywh_norm"], dtype=torch.float32).reshape(4).clamp(0.0, 1.0)
                 boxes_mask[slot] = True
@@ -516,10 +548,13 @@ def _build_targets(
         id_mask_frames.append(ids_mask)
         source_frames.append(source)
         quality_frames.append(quality)
+        if patch_masks is not None and patch_masks_valid is not None:
+            patch_mask_frames.append(patch_masks)
+            patch_mask_valid_frames.append(patch_masks_valid)
     track_ids = torch.stack(id_frames, dim=0)
     track_mask = torch.stack(id_mask_frames, dim=0)
     transl_cam = torch.stack(transl_frames, dim=0)
-    return {
+    out = {
         "gt_pose_6d": torch.stack(pose_frames, dim=0),
         "gt_betas": torch.stack(beta_frames, dim=0),
         "gt_transl_cam": transl_cam,
@@ -533,6 +568,46 @@ def _build_targets(
         "gt_track_mask": track_mask,
         "gt_track_source": torch.stack(source_frames, dim=0),
         "gt_track_quality": torch.stack(quality_frames, dim=0),
+    }
+    if patch_mask_frames:
+        out["smpl_query_patch_masks"] = torch.stack(patch_mask_frames, dim=0)
+        out["smpl_query_patch_masks_valid"] = torch.stack(patch_mask_valid_frames, dim=0)
+    return out
+
+
+def _load_sam2_patch_masks(root: str | Path | None, split: str, require: bool) -> dict[str, Any] | None:
+    if root is None or str(root).strip() == "":
+        if require:
+            raise ValueError("HF BEDLAM SAM2 patch masks are required but sam2_patch_masks_root is empty")
+        return None
+    root_path = Path(root).expanduser()
+    path = root_path / f"{split}.pkl"
+    if not path.is_file():
+        if require:
+            raise FileNotFoundError(f"HF BEDLAM SAM2 patch-mask cache not found: {path}")
+        return None
+    with path.open("rb") as file:
+        data = pickle.load(file)
+    if not isinstance(data, dict) or "frames" not in data:
+        raise TypeError(f"Invalid HF BEDLAM SAM2 patch-mask cache: {path}")
+    num_patches = int(data.get("num_patches", 0))
+    if num_patches <= 0:
+        raise ValueError(f"Invalid num_patches in SAM2 cache {path}: {num_patches}")
+    frames: dict[str, dict[int, np.ndarray]] = {}
+    for frame_key, packed_by_person in data["frames"].items():
+        frame_masks: dict[int, np.ndarray] = {}
+        if not isinstance(packed_by_person, dict):
+            continue
+        for raw_pid, item in packed_by_person.items():
+            if not isinstance(item, dict) or "bits" not in item:
+                continue
+            mask = np.unpackbits(np.asarray(item["bits"], dtype=np.uint8), count=num_patches).astype(np.bool_)
+            frame_masks[int(raw_pid)] = mask
+        frames[str(frame_key)] = frame_masks
+    return {
+        "num_patches": num_patches,
+        "frames": frames,
+        "path": str(path),
     }
 
 

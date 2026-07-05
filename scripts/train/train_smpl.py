@@ -242,6 +242,9 @@ def build_hf_bedlam_loader(config: dict[str, Any], split: str, shuffle: bool) ->
         skip_missing_images=bool(data_cfg.get("skip_missing_images", True)),
         max_npz_files=int(data_cfg.get("max_npz_files", 0) or 0),
         max_frames=int(data_cfg.get("max_frames", 0) or 0),
+        sam2_patch_masks_root=resolve_optional_data_path(config, data_cfg, "sam2_patch_masks_root", "sam2_patch_masks_root_key"),
+        sam2_patch_masks_split=str(data_cfg.get("sam2_patch_masks_split", split or "train")),
+        require_sam2_patch_masks=bool(data_cfg.get("require_sam2_patch_masks", False)),
     )
     dataset = maybe_subset_dataset(dataset, data_cfg, split)
     return DataLoader(

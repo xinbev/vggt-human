@@ -36,6 +36,7 @@ datasets:
   #   <hf_bedlam_npz_root>/<scene>.npz
   hf_bedlam_images_root: "/home/zhw/xyb_space/bedlam/hf_bedlam/training_images"
   hf_bedlam_npz_root: "/home/zhw/xyb_space/bedlam/all_npz_12_training"
+  hf_bedlam_sam2_patch_masks_root: "outputs/preprocess/hf_bedlam_sam2_patch_masks"
 
   # GVHMR/Human3R-style evaluation support files. Expected support layouts:
   #   <emdb_hmr4d_support_root>/emdb_vit_v4.pt

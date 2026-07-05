@@ -43,6 +43,9 @@ fi
 if [[ -n "${OUT_DIR:-}" ]]; then
   ARGS+=(--override "experiment.output_dir=${OUT_DIR}")
 fi
+if [[ -n "${SAM2_PATCH_MASKS_ROOT:-}" ]]; then
+  ARGS+=(--override "data.sam2_patch_masks_root=${SAM2_PATCH_MASKS_ROOT}")
+fi
 if [[ -n "${RESUME:-}" ]]; then
   ARGS+=(--override "checkpoint.resume=${RESUME}")
 fi
