@@ -1,0 +1,56 @@
+{
+  "purpose": "Paper-figure PLY elements for HSI 24 body anchors and camera-to-depth projection.",
+  "image": "/home/zhw/lab_users/xyb/home/projects/vggt-human/assets/image/f2/f2.jpg",
+  "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_translation_ray_refine_full_from0121/merged_hsi_translation/checkpoint_latest.pt",
+  "requested_depth_source": "hsi",
+  "actual_depth_source": "hsi",
+  "depth_colormap": "teal-blue-green",
+  "projection_point_color": "bright yellow",
+  "camera_style": "classic CV frustum pyramid",
+  "num_people": 2,
+  "people": [
+    {
+      "query_index": 0,
+      "num_anchors": 24,
+      "valid_projected_anchors": 23,
+      "anchor_schema": {
+        "0_20": "SMPL joints 1:22, non-root body joints",
+        "21": "left hand center",
+        "22": "right hand center",
+        "23": "full body center"
+      }
+    },
+    {
+      "query_index": 1,
+      "num_anchors": 24,
+      "valid_projected_anchors": 23,
+      "anchor_schema": {
+        "0_20": "SMPL joints 1:22, non-root body joints",
+        "21": "left hand center",
+        "22": "right hand center",
+        "23": "full body center"
+      }
+    }
+  ],
+  "files": [
+    "00_camera_frustum.ply",
+    "00_depth_surface_hsi_teal.ply",
+    "01_person0_q0_smpl_only.ply",
+    "01_person0_q0_24anchors_only.ply",
+    "01_person0_q0_smpl_24anchors.ply",
+    "02_person0_q0_projection_links_yellow_points_only.ply",
+    "02_person0_q0_camera_person_depth_projection.ply",
+    "01_person1_q1_smpl_only.ply",
+    "01_person1_q1_24anchors_only.ply",
+    "01_person1_q1_smpl_24anchors.ply",
+    "02_person1_q1_projection_links_yellow_points_only.ply",
+    "02_person1_q1_camera_person_depth_projection.ply",
+    "03_hsi_anchor_projection_collection.ply"
+  ],
+  "notes": [
+    "All PLY files use the same camera-space coordinate system for manual composition.",
+    "Depth surface is colored by a teal/blue-green depth colormap, not RGB texture.",
+    "Yellow spheres are the anchor-corresponding depth samples after projection.",
+    "The *_only.ply files are layer-only exports for manual figure assembly."
+  ]
+}
