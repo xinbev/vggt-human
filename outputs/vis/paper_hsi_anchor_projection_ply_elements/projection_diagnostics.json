@@ -1,0 +1,182 @@
+{
+  "meaning": "Distance between SMPL anchors and depth samples along the same projected camera rays.",
+  "interpretation": {
+    "base_raw": "Closest to the actual HSI tokenization step: base SMPL anchors sample raw VGGT depth.",
+    "base_hsi": "Current default paper-depth visualization if --smpl-stage=base and --depth-source=hsi.",
+    "refined_hsi": "Expected best alignment after HSI refines SMPL and applies scene affine depth."
+  },
+  "queries": {
+    "0": {
+      "base_raw": {
+        "valid_projected_anchors": 23,
+        "mean_l2_m": 3.1071770191192627,
+        "median_l2_m": 3.022724151611328,
+        "max_l2_m": 3.8148653507232666,
+        "mean_abs_depth_delta_m": 3.0758986473083496,
+        "median_abs_depth_delta_m": 3.0122852325439453,
+        "mean_signed_depth_delta_m": -3.0758986473083496,
+        "projected_depth_uv_min": [
+          238.506591796875,
+          12.514162063598633
+        ],
+        "projected_depth_uv_max": [
+          381.8849792480469,
+          502.7361145019531
+        ],
+        "depth_hw": [
+          512,
+          512
+        ]
+      },
+      "base_hsi": {
+        "valid_projected_anchors": 23,
+        "mean_l2_m": 1.6133979558944702,
+        "median_l2_m": 1.5995910167694092,
+        "max_l2_m": 2.15934419631958,
+        "mean_abs_depth_delta_m": 1.5965054035186768,
+        "median_abs_depth_delta_m": 1.56925630569458,
+        "mean_signed_depth_delta_m": 1.2241184711456299,
+        "projected_depth_uv_min": [
+          238.506591796875,
+          12.514162063598633
+        ],
+        "projected_depth_uv_max": [
+          381.8849792480469,
+          502.7361145019531
+        ],
+        "depth_hw": [
+          512,
+          512
+        ]
+      },
+      "refined_raw": {
+        "valid_projected_anchors": 24,
+        "mean_l2_m": 3.138766288757324,
+        "median_l2_m": 3.0290367603302,
+        "max_l2_m": 3.8093507289886475,
+        "mean_abs_depth_delta_m": 3.1049435138702393,
+        "median_abs_depth_delta_m": 3.0231242179870605,
+        "mean_signed_depth_delta_m": -3.1049435138702393,
+        "projected_depth_uv_min": [
+          240.33531188964844,
+          12.489864349365234
+        ],
+        "projected_depth_uv_max": [
+          383.7913513183594,
+          510.6203918457031
+        ],
+        "depth_hw": [
+          512,
+          512
+        ]
+      },
+      "refined_hsi": {
+        "valid_projected_anchors": 24,
+        "mean_l2_m": 1.6000856161117554,
+        "median_l2_m": 1.5781267881393433,
+        "max_l2_m": 2.151319980621338,
+        "mean_abs_depth_delta_m": 1.5823712348937988,
+        "median_abs_depth_delta_m": 1.547481894493103,
+        "mean_signed_depth_delta_m": 1.1004239320755005,
+        "projected_depth_uv_min": [
+          240.33531188964844,
+          12.489864349365234
+        ],
+        "projected_depth_uv_max": [
+          383.7913513183594,
+          510.6203918457031
+        ],
+        "depth_hw": [
+          512,
+          512
+        ]
+      }
+    },
+    "1": {
+      "base_raw": {
+        "valid_projected_anchors": 23,
+        "mean_l2_m": 3.307046890258789,
+        "median_l2_m": 3.281870126724243,
+        "max_l2_m": 3.9988412857055664,
+        "mean_abs_depth_delta_m": 3.2468421459198,
+        "median_abs_depth_delta_m": 3.222816228866577,
+        "mean_signed_depth_delta_m": -3.2468421459198,
+        "projected_depth_uv_min": [
+          79.50276184082031,
+          52.10946273803711
+        ],
+        "projected_depth_uv_max": [
+          184.7021026611328,
+          492.2094421386719
+        ],
+        "depth_hw": [
+          512,
+          512
+        ]
+      },
+      "base_hsi": {
+        "valid_projected_anchors": 23,
+        "mean_l2_m": 1.8508552312850952,
+        "median_l2_m": 2.3128674030303955,
+        "max_l2_m": 2.9101502895355225,
+        "mean_abs_depth_delta_m": 1.8184548616409302,
+        "median_abs_depth_delta_m": 2.2913737297058105,
+        "mean_signed_depth_delta_m": 1.5487704277038574,
+        "projected_depth_uv_min": [
+          79.50276184082031,
+          52.10946273803711
+        ],
+        "projected_depth_uv_max": [
+          184.7021026611328,
+          492.2094421386719
+        ],
+        "depth_hw": [
+          512,
+          512
+        ]
+      },
+      "refined_raw": {
+        "valid_projected_anchors": 22,
+        "mean_l2_m": 3.2668838500976562,
+        "median_l2_m": 3.137885570526123,
+        "max_l2_m": 3.8804073333740234,
+        "mean_abs_depth_delta_m": 3.196726083755493,
+        "median_abs_depth_delta_m": 3.082561492919922,
+        "mean_signed_depth_delta_m": -3.196726083755493,
+        "projected_depth_uv_min": [
+          56.15679168701172,
+          66.46730041503906
+        ],
+        "projected_depth_uv_max": [
+          163.79335021972656,
+          509.2720031738281
+        ],
+        "depth_hw": [
+          512,
+          512
+        ]
+      },
+      "refined_hsi": {
+        "valid_projected_anchors": 22,
+        "mean_l2_m": 1.8812092542648315,
+        "median_l2_m": 2.336010217666626,
+        "max_l2_m": 3.005527973175049,
+        "mean_abs_depth_delta_m": 1.8449406623840332,
+        "median_abs_depth_delta_m": 2.295907735824585,
+        "mean_signed_depth_delta_m": 1.500630259513855,
+        "projected_depth_uv_min": [
+          56.15679168701172,
+          66.46730041503906
+        ],
+        "projected_depth_uv_max": [
+          163.79335021972656,
+          509.2720031738281
+        ],
+        "depth_hw": [
+          512,
+          512
+        ]
+      }
+    }
+  }
+}
