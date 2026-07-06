@@ -1,12 +1,12 @@
 {
   "purpose": "Paper-figure PLY elements for HSI 24 body anchors and camera-to-depth projection.",
   "image": "/home/zhw/lab_users/xyb/home/projects/vggt-human/assets/image/f2/f2.jpg",
-  "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_translation_ray_refine_full_from0121/merged_hsi_translation/checkpoint_latest.pt",
+  "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_after_translation_ray_refine/checkpoint_latest.pt",
   "requested_depth_source": "hsi",
   "actual_depth_source": "hsi",
-  "requested_smpl_stage": "refined",
-  "actual_smpl_stage": "refined",
-  "depth_colormap": "teal-blue-green",
+  "requested_smpl_stage": "base",
+  "actual_smpl_stage": "base",
+  "depth_colormap": "turbo",
   "projection_point_color": "bright yellow",
   "camera_style": "classic CV frustum pyramid",
   "num_people": 2,
@@ -14,23 +14,31 @@
     {
       "query_index": 0,
       "num_anchors": 24,
-      "valid_projected_anchors": 24,
+      "valid_projected_anchors": 23,
       "anchor_schema": {
         "0_20": "SMPL joints 1:22, non-root body joints",
         "21": "left hand center",
         "22": "right hand center",
         "23": "full body center"
+      },
+      "mask_depth_samples": {
+        "file": "mask_depth_samples_person0_q0.json",
+        "num_points": 24
       }
     },
     {
       "query_index": 1,
       "num_anchors": 24,
-      "valid_projected_anchors": 22,
+      "valid_projected_anchors": 23,
       "anchor_schema": {
         "0_20": "SMPL joints 1:22, non-root body joints",
         "21": "left hand center",
         "22": "right hand center",
         "23": "full body center"
+      },
+      "mask_depth_samples": {
+        "file": "mask_depth_samples_person1_q1.json",
+        "num_points": 24
       }
     }
   ],
@@ -66,12 +74,12 @@
         },
         "base_hsi": {
           "valid_projected_anchors": 23,
-          "mean_l2_m": 1.6133979558944702,
-          "median_l2_m": 1.5995910167694092,
-          "max_l2_m": 2.15934419631958,
-          "mean_abs_depth_delta_m": 1.5965054035186768,
-          "median_abs_depth_delta_m": 1.56925630569458,
-          "mean_signed_depth_delta_m": 1.2241184711456299,
+          "mean_l2_m": 1.4108811616897583,
+          "median_l2_m": 1.560959815979004,
+          "max_l2_m": 1.8864535093307495,
+          "mean_abs_depth_delta_m": 1.3955934047698975,
+          "median_abs_depth_delta_m": 1.5493547916412354,
+          "mean_signed_depth_delta_m": 0.9867247939109802,
           "projected_depth_uv_min": [
             238.506591796875,
             12.514162063598633
@@ -87,19 +95,19 @@
         },
         "refined_raw": {
           "valid_projected_anchors": 24,
-          "mean_l2_m": 3.138766288757324,
-          "median_l2_m": 3.0290367603302,
-          "max_l2_m": 3.8093507289886475,
-          "mean_abs_depth_delta_m": 3.1049435138702393,
-          "median_abs_depth_delta_m": 3.0231242179870605,
-          "mean_signed_depth_delta_m": -3.1049435138702393,
+          "mean_l2_m": 3.1347148418426514,
+          "median_l2_m": 3.019040107727051,
+          "max_l2_m": 3.8475332260131836,
+          "mean_abs_depth_delta_m": 3.1015167236328125,
+          "median_abs_depth_delta_m": 2.986147403717041,
+          "mean_signed_depth_delta_m": -3.1015167236328125,
           "projected_depth_uv_min": [
-            240.33531188964844,
-            12.489864349365234
+            236.13851928710938,
+            10.398391723632812
           ],
           "projected_depth_uv_max": [
-            383.7913513183594,
-            510.6203918457031
+            379.3294372558594,
+            509.19171142578125
           ],
           "depth_hw": [
             512,
@@ -108,19 +116,19 @@
         },
         "refined_hsi": {
           "valid_projected_anchors": 24,
-          "mean_l2_m": 1.6000856161117554,
-          "median_l2_m": 1.5781267881393433,
-          "max_l2_m": 2.151319980621338,
-          "mean_abs_depth_delta_m": 1.5823712348937988,
-          "median_abs_depth_delta_m": 1.547481894493103,
-          "mean_signed_depth_delta_m": 1.1004239320755005,
+          "mean_l2_m": 1.4583759307861328,
+          "median_l2_m": 1.6002421379089355,
+          "max_l2_m": 1.9048988819122314,
+          "mean_abs_depth_delta_m": 1.4420872926712036,
+          "median_abs_depth_delta_m": 1.5750623941421509,
+          "mean_signed_depth_delta_m": 0.9116366505622864,
           "projected_depth_uv_min": [
-            240.33531188964844,
-            12.489864349365234
+            236.13851928710938,
+            10.398391723632812
           ],
           "projected_depth_uv_max": [
-            383.7913513183594,
-            510.6203918457031
+            379.3294372558594,
+            509.19171142578125
           ],
           "depth_hw": [
             512,
@@ -152,12 +160,12 @@
         },
         "base_hsi": {
           "valid_projected_anchors": 23,
-          "mean_l2_m": 1.8508552312850952,
-          "median_l2_m": 2.3128674030303955,
-          "max_l2_m": 2.9101502895355225,
-          "mean_abs_depth_delta_m": 1.8184548616409302,
-          "median_abs_depth_delta_m": 2.2913737297058105,
-          "mean_signed_depth_delta_m": 1.5487704277038574,
+          "mean_l2_m": 1.6657426357269287,
+          "median_l2_m": 2.012925148010254,
+          "max_l2_m": 2.602323532104492,
+          "mean_abs_depth_delta_m": 1.6365547180175781,
+          "median_abs_depth_delta_m": 1.9942188262939453,
+          "mean_signed_depth_delta_m": 1.2883762121200562,
           "projected_depth_uv_min": [
             79.50276184082031,
             52.10946273803711
@@ -173,19 +181,19 @@
         },
         "refined_raw": {
           "valid_projected_anchors": 22,
-          "mean_l2_m": 3.2668838500976562,
-          "median_l2_m": 3.137885570526123,
-          "max_l2_m": 3.8804073333740234,
-          "mean_abs_depth_delta_m": 3.196726083755493,
-          "median_abs_depth_delta_m": 3.082561492919922,
-          "mean_signed_depth_delta_m": -3.196726083755493,
+          "mean_l2_m": 3.241848945617676,
+          "median_l2_m": 3.138296127319336,
+          "max_l2_m": 3.853214740753174,
+          "mean_abs_depth_delta_m": 3.169123649597168,
+          "median_abs_depth_delta_m": 3.0830249786376953,
+          "mean_signed_depth_delta_m": -3.169123649597168,
           "projected_depth_uv_min": [
-            56.15679168701172,
-            66.46730041503906
+            53.134063720703125,
+            64.98939514160156
           ],
           "projected_depth_uv_max": [
-            163.79335021972656,
-            509.2720031738281
+            159.17999267578125,
+            504.8256530761719
           ],
           "depth_hw": [
             512,
@@ -194,19 +202,19 @@
         },
         "refined_hsi": {
           "valid_projected_anchors": 22,
-          "mean_l2_m": 1.8812092542648315,
-          "median_l2_m": 2.336010217666626,
-          "max_l2_m": 3.005527973175049,
-          "mean_abs_depth_delta_m": 1.8449406623840332,
-          "median_abs_depth_delta_m": 2.295907735824585,
-          "mean_signed_depth_delta_m": 1.500630259513855,
+          "mean_l2_m": 1.7256455421447754,
+          "median_l2_m": 2.056044101715088,
+          "max_l2_m": 2.688136577606201,
+          "mean_abs_depth_delta_m": 1.6907035112380981,
+          "median_abs_depth_delta_m": 2.0185306072235107,
+          "mean_signed_depth_delta_m": 1.371782660484314,
           "projected_depth_uv_min": [
-            56.15679168701172,
-            66.46730041503906
+            53.134063720703125,
+            64.98939514160156
           ],
           "projected_depth_uv_max": [
-            163.79335021972656,
-            509.2720031738281
+            159.17999267578125,
+            504.8256530761719
           ],
           "depth_hw": [
             512,
@@ -218,23 +226,31 @@
   },
   "files": [
     "00_camera_frustum.ply",
-    "00_depth_surface_hsi_teal.ply",
+    "00_depth_surface_hsi_turbo.ply",
     "01_person0_q0_smpl_only.ply",
     "01_person0_q0_24anchors_only.ply",
     "01_person0_q0_smpl_24anchors.ply",
     "02_person0_q0_projection_links_yellow_points_only.ply",
     "02_person0_q0_camera_person_depth_projection.ply",
+    "02_person0_q0_mask_depth_samples_yellow_only.ply",
+    "02_person0_q0_camera_depth_mask_samples.ply",
+    "mask_depth_samples_person0_q0.json",
     "01_person1_q1_smpl_only.ply",
     "01_person1_q1_24anchors_only.ply",
     "01_person1_q1_smpl_24anchors.ply",
     "02_person1_q1_projection_links_yellow_points_only.ply",
     "02_person1_q1_camera_person_depth_projection.ply",
-    "03_hsi_anchor_projection_collection.ply"
+    "02_person1_q1_mask_depth_samples_yellow_only.ply",
+    "02_person1_q1_camera_depth_mask_samples.ply",
+    "mask_depth_samples_person1_q1.json",
+    "03_hsi_anchor_projection_collection.ply",
+    "03_hsi_mask_depth_sampling_collection.ply"
   ],
   "notes": [
     "All PLY files use the same camera-space coordinate system for manual composition.",
-    "Depth surface is colored by a teal/blue-green depth colormap, not RGB texture.",
+    "Depth surface is colored by a heatmap depth colormap, not RGB texture.",
     "Yellow spheres are the anchor-corresponding depth samples after projection.",
+    "The mask-depth sample PLYs use SAM2 person masks to sample real depth points for paper visualization when SMPL projection is unreliable.",
     "The *_only.ply files are layer-only exports for manual figure assembly."
   ]
 }
