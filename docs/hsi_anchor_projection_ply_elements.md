@@ -102,6 +102,7 @@ AUTO_TOP_K=2 \
 DEPTH_SOURCE=hsi \
 SMPL_STAGE=base \
 DEPTH_COLORMAP=turbo \
+DEPTH_SURFACE_COLOR=rgb \
 MASK_DEPTH_SAMPLES=24 \
 DEPTH_UPSAMPLE=2 \
 DEPTH_STRIDE=4 \
@@ -113,10 +114,11 @@ Depth sample fallback:
 ```bash
 MASK_DEPTH_SAMPLES=24 \
 DEPTH_COLORMAP=turbo \
+DEPTH_SURFACE_COLOR=rgb \
 bash scripts/vis/create_hsi_anchor_projection_ply_elements.sh
 ```
 
-This creates yellow points directly from each selected person's SAM2 mask:
+This creates green points directly from each selected person's SAM2 mask:
 resize the per-person mask to the dense-depth grid, keep valid depth pixels
 inside that mask, choose spatially spread pixels by farthest-point sampling,
 then unproject those pixels to camera-space xyz. This is a data-derived visual
@@ -161,11 +163,19 @@ Classic CV camera frustum: a small camera body at the camera origin and four
 rays forming the image-plane pyramid.
 
 ```text
-00_depth_surface_hsi_turbo.ply
+00_depth_surface_hsi_rgb.ply
 ```
 
 Environment depth surface from HSI-adjusted depth by default. The surface uses
-a standard heatmap-style depth colormap, not RGB texture colors. The default
+the resized input RGB image as vertex colors, which usually reads more naturally
+in a paper figure than a synthetic heatmap. Set `DEPTH_SURFACE_COLOR=colormap`
+to instead export a heatmap-colored PLY.
+
+```text
+00_depth_map_hsi_turbo.png
+```
+
+Standalone dense-depth image using the selected heatmap colormap. The default
 wrapper uses `DEPTH_COLORMAP=turbo`; supported values are `turbo`, `inferno`,
 `magma`, `viridis`, and `teal`.
 
@@ -203,24 +213,31 @@ and depth surface manually.
 02_person*_q*_camera_person_depth_projection.ply
 ```
 
-Camera frustum, heatmap depth surface, base SMPL, 24 anchors, projection links, and
+Camera frustum, RGB-colored depth surface, base SMPL, 24 anchors, projection links, and
 yellow projected depth points for one person.
 
 ```text
-02_person*_q*_mask_depth_samples_yellow_only.ply
+02_person*_q*_mask_depth_samples_green_only.ply
 ```
 
-Yellow depth samples selected directly from the SAM2 person mask. These points
+Green depth samples selected directly from the SAM2 person mask. These points
 are data-derived from the real mask and real depth, but they do not depend on
 the current SMPL projection. Use this layer for paper visualization when the
 current SMPL camera geometry is known to be misaligned.
 
 ```text
-02_person*_q*_camera_depth_mask_samples.ply
+02_person*_q*_camera_depth_mask_samples_green.ply
 ```
 
-Camera frustum, heatmap depth surface, and mask-derived yellow depth samples for
+Camera frustum, RGB-colored depth surface, and mask-derived green depth samples for
 one person.
+
+```text
+02_person*_q*_mask_depth_samples_9patch_rgb.png
+```
+
+Image-space patch-token material: resized RGB input, patch grid, green sampled
+depth points, and the union of each point's surrounding 3x3 patch window.
 
 Combined layer:
 
@@ -235,7 +252,7 @@ camera-space coordinate system.
 03_hsi_mask_depth_sampling_collection.ply
 ```
 
-Shared camera, shared heatmap depth surface, and the mask-derived yellow depth
+Shared camera, shared RGB-colored depth surface, and the mask-derived green depth
 samples for all selected people. This is the cleanest "data-derived visual
 effect" fallback while SMPL projection alignment is under investigation.
 
@@ -260,7 +277,7 @@ file to inspect when yellow projected points look detached from the person.
 mask_depth_samples_person*_q*.json
 ```
 
-The numeric source for `*_mask_depth_samples_yellow_only.ply`: sampled depth-grid
+The numeric source for `*_mask_depth_samples_green_only.ply`: sampled depth-grid
 uv, model-input uv, depth values, and unprojected camera-space xyz.
 
 ## Coordinate Notes

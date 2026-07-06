@@ -11,6 +11,7 @@ from typing import Any
 
 import numpy as np
 import torch
+from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -48,6 +49,8 @@ COLOR = {
     "anchor_body": (26, 166, 166),
     "projection": (255, 218, 58),
     "projection_line": (244, 190, 40),
+    "sample_gt": (34, 197, 94),
+    "patch_grid": (148, 163, 184),
 }
 
 
@@ -80,6 +83,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--depth-source", choices=("hsi", "raw"), default="hsi")
     parser.add_argument("--smpl-stage", choices=("base", "refined"), default="base")
     parser.add_argument("--depth-colormap", choices=("turbo", "inferno", "magma", "viridis", "teal"), default="turbo")
+    parser.add_argument("--depth-surface-color", choices=("rgb", "colormap"), default="rgb")
     parser.add_argument("--depth-upsample", type=int, default=2)
     parser.add_argument("--depth-stride", type=int, default=4)
     parser.add_argument("--max-scene-depth", type=float, default=30.0)
@@ -108,7 +112,8 @@ def main() -> None:
     load_training_checkpoint(model, checkpoint, device)
     model.eval()
 
-    image_tensor, _original_image = load_image(image_path, input_size)
+    image_tensor, original_image = load_image(image_path, input_size)
+    rgb_input = original_image.resize((input_size, input_size), Image.BILINEAR).convert("RGB")
     with torch.no_grad():
         predictions = model(
             image_tensor.to(device),
@@ -137,6 +142,8 @@ def main() -> None:
         stride=max(int(args.depth_stride), 1),
         max_depth=float(args.max_scene_depth),
         colormap=args.depth_colormap,
+        rgb=rgb_input,
+        color_source=args.depth_surface_color,
     )
     camera_mesh = MeshBuilder()
     add_camera_frustum(camera_mesh, probe["intrinsics"], input_size, camera_depth, scale)
@@ -146,9 +153,15 @@ def main() -> None:
     camera_mesh.write(camera_path)
     files.append(camera_path.name)
 
-    depth_path = output_dir / f"00_depth_surface_{actual_depth_source}_{args.depth_colormap}.ply"
+    depth_suffix = "rgb" if args.depth_surface_color == "rgb" else args.depth_colormap
+    depth_path = output_dir / f"00_depth_surface_{actual_depth_source}_{depth_suffix}.ply"
     depth_mesh.write(depth_path)
     files.append(depth_path.name)
+
+    depth_png = depth_to_rgba_image(probe[depth_key][0, 0], args.depth_colormap)
+    depth_png_path = output_dir / f"00_depth_map_{actual_depth_source}_{args.depth_colormap}.png"
+    depth_png.save(depth_png_path)
+    files.append(depth_png_path.name)
 
     collection = MeshBuilder()
     collection.merge(camera_mesh)
@@ -200,8 +213,8 @@ def main() -> None:
                 num_points=int(args.mask_depth_samples),
             )
             if mask_samples["points"].size:
-                mask_samples_mesh = build_depth_sample_component(mask_samples["points"], radius)
-                mask_samples_path = output_dir / f"02_{person_prefix}_mask_depth_samples_yellow_only.ply"
+                mask_samples_mesh = build_depth_sample_component(mask_samples["points"], radius, COLOR["sample_gt"])
+                mask_samples_path = output_dir / f"02_{person_prefix}_mask_depth_samples_green_only.ply"
                 mask_samples_mesh.write(mask_samples_path)
                 files.append(mask_samples_path.name)
 
@@ -209,11 +222,21 @@ def main() -> None:
                 mask_samples_scene.merge(camera_mesh)
                 mask_samples_scene.merge(depth_mesh)
                 mask_samples_scene.merge(mask_samples_mesh)
-                mask_samples_scene_path = output_dir / f"02_{person_prefix}_camera_depth_mask_samples.ply"
+                mask_samples_scene_path = output_dir / f"02_{person_prefix}_camera_depth_mask_samples_green.ply"
                 mask_samples_scene.write(mask_samples_scene_path)
                 files.append(mask_samples_scene_path.name)
 
                 visual_collection.merge(mask_samples_mesh)
+                patch_png = create_mask_sample_patch_png(
+                    rgb_input=rgb_input,
+                    samples=mask_samples,
+                    patch_size=patch_size,
+                    grid_hw=tuple(int(v) for v in probe["patch_grid_hw"].detach().cpu().tolist()),
+                )
+                patch_png_path = output_dir / f"02_{person_prefix}_mask_depth_samples_9patch_rgb.png"
+                patch_png.save(patch_png_path)
+                files.append(patch_png_path.name)
+
                 mask_samples_meta = write_mask_sample_json(output_dir / f"mask_depth_samples_{person_prefix}.json", mask_samples)
                 files.append(f"mask_depth_samples_{person_prefix}.json")
 
@@ -238,7 +261,9 @@ def main() -> None:
         "requested_smpl_stage": args.smpl_stage,
         "actual_smpl_stage": actual_smpl_stage,
         "depth_colormap": args.depth_colormap,
+        "depth_surface_color": args.depth_surface_color,
         "projection_point_color": "bright yellow",
+        "mask_depth_sample_color": "green",
         "camera_style": "classic CV frustum pyramid",
         "num_people": len(selected),
         "people": people_meta,
@@ -246,9 +271,10 @@ def main() -> None:
         "files": files,
         "notes": [
             "All PLY files use the same camera-space coordinate system for manual composition.",
-            "Depth surface is colored by a heatmap depth colormap, not RGB texture.",
+            "Depth surface is colored by resized input RGB by default; set --depth-surface-color colormap for heatmap PLY.",
             "Yellow spheres are the anchor-corresponding depth samples after projection.",
-            "The mask-depth sample PLYs use SAM2 person masks to sample real depth points for paper visualization when SMPL projection is unreliable.",
+            "Green spheres use SAM2 person masks to sample real depth points for paper visualization when SMPL projection is unreliable.",
+            "The 9patch PNG files show the 3x3 patch-token neighborhoods around mask-depth sample points.",
             "The *_only.ply files are layer-only exports for manual figure assembly.",
         ],
     }
@@ -517,11 +543,65 @@ def farthest_sample_pixels(coords_xy: np.ndarray, count: int, width: int, height
     return coords_xy[np.asarray(selected, dtype=np.int64)]
 
 
-def build_depth_sample_component(points: np.ndarray, radius: float) -> MeshBuilder:
+def build_depth_sample_component(points: np.ndarray, radius: float, color: tuple[int, int, int]) -> MeshBuilder:
     mesh = MeshBuilder()
     for point in np.asarray(points, dtype=np.float32).reshape(-1, 3):
-        add_uv_sphere(mesh, point, radius * 0.85, COLOR["projection"], rings=8, segments=14)
+        add_uv_sphere(mesh, point, radius * 0.85, color, rings=8, segments=14)
     return mesh
+
+
+def create_mask_sample_patch_png(
+    rgb_input: Image.Image,
+    samples: dict[str, np.ndarray],
+    patch_size: int,
+    grid_hw: tuple[int, int],
+) -> Image.Image:
+    out = rgb_input.convert("RGBA")
+    overlay = Image.new("RGBA", out.size, (255, 255, 255, 0))
+    draw = ImageDraw.Draw(overlay, "RGBA")
+    width, height = out.size
+    grid_h, grid_w = grid_hw
+    cell_w = float(width) / max(float(grid_w), 1.0)
+    cell_h = float(height) / max(float(grid_h), 1.0)
+    del patch_size
+
+    for col in range(grid_w + 1):
+        x = col * cell_w
+        draw.line([(x, 0), (x, height)], fill=(*COLOR["patch_grid"], 72), width=1)
+    for row in range(grid_h + 1):
+        y = row * cell_h
+        draw.line([(0, y), (width, y)], fill=(*COLOR["patch_grid"], 72), width=1)
+
+    uv_input = np.asarray(samples["uv_input"], dtype=np.float32).reshape(-1, 2)
+    highlighted: set[tuple[int, int]] = set()
+    for u, v in uv_input:
+        center_col = int(np.floor(float(u) / max(cell_w, 1e-6)))
+        center_row = int(np.floor(float(v) / max(cell_h, 1e-6)))
+        center_col = max(0, min(grid_w - 1, center_col))
+        center_row = max(0, min(grid_h - 1, center_row))
+        for row in range(max(0, center_row - 1), min(grid_h, center_row + 2)):
+            for col in range(max(0, center_col - 1), min(grid_w, center_col + 2)):
+                highlighted.add((row, col))
+
+    for row, col in sorted(highlighted):
+        rect = [col * cell_w, row * cell_h, (col + 1) * cell_w, (row + 1) * cell_h]
+        draw.rectangle(rect, fill=(*COLOR["sample_gt"], 54), outline=(*COLOR["sample_gt"], 180), width=2)
+
+    for u, v in uv_input:
+        draw_dot_2d(draw, (float(u), float(v)), COLOR["sample_gt"], radius=5, alpha=245)
+    out.alpha_composite(overlay)
+    return out
+
+
+def draw_dot_2d(
+    draw: ImageDraw.ImageDraw,
+    xy: tuple[float, float],
+    color: tuple[int, int, int],
+    radius: int,
+    alpha: int,
+) -> None:
+    x, y = xy
+    draw.ellipse([x - radius, y - radius, x + radius, y + radius], fill=(*color, alpha), outline=(255, 255, 255, 230), width=2)
 
 
 def write_mask_sample_json(path: Path, samples: dict[str, np.ndarray]) -> dict[str, Any]:
@@ -591,6 +671,8 @@ def build_depth_component(
     stride: int,
     max_depth: float,
     colormap: str,
+    rgb: Image.Image,
+    color_source: str,
 ) -> MeshBuilder:
     vertices, colors, faces = depth_to_colored_surface_mesh(
         depth=probe[depth_key][0, 0],
@@ -600,6 +682,8 @@ def build_depth_component(
         stride=stride,
         max_depth=max_depth,
         colormap=colormap,
+        rgb=rgb,
+        color_source=color_source,
     )
     mesh = MeshBuilder()
     if vertices.size:
@@ -615,6 +699,8 @@ def depth_to_colored_surface_mesh(
     stride: int,
     max_depth: float,
     colormap: str,
+    rgb: Image.Image,
+    color_source: str,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     depth_hw = depth.detach().float()
     if int(upsample) > 1:
@@ -648,7 +734,11 @@ def depth_to_colored_surface_mesh(
 
     z_np = z.detach().float().cpu().numpy()
     z_valid = z_np[valid_np]
-    colors_grid = depth_colormap_colors(z_np, z_valid, colormap)
+    if color_source == "rgb":
+        rgb_small = np.asarray(rgb.resize((width, height), Image.BILINEAR).convert("RGB"), dtype=np.uint8)
+        colors_grid = rgb_small[yy.detach().cpu().numpy(), xx.detach().cpu().numpy()]
+    else:
+        colors_grid = depth_colormap_colors(z_np, z_valid, colormap)
     colors = colors_grid[valid_np]
 
     faces: list[list[int]] = []
@@ -667,12 +757,20 @@ def depth_to_colored_surface_mesh(
     return vertices, colors.astype(np.uint8), np.asarray(faces, dtype=np.int64).reshape(-1, 3)
 
 
+def depth_to_rgba_image(depth: torch.Tensor, colormap: str) -> Image.Image:
+    depth_np = depth.detach().float().cpu().numpy()
+    valid = np.isfinite(depth_np) & (depth_np > 1e-6)
+    colors = depth_colormap_colors(depth_np, depth_np[valid], colormap).astype(np.uint8)
+    alpha = np.where(valid, 255, 0).astype(np.uint8)
+    return Image.fromarray(np.dstack([colors, alpha]), mode="RGBA")
+
+
 def depth_colormap_colors(depth_grid: np.ndarray, valid_values: np.ndarray, colormap: str) -> np.ndarray:
     if valid_values.size:
         lo, hi = np.percentile(valid_values, [2.0, 98.0])
     else:
         lo, hi = 0.0, 1.0
-    t = np.clip((depth_grid - lo) / max(float(hi - lo), 1e-6), 0.0, 1.0)
+    t = np.nan_to_num(np.clip((depth_grid - lo) / max(float(hi - lo), 1e-6), 0.0, 1.0), nan=0.0, posinf=1.0, neginf=0.0)
     stops_by_name = {
         "turbo": [
             [48, 18, 59],
