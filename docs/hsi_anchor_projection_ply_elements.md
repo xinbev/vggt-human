@@ -82,6 +82,16 @@ Default output:
 outputs/vis/paper_hsi_anchor_projection_ply_elements/
 ```
 
+Checkpoint selection: the wrapper first looks for the HSI reconnect result:
+
+```text
+outputs/train/smpl_hsi_after_translation_ray_refine/checkpoint_latest.pt
+```
+
+If that file is missing, it falls back to `checkpoint.resume` in the train
+config, which is the merged translation-repair initialization checkpoint. Pass
+`CHECKPOINT=/path/to/checkpoint.pt` explicitly when comparing checkpoints.
+
 Useful overrides:
 
 ```bash
@@ -91,10 +101,27 @@ TOP_K=2 \
 AUTO_TOP_K=2 \
 DEPTH_SOURCE=hsi \
 SMPL_STAGE=base \
+DEPTH_COLORMAP=turbo \
+MASK_DEPTH_SAMPLES=24 \
 DEPTH_UPSAMPLE=2 \
 DEPTH_STRIDE=4 \
 bash scripts/vis/create_hsi_anchor_projection_ply_elements.sh
 ```
+
+Depth sample fallback:
+
+```bash
+MASK_DEPTH_SAMPLES=24 \
+DEPTH_COLORMAP=turbo \
+bash scripts/vis/create_hsi_anchor_projection_ply_elements.sh
+```
+
+This creates yellow points directly from each selected person's SAM2 mask:
+resize the per-person mask to the dense-depth grid, keep valid depth pixels
+inside that mask, choose spatially spread pixels by farthest-point sampling,
+then unproject those pixels to camera-space xyz. This is a data-derived visual
+fallback for figure making and is separate from the true HSI anchor projection
+diagnostics.
 
 Use `PERSON_SELECT=rightmost` if only the right-side person is needed. The
 default `PERSON_SELECT=all` with `TOP_K=2` exports two detected people
@@ -103,6 +130,24 @@ separately.
 Use `SMPL_STAGE=base` to visualize the exact base-SMPL anchor construction used
 as HSI input. Use `SMPL_STAGE=refined` when checking whether the HSI-refined
 human aligns with the HSI-adjusted depth surface.
+
+Example for forcing the merged translation-repair checkpoint:
+
+```bash
+CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_translation_ray_refine_full_from0121/merged_hsi_translation/checkpoint_latest.pt \
+SMPL_STAGE=refined \
+DEPTH_SOURCE=hsi \
+bash scripts/vis/create_hsi_anchor_projection_ply_elements.sh
+```
+
+Example for forcing the HSI reconnect checkpoint:
+
+```bash
+CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_after_translation_ray_refine/checkpoint_latest.pt \
+SMPL_STAGE=refined \
+DEPTH_SOURCE=hsi \
+bash scripts/vis/create_hsi_anchor_projection_ply_elements.sh
+```
 
 ## Exported PLY Files
 
@@ -116,11 +161,13 @@ Classic CV camera frustum: a small camera body at the camera origin and four
 rays forming the image-plane pyramid.
 
 ```text
-00_depth_surface_hsi_teal.ply
+00_depth_surface_hsi_turbo.ply
 ```
 
 Environment depth surface from HSI-adjusted depth by default. The surface uses
-a teal/blue-green depth colormap, not RGB texture colors.
+a standard heatmap-style depth colormap, not RGB texture colors. The default
+wrapper uses `DEPTH_COLORMAP=turbo`; supported values are `turbo`, `inferno`,
+`magma`, `viridis`, and `teal`.
 
 Per selected person/query:
 
@@ -156,8 +203,24 @@ and depth surface manually.
 02_person*_q*_camera_person_depth_projection.ply
 ```
 
-Camera frustum, teal depth surface, base SMPL, 24 anchors, projection links, and
+Camera frustum, heatmap depth surface, base SMPL, 24 anchors, projection links, and
 yellow projected depth points for one person.
+
+```text
+02_person*_q*_mask_depth_samples_yellow_only.ply
+```
+
+Yellow depth samples selected directly from the SAM2 person mask. These points
+are data-derived from the real mask and real depth, but they do not depend on
+the current SMPL projection. Use this layer for paper visualization when the
+current SMPL camera geometry is known to be misaligned.
+
+```text
+02_person*_q*_camera_depth_mask_samples.ply
+```
+
+Camera frustum, heatmap depth surface, and mask-derived yellow depth samples for
+one person.
 
 Combined layer:
 
@@ -167,6 +230,14 @@ Combined layer:
 
 All selected people plus the shared camera and shared depth surface in the same
 camera-space coordinate system.
+
+```text
+03_hsi_mask_depth_sampling_collection.ply
+```
+
+Shared camera, shared heatmap depth surface, and the mask-derived yellow depth
+samples for all selected people. This is the cleanest "data-derived visual
+effect" fallback while SMPL projection alignment is under investigation.
 
 Metadata:
 
@@ -184,6 +255,13 @@ projection_diagnostics.json
 Reports per-query distances between SMPL anchors and depth samples for
 `base_raw`, `base_hsi`, and, when available, `refined_hsi`. This is the first
 file to inspect when yellow projected points look detached from the person.
+
+```text
+mask_depth_samples_person*_q*.json
+```
+
+The numeric source for `*_mask_depth_samples_yellow_only.ply`: sampled depth-grid
+uv, model-input uv, depth values, and unprojected camera-space xyz.
 
 ## Coordinate Notes
 

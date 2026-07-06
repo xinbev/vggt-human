@@ -9,6 +9,7 @@ IMAGE="${IMAGE:-${REPO_ROOT}/assets/image/f2/f2.jpg}"
 TRAIN_CONFIG="${TRAIN_CONFIG:-configs/train_smpl_hsi_after_translation_ray_refine.yaml}"
 PATH_CONFIG="${PATH_CONFIG:-configs/path.yaml}"
 OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/outputs/vis/paper_hsi_anchor_projection_ply_elements}"
+DEFAULT_HSI_RECONNECT_CHECKPOINT="${DEFAULT_HSI_RECONNECT_CHECKPOINT:-${REPO_ROOT}/outputs/train/smpl_hsi_after_translation_ray_refine/checkpoint_latest.pt}"
 CHECKPOINT="${CHECKPOINT:-}"
 BASELINE_CHECKPOINT="${BASELINE_CHECKPOINT:-}"
 DEVICE="${DEVICE:-cuda}"
@@ -20,21 +21,29 @@ CONF_THRESHOLD="${CONF_THRESHOLD:-0.05}"
 DETECTOR_IMAGE_SIZE="${DETECTOR_IMAGE_SIZE:-640}"
 DEPTH_SOURCE="${DEPTH_SOURCE:-hsi}"
 SMPL_STAGE="${SMPL_STAGE:-base}"
+DEPTH_COLORMAP="${DEPTH_COLORMAP:-turbo}"
 DEPTH_UPSAMPLE="${DEPTH_UPSAMPLE:-2}"
 DEPTH_STRIDE="${DEPTH_STRIDE:-4}"
 MAX_SCENE_DEPTH="${MAX_SCENE_DEPTH:-30.0}"
-ANCHOR_RADIUS_SCALE="${ANCHOR_RADIUS_SCALE:-0.018}"
+ANCHOR_RADIUS_SCALE="${ANCHOR_RADIUS_SCALE:-0.009}"
 PROJECTION_RADIUS_SCALE="${PROJECTION_RADIUS_SCALE:-0.0035}"
+MASK_DEPTH_SAMPLES="${MASK_DEPTH_SAMPLES:-24}"
 
 cd "${REPO_ROOT}"
 mkdir -p "${OUTPUT_DIR}"
+
+if [[ -z "${CHECKPOINT}" && -f "${DEFAULT_HSI_RECONNECT_CHECKPOINT}" ]]; then
+  CHECKPOINT="${DEFAULT_HSI_RECONNECT_CHECKPOINT}"
+fi
 
 echo "========== HSI anchor projection PLY elements =========="
 echo "Repo        : ${REPO_ROOT}"
 echo "Image       : ${IMAGE}"
 echo "Train config: ${TRAIN_CONFIG}"
+echo "Checkpoint  : ${CHECKPOINT:-<train-config checkpoint.resume>}"
 echo "Depth source: ${DEPTH_SOURCE}"
 echo "SMPL stage  : ${SMPL_STAGE}"
+echo "Colormap    : ${DEPTH_COLORMAP}"
 echo "Output      : ${OUTPUT_DIR}"
 
 args=(
@@ -51,11 +60,13 @@ args=(
   --detector-image-size "${DETECTOR_IMAGE_SIZE}"
   --depth-source "${DEPTH_SOURCE}"
   --smpl-stage "${SMPL_STAGE}"
+  --depth-colormap "${DEPTH_COLORMAP}"
   --depth-upsample "${DEPTH_UPSAMPLE}"
   --depth-stride "${DEPTH_STRIDE}"
   --max-scene-depth "${MAX_SCENE_DEPTH}"
   --anchor-radius-scale "${ANCHOR_RADIUS_SCALE}"
   --projection-radius-scale "${PROJECTION_RADIUS_SCALE}"
+  --mask-depth-samples "${MASK_DEPTH_SAMPLES}"
   --auto-person-prior
 )
 

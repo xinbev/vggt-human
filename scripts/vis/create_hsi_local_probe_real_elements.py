@@ -333,6 +333,7 @@ def build_query_priors(
     patch_tensor = torch.zeros(1, 1, max_queries, grid_h * grid_w, dtype=torch.bool, device=device)
 
     resized_masks = []
+    resized_masks_by_query: dict[int, np.ndarray] = {}
     for idx in selected:
         key = sorted(instance_masks.keys())[idx]
         box = mask_bbox(np.asarray(instance_masks[key]).astype(bool)).clipped(width, height)
@@ -352,6 +353,7 @@ def build_query_priors(
         ]
         resized = resize_mask(np.asarray(instance_masks[key]).astype(bool), (input_size, input_size))
         resized_masks.append(resized)
+        resized_masks_by_query[int(idx)] = resized
         patch_tensor[0, 0, idx] = torch.from_numpy(mask_to_patch_grid(resized, grid_h, grid_w, patch_size, args.patch_mask_min_overlap)).to(device)
 
     resized_union = np.logical_or.reduce(resized_masks) if resized_masks else np.zeros((input_size, input_size), dtype=bool)
@@ -376,6 +378,7 @@ def build_query_priors(
         "patch_masks": patch_tensor,
         "valid_indices": selected,
         "person_mask_input": resized_union,
+        "person_masks_input_by_query": resized_masks_by_query,
         "prior_boxes_xyxy_input_pixels": prior_boxes_xyxy_input,
         "meta": auto_meta,
     }

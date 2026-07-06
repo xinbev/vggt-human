@@ -79,11 +79,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--patch-mask-min-overlap", type=float, default=0.02)
     parser.add_argument("--depth-source", choices=("hsi", "raw"), default="hsi")
     parser.add_argument("--smpl-stage", choices=("base", "refined"), default="base")
+    parser.add_argument("--depth-colormap", choices=("turbo", "inferno", "magma", "viridis", "teal"), default="turbo")
     parser.add_argument("--depth-upsample", type=int, default=2)
     parser.add_argument("--depth-stride", type=int, default=4)
     parser.add_argument("--max-scene-depth", type=float, default=30.0)
-    parser.add_argument("--anchor-radius-scale", type=float, default=0.018)
+    parser.add_argument("--anchor-radius-scale", type=float, default=0.009)
     parser.add_argument("--projection-radius-scale", type=float, default=0.0035)
+    parser.add_argument("--mask-depth-samples", type=int, default=24)
     parser.add_argument("--override", action="append", default=[])
     return parser.parse_args()
 
@@ -124,7 +126,7 @@ def main() -> None:
 
     selected = build_selected_people(probe, query_indices, depth_key)
     scale = estimate_scene_scale(probe, selected)
-    radius = max(scale * float(args.anchor_radius_scale), 0.012)
+    radius = max(scale * float(args.anchor_radius_scale), 0.006)
     line_radius = max(scale * float(args.projection_radius_scale), 0.0025)
     camera_depth = choose_camera_plane_depth(probe, selected)
 
@@ -134,6 +136,7 @@ def main() -> None:
         upsample=max(int(args.depth_upsample), 1),
         stride=max(int(args.depth_stride), 1),
         max_depth=float(args.max_scene_depth),
+        colormap=args.depth_colormap,
     )
     camera_mesh = MeshBuilder()
     add_camera_frustum(camera_mesh, probe["intrinsics"], input_size, camera_depth, scale)
@@ -143,13 +146,16 @@ def main() -> None:
     camera_mesh.write(camera_path)
     files.append(camera_path.name)
 
-    depth_path = output_dir / f"00_depth_surface_{actual_depth_source}_teal.ply"
+    depth_path = output_dir / f"00_depth_surface_{actual_depth_source}_{args.depth_colormap}.ply"
     depth_mesh.write(depth_path)
     files.append(depth_path.name)
 
     collection = MeshBuilder()
     collection.merge(camera_mesh)
     collection.merge(depth_mesh)
+    visual_collection = MeshBuilder()
+    visual_collection.merge(camera_mesh)
+    visual_collection.merge(depth_mesh)
 
     people_meta: list[dict[str, Any]] = []
     for rank, person in enumerate(selected):
@@ -184,13 +190,44 @@ def main() -> None:
         projection_mesh.write(projection_path)
         files.append(projection_path.name)
 
+        mask_samples_meta = None
+        query_mask = query_mask_input(priors, int(person["query_idx"]))
+        if query_mask is not None and int(args.mask_depth_samples) > 0:
+            mask_samples = sample_mask_depth_points(
+                probe=probe,
+                depth_key=depth_key,
+                mask_input=query_mask,
+                num_points=int(args.mask_depth_samples),
+            )
+            if mask_samples["points"].size:
+                mask_samples_mesh = build_depth_sample_component(mask_samples["points"], radius)
+                mask_samples_path = output_dir / f"02_{person_prefix}_mask_depth_samples_yellow_only.ply"
+                mask_samples_mesh.write(mask_samples_path)
+                files.append(mask_samples_path.name)
+
+                mask_samples_scene = MeshBuilder()
+                mask_samples_scene.merge(camera_mesh)
+                mask_samples_scene.merge(depth_mesh)
+                mask_samples_scene.merge(mask_samples_mesh)
+                mask_samples_scene_path = output_dir / f"02_{person_prefix}_camera_depth_mask_samples.ply"
+                mask_samples_scene.write(mask_samples_scene_path)
+                files.append(mask_samples_scene_path.name)
+
+                visual_collection.merge(mask_samples_mesh)
+                mask_samples_meta = write_mask_sample_json(output_dir / f"mask_depth_samples_{person_prefix}.json", mask_samples)
+                files.append(f"mask_depth_samples_{person_prefix}.json")
+
         collection.merge(anchors_mesh)
         add_anchor_projection_marks(collection, person, radius, line_radius)
-        people_meta.append(person_metadata(person))
+        people_meta.append(person_metadata(person, mask_samples_meta))
 
     collection_path = output_dir / "03_hsi_anchor_projection_collection.ply"
     collection.write(collection_path)
     files.append(collection_path.name)
+
+    visual_collection_path = output_dir / "03_hsi_mask_depth_sampling_collection.ply"
+    visual_collection.write(visual_collection_path)
+    files.append(visual_collection_path.name)
 
     manifest = {
         "purpose": "Paper-figure PLY elements for HSI 24 body anchors and camera-to-depth projection.",
@@ -200,7 +237,7 @@ def main() -> None:
         "actual_depth_source": actual_depth_source,
         "requested_smpl_stage": args.smpl_stage,
         "actual_smpl_stage": actual_smpl_stage,
-        "depth_colormap": "teal-blue-green",
+        "depth_colormap": args.depth_colormap,
         "projection_point_color": "bright yellow",
         "camera_style": "classic CV frustum pyramid",
         "num_people": len(selected),
@@ -209,8 +246,9 @@ def main() -> None:
         "files": files,
         "notes": [
             "All PLY files use the same camera-space coordinate system for manual composition.",
-            "Depth surface is colored by a teal/blue-green depth colormap, not RGB texture.",
+            "Depth surface is colored by a heatmap depth colormap, not RGB texture.",
             "Yellow spheres are the anchor-corresponding depth samples after projection.",
+            "The mask-depth sample PLYs use SAM2 person masks to sample real depth points for paper visualization when SMPL projection is unreliable.",
             "The *_only.ply files are layer-only exports for manual figure assembly.",
         ],
     }
@@ -406,6 +444,99 @@ def sample_anchor_scene_points(probe: dict[str, torch.Tensor], query_idx: int, d
     )
 
 
+def query_mask_input(priors: dict[str, Any], query_idx: int) -> np.ndarray | None:
+    masks = priors.get("person_masks_input_by_query") or {}
+    mask = masks.get(int(query_idx))
+    if mask is None:
+        mask = masks.get(str(int(query_idx)))
+    if mask is None:
+        return None
+    return np.asarray(mask).astype(bool)
+
+
+def sample_mask_depth_points(
+    probe: dict[str, torch.Tensor],
+    depth_key: str,
+    mask_input: np.ndarray,
+    num_points: int,
+) -> dict[str, np.ndarray]:
+    depth = probe[depth_key][0, 0]
+    height, width = depth.shape[-2:]
+    mask_depth = resize_bool_mask_nearest(mask_input, (height, width))
+    valid_depth = torch.isfinite(depth) & (depth > 1e-6)
+    valid_np = (mask_depth & valid_depth.detach().cpu().numpy())
+    ys, xs = np.nonzero(valid_np)
+    if xs.size == 0:
+        return {
+            "points": np.empty((0, 3), dtype=np.float32),
+            "uv_depth": np.empty((0, 2), dtype=np.float32),
+            "uv_input": np.empty((0, 2), dtype=np.float32),
+            "depth": np.empty((0,), dtype=np.float32),
+        }
+    chosen = farthest_sample_pixels(np.stack([xs, ys], axis=1).astype(np.float32), min(int(num_points), int(xs.size)), width, height)
+    chosen_x = chosen[:, 0].round().astype(np.int64).clip(0, width - 1)
+    chosen_y = chosen[:, 1].round().astype(np.int64).clip(0, height - 1)
+    image_size = float(int(probe["image_size"].detach().cpu()))
+    input_x = torch.as_tensor(chosen_x, device=depth.device, dtype=depth.dtype) * (image_size / float(width))
+    input_y = torch.as_tensor(chosen_y, device=depth.device, dtype=depth.dtype) * (image_size / float(height))
+    z = depth[torch.as_tensor(chosen_y, device=depth.device), torch.as_tensor(chosen_x, device=depth.device)]
+    intr = probe["intrinsics"].reshape(-1, 3, 3)[0].to(device=depth.device, dtype=depth.dtype)
+    points = []
+    for idx in range(chosen_x.shape[0]):
+        points.append(unproject_one(torch.stack([input_x[idx], input_y[idx]]), z[idx], intr))
+    points_tensor = torch.stack(points, dim=0)
+    return {
+        "points": points_tensor.detach().float().cpu().numpy().astype(np.float32),
+        "uv_depth": np.stack([chosen_x, chosen_y], axis=1).astype(np.float32),
+        "uv_input": torch.stack([input_x, input_y], dim=-1).detach().float().cpu().numpy().astype(np.float32),
+        "depth": z.detach().float().cpu().numpy().astype(np.float32),
+    }
+
+
+def resize_bool_mask_nearest(mask: np.ndarray, size_hw: tuple[int, int]) -> np.ndarray:
+    mask_tensor = torch.from_numpy(np.asarray(mask).astype(np.float32)).reshape(1, 1, *mask.shape)
+    resized = torch.nn.functional.interpolate(mask_tensor, size=size_hw, mode="nearest")[0, 0]
+    return resized.numpy() > 0.5
+
+
+def farthest_sample_pixels(coords_xy: np.ndarray, count: int, width: int, height: int) -> np.ndarray:
+    if coords_xy.shape[0] <= count:
+        return coords_xy
+    norm = coords_xy.copy()
+    norm[:, 0] /= max(float(width - 1), 1.0)
+    norm[:, 1] /= max(float(height - 1), 1.0)
+    center = norm.mean(axis=0, keepdims=True)
+    first = int(np.argmin(np.linalg.norm(norm - center, axis=1)))
+    selected = [first]
+    min_dist = np.linalg.norm(norm - norm[first : first + 1], axis=1)
+    for _ in range(1, count):
+        next_idx = int(np.argmax(min_dist))
+        selected.append(next_idx)
+        dist = np.linalg.norm(norm - norm[next_idx : next_idx + 1], axis=1)
+        min_dist = np.minimum(min_dist, dist)
+    return coords_xy[np.asarray(selected, dtype=np.int64)]
+
+
+def build_depth_sample_component(points: np.ndarray, radius: float) -> MeshBuilder:
+    mesh = MeshBuilder()
+    for point in np.asarray(points, dtype=np.float32).reshape(-1, 3):
+        add_uv_sphere(mesh, point, radius * 0.85, COLOR["projection"], rings=8, segments=14)
+    return mesh
+
+
+def write_mask_sample_json(path: Path, samples: dict[str, np.ndarray]) -> dict[str, Any]:
+    data = {
+        "num_points": int(samples["points"].shape[0]),
+        "source": "SAM2 person mask resized to depth grid + HSI/VGGT depth sampling",
+        "points_xyz": samples["points"].astype(float).tolist(),
+        "uv_depth": samples["uv_depth"].astype(float).tolist(),
+        "uv_input": samples["uv_input"].astype(float).tolist(),
+        "depth_values": samples["depth"].astype(float).tolist(),
+    }
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    return {"file": path.name, "num_points": int(samples["points"].shape[0])}
+
+
 def estimate_scene_scale(probe: dict[str, torch.Tensor], selected: list[dict[str, Any]]) -> float:
     parts = []
     for person in selected:
@@ -459,14 +590,16 @@ def build_depth_component(
     upsample: int,
     stride: int,
     max_depth: float,
+    colormap: str,
 ) -> MeshBuilder:
-    vertices, colors, faces = depth_to_teal_surface_mesh(
+    vertices, colors, faces = depth_to_colored_surface_mesh(
         depth=probe[depth_key][0, 0],
         intrinsics=probe["intrinsics"],
         image_size=int(probe["image_size"].detach().cpu()),
         upsample=upsample,
         stride=stride,
         max_depth=max_depth,
+        colormap=colormap,
     )
     mesh = MeshBuilder()
     if vertices.size:
@@ -474,13 +607,14 @@ def build_depth_component(
     return mesh
 
 
-def depth_to_teal_surface_mesh(
+def depth_to_colored_surface_mesh(
     depth: torch.Tensor,
     intrinsics: torch.Tensor,
     image_size: int,
     upsample: int,
     stride: int,
     max_depth: float,
+    colormap: str,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     depth_hw = depth.detach().float()
     if int(upsample) > 1:
@@ -514,7 +648,7 @@ def depth_to_teal_surface_mesh(
 
     z_np = z.detach().float().cpu().numpy()
     z_valid = z_np[valid_np]
-    colors_grid = teal_depth_colors(z_np, z_valid)
+    colors_grid = depth_colormap_colors(z_np, z_valid, colormap)
     colors = colors_grid[valid_np]
 
     faces: list[list[int]] = []
@@ -533,21 +667,55 @@ def depth_to_teal_surface_mesh(
     return vertices, colors.astype(np.uint8), np.asarray(faces, dtype=np.int64).reshape(-1, 3)
 
 
-def teal_depth_colors(depth_grid: np.ndarray, valid_values: np.ndarray) -> np.ndarray:
+def depth_colormap_colors(depth_grid: np.ndarray, valid_values: np.ndarray, colormap: str) -> np.ndarray:
     if valid_values.size:
         lo, hi = np.percentile(valid_values, [2.0, 98.0])
     else:
         lo, hi = 0.0, 1.0
     t = np.clip((depth_grid - lo) / max(float(hi - lo), 1e-6), 0.0, 1.0)
-    stops = np.asarray(
-        [
+    stops_by_name = {
+        "turbo": [
+            [48, 18, 59],
+            [58, 82, 166],
+            [32, 159, 181],
+            [72, 193, 110],
+            [245, 231, 65],
+            [245, 135, 48],
+            [180, 35, 38],
+        ],
+        "inferno": [
+            [0, 0, 4],
+            [40, 11, 84],
+            [101, 21, 110],
+            [159, 42, 99],
+            [212, 72, 66],
+            [245, 125, 21],
+            [252, 255, 164],
+        ],
+        "magma": [
+            [0, 0, 4],
+            [28, 16, 68],
+            [79, 18, 123],
+            [129, 37, 129],
+            [181, 54, 122],
+            [229, 80, 100],
+            [252, 253, 191],
+        ],
+        "viridis": [
+            [68, 1, 84],
+            [59, 82, 139],
+            [33, 145, 140],
+            [94, 201, 98],
+            [253, 231, 37],
+        ],
+        "teal": [
             [29, 74, 120],
             [21, 132, 160],
             [40, 177, 150],
             [139, 213, 168],
         ],
-        dtype=np.float32,
-    )
+    }
+    stops = np.asarray(stops_by_name.get(str(colormap), stops_by_name["turbo"]), dtype=np.float32)
     pos = t * float(len(stops) - 1)
     idx = np.floor(pos).astype(np.int32).clip(0, len(stops) - 2)
     frac = (pos - idx)[..., None]
@@ -599,8 +767,8 @@ def add_anchor_projection_marks(mesh: MeshBuilder, person: dict[str, Any], radiu
         add_uv_sphere(mesh, scene, radius * 0.72, COLOR["projection"], rings=8, segments=14)
 
 
-def person_metadata(person: dict[str, Any]) -> dict[str, Any]:
-    return {
+def person_metadata(person: dict[str, Any], mask_samples_meta: dict[str, Any] | None = None) -> dict[str, Any]:
+    data = {
         "query_index": int(person["query_idx"]),
         "num_anchors": 24,
         "valid_projected_anchors": int(np.asarray(person["valid_projection"]).sum()),
@@ -611,6 +779,9 @@ def person_metadata(person: dict[str, Any]) -> dict[str, Any]:
             "23": "full body center",
         },
     }
+    if mask_samples_meta is not None:
+        data["mask_depth_samples"] = mask_samples_meta
+    return data
 
 
 if __name__ == "__main__":
