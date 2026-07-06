@@ -35,6 +35,8 @@ from scripts.vis.create_hsi_paper_ply_elements import (  # noqa: E402
     add_cylinder,
     add_uv_sphere,
 )
+from vggt_omega.models.heads.hsi_refinement_head import _project_points, _scale_points_to_depth  # noqa: E402
+from vggt_omega.utils.rotation import rot6d_to_axis_angle  # noqa: E402
 
 
 COLOR = {
@@ -76,6 +78,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sam2-single-mask", action="store_true")
     parser.add_argument("--patch-mask-min-overlap", type=float, default=0.02)
     parser.add_argument("--depth-source", choices=("hsi", "raw"), default="hsi")
+    parser.add_argument("--smpl-stage", choices=("base", "refined"), default="base")
     parser.add_argument("--depth-upsample", type=int, default=2)
     parser.add_argument("--depth-stride", type=int, default=4)
     parser.add_argument("--max-scene-depth", type=float, default=30.0)
@@ -112,8 +115,10 @@ def main() -> None:
             smpl_query_patch_masks=priors["patch_masks"],
         )
 
-    probe = compute_hsi_probe(predictions, model, input_size)
+    base_probe = compute_hsi_probe(predictions, model, input_size)
     query_indices = choose_query_indices(predictions, priors, args)
+    diagnostics = build_projection_diagnostics(predictions, model, base_probe, query_indices)
+    probe, actual_smpl_stage = apply_smpl_stage(base_probe, predictions, model, args.smpl_stage)
     depth_key = "hsi_depth_hw" if args.depth_source == "hsi" and "hsi_depth_hw" in probe else "depth_hw"
     actual_depth_source = "hsi" if depth_key == "hsi_depth_hw" else "raw"
 
@@ -193,11 +198,14 @@ def main() -> None:
         "checkpoint": str(checkpoint),
         "requested_depth_source": args.depth_source,
         "actual_depth_source": actual_depth_source,
+        "requested_smpl_stage": args.smpl_stage,
+        "actual_smpl_stage": actual_smpl_stage,
         "depth_colormap": "teal-blue-green",
         "projection_point_color": "bright yellow",
         "camera_style": "classic CV frustum pyramid",
         "num_people": len(selected),
         "people": people_meta,
+        "projection_diagnostics": diagnostics,
         "files": files,
         "notes": [
             "All PLY files use the same camera-space coordinate system for manual composition.",
@@ -207,7 +215,143 @@ def main() -> None:
         ],
     }
     (output_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    (output_dir / "projection_diagnostics.json").write_text(json.dumps(diagnostics, indent=2), encoding="utf-8")
     print(json.dumps({"output_dir": str(output_dir), "files": files}, indent=2))
+
+
+def apply_smpl_stage(
+    probe: dict[str, torch.Tensor],
+    predictions: dict[str, torch.Tensor],
+    model: torch.nn.Module,
+    stage: str,
+) -> tuple[dict[str, torch.Tensor], str]:
+    if stage == "base":
+        return probe, "base"
+    refined = rebuild_probe_geometry_from_prediction_stage(probe, predictions, model, "refined")
+    if refined is None:
+        return probe, "base_fallback_refined_keys_missing"
+    return refined, "refined"
+
+
+def rebuild_probe_geometry_from_prediction_stage(
+    probe: dict[str, torch.Tensor],
+    predictions: dict[str, torch.Tensor],
+    model: torch.nn.Module,
+    stage: str,
+) -> dict[str, torch.Tensor] | None:
+    if stage == "base":
+        pose6d = predictions.get("pred_pose_6d")
+        betas = predictions.get("pred_betas")
+        transl = predictions.get("pred_transl_cam")
+    elif stage == "refined":
+        pose6d = predictions.get("hsi_refined_pred_pose_6d")
+        betas = predictions.get("hsi_refined_pred_betas")
+        transl = predictions.get("hsi_refined_pred_transl_cam")
+    else:
+        raise ValueError(f"Unsupported SMPL stage: {stage}")
+    if not isinstance(pose6d, torch.Tensor) or not isinstance(betas, torch.Tensor) or not isinstance(transl, torch.Tensor):
+        return None
+    head = getattr(model, "hsi_refinement_head", None)
+    if head is None:
+        return None
+    pose6d = pose6d.float()
+    betas = betas.float()
+    transl = transl.float()
+    anchors = head._anchors_cam(pose6d, betas, transl)
+    poses_aa = rot6d_to_axis_angle(pose6d.reshape(-1, 24, 6)).reshape(-1, 72)
+    smpl_vertices, smpl_joints = head.smpl(poses_aa.float(), betas.reshape(-1, betas.shape[-1]).float())
+    smpl_vertices = smpl_vertices.to(device=pose6d.device, dtype=pose6d.dtype) + transl.reshape(-1, 1, 3)
+    smpl_joints = smpl_joints[:, :24].to(device=pose6d.device, dtype=pose6d.dtype) + transl.reshape(-1, 1, 3)
+    smpl_vertices = smpl_vertices.reshape(*pose6d.shape[:3], smpl_vertices.shape[-2], 3)
+    smpl_joints = smpl_joints.reshape(*pose6d.shape[:3], smpl_joints.shape[-2], 3)
+    batch_size, num_frames, num_queries, _, _ = anchors.shape
+    intrinsics = probe["intrinsics"].to(device=pose6d.device, dtype=pose6d.dtype)
+    flat_anchors = anchors.reshape(batch_size * num_frames * num_queries, 24, 3)
+    projected = _project_points(flat_anchors, intrinsics.repeat_interleave(num_queries, dim=0)).reshape(
+        batch_size, num_frames, num_queries, 24, 2
+    )
+    height, width = probe["depth_hw"].shape[-2:]
+    image_size = int(probe["image_size"].detach().cpu())
+    projected_depth = _scale_points_to_depth(projected, image_size, height, width)
+    rebuilt = dict(probe)
+    rebuilt.update(
+        {
+            "anchors": anchors.detach(),
+            "smpl_vertices": smpl_vertices.detach(),
+            "smpl_joints": smpl_joints.detach(),
+            "projected": projected.detach(),
+            "projected_depth": projected_depth.detach(),
+        }
+    )
+    return rebuilt
+
+
+def build_projection_diagnostics(
+    predictions: dict[str, torch.Tensor],
+    model: torch.nn.Module,
+    base_probe: dict[str, torch.Tensor],
+    query_indices: list[int],
+) -> dict[str, Any]:
+    variants = {"base": base_probe}
+    refined_probe = rebuild_probe_geometry_from_prediction_stage(base_probe, predictions, model, "refined")
+    if refined_probe is not None:
+        variants["refined"] = refined_probe
+    depth_keys = {"raw": "depth_hw"}
+    if "hsi_depth_hw" in base_probe:
+        depth_keys["hsi"] = "hsi_depth_hw"
+    per_query: dict[str, Any] = {}
+    for query_idx in query_indices:
+        query_metrics: dict[str, Any] = {}
+        for stage, stage_probe in variants.items():
+            for depth_name, depth_key in depth_keys.items():
+                scene_points, projected_depth, valid = sample_anchor_scene_points(stage_probe, query_idx, depth_key)
+                anchors = stage_probe["anchors"][0, 0, query_idx].detach().float().cpu().numpy()
+                query_metrics[f"{stage}_{depth_name}"] = summarize_projection_alignment(
+                    anchors=anchors,
+                    scene_points=scene_points,
+                    projected_depth=projected_depth,
+                    valid=valid,
+                    depth_hw=stage_probe[depth_key][0, 0],
+                )
+        per_query[str(query_idx)] = query_metrics
+    return {
+        "meaning": "Distance between SMPL anchors and depth samples along the same projected camera rays.",
+        "interpretation": {
+            "base_raw": "Closest to the actual HSI tokenization step: base SMPL anchors sample raw VGGT depth.",
+            "base_hsi": "Current default paper-depth visualization if --smpl-stage=base and --depth-source=hsi.",
+            "refined_hsi": "Expected best alignment after HSI refines SMPL and applies scene affine depth.",
+        },
+        "queries": per_query,
+    }
+
+
+def summarize_projection_alignment(
+    anchors: np.ndarray,
+    scene_points: np.ndarray,
+    projected_depth: np.ndarray,
+    valid: np.ndarray,
+    depth_hw: torch.Tensor,
+) -> dict[str, Any]:
+    valid = np.asarray(valid).astype(bool)
+    if not bool(valid.any()):
+        return {"valid_projected_anchors": 0}
+    delta = np.asarray(scene_points, dtype=np.float32) - np.asarray(anchors, dtype=np.float32)
+    l2 = np.linalg.norm(delta[valid], axis=-1)
+    z_delta = delta[valid, 2]
+    uv = np.asarray(projected_depth, dtype=np.float32)[valid]
+    height, width = depth_hw.shape[-2:]
+    return {
+        "valid_projected_anchors": int(valid.sum()),
+        "mean_l2_m": float(np.mean(l2)),
+        "median_l2_m": float(np.median(l2)),
+        "max_l2_m": float(np.max(l2)),
+        "mean_abs_depth_delta_m": float(np.mean(np.abs(z_delta))),
+        "median_abs_depth_delta_m": float(np.median(np.abs(z_delta))),
+        "mean_signed_depth_delta_m": float(np.mean(z_delta)),
+        "projected_depth_uv_min": [float(uv[:, 0].min()), float(uv[:, 1].min())],
+        "projected_depth_uv_max": [float(uv[:, 0].max()), float(uv[:, 1].max())],
+        "depth_hw": [int(height), int(width)],
+    }
 
 
 def build_selected_people(probe: dict[str, torch.Tensor], query_indices: list[int], depth_key: str) -> list[dict[str, Any]]:

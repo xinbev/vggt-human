@@ -90,6 +90,7 @@ PERSON_SELECT=all \
 TOP_K=2 \
 AUTO_TOP_K=2 \
 DEPTH_SOURCE=hsi \
+SMPL_STAGE=base \
 DEPTH_UPSAMPLE=2 \
 DEPTH_STRIDE=4 \
 bash scripts/vis/create_hsi_anchor_projection_ply_elements.sh
@@ -98,6 +99,10 @@ bash scripts/vis/create_hsi_anchor_projection_ply_elements.sh
 Use `PERSON_SELECT=rightmost` if only the right-side person is needed. The
 default `PERSON_SELECT=all` with `TOP_K=2` exports two detected people
 separately.
+
+Use `SMPL_STAGE=base` to visualize the exact base-SMPL anchor construction used
+as HSI input. Use `SMPL_STAGE=refined` when checking whether the HSI-refined
+human aligns with the HSI-adjusted depth surface.
 
 ## Exported PLY Files
 
@@ -172,6 +177,14 @@ manifest.json
 Records input image, checkpoint, depth source, selected queries, valid projected
 anchor count, and the anchor schema.
 
+```text
+projection_diagnostics.json
+```
+
+Reports per-query distances between SMPL anchors and depth samples for
+`base_raw`, `base_hsi`, and, when available, `refined_hsi`. This is the first
+file to inspect when yellow projected points look detached from the person.
+
 ## Coordinate Notes
 
 The original image is resized to the model input size before inference. Anchor
@@ -190,6 +203,15 @@ D_hsi = s_hsi * D_vggt + b_hsi
 ```
 
 Use `DEPTH_SOURCE=raw` only when comparing against uncorrected VGGT depth.
+
+Important: the actual HSI tokenization step samples raw VGGT depth before the
+HSI scene scale/bias exists. Therefore:
+
+- `base_raw` is the faithful internal HSI probe state.
+- `base_hsi` mixes base SMPL anchors with HSI-adjusted depth and can visually
+  separate yellow points from the base person.
+- `refined_hsi` is the meaningful alignment check for HSI-refined SMPL against
+  HSI-adjusted depth.
 
 ## Local Verification
 
