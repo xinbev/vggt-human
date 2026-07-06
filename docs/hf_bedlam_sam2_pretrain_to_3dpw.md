@@ -89,7 +89,7 @@ bash scripts/train/train_smpl_base_hf_bedlam_sam2_then_3dpw_extreme.sh
 
 ```bash
 HF_SAM2_OVERWRITE=1 THREEDPW_SAM2_OVERWRITE=1 \
-HF_BATCH_SIZE=48 THREEDPW_BATCH_SIZE=16 \
+HF_BATCH_SIZE=40 THREEDPW_BATCH_SIZE=12 \
 HF_EPOCHS=12 THREEDPW_EPOCHS=40 NUM_WORKERS=28 DEVICE=cuda:5 \
 bash scripts/train/train_smpl_base_hf_bedlam_sam2_then_3dpw_extreme.sh
 ```
@@ -100,7 +100,7 @@ bash scripts/train/train_smpl_base_hf_bedlam_sam2_then_3dpw_extreme.sh
 
 ```bash
 RUN_HF_PREPROCESS=0 RUN_3DPW_PREPROCESS=0 \
-HF_BATCH_SIZE=48 THREEDPW_BATCH_SIZE=16 \
+HF_BATCH_SIZE=40 THREEDPW_BATCH_SIZE=12 \
 HF_EPOCHS=12 THREEDPW_EPOCHS=40 NUM_WORKERS=28 DEVICE=cuda:5 \
 bash scripts/train/train_smpl_base_hf_bedlam_sam2_then_3dpw_extreme.sh
 ```

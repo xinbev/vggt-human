@@ -30,8 +30,8 @@ THREEDPW_OUT_DIR="${THREEDPW_OUT_DIR:-outputs/train/stageG_3dpw_sam2_mask_pose_b
 VAL_OUT_DIR="${VAL_OUT_DIR:-outputs/eval/stageG_3dpw_validation_sam2_mask_from_hf_bedlam}"
 TEST_OUT_DIR="${TEST_OUT_DIR:-outputs/eval/stageG_3dpw_test_sam2_mask_from_hf_bedlam}"
 
-HF_BATCH_SIZE="${HF_BATCH_SIZE:-48}"
-THREEDPW_BATCH_SIZE="${THREEDPW_BATCH_SIZE:-16}"
+HF_BATCH_SIZE="${HF_BATCH_SIZE:-40}"
+THREEDPW_BATCH_SIZE="${THREEDPW_BATCH_SIZE:-12}"
 HF_EPOCHS="${HF_EPOCHS:-12}"
 THREEDPW_EPOCHS="${THREEDPW_EPOCHS:-40}"
 NUM_WORKERS="${NUM_WORKERS:-28}"

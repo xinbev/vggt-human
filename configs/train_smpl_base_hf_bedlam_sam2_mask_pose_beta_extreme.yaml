@@ -89,7 +89,7 @@ checkpoint:
   monitor_mode: min
 
 optim:
-  batch_size: 48
+  batch_size: 40
   epochs: 12
   lr: 0.000008
   weight_decay: 0.05
