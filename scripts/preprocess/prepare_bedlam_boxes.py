@@ -71,7 +71,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset-root", required=True)
     parser.add_argument("--output-root", required=True)
     parser.add_argument("--splits", nargs="+", default=["Training", "Test"])
-    parser.add_argument("--image-size", type=int, default=518)
+    parser.add_argument("--image-size", type=int, default=512)
     parser.add_argument("--max-humans", type=int, default=20)
     parser.add_argument("--require-boxes", action="store_true")
     parser.add_argument("--use-smpl-projection", action="store_true")

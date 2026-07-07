@@ -15,13 +15,16 @@ ARGS=(
   --path-config "${PATH_CONFIG:-configs/path.yaml}"
   --splits ${SPLITS:-train validation test}
   --device "${DEVICE:-cuda}"
-  --image-size "${IMAGE_SIZE:-518}"
+  --image-resolution "${IMAGE_RESOLUTION:-512}"
   --patch-size "${PATCH_SIZE:-16}"
   --mask-patch-threshold "${MASK_PATCH_THRESHOLD:-0.10}"
   --min-mask-patches "${MIN_MASK_PATCHES:-4}"
   --log-interval "${LOG_INTERVAL:-100}"
 )
 
+if [[ -n "${IMAGE_SIZE:-}" ]]; then
+  ARGS+=(--image-size "${IMAGE_SIZE}")
+fi
 if [[ -n "${ROOT:-}" ]]; then
   ARGS+=(--root "${ROOT}")
 fi

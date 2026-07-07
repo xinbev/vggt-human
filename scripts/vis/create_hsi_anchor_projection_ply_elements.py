@@ -85,7 +85,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--train-config", default="configs/train_smpl_hsi_after_translation_ray_refine.yaml")
     parser.add_argument("--output-dir", type=Path, default=Path("outputs/vis/paper_hsi_anchor_projection_ply_elements"))
     parser.add_argument("--device", default="")
-    parser.add_argument("--image-size", type=int, default=518)
+    parser.add_argument("--image-size", type=int, default=0, help="Legacy explicit geometry override; default uses data.image_resolution or 512")
     parser.add_argument("--person-index", type=int, default=-1)
     parser.add_argument("--person-select", choices=("rightmost", "leftmost", "confidence", "all"), default="all")
     parser.add_argument("--top-k", type=int, default=2)

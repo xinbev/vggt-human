@@ -38,7 +38,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.train.train_smpl import apply_overrides, build_model, load_yaml_config
-from vggt_omega.data.geometry import compute_resize_geometry, resize_image_with_geometry
+from vggt_omega.data.geometry import compute_resize_geometry, resize_image_with_geometry, resolve_image_size_config
 from vggt_omega.models.smpl_layer import SMPLLayer
 from vggt_omega.training.config import deep_update, require_path
 from vggt_omega.utils.pose_enc import encoding_to_camera
@@ -73,8 +73,10 @@ def main() -> None:
     model.eval()
 
     image_path = Path(args.image).expanduser()
-    input_size = int(config["data"].get("image_size", args.image_size))
-    image_tensor, orig_image = load_image(image_path, input_size)
+    _, input_resolution = resolve_image_size_config(config.get("data", {}), args.image_size)
+    image_tensor, orig_image = load_image(image_path, input_resolution)
+    input_hw = (int(image_tensor.shape[-2]), int(image_tensor.shape[-1]))
+    input_size = max(input_hw)
     prior_boxes, prior_mask = load_gt_box_prior(image_path, config, args, device) if args.use_gt_box_prior else (None, None)
     if prior_boxes is not None and prior_mask is not None:
         prior_boxes, prior_mask = make_noisy_gt_box_prior(
@@ -90,6 +92,7 @@ def main() -> None:
             smpl_query_boxes=prior_boxes,
             smpl_query_boxes_mask=prior_mask,
         )
+    predictions["images"] = image_tensor.to(device)
     results = collect_predictions(predictions, orig_image.size, args.conf_threshold, args.top_k)
     if args.draw_smpl_joints:
         add_projected_smpl_joints(results, predictions, config, args, orig_image.size, input_size, device)
@@ -139,7 +142,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--train-config", default="configs/train_smpl.yaml")
     parser.add_argument("--output-dir", default="outputs/vis/smpl_inference")
     parser.add_argument("--device", default="")
-    parser.add_argument("--image-size", type=int, default=518)
+    parser.add_argument("--image-size", type=int, default=0, help="Legacy explicit geometry override; default uses data.image_resolution or 512")
     parser.add_argument("--conf-threshold", type=float, default=0.25)
     parser.add_argument("--top-k", type=int, default=20)
     parser.add_argument("--draw-smpl-joints", action="store_true", help="Decode SMPL and draw projected joints")
@@ -181,7 +184,9 @@ def load_config(args: argparse.Namespace) -> dict[str, Any]:
     config = apply_overrides(config, args.override)
     if args.baseline_checkpoint:
         config.setdefault("checkpoints", {})["vggt_baseline"] = args.baseline_checkpoint
-    config.setdefault("data", {})["image_size"] = int(config.get("data", {}).get("image_size", args.image_size))
+    image_size, image_resolution = resolve_image_size_config(config.get("data", {}), args.image_size)
+    config.setdefault("data", {})["image_size"] = image_size
+    config.setdefault("data", {})["image_resolution"] = image_resolution
     config.setdefault("model", {})["enable_smpl"] = True
     return config
 

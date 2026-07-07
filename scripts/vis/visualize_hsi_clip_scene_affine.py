@@ -54,6 +54,7 @@ from scripts.vis.visualize_smpl_inference import (  # noqa: E402
     load_vggt_baseline_for_camera,
     make_noisy_gt_box_prior,
 )
+from vggt_omega.data.geometry import resolve_image_size_config  # noqa: E402
 
 
 def main() -> None:
@@ -71,9 +72,11 @@ def main() -> None:
     load_training_checkpoint(model, Path(args.checkpoint).expanduser(), device)
     model.eval()
 
-    input_size = int(config["data"].get("image_size", args.image_size))
+    _, input_resolution = resolve_image_size_config(config.get("data", {}), args.image_size)
     frame_paths = select_sequence_frames(Path(args.image).expanduser(), int(args.num_frames), int(args.stride))
-    image_tensor, orig_images = load_clip_images(frame_paths, input_size)
+    image_tensor, orig_images = load_clip_images(frame_paths, input_resolution)
+    input_hw = (int(image_tensor.shape[-2]), int(image_tensor.shape[-1]))
+    input_size = max(input_hw)
     prior_boxes, prior_mask = load_clip_box_priors(frame_paths, config, args, device) if args.use_gt_box_prior else (None, None)
     if prior_boxes is not None and prior_mask is not None:
         prior_boxes, prior_mask = make_noisy_gt_box_prior(
@@ -90,6 +93,7 @@ def main() -> None:
             smpl_query_boxes=prior_boxes,
             smpl_query_boxes_mask=prior_mask,
         )
+    predictions["images"] = image_tensor.to(device)
 
     if "hsi_scene_scale" not in predictions or "hsi_scene_depth_bias" not in predictions:
         raise ValueError("Checkpoint/model did not produce HSI scene affine outputs")
@@ -164,7 +168,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--baseline-checkpoint", default="")
     parser.add_argument("--output-dir", default="outputs/vis/hsi_clip_scene_affine")
     parser.add_argument("--device", default="")
-    parser.add_argument("--image-size", type=int, default=518)
+    parser.add_argument("--image-size", type=int, default=0, help="Legacy explicit geometry override; default uses data.image_resolution or 512")
     parser.add_argument("--num-frames", type=int, default=8)
     parser.add_argument("--stride", type=int, default=1)
     parser.add_argument("--ema-alpha", type=float, default=0.25)

@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
 
 from scripts.train.train_smpl import apply_overrides
 from vggt_omega.data import HFBedlamDataset, hf_bedlam_collate_fn
+from vggt_omega.data.geometry import resolve_image_size_config
 from vggt_omega.training.config import deep_update, load_yaml_config, require_path
 
 
@@ -23,13 +24,14 @@ def main() -> None:
     config = deep_update(load_yaml_config(args.path_config), load_yaml_config(args.train_config))
     config = apply_overrides(config, args.override)
     data_cfg = config["data"]
+    image_size, image_resolution = resolve_image_size_config(data_cfg, args.image_size)
     dataset = HFBedlamDataset(
         images_root=require_path(config, data_cfg.get("images_root_key", "datasets.hf_bedlam_images_root")),
         npz_root=require_path(config, data_cfg.get("npz_root_key", "datasets.hf_bedlam_npz_root")),
         sequence_length=int(args.sequence_length or data_cfg.get("sequence_length", 1)),
         stride=int(args.stride or data_cfg.get("stride", 1)),
-        image_size=int(args.image_size or data_cfg.get("image_size", data_cfg.get("image_resolution", 512))),
-        image_resolution=int(data_cfg.get("image_resolution", args.image_size or data_cfg.get("image_size", 512))),
+        image_size=image_size,
+        image_resolution=image_resolution,
         resize_mode=str(data_cfg.get("resize_mode", "balanced")),
         max_humans=int(args.max_humans or data_cfg.get("max_humans", 20)),
         require_boxes=bool(data_cfg.get("require_boxes", True)),
@@ -62,6 +64,7 @@ def main() -> None:
         "num_windows": len(dataset),
         "batch_size": int(args.batch_size),
         "tensor_shapes": {key: list(batch[key].shape) for key in required},
+        "geometry": tensor_previews(batch, ("image_hw", "valid_hw", "orig_hw", "pad_xyxy")),
         "smpl_valid_count": int(batch["smpl_mask"].sum().item()),
         "box_valid_count": int(batch["boxes_mask"].sum().item()),
         "transl_mean": tensor_mean(batch["gt_transl_cam"], batch["smpl_mask"]),
@@ -110,6 +113,15 @@ def tensor_reduce_xyz(value: torch.Tensor, mask: torch.Tensor, mode: str) -> lis
     else:
         raise ValueError(f"Unsupported reduce mode: {mode}")
     return [float(x) for x in out.detach().cpu().tolist()]
+
+
+def tensor_previews(batch: dict[str, torch.Tensor], keys: tuple[str, ...]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for key in keys:
+        value = batch.get(key)
+        if isinstance(value, torch.Tensor):
+            out[key] = value.detach().cpu().reshape(-1, value.shape[-1]).tolist()[:4]
+    return out
 
 
 if __name__ == "__main__":

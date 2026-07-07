@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
 
 from scripts.train.train_smpl import apply_overrides
 from vggt_omega.data import BedlamDataset, bedlam_collate_fn
+from vggt_omega.data.geometry import resolve_image_size_config
 from vggt_omega.training.config import deep_update, load_yaml_config, require_path
 
 
@@ -23,13 +24,14 @@ def main() -> None:
     data_cfg = config["data"]
     split = args.split or data_cfg.get("train_split", "Training")
     boxes_root = require_path(config, data_cfg["boxes_root_key"], allow_empty=False)
+    image_size, image_resolution = resolve_image_size_config(data_cfg, args.image_size)
     dataset = BedlamDataset(
         root=require_path(config, data_cfg.get("root_key", "datasets.bedlam_root")),
         split=split,
         sequence_length=int(args.sequence_length or data_cfg["sequence_length"]),
         stride=int(args.stride or data_cfg["stride"]),
-        image_size=int(args.image_size or data_cfg.get("image_size", data_cfg.get("image_resolution", 512))),
-        image_resolution=int(data_cfg.get("image_resolution", args.image_size or data_cfg.get("image_size", 512))),
+        image_size=image_size,
+        image_resolution=image_resolution,
         resize_mode=str(data_cfg.get("resize_mode", "balanced")),
         max_humans=int(args.max_humans or data_cfg["max_humans"]),
         require_smpl=True,
@@ -72,6 +74,7 @@ def main() -> None:
         "batch_size": int(args.batch_size),
         "boxes_root": str(boxes_root),
         "tensor_shapes": {key: list(batch[key].shape) for key in required},
+        "geometry": tensor_previews(batch, ("image_hw", "valid_hw", "orig_hw", "pad_xyxy")),
         "query_valid_count": int(batch["smpl_query_boxes_mask"].sum().item()),
         "gt_valid_count": int(batch["smpl_mask"].sum().item()),
         "sam2_patch_mask_valid_count": int(batch["smpl_query_patch_masks_valid"].sum().item()),
@@ -101,6 +104,15 @@ def tensor_mean(value: torch.Tensor, mask: torch.Tensor) -> float:
     if not bool(mask.any()):
         return 0.0
     return float(value[mask].float().mean().item())
+
+
+def tensor_previews(batch: dict[str, torch.Tensor], keys: tuple[str, ...]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for key in keys:
+        value = batch.get(key)
+        if isinstance(value, torch.Tensor):
+            out[key] = value.detach().cpu().reshape(-1, value.shape[-1]).tolist()[:4]
+    return out
 
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ ARGS=(
   --path-config "${PATH_CONFIG:-configs/path.yaml}"
   --output-split "${OUTPUT_SPLIT:-train}"
   --device "${DEVICE:-cuda}"
-  --image-size "${IMAGE_SIZE:-518}"
+  --image-resolution "${IMAGE_RESOLUTION:-512}"
   --patch-size "${PATCH_SIZE:-16}"
   --max-humans "${MAX_HUMANS:-20}"
   --bbox-expand "${BBOX_EXPAND:-0.15}"
@@ -27,6 +27,9 @@ ARGS=(
   --log-interval "${LOG_INTERVAL:-100}"
 )
 
+if [[ -n "${IMAGE_SIZE:-}" ]]; then
+  ARGS+=(--image-size "${IMAGE_SIZE}")
+fi
 if [[ "${TRANSL_ADD_CAM_EXT:-1}" == "0" ]]; then
   ARGS+=(--no-transl-add-cam-ext)
 fi

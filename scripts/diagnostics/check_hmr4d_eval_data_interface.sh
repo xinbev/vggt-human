@@ -11,6 +11,6 @@ python scripts/diagnostics/check_hmr4d_eval_data_interface.py \
   --path-config "${PATH_CONFIG:-configs/path.yaml}" \
   --sequence-length "${SEQUENCE_LENGTH:-16}" \
   --stride "${STRIDE:-1}" \
-  --image-size "${IMAGE_SIZE:-518}" \
+  --image-resolution "${IMAGE_RESOLUTION:-512}" \
   --max-humans "${MAX_HUMANS:-20}" \
   --batch-size "${BATCH_SIZE:-1}"

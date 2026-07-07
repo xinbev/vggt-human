@@ -94,6 +94,26 @@ def compute_resize_geometry(
     )
 
 
+def resolve_image_size_config(
+    data_cfg: dict[str, Any],
+    cli_image_size: int | None = None,
+    default_resolution: int = 512,
+) -> tuple[int, int]:
+    """Return (legacy_image_size, image_resolution) with VGGT-style resolution priority.
+
+    `image_size` is kept only for old configs and compatibility fields.  Geometry
+    should use `image_resolution`, defaulting to 512 unless a CLI override is
+    explicitly supplied.
+    """
+    cli_value = int(cli_image_size or 0)
+    if cli_value > 0:
+        image_resolution = cli_value
+    else:
+        image_resolution = int(data_cfg.get("image_resolution", default_resolution) or default_resolution)
+    image_size = int(data_cfg.get("image_size", image_resolution) or image_resolution)
+    return image_size, image_resolution
+
+
 def supported_aspect_crop_xyxy(orig_hw: tuple[int, int], min_aspect_ratio: float = 0.5, max_aspect_ratio: float = 2.0) -> tuple[int, int, int, int]:
     height, width = int(orig_hw[0]), int(orig_hw[1])
     aspect_ratio = float(height) / max(float(width), 1.0)

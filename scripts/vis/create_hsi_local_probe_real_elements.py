@@ -60,6 +60,7 @@ from scripts.vis.visualize_smpl_inference import (  # noqa: E402
     load_image,
     load_training_checkpoint,
 )
+from vggt_omega.data.geometry import resolve_image_size_config  # noqa: E402
 from vggt_omega.models.heads.hsi_refinement_head import (  # noqa: E402
     _canonical_depth,
     _estimate_depth_normals,
@@ -109,7 +110,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--train-config", default="configs/train_smpl_hsi_after_translation_ray_refine.yaml")
     parser.add_argument("--output-dir", type=Path, default=Path("outputs/vis/paper_hsi_local_probe_real_elements"))
     parser.add_argument("--device", default="")
-    parser.add_argument("--image-size", type=int, default=518)
+    parser.add_argument("--image-size", type=int, default=0, help="Legacy explicit geometry override; default uses data.image_resolution or 512")
     parser.add_argument("--person-index", type=int, default=-1, help="Index after person selection candidates; overrides --person-select when >=0.")
     parser.add_argument("--person-select", choices=("rightmost", "leftmost", "confidence", "all"), default="all")
     parser.add_argument("--anchor-index", type=int, default=-1, help="-1 chooses according to --anchor-mode.")
@@ -147,7 +148,7 @@ def main() -> None:
     config = load_config(args)
     checkpoint = resolve_checkpoint(args, config)
     image_path = resolve_project_path(args.image)
-    input_size = int(config.get("data", {}).get("image_resolution", config.get("data", {}).get("image_size", args.image_size)))
+    _, input_size = resolve_image_size_config(config.get("data", {}), args.image_size)
     patch_size = int(config.get("model", {}).get("patch_size", 16))
 
     priors = build_query_priors(args, image_path, input_size, patch_size, config, device, output_dir)
@@ -253,7 +254,9 @@ def load_config(args: argparse.Namespace) -> dict[str, Any]:
         model_cfg["smpl_query_box_prior"] = True
         model_cfg["smpl_query_patch_pool"] = True
         model_cfg["smpl_query_patch_pool_mode"] = "mask_intersection"
-    config.setdefault("data", {})["image_size"] = int(config.get("data", {}).get("image_size", args.image_size))
+    image_size, image_resolution = resolve_image_size_config(config.get("data", {}), args.image_size)
+    config.setdefault("data", {})["image_size"] = image_size
+    config.setdefault("data", {})["image_resolution"] = image_resolution
     return config
 
 

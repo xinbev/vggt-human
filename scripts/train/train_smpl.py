@@ -42,6 +42,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from vggt_omega.data import BedlamDataset, HFBedlamDataset, ThreeDPWDataset, bedlam_collate_fn, hf_bedlam_collate_fn, threedpw_collate_fn
+from vggt_omega.data.geometry import resolve_image_size_config
 from vggt_omega.models import VGGTOmega
 from vggt_omega.training import HungarianSMPLLoss, HungarianSMPLMatcher, SMPLSlotLoss
 from vggt_omega.training.config import deep_update, load_yaml_config, require_path
@@ -154,6 +155,7 @@ def build_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoade
         return build_hf_bedlam_loader(config, split=split, shuffle=shuffle)
     if dataset_name != "bedlam":
         raise ValueError(f"Unsupported data.dataset: {data_cfg.get('dataset')!r}")
+    image_size, image_resolution = resolve_image_size_config(data_cfg)
     root = require_path(config, data_cfg.get("root_key", "datasets.bedlam_root"))
     boxes_root = None
     if data_cfg.get("boxes_root_key"):
@@ -163,8 +165,8 @@ def build_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoade
         split=split,
         sequence_length=int(data_cfg["sequence_length"]),
         stride=int(data_cfg["stride"]),
-        image_size=int(data_cfg.get("image_size", data_cfg.get("image_resolution", 512))),
-        image_resolution=int(data_cfg.get("image_resolution", data_cfg.get("image_size", 512))),
+        image_size=image_size,
+        image_resolution=image_resolution,
         resize_mode=str(data_cfg.get("resize_mode", "balanced")),
         max_humans=int(data_cfg["max_humans"]),
         require_smpl=bool(data_cfg.get("require_smpl", True)),
@@ -189,14 +191,15 @@ def build_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoade
 
 def build_3dpw_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoader:
     data_cfg = config["data"]
+    image_size, image_resolution = resolve_image_size_config(data_cfg)
     dataset = ThreeDPWDataset(
         root=require_path(config, data_cfg.get("root_key", "datasets.threedpw_root")),
         annotation_root=require_path(config, data_cfg.get("annotation_root_key", "datasets.threedpw_smpl_base_root")),
         split=split,
         sequence_length=int(data_cfg["sequence_length"]),
         stride=int(data_cfg["stride"]),
-        image_size=int(data_cfg.get("image_size", data_cfg.get("image_resolution", 512))),
-        image_resolution=int(data_cfg.get("image_resolution", data_cfg.get("image_size", 512))),
+        image_size=image_size,
+        image_resolution=image_resolution,
         resize_mode=str(data_cfg.get("resize_mode", "balanced")),
         max_humans=int(data_cfg.get("max_humans", 2)),
         require_smpl=bool(data_cfg.get("require_smpl", True)),
@@ -232,13 +235,14 @@ def resolve_optional_data_path(
 
 def build_hf_bedlam_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoader:
     data_cfg = config["data"]
+    image_size, image_resolution = resolve_image_size_config(data_cfg)
     dataset = HFBedlamDataset(
         images_root=require_path(config, data_cfg.get("images_root_key", "datasets.hf_bedlam_images_root")),
         npz_root=require_path(config, data_cfg.get("npz_root_key", "datasets.hf_bedlam_npz_root")),
         sequence_length=int(data_cfg["sequence_length"]),
         stride=int(data_cfg["stride"]),
-        image_size=int(data_cfg.get("image_size", data_cfg.get("image_resolution", 512))),
-        image_resolution=int(data_cfg.get("image_resolution", data_cfg.get("image_size", 512))),
+        image_size=image_size,
+        image_resolution=image_resolution,
         resize_mode=str(data_cfg.get("resize_mode", "balanced")),
         max_humans=int(data_cfg.get("max_humans", 20)),
         require_smpl=bool(data_cfg.get("require_smpl", True)),

@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from vggt_omega.data import HMR4DSupportEvalDataset, hmr4d_eval_collate_fn
+from vggt_omega.data.geometry import resolve_image_size_config
 from vggt_omega.training.config import deep_update, load_yaml_config, require_path
 
 
@@ -21,6 +22,10 @@ def main() -> None:
     support_root = args.support_root or support_key(config, args.dataset)
     frames_root = args.frames_root or require_path(config, "datasets.hmr4d_eval_frames_root")
     sidecar_root = args.sidecar_root or str(config.get("datasets", {}).get("hmr4d_eval_tracks_root", "") or "")
+    data_cfg = {"image_resolution": int(args.image_resolution or 512)}
+    if args.image_size > 0:
+        data_cfg["image_size"] = int(args.image_size)
+    image_size, image_resolution = resolve_image_size_config(data_cfg, args.image_size)
     dataset = HMR4DSupportEvalDataset(
         dataset=args.dataset,
         support_root=support_root,
@@ -28,8 +33,8 @@ def main() -> None:
         sidecar_root=sidecar_root or None,
         sequence_length=args.sequence_length,
         stride=args.stride,
-        image_size=args.image_size,
-        image_resolution=args.image_size,
+        image_size=image_size,
+        image_resolution=image_resolution,
         resize_mode="balanced",
         max_humans=args.max_humans,
         patch_size=args.patch_size,
@@ -43,6 +48,7 @@ def main() -> None:
         "batch_size": args.batch_size,
         "meta": batch["meta"],
         "tensor_shapes": tensor_shapes(batch),
+        "geometry": tensor_previews(batch, ("image_hw", "valid_hw", "orig_hw", "pad_xyxy")),
     }
     print(json.dumps(summary, indent=2, ensure_ascii=False))
 
@@ -56,7 +62,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sidecar-root", default="")
     parser.add_argument("--sequence-length", type=int, default=16)
     parser.add_argument("--stride", type=int, default=1)
-    parser.add_argument("--image-size", type=int, default=518)
+    parser.add_argument("--image-size", type=int, default=0, help="Legacy explicit geometry override; default uses --image-resolution")
+    parser.add_argument("--image-resolution", type=int, default=512)
     parser.add_argument("--max-humans", type=int, default=1)
     parser.add_argument("--patch-size", type=int, default=16)
     parser.add_argument("--batch-size", type=int, default=1)
@@ -82,6 +89,15 @@ def tensor_shapes(value: Any) -> Any:
     if isinstance(value, list):
         return [tensor_shapes(value[0])] if value else []
     return type(value).__name__
+
+
+def tensor_previews(batch: dict[str, Any], keys: tuple[str, ...]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for key in keys:
+        value = batch.get(key)
+        if isinstance(value, torch.Tensor):
+            out[key] = value.detach().cpu().reshape(-1, value.shape[-1]).tolist()[:4]
+    return out
 
 
 if __name__ == "__main__":

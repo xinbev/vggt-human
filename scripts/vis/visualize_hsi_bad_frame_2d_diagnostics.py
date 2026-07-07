@@ -48,6 +48,7 @@ from scripts.vis.visualize_smpl_inference import (  # noqa: E402
     require_smpl_model_dir,
 )
 from vggt_omega.data import BedlamDataset  # noqa: E402
+from vggt_omega.data.geometry import resolve_image_size_config  # noqa: E402
 from vggt_omega.models.smpl_layer import SMPLLayer  # noqa: E402
 from vggt_omega.training.config import require_path  # noqa: E402
 from vggt_omega.utils.pose_enc import encoding_to_camera  # noqa: E402
@@ -123,7 +124,7 @@ def main() -> None:
             smpl_track_mask=batch.get("gt_track_mask") if args.use_track_ids else None,
         )
 
-    input_size = int(config["data"].get("image_resolution", config["data"].get("image_size", args.image_size)))
+    _, input_size = resolve_image_size_config(config["data"], args.image_size)
     original = Image.open(target_path).convert("RGB")
     persons = collect_person_diagnostics(predictions, batch, target_idx, original.size, input_size, config, args, device)
     panels = make_panels(original, persons, int(args.panel_width))
@@ -169,7 +170,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--baseline-checkpoint", default="")
     parser.add_argument("--output-dir", default="outputs/vis/hsi_bad_frame_2d_diagnostics")
     parser.add_argument("--device", default="")
-    parser.add_argument("--image-size", type=int, default=518)
+    parser.add_argument("--image-size", type=int, default=0, help="Legacy explicit geometry override; default uses data.image_resolution or 512")
     parser.add_argument("--num-frames", type=int, default=27)
     parser.add_argument("--stride", type=int, default=1)
     parser.add_argument("--target-frame-stem", default="seq_000000_0100")
@@ -189,13 +190,14 @@ def build_dataset(config: dict[str, Any], args: argparse.Namespace) -> BedlamDat
     data_cfg = config["data"]
     root = require_path(config, data_cfg.get("root_key", "datasets.bedlam_root"), allow_empty=False)
     boxes_root = require_path(config, data_cfg.get("boxes_root_key", "datasets.bedlam_boxes_root"), allow_empty=False)
+    image_size, image_resolution = resolve_image_size_config(data_cfg, args.image_size)
     return BedlamDataset(
         root=root,
         split=str(args.split),
         sequence_length=int(args.num_frames),
         stride=int(args.stride),
-        image_size=int(data_cfg.get("image_size", data_cfg.get("image_resolution", args.image_size))),
-        image_resolution=int(data_cfg.get("image_resolution", data_cfg.get("image_size", args.image_size))),
+        image_size=image_size,
+        image_resolution=image_resolution,
         resize_mode=str(data_cfg.get("resize_mode", "balanced")),
         max_humans=int(data_cfg.get("max_humans", config.get("model", {}).get("num_smpl_queries", 20))),
         require_smpl=True,

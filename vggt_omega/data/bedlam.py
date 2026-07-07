@@ -59,7 +59,7 @@ class BedlamDataset(Dataset):
         split: str = "Training",
         sequence_length: int = 2,
         stride: int = 1,
-        image_size: int = 518,
+        image_size: int = 512,
         image_resolution: int | None = None,
         resize_mode: str = "balanced",
         max_humans: int = 20,

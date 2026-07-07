@@ -11,7 +11,7 @@ DEVICE="${DEVICE:-cuda}"
 OVERWRITE_FLAG="${OVERWRITE_FLAG:-}"
 SAM2_FLAG="${SAM2_FLAG:---enable}"
 SEQUENCE_LENGTH="${SEQUENCE_LENGTH:-16}"
-IMAGE_SIZE="${IMAGE_SIZE:-518}"
+IMAGE_RESOLUTION="${IMAGE_RESOLUTION:-512}"
 MAX_HUMANS="${MAX_HUMANS:-20}"
 
 for DATASET in ${DATASETS}; do
@@ -52,10 +52,15 @@ for DATASET in ${DATASETS}; do
   fi
   python scripts/preprocess/prepare_hmr4d_eval_tracks.py "${TRACK_ARGS[@]}"
 
-  python scripts/diagnostics/check_hmr4d_eval_data_interface.py \
-    --dataset "${DATASET}" \
-    --path-config configs/path.yaml \
-    --sequence-length "${SEQUENCE_LENGTH}" \
-    --image-size "${IMAGE_SIZE}" \
+  CHECK_ARGS=(
+    --dataset "${DATASET}"
+    --path-config configs/path.yaml
+    --sequence-length "${SEQUENCE_LENGTH}"
+    --image-resolution "${IMAGE_RESOLUTION}"
     --max-humans "${MAX_HUMANS}"
+  )
+  if [[ -n "${IMAGE_SIZE:-}" ]]; then
+    CHECK_ARGS+=(--image-size "${IMAGE_SIZE}")
+  fi
+  python scripts/diagnostics/check_hmr4d_eval_data_interface.py "${CHECK_ARGS[@]}"
 done

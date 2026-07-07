@@ -55,6 +55,7 @@ from scripts.vis.visualize_smpl_inference import (  # noqa: E402
     require_smpl_model_dir,
     write_ply_meshes,
 )
+from vggt_omega.data.geometry import resolve_image_size_config  # noqa: E402
 from vggt_omega.data.bedlam import _build_box_targets, _load_box_persons, _load_persons  # noqa: E402
 from vggt_omega.models.smpl_layer import SMPLLayer  # noqa: E402
 from vggt_omega.training.config import require_path  # noqa: E402
@@ -85,8 +86,10 @@ def main() -> None:
 
     target_image = Path(args.image).expanduser()
     frame_paths, target_frame_idx = resolve_clip_frames(target_image, args)
-    input_size = int(config["data"].get("image_size", args.image_size))
-    image_tensor, orig_images = load_clip_images(frame_paths, input_size)
+    _, input_resolution = resolve_image_size_config(config.get("data", {}), args.image_size)
+    image_tensor, orig_images = load_clip_images(frame_paths, input_resolution)
+    input_hw = (int(image_tensor.shape[-2]), int(image_tensor.shape[-1]))
+    input_size = max(input_hw)
     priors = load_clip_priors_and_tracks(frame_paths, config, device)
 
     model = build_model(config).to(device)
@@ -102,6 +105,7 @@ def main() -> None:
             smpl_track_ids=priors["gt_track_ids"],
             smpl_track_mask=priors["gt_track_mask"],
         )
+    predictions["images"] = image_tensor.to(device)
 
     frame_pred = slice_predictions(predictions, target_frame_idx)
     selected = select_pairs_for_target(target_image, target_frame_idx, priors, frame_pred, args)
@@ -142,7 +146,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--baseline-checkpoint", default="")
     parser.add_argument("--output-dir", default="outputs/vis/smpl_translation_v2_longseq_ply")
     parser.add_argument("--device", default="")
-    parser.add_argument("--image-size", type=int, default=518)
+    parser.add_argument("--image-size", type=int, default=0, help="Legacy explicit geometry override; default uses data.image_resolution or 512")
     parser.add_argument("--num-frames", type=int, default=27)
     parser.add_argument("--stride", type=int, default=1)
     parser.add_argument("--target-frame-offset", type=int, default=4, help="Place --image at this 0-based clip offset")

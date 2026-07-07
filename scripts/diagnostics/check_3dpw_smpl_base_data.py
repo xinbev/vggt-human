@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from vggt_omega.data import ThreeDPWDataset, threedpw_collate_fn
+from vggt_omega.data.geometry import resolve_image_size_config
 from vggt_omega.training.config import deep_update, load_yaml_config, require_path
 
 
@@ -22,14 +23,15 @@ def main() -> None:
     config = deep_update(load_yaml_config(args.path_config), load_yaml_config(args.train_config))
     data_cfg = config["data"]
     split = args.split or data_cfg.get("train_split", "train")
+    image_size, image_resolution = resolve_image_size_config(data_cfg, args.image_size)
     dataset = ThreeDPWDataset(
         root=require_path(config, data_cfg.get("root_key", "datasets.threedpw_root")),
         annotation_root=require_path(config, data_cfg.get("annotation_root_key", "datasets.threedpw_smpl_base_root")),
         split=split,
         sequence_length=int(args.sequence_length or data_cfg["sequence_length"]),
         stride=int(args.stride or data_cfg["stride"]),
-        image_size=int(args.image_size or data_cfg.get("image_size", data_cfg.get("image_resolution", 512))),
-        image_resolution=int(data_cfg.get("image_resolution", args.image_size or data_cfg.get("image_size", 512))),
+        image_size=image_size,
+        image_resolution=image_resolution,
         resize_mode=str(data_cfg.get("resize_mode", "balanced")),
         max_humans=int(args.max_humans or data_cfg["max_humans"]),
         require_boxes=True,
@@ -52,6 +54,7 @@ def main() -> None:
         "split": split,
         "num_windows": len(dataset),
         "tensor_shapes": {key: list(batch[key].shape) for key in fields},
+        "geometry": tensor_previews(batch, ("image_hw", "valid_hw", "orig_hw", "pad_xyxy")),
         "valid_people": int(batch["smpl_mask"].sum().item()),
         "valid_boxes": int(batch["boxes_mask"].sum().item()),
         "transl_z_mean": tensor_mean(batch["gt_transl_cam"][..., 2], batch["smpl_mask"]),
@@ -77,6 +80,15 @@ def tensor_mean(value: torch.Tensor, mask: torch.Tensor) -> float:
     if not bool(mask.any()):
         return 0.0
     return float(value[mask].float().mean().item())
+
+
+def tensor_previews(batch: dict[str, torch.Tensor], keys: tuple[str, ...]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for key in keys:
+        value = batch.get(key)
+        if isinstance(value, torch.Tensor):
+            out[key] = value.detach().cpu().reshape(-1, value.shape[-1]).tolist()[:4]
+    return out
 
 
 if __name__ == "__main__":

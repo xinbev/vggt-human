@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
 
 from scripts.train.train_smpl import apply_overrides, build_model, load_initial_checkpoint
 from vggt_omega.data import HMR4DSupportEvalDataset, hmr4d_eval_collate_fn
+from vggt_omega.data.geometry import resolve_image_size_config
 from vggt_omega.models.smpl_layer import SMPLLayer
 from vggt_omega.training.config import deep_update, load_yaml_config, require_path
 
@@ -125,6 +126,7 @@ def build_dataset(config: dict[str, Any], args: argparse.Namespace) -> HMR4DSupp
     frames_root = args.frames_root or require_path(config, "datasets.hmr4d_eval_frames_root")
     sidecar_root = args.sidecar_root or str(config.get("datasets", {}).get("hmr4d_eval_tracks_root", "") or "")
     max_humans = int(args.max_humans or config.get("model", {}).get("num_smpl_queries", data_cfg.get("max_humans", 1)))
+    image_size, image_resolution = resolve_image_size_config(data_cfg, args.image_size)
     return HMR4DSupportEvalDataset(
         dataset=args.dataset,
         support_root=support_root,
@@ -132,8 +134,8 @@ def build_dataset(config: dict[str, Any], args: argparse.Namespace) -> HMR4DSupp
         sidecar_root=sidecar_root or None,
         sequence_length=int(args.sequence_length or data_cfg.get("sequence_length", 16)),
         stride=int(args.stride),
-        image_size=int(args.image_size or data_cfg.get("image_size", data_cfg.get("image_resolution", 512))),
-        image_resolution=int(data_cfg.get("image_resolution", args.image_size or data_cfg.get("image_size", 512))),
+        image_size=image_size,
+        image_resolution=image_resolution,
         resize_mode=str(data_cfg.get("resize_mode", "balanced")),
         max_humans=max_humans,
         patch_size=int(config.get("model", {}).get("patch_size", 16)),
