@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from vggt_omega.data.geometry import compute_resize_geometry
 from vggt_omega.data.hf_bedlam import HFBedlamDataset, _load_person
 from vggt_omega.tracking.query_builder import pixel_mask_to_patch_mask
 from vggt_omega.tracking.sam2_masks import SAM2BoxMaskPredictor
@@ -35,6 +36,8 @@ def main() -> None:
         sequence_length=1,
         stride=1,
         image_size=int(args.image_size),
+        image_resolution=int(args.image_resolution or args.image_size),
+        resize_mode=str(args.resize_mode),
         max_humans=int(args.max_humans),
         require_smpl=True,
         require_boxes=True,
@@ -63,7 +66,7 @@ def main() -> None:
     if int(args.max_output_frames) > 0:
         frame_items = frame_items[: int(args.max_output_frames)]
 
-    num_patches = (int(args.image_size) // int(args.patch_size)) ** 2
+    max_num_patches = 0
     cache_frames: dict[str, dict[int, dict[str, Any]]] = {}
     stats = {
         "frames": 0,
@@ -80,6 +83,16 @@ def main() -> None:
             stats["missing_images"] += 1
             continue
         image_h, image_w = frame_bgr.shape[:2]
+        geometry = compute_resize_geometry(
+            (int(image_h), int(image_w)),
+            image_resolution=int(args.image_resolution or args.image_size),
+            patch_size=int(args.patch_size),
+            mode=str(args.resize_mode),
+        )
+        target_hw = geometry.input_hw
+        grid_hw = (target_hw[0] // int(args.patch_size), target_hw[1] // int(args.patch_size))
+        num_patches = int(grid_hw[0] * grid_hw[1])
+        max_num_patches = max(max_num_patches, num_patches)
         data = dataset._load_npz(frame["npz_path"])  # noqa: SLF001
         persons: list[dict[str, Any]] = []
         for person_idx in frame["person_indices"]:
@@ -89,13 +102,14 @@ def main() -> None:
                         data,
                         int(person_idx),
                         (int(image_h), int(image_w)),
+                        geometry,
                         float(args.bbox_expand),
                         bool(args.transl_add_cam_ext),
                     )
                 )
             except Exception:
                 stats["person_load_errors"] += 1
-        detections = build_detections(persons, image_w=image_w, image_h=image_h)
+        detections = build_detections(persons, image_w=image_w, image_h=image_h, geometry=geometry)
         if not detections:
             stats["missing_boxes"] += 1
             continue
@@ -109,7 +123,7 @@ def main() -> None:
                 continue
             patch_mask = pixel_mask_to_patch_mask(
                 pixel_mask,
-                image_size=int(args.image_size),
+                image_hw=target_hw,
                 patch_size=int(args.patch_size),
                 threshold=float(args.mask_patch_threshold),
             ).reshape(-1)
@@ -120,6 +134,11 @@ def main() -> None:
             packed_by_person[person_id] = {
                 "bits": np.packbits(patch_mask.astype(np.uint8)),
                 "patch_count": patch_count,
+                "target_hw": [int(target_hw[0]), int(target_hw[1])],
+                "grid_hw": [int(grid_hw[0]), int(grid_hw[1])],
+                "num_patches": int(num_patches),
+                "resize_mode": str(args.resize_mode),
+                "image_resolution": int(args.image_resolution or args.image_size),
                 **metadata.get(person_id, {}),
             }
             stats["valid_masks"] += 1
@@ -138,8 +157,10 @@ def main() -> None:
         "version": 1,
         "split": str(args.output_split),
         "image_size": int(args.image_size),
+        "image_resolution": int(args.image_resolution or args.image_size),
+        "resize_mode": str(args.resize_mode),
         "patch_size": int(args.patch_size),
-        "num_patches": int(num_patches),
+        "num_patches": int(max_num_patches),
         "mask_patch_threshold": float(args.mask_patch_threshold),
         "min_mask_patches": int(args.min_mask_patches),
         "frames": cache_frames,
@@ -151,7 +172,7 @@ def main() -> None:
         "npz_root": str(npz_root),
         "cache": str(output_path),
         "cache_frames": len(cache_frames),
-        "num_patches": int(num_patches),
+        "num_patches": int(max_num_patches),
         **stats,
     }
     summary_path = output_root / "summary.json"
@@ -171,7 +192,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sam2-checkpoint", default="")
     parser.add_argument("--sam2-model-cfg", default="configs/sam2.1/sam2.1_hiera_l.yaml")
     parser.add_argument("--sam2-single-mask", action="store_true")
-    parser.add_argument("--image-size", type=int, default=518)
+    parser.add_argument("--image-size", type=int, default=512, help="Legacy square size fallback; prefer --image-resolution")
+    parser.add_argument("--image-resolution", type=int, default=512)
+    parser.add_argument("--resize-mode", default="balanced", choices=["balanced", "max_size", "square_legacy"])
     parser.add_argument("--patch-size", type=int, default=16)
     parser.add_argument("--max-humans", type=int, default=20)
     parser.add_argument("--bbox-expand", type=float, default=0.15)
@@ -186,7 +209,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def build_detections(persons: list[dict[str, Any]], image_w: int, image_h: int) -> list[Detection]:
+def build_detections(persons: list[dict[str, Any]], image_w: int, image_h: int, geometry: Any) -> list[Detection]:
     detections: list[Detection] = []
     for person in persons:
         if not bool(person.get("bbox_valid", False)):
@@ -195,7 +218,7 @@ def build_detections(persons: list[dict[str, Any]], image_w: int, image_h: int) 
         if box is None:
             continue
         person_id = int(person.get("person_id", len(detections)))
-        xyxy = cxcywh_norm_to_xyxy(np.asarray(box, dtype=np.float32).reshape(4), image_w=image_w, image_h=image_h)
+        xyxy = model_cxcywh_norm_to_orig_xyxy(np.asarray(box, dtype=np.float32).reshape(4), geometry, image_w=image_w, image_h=image_h)
         detections.append(
             Detection(
                 bbox_xyxy=[float(v) for v in xyxy],
@@ -209,14 +232,22 @@ def build_detections(persons: list[dict[str, Any]], image_w: int, image_h: int) 
     return detections
 
 
-def cxcywh_norm_to_xyxy(box: np.ndarray, image_w: int, image_h: int) -> np.ndarray:
+def model_cxcywh_norm_to_orig_xyxy(box: np.ndarray, geometry: Any, image_w: int, image_h: int) -> np.ndarray:
     cx, cy, w, h = [float(v) for v in box.reshape(4)]
-    bw = w * float(max(image_w, 1))
-    bh = h * float(max(image_h, 1))
-    x1 = cx * float(max(image_w, 1)) - 0.5 * bw
-    y1 = cy * float(max(image_h, 1)) - 0.5 * bh
+    target_h, target_w = geometry.input_hw
+    bw = w * float(max(target_w, 1))
+    bh = h * float(max(target_h, 1))
+    x1 = cx * float(max(target_w, 1)) - 0.5 * bw
+    y1 = cy * float(max(target_h, 1)) - 0.5 * bh
     x2 = x1 + bw
     y2 = y1 + bh
+    sx, sy = geometry.scale_xy
+    crop_x1, crop_y1, _, _ = geometry.crop_xyxy
+    pad_left, pad_top, _, _ = geometry.pad_xyxy
+    x1 = (x1 - float(pad_left)) / max(float(sx), 1e-6) + float(crop_x1)
+    x2 = (x2 - float(pad_left)) / max(float(sx), 1e-6) + float(crop_x1)
+    y1 = (y1 - float(pad_top)) / max(float(sy), 1e-6) + float(crop_y1)
+    y2 = (y2 - float(pad_top)) / max(float(sy), 1e-6) + float(crop_y1)
     return np.asarray(
         [
             np.clip(x1, 0.0, float(max(image_w - 1, 1))),

@@ -118,6 +118,7 @@ class HSIRefinementHead(nn.Module):
         track_mask: torch.Tensor | None = None,
         track_quality: torch.Tensor | None = None,
         track_gap: torch.Tensor | None = None,
+        image_size_hw: tuple[int, int] | None = None,
     ) -> dict[str, torch.Tensor]:
         required = ("pred_pose_6d", "pred_poses", "pred_betas", "pred_transl_cam", "pred_confs")
         for key in required:
@@ -138,6 +139,7 @@ class HSIRefinementHead(nn.Module):
                 track_mask=track_mask,
                 track_quality=track_quality,
                 track_gap=track_gap,
+                image_size_hw=image_size_hw,
             )
 
         pose6d = smpl_outputs["pred_pose_6d"].float()
@@ -151,7 +153,8 @@ class HSIRefinementHead(nn.Module):
         height, width = depth_hw.shape[-2:]
         if depth_hw.shape[:2] != (batch_size, num_frames):
             raise ValueError(f"Expected depth shape [B,S,H,W], got {tuple(depth_hw.shape)}")
-        intrinsics = _flatten_intrinsics(pose_enc, self.image_size).to(device=pose6d.device, dtype=pose6d.dtype)
+        image_size_hw = _resolve_image_size_hw(image_size_hw, self.image_size)
+        intrinsics = _flatten_intrinsics(pose_enc, image_size_hw=image_size_hw).to(device=pose6d.device, dtype=pose6d.dtype)
 
         scene_features = self._build_scene_features(aggregated_tokens_list, token_layout)
         local_scene_tokens = self._gather_local_scene_tokens(
@@ -163,6 +166,7 @@ class HSIRefinementHead(nn.Module):
             intrinsics,
             height,
             width,
+            image_size_hw=image_size_hw,
         )
         hsi_tokens, token_aux = self._tokenize(
             pose6d,
@@ -172,6 +176,7 @@ class HSIRefinementHead(nn.Module):
             intrinsics,
             height,
             width,
+            image_size_hw=image_size_hw,
             probe_mode=self.probe_mode,
         )
         flat_tokens = hsi_tokens.reshape(flat_frames * num_queries, 24, self.hidden_dim)
@@ -208,6 +213,7 @@ class HSIRefinementHead(nn.Module):
                 intrinsics,
                 height,
                 width,
+                image_size_hw=image_size_hw,
                 probe_mode=self.affine_probe_mode,
             )
             affine_tokens = affine_tokens.reshape(flat_frames * num_queries, 24, self.hidden_dim)
@@ -249,6 +255,7 @@ class HSIRefinementHead(nn.Module):
         track_mask: torch.Tensor | None = None,
         track_quality: torch.Tensor | None = None,
         track_gap: torch.Tensor | None = None,
+        image_size_hw: tuple[int, int] | None = None,
     ) -> dict[str, torch.Tensor]:
         pose6d = smpl_outputs["pred_pose_6d"].float()
         betas = smpl_outputs["pred_betas"].float()
@@ -258,7 +265,8 @@ class HSIRefinementHead(nn.Module):
         depth_hw = _canonical_depth(depth).float()
         if depth_hw.shape[:2] != (batch_size, num_frames):
             raise ValueError(f"Expected depth shape [B,S,H,W], got {tuple(depth_hw.shape)}")
-        intrinsics = _flatten_intrinsics(pose_enc, self.image_size).to(device=pose6d.device, dtype=pose6d.dtype)
+        image_size_hw = _resolve_image_size_hw(image_size_hw, self.image_size)
+        intrinsics = _flatten_intrinsics(pose_enc, image_size_hw=image_size_hw).to(device=pose6d.device, dtype=pose6d.dtype)
         scene_features = self._build_scene_features(aggregated_tokens_list, token_layout)
         num_patches = int(scene_features.shape[1])
         scene_features = scene_features.reshape(batch_size, num_frames, num_patches, -1)
@@ -291,6 +299,7 @@ class HSIRefinementHead(nn.Module):
                 frame_intrinsics,
                 frame_depth.shape[-2],
                 frame_depth.shape[-1],
+                image_size_hw=image_size_hw,
                 probe_mode=self.probe_mode,
             )
             frame_tokens = self._inject_temporal_memory(
@@ -304,7 +313,15 @@ class HSIRefinementHead(nn.Module):
                 frame_bias=None,
             )
             flat_tokens = frame_tokens.reshape(batch_size * num_queries, 24, self.hidden_dim)
-            flat_scene = self._reshape_local_scene_tokens(frame_scene_features, frame_pose6d, frame_betas, frame_transl, frame_depth, frame_intrinsics)
+            flat_scene = self._reshape_local_scene_tokens(
+                frame_scene_features,
+                frame_pose6d,
+                frame_betas,
+                frame_transl,
+                frame_depth,
+                frame_intrinsics,
+                image_size_hw=image_size_hw,
+            )
             tokens = flat_tokens
             for _ in range(max(self.num_iters, 1)):
                 for block in self.blocks:
@@ -328,6 +345,7 @@ class HSIRefinementHead(nn.Module):
                     frame_intrinsics,
                     frame_depth.shape[-2],
                     frame_depth.shape[-1],
+                    image_size_hw=image_size_hw,
                     probe_mode=self.affine_probe_mode,
                 )
                 affine_tokens = affine_tokens.reshape(batch_size * num_queries, 24, self.hidden_dim)
@@ -419,6 +437,7 @@ class HSIRefinementHead(nn.Module):
         intrinsics: torch.Tensor,
         height: int,
         width: int,
+        image_size_hw: tuple[int, int],
     ) -> torch.Tensor:
         anchors = self._anchors_cam(pose6d, betas, transl)
         num_queries = anchors.shape[2]
@@ -427,7 +446,7 @@ class HSIRefinementHead(nn.Module):
             intrinsics.repeat_interleave(num_queries, dim=0),
         )
         projected = projected.reshape(*anchors.shape[:3], 24, 2)
-        projected = _scale_points_to_depth(projected, self.image_size, height, width)
+        projected = _scale_points_to_depth(projected, image_size_hw, height, width)
         grid_h = height // 16
         grid_w = width // 16
         center_x = (projected[..., 0] / float(width) * float(grid_w)).floor().long().clamp(0, grid_w - 1)
@@ -451,6 +470,7 @@ class HSIRefinementHead(nn.Module):
         intrinsics: torch.Tensor,
         height: int,
         width: int,
+        image_size_hw: tuple[int, int],
         probe_mode: str,
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         anchors = self._anchors_cam(pose6d, betas, transl)
@@ -459,7 +479,7 @@ class HSIRefinementHead(nn.Module):
         flat_anchors = anchors.reshape(flat_frames * num_queries, 24, 3)
         flat_intrinsics = intrinsics.repeat_interleave(num_queries, dim=0)
         projected = _project_points(flat_anchors, flat_intrinsics).reshape(batch_size, num_frames, num_queries, 24, 2)
-        projected_depth = _scale_points_to_depth(projected, self.image_size, height, width)
+        projected_depth = _scale_points_to_depth(projected, image_size_hw, height, width)
         px = projected_depth[..., 0].round().long().clamp(0, width - 1)
         py = projected_depth[..., 1].round().long().clamp(0, height - 1)
         frame_idx = torch.arange(flat_frames, device=pose6d.device).reshape(batch_size, num_frames, 1, 1).expand(-1, -1, num_queries, 24)
@@ -477,7 +497,7 @@ class HSIRefinementHead(nn.Module):
                 anchors=anchors,
                 projected_depth=projected_depth,
                 intrinsics=intrinsics,
-                image_size=self.image_size,
+                image_size_hw=image_size_hw,
                 window_size=self.probe_window,
             )
             blend = min(max(float(self.probe_blend), 0.0), 1.0)
@@ -519,6 +539,7 @@ class HSIRefinementHead(nn.Module):
         frame_transl: torch.Tensor,
         frame_depth: torch.Tensor,
         frame_intrinsics: torch.Tensor,
+        image_size_hw: tuple[int, int],
     ) -> torch.Tensor:
         local_scene_tokens = self._gather_local_scene_tokens(
             frame_scene_features,
@@ -529,6 +550,7 @@ class HSIRefinementHead(nn.Module):
             frame_intrinsics,
             frame_depth.shape[-2],
             frame_depth.shape[-1],
+            image_size_hw=image_size_hw,
         )
         batch_size, num_queries = local_scene_tokens.shape[:2]
         return local_scene_tokens.reshape(batch_size * num_queries, 24, self.scene_window * self.scene_window, self.hidden_dim)
@@ -679,8 +701,14 @@ def _canonical_depth(depth: torch.Tensor) -> torch.Tensor:
     raise ValueError(f"Unsupported depth shape: {tuple(depth.shape)}")
 
 
-def _flatten_intrinsics(pose_enc: torch.Tensor, image_size: int) -> torch.Tensor:
-    _, intrinsics = encoding_to_camera(pose_enc, image_size_hw=(image_size, image_size), build_intrinsics=True)
+def _resolve_image_size_hw(image_size_hw: tuple[int, int] | None, fallback_image_size: int) -> tuple[int, int]:
+    if image_size_hw is None:
+        return int(fallback_image_size), int(fallback_image_size)
+    return int(image_size_hw[0]), int(image_size_hw[1])
+
+
+def _flatten_intrinsics(pose_enc: torch.Tensor, image_size_hw: tuple[int, int]) -> torch.Tensor:
+    _, intrinsics = encoding_to_camera(pose_enc, image_size_hw=image_size_hw, build_intrinsics=True)
     return intrinsics.reshape(-1, 3, 3)
 
 
@@ -703,11 +731,12 @@ def _unproject_pixels(px: torch.Tensor, py: torch.Tensor, z: torch.Tensor, intri
     return torch.stack([x, y, z], dim=-1)
 
 
-def _scale_points_to_depth(points_2d: torch.Tensor, image_size: int, depth_height: int, depth_width: int) -> torch.Tensor:
+def _scale_points_to_depth(points_2d: torch.Tensor, image_size_hw: tuple[int, int], depth_height: int, depth_width: int) -> torch.Tensor:
+    image_h, image_w = int(image_size_hw[0]), int(image_size_hw[1])
     scale = points_2d.new_tensor(
         [
-            float(depth_width) / float(image_size),
-            float(depth_height) / float(image_size),
+            float(depth_width) / float(image_w),
+            float(depth_height) / float(image_h),
         ]
     )
     return points_2d * scale
@@ -726,12 +755,13 @@ def _local_nearest_scene_probe(
     anchors: torch.Tensor,
     projected_depth: torch.Tensor,
     intrinsics: torch.Tensor,
-    image_size: int,
+    image_size_hw: tuple[int, int],
     window_size: int,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     batch_size, num_frames, num_queries, num_tokens, _ = anchors.shape
     flat_frames = batch_size * num_frames
     height, width = depth_hw.shape[-2:]
+    image_h, image_w = int(image_size_hw[0]), int(image_size_hw[1])
     radius = max(int(window_size), 1) // 2
     offsets = torch.arange(-radius, radius + 1, device=anchors.device)
     oy, ox = torch.meshgrid(offsets, offsets, indexing="ij")
@@ -757,8 +787,8 @@ def _local_nearest_scene_probe(
     fy = flat_intrinsics[..., 1, 1].clamp(min=1e-6)
     cx = flat_intrinsics[..., 0, 2]
     cy = flat_intrinsics[..., 1, 2]
-    image_x = xs.to(dtype=local_depth.dtype) * (float(image_size) / float(width))
-    image_y = ys.to(dtype=local_depth.dtype) * (float(image_size) / float(height))
+    image_x = xs.to(dtype=local_depth.dtype) * (float(image_w) / float(width))
+    image_y = ys.to(dtype=local_depth.dtype) * (float(image_h) / float(height))
     scene_x = (image_x - cx.to(dtype=local_depth.dtype)) * local_depth / fx.to(dtype=local_depth.dtype)
     scene_y = (image_y - cy.to(dtype=local_depth.dtype)) * local_depth / fy.to(dtype=local_depth.dtype)
     scene_xyz = torch.stack([scene_x, scene_y, local_depth], dim=-1)
@@ -779,8 +809,8 @@ def _local_nearest_scene_probe(
         fallback_y,
         fallback_x,
     ]
-    fallback_image_x = fallback_x.to(dtype=local_depth.dtype) * (float(image_size) / float(width))
-    fallback_image_y = fallback_y.to(dtype=local_depth.dtype) * (float(image_size) / float(height))
+    fallback_image_x = fallback_x.to(dtype=local_depth.dtype) * (float(image_w) / float(width))
+    fallback_image_y = fallback_y.to(dtype=local_depth.dtype) * (float(image_h) / float(height))
     fallback_xyz = _unproject_pixels(fallback_image_x, fallback_image_y, fallback_depth, intrinsics, num_queries)
     fallback_normals = flat_normals[
         torch.arange(flat_frames, device=anchors.device).reshape(batch_size, num_frames, 1, 1).expand(-1, -1, num_queries, num_tokens),

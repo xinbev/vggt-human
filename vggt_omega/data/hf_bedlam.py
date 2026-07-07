@@ -10,6 +10,14 @@ import torch
 from PIL import Image
 from torch.utils.data import Dataset
 
+from vggt_omega.data.geometry import (
+    ResizeGeometry,
+    collate_smpl_geometry_batch,
+    compute_resize_geometry,
+    resize_image_with_geometry,
+    transform_intrinsics,
+    transform_xyxy_to_normalized_cxcywh,
+)
 from vggt_omega.utils.rotation import axis_angle_to_rot6d
 
 
@@ -49,6 +57,8 @@ class HFBedlamDataset(Dataset):
         sequence_length: int = 1,
         stride: int = 1,
         image_size: int = 518,
+        image_resolution: int | None = None,
+        resize_mode: str = "balanced",
         max_humans: int = 20,
         require_boxes: bool = True,
         require_smpl: bool = True,
@@ -66,7 +76,9 @@ class HFBedlamDataset(Dataset):
         self.npz_root = Path(npz_root).expanduser()
         self.sequence_length = int(sequence_length)
         self.stride = int(stride)
-        self.image_size = int(image_size)
+        self.image_resolution = int(image_resolution or image_size)
+        self.resize_mode = str(resize_mode or "balanced")
+        self.image_size = self.image_resolution
         self.max_humans = int(max_humans)
         self.require_boxes = bool(require_boxes)
         self.require_smpl = bool(require_smpl)
@@ -125,29 +137,34 @@ class HFBedlamDataset(Dataset):
         patch_masks_per_frame = []
         for frame_id in selected:
             frame = self._frames[frame_id]
-            image, orig_hw = _load_rgb_tensor(frame["image_path"], self.image_size)
+            image, orig_hw, geometry = _load_rgb_tensor(frame["image_path"], self.image_resolution, 16, self.resize_mode)
             images.append(image)
             data = self._load_npz(frame["npz_path"])
-            intrinsics.append(_scale_intrinsics(_frame_intrinsics(data, frame["person_indices"][0], self.image_size), orig_hw, self.image_size))
-            persons = [_load_person(data, person_idx, orig_hw, self.bbox_expand, self.transl_add_cam_ext) for person_idx in frame["person_indices"]]
+            intrinsics.append(_scale_intrinsics(_frame_intrinsics(data, frame["person_indices"][0], self.image_resolution), orig_hw, geometry))
+            persons = [_load_person(data, person_idx, orig_hw, geometry, self.bbox_expand, self.transl_add_cam_ext) for person_idx in frame["person_indices"]]
             persons_per_frame.append(persons)
             if self.sam2_patch_masks is not None:
                 patch_masks_per_frame.append(self.sam2_patch_masks["frames"].get(frame_id, {}))
 
+        sample_num_patches = (int(images[0].shape[-2]) // 16) * (int(images[0].shape[-1]) // 16)
         targets = _build_targets(
             persons_per_frame,
             self.max_humans,
             self.require_boxes,
             self.require_smpl,
             patch_masks_per_frame if self.sam2_patch_masks is not None else None,
-            self.sam2_patch_masks["num_patches"] if self.sam2_patch_masks is not None else 0,
+            sample_num_patches if self.sam2_patch_masks is not None else 0,
         )
         intrinsics_tensor = torch.stack(intrinsics, dim=0)
         return {
             "images": torch.stack(images, dim=0),
-            "gt_depth": torch.zeros(self.sequence_length, 1, self.image_size, self.image_size, dtype=torch.float32),
+            "gt_depth": torch.zeros(self.sequence_length, 1, images[0].shape[-2], images[0].shape[-1], dtype=torch.float32),
             "K_scal3r": intrinsics_tensor,
             "gt_intrinsics": intrinsics_tensor,
+            "valid_hw": torch.tensor([list(image.shape[-2:]) for image in images], dtype=torch.long),
+            "image_hw": torch.tensor([list(image.shape[-2:]) for image in images], dtype=torch.long),
+            "orig_hw": torch.tensor([list(orig_hw)] * len(images), dtype=torch.long),
+            "patch_size": torch.tensor(16, dtype=torch.long),
             **targets,
         }
 
@@ -226,22 +243,22 @@ class HFBedlamDataset(Dataset):
 
 
 def hf_bedlam_collate_fn(batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
-    if not batch:
-        raise ValueError("Cannot collate an empty HF BEDLAM batch")
-    return {key: torch.stack([_require_tensor(item[key], key) for item in batch], dim=0) for key in batch[0].keys()}
+    patch_size = int(batch[0].get("patch_size", torch.tensor(16)).reshape(-1)[0].item())
+    return collate_smpl_geometry_batch(batch, patch_size=patch_size)
 
 
 def _load_person(
     data: dict[str, np.ndarray],
     person_idx: int,
     orig_hw: tuple[int, int],
+    geometry: ResizeGeometry,
     bbox_expand: float,
     transl_add_cam_ext: bool,
 ) -> dict[str, Any]:
     pose_aa = _person_pose_axis_angle(data, person_idx)
     betas = _field_value(data, BETA_KEYS, person_idx, required=True).reshape(-1)[:10].astype(np.float32)
     transl = _person_translation(data, person_idx, transl_add_cam_ext)
-    bbox = _person_bbox(data, person_idx, orig_hw, bbox_expand)
+    bbox = _person_bbox(data, person_idx, orig_hw, geometry, bbox_expand)
     person_id = _person_id(data, person_idx)
     return {
         "pose_aa": pose_aa,
@@ -281,24 +298,24 @@ def _person_pose_axis_angle(data: dict[str, np.ndarray], person_idx: int) -> np.
     return np.concatenate([root, body], axis=0).astype(np.float32)
 
 
-def _person_bbox(data: dict[str, np.ndarray], person_idx: int, orig_hw: tuple[int, int], bbox_expand: float) -> np.ndarray | None:
+def _person_bbox(data: dict[str, np.ndarray], person_idx: int, orig_hw: tuple[int, int], geometry: ResizeGeometry, bbox_expand: float) -> np.ndarray | None:
     bbox = _field_value(data, BBOX_KEYS, person_idx, required=False)
     if bbox is not None:
-        return _bbox_to_cxcywh_norm(np.asarray(bbox).reshape(-1)[:4], orig_hw, bbox_expand)
+        return _map_orig_norm_box(_bbox_to_cxcywh_norm(np.asarray(bbox).reshape(-1)[:4], orig_hw, bbox_expand), orig_hw, geometry)
     proj_verts = _field_value(data, PROJ_VERTS_KEYS, person_idx, required=False)
     if proj_verts is not None:
         box = _points_to_cxcywh_norm(proj_verts, orig_hw, bbox_expand)
         if box is not None:
-            return box
+            return _map_orig_norm_box(box, orig_hw, geometry)
     j2d = _field_value(data, J2D_KEYS, person_idx, required=False)
     if j2d is not None:
         box = _points_to_cxcywh_norm(j2d, orig_hw, bbox_expand)
         if box is not None:
-            return box
+            return _map_orig_norm_box(box, orig_hw, geometry)
     center = _field_value(data, CENTER_KEYS, person_idx, required=False)
     scale = _field_value(data, SCALE_KEYS, person_idx, required=False)
     if center is not None and scale is not None:
-        return _center_scale_to_cxcywh_norm(center, scale, orig_hw)
+        return _map_orig_norm_box(_center_scale_to_cxcywh_norm(center, scale, orig_hw), orig_hw, geometry)
     return None
 
 
@@ -411,24 +428,36 @@ def _natural_sort_key(text: str) -> tuple[Any, ...]:
     return tuple(int(part) if part.isdigit() else part for part in re.split(r"(\d+)", text))
 
 
-def _load_rgb_tensor(path: Path, size: int) -> tuple[torch.Tensor, tuple[int, int]]:
+def _load_rgb_tensor(path: Path, image_resolution: int, patch_size: int, resize_mode: str) -> tuple[torch.Tensor, tuple[int, int], ResizeGeometry]:
     if not path.is_file():
         raise FileNotFoundError(f"HF BEDLAM RGB frame not found: {path}")
     image = Image.open(path).convert("RGB")
     orig_hw = (image.height, image.width)
-    image = image.resize((int(size), int(size)), Image.BILINEAR)
-    arr = np.asarray(image, dtype=np.float32) / 255.0
-    return torch.from_numpy(arr).permute(2, 0, 1).contiguous(), orig_hw
+    geometry = compute_resize_geometry(orig_hw, image_resolution=image_resolution, patch_size=patch_size, mode=resize_mode)
+    resized = resize_image_with_geometry(image, geometry, Image.BILINEAR)
+    arr = np.asarray(resized, dtype=np.float32) / 255.0
+    return torch.from_numpy(arr).permute(2, 0, 1).contiguous(), orig_hw, geometry
 
 
-def _scale_intrinsics(intrinsics: np.ndarray, orig_hw: tuple[int, int], size: int) -> torch.Tensor:
-    src_h, src_w = orig_hw
-    scaled = np.asarray(intrinsics, dtype=np.float32).copy().reshape(3, 3)
-    scaled[0, 0] *= float(size) / float(max(src_w, 1))
-    scaled[0, 2] *= float(size) / float(max(src_w, 1))
-    scaled[1, 1] *= float(size) / float(max(src_h, 1))
-    scaled[1, 2] *= float(size) / float(max(src_h, 1))
-    return torch.from_numpy(scaled)
+def _scale_intrinsics(intrinsics: np.ndarray, orig_hw: tuple[int, int], geometry: ResizeGeometry) -> torch.Tensor:
+    del orig_hw
+    return transform_intrinsics(intrinsics, geometry)
+
+
+def _map_orig_norm_box(box: np.ndarray, orig_hw: tuple[int, int], geometry: ResizeGeometry) -> np.ndarray | None:
+    h, w = orig_hw
+    cx, cy, bw, bh = [float(v) for v in np.asarray(box, dtype=np.float32).reshape(4)]
+    xyxy = np.asarray(
+        [
+            (cx - 0.5 * bw) * float(w),
+            (cy - 0.5 * bh) * float(h),
+            (cx + 0.5 * bw) * float(w),
+            (cy + 0.5 * bh) * float(h),
+        ],
+        dtype=np.float32,
+    )
+    mapped, valid = transform_xyxy_to_normalized_cxcywh(xyxy, geometry)
+    return mapped if valid else None
 
 
 def _bbox_to_cxcywh_norm(raw_box: np.ndarray, orig_hw: tuple[int, int], expand: float) -> np.ndarray:
@@ -529,7 +558,10 @@ def _build_targets(
             if patch_masks is not None and patch_masks_valid is not None:
                 mask = frame_patch_masks.get(int(ids[slot].item()))
                 if mask is not None:
-                    patch_masks[slot] = torch.as_tensor(mask, dtype=torch.bool).reshape(-1)
+                    mask_tensor = torch.as_tensor(mask, dtype=torch.bool).reshape(-1)
+                    if int(mask_tensor.numel()) != int(patch_masks.shape[-1]):
+                        continue
+                    patch_masks[slot] = mask_tensor
                     patch_masks_valid[slot] = bool(patch_masks[slot].any())
             if person.get("bbox_valid", False) and person.get("bbox_cxcywh_norm") is not None:
                 boxes[slot] = torch.as_tensor(person["bbox_cxcywh_norm"], dtype=torch.float32).reshape(4).clamp(0.0, 1.0)
@@ -601,7 +633,8 @@ def _load_sam2_patch_masks(root: str | Path | None, split: str, require: bool) -
         for raw_pid, item in packed_by_person.items():
             if not isinstance(item, dict) or "bits" not in item:
                 continue
-            mask = np.unpackbits(np.asarray(item["bits"], dtype=np.uint8), count=num_patches).astype(np.bool_)
+            item_num_patches = int(item.get("num_patches", num_patches))
+            mask = np.unpackbits(np.asarray(item["bits"], dtype=np.uint8), count=item_num_patches).astype(np.bool_)
             frame_masks[int(raw_pid)] = mask
         frames[str(frame_key)] = frame_masks
     return {

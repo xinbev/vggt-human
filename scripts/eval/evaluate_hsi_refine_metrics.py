@@ -156,7 +156,9 @@ def build_eval_loader(config: dict[str, Any], args: argparse.Namespace) -> DataL
         split=args.split,
         sequence_length=int(data_cfg["sequence_length"]),
         stride=int(data_cfg["stride"]),
-        image_size=int(data_cfg["image_size"]),
+        image_size=int(data_cfg.get("image_size", data_cfg.get("image_resolution", 512))),
+        image_resolution=int(data_cfg.get("image_resolution", data_cfg.get("image_size", 512))),
+        resize_mode=str(data_cfg.get("resize_mode", "balanced")),
         max_humans=int(data_cfg["max_humans"]),
         require_smpl=True,
         require_depth=True,
@@ -285,9 +287,10 @@ def evaluate_batch(
     gt_poses = rot6d_to_axis_angle(batch["gt_pose_6d"].reshape(-1, 24, 6)).reshape(*batch["gt_pose_6d"].shape[:3], 72)
     gt = decode_smpl_batch(gt_poses, batch["gt_betas"], batch["gt_transl_cam"], smpl)
 
+    image_hw = (int(batch["images"].shape[-2]), int(batch["images"].shape[-1]))
     intrinsics = encoding_to_camera(
         predictions["pose_enc"],
-        image_size_hw=(int(config["data"]["image_size"]), int(config["data"]["image_size"])),
+        image_size_hw=image_hw,
         build_intrinsics=True,
     )[1]
     confs = predictions["pred_confs"].detach()
@@ -317,7 +320,7 @@ def evaluate_batch(
                     intrinsics[b, s],
                     hsi_depth[b, s],
                     gt_depth[b, s],
-                    int(config["data"]["image_size"]),
+                    image_hw,
                     args,
                     b,
                     s,
@@ -549,8 +552,12 @@ def add_foot_sole_contact_metrics(
     metrics["sole_plane_contact_valid_count"].add(float(contact.sum().detach().cpu()))
 
 
-def scale_points_to_depth(points: torch.Tensor, image_size: int, depth_height: int, depth_width: int) -> torch.Tensor:
-    scale = points.new_tensor([depth_width / float(image_size), depth_height / float(image_size)])
+def scale_points_to_depth(points: torch.Tensor, image_size: int | tuple[int, int], depth_height: int, depth_width: int) -> torch.Tensor:
+    if isinstance(image_size, int):
+        image_h, image_w = int(image_size), int(image_size)
+    else:
+        image_h, image_w = int(image_size[0]), int(image_size[1])
+    scale = points.new_tensor([depth_width / float(image_w), depth_height / float(image_h)])
     return points * scale
 
 

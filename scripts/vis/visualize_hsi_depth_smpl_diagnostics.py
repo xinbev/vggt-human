@@ -58,11 +58,13 @@ from scripts.train.train_smpl import apply_overrides, build_model, load_yaml_con
 from vggt_omega.data.bedlam import (  # noqa: E402
     _build_box_targets,
     _build_smpl_targets,
+    _frame_persons,
     _load_box_persons,
     _load_depth_tensor,
     _load_persons,
     _load_rgb_tensor,
 )
+from vggt_omega.data.geometry import resize_image_with_geometry  # noqa: E402
 from vggt_omega.models.smpl_layer import SMPLLayer  # noqa: E402
 from vggt_omega.training.config import deep_update, require_path  # noqa: E402
 from vggt_omega.utils.pose_enc import encoding_to_camera  # noqa: E402
@@ -158,12 +160,16 @@ def load_config(args: argparse.Namespace) -> dict[str, Any]:
     config.setdefault("model", {})["enable_hsi_refine"] = True
     config.setdefault("data", {})["require_depth"] = True
     config.setdefault("data", {})["require_boxes"] = True
+    config.setdefault("data", {})["image_resolution"] = int(config.get("data", {}).get("image_resolution", 512))
+    config.setdefault("data", {})["resize_mode"] = str(config.get("data", {}).get("resize_mode", "balanced"))
     return config
 
 
 def load_single_bedlam_batch(image_path: Path, config: dict[str, Any], args: argparse.Namespace) -> tuple[dict[str, torch.Tensor], Image.Image]:
     data_cfg = config["data"]
-    image_size = int(data_cfg.get("image_size", 518))
+    image_resolution = int(data_cfg.get("image_resolution", data_cfg.get("image_size", 512)))
+    resize_mode = str(data_cfg.get("resize_mode", "balanced"))
+    patch_size = int(config.get("model", {}).get("patch_size", 16))
     max_humans = int(data_cfg.get("max_humans", config.get("model", {}).get("num_smpl_queries", 20)))
     dataset_root = Path(require_path(config, data_cfg.get("root_key", "datasets.bedlam_root"), allow_empty=False)).expanduser()
     boxes_root = Path(require_path(config, data_cfg["boxes_root_key"], allow_empty=False)).expanduser()
@@ -172,11 +178,12 @@ def load_single_bedlam_batch(image_path: Path, config: dict[str, Any], args: arg
     frame_id = image_path.stem
     sequence_rel = seq_dir.relative_to(dataset_root / split)
 
-    image_tensor, _ = _load_rgb_tensor(image_path, image_size)
-    rgb = Image.open(image_path).convert("RGB").resize((image_size, image_size), Image.BILINEAR)
-    depth = _load_depth_tensor(seq_dir / "depth" / f"{frame_id}.npy", image_size, require_depth=True)
+    image_tensor, orig_hw, geometry = _load_rgb_tensor(image_path, image_resolution, patch_size, resize_mode)
+    rgb = resize_image_with_geometry(Image.open(image_path).convert("RGB"), geometry, Image.BILINEAR)
+    depth = _load_depth_tensor(seq_dir / "depth" / f"{frame_id}.npy", geometry, require_depth=True)
     persons = _load_persons(seq_dir / "smpl" / f"{frame_id}.pkl", require_smpl=True)
-    box_persons = _load_box_persons(boxes_root / split / sequence_rel / "smpl_boxes" / f"{frame_id}.pkl", require_boxes=True)
+    raw_box_frame = {"persons": _load_box_persons(boxes_root / split / sequence_rel / "smpl_boxes" / f"{frame_id}.pkl", require_boxes=True)}
+    box_persons = _frame_persons(raw_box_frame, geometry)
     smpl = _build_smpl_targets([persons], max_humans)
     boxes = _build_box_targets([box_persons], [persons], max_humans, require_boxes=True)
     batch = {
@@ -191,6 +198,9 @@ def load_single_bedlam_batch(image_path: Path, config: dict[str, Any], args: arg
         "boxes_mask": boxes["boxes_mask"].unsqueeze(0),
         "person_ids": boxes["person_ids"].unsqueeze(0),
         "person_id_mask": boxes["person_id_mask"].unsqueeze(0),
+        "valid_hw": torch.tensor([[[image_tensor.shape[-2], image_tensor.shape[-1]]]], dtype=torch.long),
+        "image_hw": torch.tensor([[[image_tensor.shape[-2], image_tensor.shape[-1]]]], dtype=torch.long),
+        "orig_hw": torch.tensor([[[orig_hw[0], orig_hw[1]]]], dtype=torch.long),
     }
     return batch, rgb
 
@@ -303,7 +313,7 @@ def compute_smpl_diagnostics(
     gt = decode_smpl_batch(gt_poses, batch["gt_betas"], batch["gt_transl_cam"], smpl)
     intrinsics = encoding_to_camera(
         predictions["pose_enc"],
-        image_size_hw=(int(config["data"]["image_size"]), int(config["data"]["image_size"])),
+        image_size_hw=(int(batch["images"].shape[-2]), int(batch["images"].shape[-1])),
         build_intrinsics=True,
     )[1]
     confs = predictions["pred_confs"].detach()
@@ -358,7 +368,7 @@ def compute_smpl_diagnostics(
             intrinsics[0, 0],
             hsi_depth[0, 0],
             gt_depth[0, 0],
-            int(config["data"]["image_size"]),
+            (int(batch["images"].shape[-2]), int(batch["images"].shape[-1])),
             args,
             q,
             g,

@@ -277,7 +277,9 @@ def make_bedlam_dataset(config: dict[str, Any], args: argparse.Namespace) -> Bed
             split=args.split,
             sequence_length=int(args.num_frames),
             stride=int(args.frame_stride),
-            image_size=int(data_cfg["image_size"]),
+            image_size=int(data_cfg.get("image_size", data_cfg.get("image_resolution", 512))),
+            image_resolution=int(data_cfg.get("image_resolution", data_cfg.get("image_size", 512))),
+            resize_mode=str(data_cfg.get("resize_mode", "balanced")),
             max_humans=int(data_cfg["max_humans"]),
             require_smpl=True,
             require_depth=True,
@@ -303,7 +305,9 @@ def make_bedlam_dataset(config: dict[str, Any], args: argparse.Namespace) -> Bed
             split=args.split,
             sequence_length=fallback_frames,
             stride=int(args.frame_stride),
-            image_size=int(data_cfg["image_size"]),
+            image_size=int(data_cfg.get("image_size", data_cfg.get("image_resolution", 512))),
+            image_resolution=int(data_cfg.get("image_resolution", data_cfg.get("image_size", 512))),
+            resize_mode=str(data_cfg.get("resize_mode", "balanced")),
             max_humans=int(data_cfg["max_humans"]),
             require_smpl=True,
             require_depth=True,
@@ -486,7 +490,7 @@ def resolve_intrinsics(
         return batch["K_scal3r"].to(device=batch["images"].device, dtype=batch["images"].dtype)
     return encoding_to_camera(
         predictions["pose_enc"],
-        image_size_hw=(int(config["data"]["image_size"]), int(config["data"]["image_size"])),
+        image_size_hw=(int(batch["images"].shape[-2]), int(batch["images"].shape[-1])),
         build_intrinsics=True,
     )[1]
 

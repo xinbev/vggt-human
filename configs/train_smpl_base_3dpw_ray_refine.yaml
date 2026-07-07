@@ -12,6 +12,8 @@ data:
   sequence_length: 1
   stride: 1
   image_size: 518
+  image_resolution: 512
+  resize_mode: balanced
   max_humans: 20
   require_boxes: true
   require_smpl: true

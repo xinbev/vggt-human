@@ -10,6 +10,14 @@ import torch
 from PIL import Image
 from torch.utils.data import Dataset
 
+from vggt_omega.data.geometry import (
+    ResizeGeometry,
+    collate_smpl_geometry_batch,
+    compute_resize_geometry,
+    resize_image_with_geometry,
+    transform_intrinsics,
+    transform_xyxy_to_normalized_cxcywh,
+)
 from vggt_omega.utils.rotation import axis_angle_to_rot6d
 
 
@@ -30,6 +38,8 @@ class ThreeDPWDataset(Dataset):
         sequence_length: int = 1,
         stride: int = 1,
         image_size: int = 518,
+        image_resolution: int | None = None,
+        resize_mode: str = "balanced",
         max_humans: int = 2,
         require_boxes: bool = True,
         require_smpl: bool = True,
@@ -42,7 +52,9 @@ class ThreeDPWDataset(Dataset):
         self.split = str(split)
         self.sequence_length = int(sequence_length)
         self.stride = int(stride)
-        self.image_size = int(image_size)
+        self.image_resolution = int(image_resolution or image_size)
+        self.resize_mode = str(resize_mode or "balanced")
+        self.image_size = self.image_resolution
         self.max_humans = int(max_humans)
         self.require_boxes = bool(require_boxes)
         self.require_smpl = bool(require_smpl)
@@ -92,29 +104,36 @@ class ThreeDPWDataset(Dataset):
         intrinsics = []
         persons_per_frame = []
         patch_masks_per_frame = []
+        orig_hws = []
         for frame_key in selected:
             frame = self.frames[frame_key]
-            image, orig_hw = _load_rgb_tensor(self.root / "imageFiles" / frame["image_relpath"], self.image_size)
+            image, orig_hw, geometry = _load_rgb_tensor(self.root / "imageFiles" / frame["image_relpath"], self.image_resolution, 16, self.resize_mode)
             images.append(image)
-            intrinsics.append(_scale_intrinsics(torch.as_tensor(frame["K"], dtype=torch.float32), orig_hw, self.image_size))
-            persons_per_frame.append(frame.get("persons", []))
+            orig_hws.append(orig_hw)
+            intrinsics.append(_scale_intrinsics(torch.as_tensor(frame["K"], dtype=torch.float32), orig_hw, geometry))
+            persons_per_frame.append(_map_person_boxes(frame.get("persons", []), orig_hw, geometry))
             if self.sam2_patch_masks is not None:
                 patch_masks_per_frame.append(self.sam2_patch_masks["frames"].get(frame_key, {}))
 
+        sample_num_patches = (int(images[0].shape[-2]) // 16) * (int(images[0].shape[-1]) // 16)
         targets = _build_targets(
             persons_per_frame,
             self.max_humans,
             self.require_boxes,
             self.require_smpl,
             patch_masks_per_frame if self.sam2_patch_masks is not None else None,
-            self.sam2_patch_masks["num_patches"] if self.sam2_patch_masks is not None else 0,
+            sample_num_patches if self.sam2_patch_masks is not None else 0,
         )
         intrinsics_tensor = torch.stack(intrinsics, dim=0)
         return {
             "images": torch.stack(images, dim=0),
-            "gt_depth": torch.zeros(self.sequence_length, 1, self.image_size, self.image_size, dtype=torch.float32),
+            "gt_depth": torch.zeros(self.sequence_length, 1, images[0].shape[-2], images[0].shape[-1], dtype=torch.float32),
             "K_scal3r": intrinsics_tensor,
             "gt_intrinsics": intrinsics_tensor,
+            "valid_hw": torch.tensor([list(image.shape[-2:]) for image in images], dtype=torch.long),
+            "image_hw": torch.tensor([list(image.shape[-2:]) for image in images], dtype=torch.long),
+            "orig_hw": torch.tensor([list(hw) for hw in orig_hws], dtype=torch.long),
+            "patch_size": torch.tensor(16, dtype=torch.long),
             **targets,
         }
 
@@ -131,9 +150,8 @@ class ThreeDPWDataset(Dataset):
 
 
 def threedpw_collate_fn(batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
-    if not batch:
-        raise ValueError("Cannot collate an empty 3DPW batch")
-    return {key: torch.stack([_require_tensor(item[key], key) for item in batch], dim=0) for key in batch[0].keys()}
+    patch_size = int(batch[0].get("patch_size", torch.tensor(16)).reshape(-1)[0].item())
+    return collate_smpl_geometry_batch(batch, patch_size=patch_size)
 
 
 def _build_targets(
@@ -187,7 +205,10 @@ def _build_targets(
             if patch_masks is not None and patch_masks_valid is not None:
                 mask = frame_patch_masks.get(int(ids[slot].item()))
                 if mask is not None:
-                    patch_masks[slot] = torch.as_tensor(mask, dtype=torch.bool).reshape(-1)
+                    mask_tensor = torch.as_tensor(mask, dtype=torch.bool).reshape(-1)
+                    if int(mask_tensor.numel()) != int(patch_masks.shape[-1]):
+                        continue
+                    patch_masks[slot] = mask_tensor
                     patch_masks_valid[slot] = bool(patch_masks[slot].any())
             if bool(person.get("bbox_valid", False)):
                 boxes[slot] = torch.as_tensor(person["bbox_cxcywh_norm"], dtype=torch.float32).reshape(4).clamp(0.0, 1.0)
@@ -261,7 +282,8 @@ def _load_sam2_patch_masks(root: str | Path | None, split: str, require: bool) -
         for raw_pid, item in packed_by_person.items():
             if not isinstance(item, dict) or "bits" not in item:
                 continue
-            mask = np.unpackbits(np.asarray(item["bits"], dtype=np.uint8), count=num_patches).astype(np.bool_)
+            item_num_patches = int(item.get("num_patches", num_patches))
+            mask = np.unpackbits(np.asarray(item["bits"], dtype=np.uint8), count=item_num_patches).astype(np.bool_)
             frame_masks[int(raw_pid)] = mask
         frames[str(frame_key)] = frame_masks
     return {
@@ -271,24 +293,47 @@ def _load_sam2_patch_masks(root: str | Path | None, split: str, require: bool) -
     }
 
 
-def _load_rgb_tensor(path: Path, size: int) -> tuple[torch.Tensor, tuple[int, int]]:
+def _load_rgb_tensor(path: Path, image_resolution: int, patch_size: int, resize_mode: str) -> tuple[torch.Tensor, tuple[int, int], ResizeGeometry]:
     if not path.is_file():
         raise FileNotFoundError(f"3DPW RGB frame not found: {path}")
     image = Image.open(path).convert("RGB")
     orig_hw = (image.height, image.width)
-    image = image.resize((int(size), int(size)), Image.BILINEAR)
-    arr = np.asarray(image, dtype=np.float32) / 255.0
-    return torch.from_numpy(arr).permute(2, 0, 1).contiguous(), orig_hw
+    geometry = compute_resize_geometry(orig_hw, image_resolution=image_resolution, patch_size=patch_size, mode=resize_mode)
+    resized = resize_image_with_geometry(image, geometry, Image.BILINEAR)
+    arr = np.asarray(resized, dtype=np.float32) / 255.0
+    return torch.from_numpy(arr).permute(2, 0, 1).contiguous(), orig_hw, geometry
 
 
-def _scale_intrinsics(intrinsics: torch.Tensor, orig_hw: tuple[int, int], size: int) -> torch.Tensor:
-    src_h, src_w = orig_hw
-    scaled = intrinsics.clone().float()
-    scaled[0, 0] *= float(size) / float(max(src_w, 1))
-    scaled[0, 2] *= float(size) / float(max(src_w, 1))
-    scaled[1, 1] *= float(size) / float(max(src_h, 1))
-    scaled[1, 2] *= float(size) / float(max(src_h, 1))
-    return scaled
+def _scale_intrinsics(intrinsics: torch.Tensor, orig_hw: tuple[int, int], geometry: ResizeGeometry) -> torch.Tensor:
+    del orig_hw
+    return transform_intrinsics(intrinsics, geometry)
+
+
+def _map_person_boxes(persons: list[dict[str, Any]], orig_hw: tuple[int, int], geometry: ResizeGeometry) -> list[dict[str, Any]]:
+    out = []
+    image_h, image_w = orig_hw
+    for person in persons:
+        mapped = dict(person)
+        xyxy = None
+        if "bbox_xyxy_pixels" in mapped:
+            xyxy = np.asarray(mapped["bbox_xyxy_pixels"], dtype=np.float32).reshape(4)
+        elif "bbox_cxcywh_norm" in mapped:
+            xyxy = _cxcywh_norm_to_xyxy(np.asarray(mapped["bbox_cxcywh_norm"], dtype=np.float32), image_w, image_h)
+        if xyxy is not None:
+            box, valid = transform_xyxy_to_normalized_cxcywh(xyxy, geometry)
+            mapped["bbox_cxcywh_norm"] = box.tolist()
+            mapped["bbox_valid"] = bool(valid)
+        out.append(mapped)
+    return out
+
+
+def _cxcywh_norm_to_xyxy(box: np.ndarray, image_w: int, image_h: int) -> np.ndarray:
+    cx, cy, w, h = [float(v) for v in box.reshape(4)]
+    bw = w * float(max(image_w, 1))
+    bh = h * float(max(image_h, 1))
+    x1 = (cx * float(max(image_w, 1))) - 0.5 * bw
+    y1 = (cy * float(max(image_h, 1))) - 0.5 * bh
+    return np.asarray([x1, y1, x1 + bw, y1 + bh], dtype=np.float32)
 
 
 def _frame_sort_key(key: str) -> tuple[str, int]:

@@ -123,7 +123,7 @@ def main() -> None:
             smpl_track_mask=batch.get("gt_track_mask") if args.use_track_ids else None,
         )
 
-    input_size = int(config["data"].get("image_size", args.image_size))
+    input_size = int(config["data"].get("image_resolution", config["data"].get("image_size", args.image_size)))
     original = Image.open(target_path).convert("RGB")
     persons = collect_person_diagnostics(predictions, batch, target_idx, original.size, input_size, config, args, device)
     panels = make_panels(original, persons, int(args.panel_width))
@@ -194,7 +194,9 @@ def build_dataset(config: dict[str, Any], args: argparse.Namespace) -> BedlamDat
         split=str(args.split),
         sequence_length=int(args.num_frames),
         stride=int(args.stride),
-        image_size=int(data_cfg.get("image_size", args.image_size)),
+        image_size=int(data_cfg.get("image_size", data_cfg.get("image_resolution", args.image_size))),
+        image_resolution=int(data_cfg.get("image_resolution", data_cfg.get("image_size", args.image_size))),
+        resize_mode=str(data_cfg.get("resize_mode", "balanced")),
         max_humans=int(data_cfg.get("max_humans", config.get("model", {}).get("num_smpl_queries", 20))),
         require_smpl=True,
         require_depth=True,
@@ -289,13 +291,14 @@ def collect_person_diagnostics(
     gt_vertices = gt_vertices + gt_transl[:, None, :]
     gt_joints = gt_joints + gt_transl[:, None, :]
 
+    input_hw = (int(batch["images"].shape[-2]), int(batch["images"].shape[-1]))
     _, intrinsics = encoding_to_camera(
         predictions["pose_enc"][:, frame_idx : frame_idx + 1],
-        image_size_hw=(input_size, input_size),
+        image_size_hw=input_hw,
         build_intrinsics=True,
     )
     intrinsics_0 = intrinsics[0, 0].to(device=device, dtype=base_joints.dtype)
-    scale = base_joints.new_tensor([float(width) / float(input_size), float(height) / float(input_size)])
+    scale = base_joints.new_tensor([float(width) / float(input_hw[1]), float(height) / float(input_hw[0])])
 
     base_xy = project_points(base_joints, intrinsics_0) * scale
     hsi_xy = project_points(hsi_joints, intrinsics_0) * scale

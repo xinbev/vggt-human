@@ -19,6 +19,7 @@ from vggt_omega.tracking.query_builder import pixel_mask_to_patch_mask
 from vggt_omega.tracking.sam2_masks import SAM2BoxMaskPredictor
 from vggt_omega.tracking.schema import Detection
 from vggt_omega.training.config import load_yaml_config, require_path
+from vggt_omega.data.geometry import compute_resize_geometry
 
 
 def main() -> None:
@@ -42,6 +43,8 @@ def main() -> None:
         "annotation_root": str(annotation_root),
         "output_root": str(output_root),
         "image_size": int(args.image_size),
+        "image_resolution": int(args.image_resolution or args.image_size),
+        "resize_mode": str(args.resize_mode),
         "patch_size": int(args.patch_size),
         "mask_patch_threshold": float(args.mask_patch_threshold),
         "min_mask_patches": int(args.min_mask_patches),
@@ -67,7 +70,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sam2-checkpoint", default="")
     parser.add_argument("--sam2-model-cfg", default="configs/sam2.1/sam2.1_hiera_l.yaml")
     parser.add_argument("--sam2-single-mask", action="store_true")
-    parser.add_argument("--image-size", type=int, default=518)
+    parser.add_argument("--image-size", type=int, default=512, help="Legacy square size fallback; prefer --image-resolution")
+    parser.add_argument("--image-resolution", type=int, default=512)
+    parser.add_argument("--resize-mode", default="balanced", choices=["balanced", "max_size", "square_legacy"])
     parser.add_argument("--patch-size", type=int, default=16)
     parser.add_argument("--mask-patch-threshold", type=float, default=0.10)
     parser.add_argument("--min-mask-patches", type=int, default=4)
@@ -103,7 +108,7 @@ def prepare_split(
     if int(args.max_frames) > 0:
         frame_items = frame_items[: int(args.max_frames)]
 
-    num_patches = (int(args.image_size) // int(args.patch_size)) ** 2
+    max_num_patches = 0
     cache_frames: dict[str, dict[int, dict[str, Any]]] = {}
     stats = {
         "frames": 0,
@@ -120,6 +125,17 @@ def prepare_split(
         if frame_bgr is None:
             stats["missing_images"] += 1
             continue
+        image_h, image_w = frame_bgr.shape[:2]
+        geometry = compute_resize_geometry(
+            (int(image_h), int(image_w)),
+            image_resolution=int(args.image_resolution or args.image_size),
+            patch_size=int(args.patch_size),
+            mode=str(args.resize_mode),
+        )
+        target_hw = geometry.input_hw
+        grid_hw = (target_hw[0] // int(args.patch_size), target_hw[1] // int(args.patch_size))
+        num_patches = int(grid_hw[0] * grid_hw[1])
+        max_num_patches = max(max_num_patches, num_patches)
         detections = build_detections(frame.get("persons", []))
         if not detections:
             stats["missing_boxes"] += 1
@@ -134,7 +150,7 @@ def prepare_split(
                 continue
             patch_mask = pixel_mask_to_patch_mask(
                 pixel_mask,
-                image_size=int(args.image_size),
+                image_hw=target_hw,
                 patch_size=int(args.patch_size),
                 threshold=float(args.mask_patch_threshold),
             ).reshape(-1)
@@ -145,6 +161,11 @@ def prepare_split(
             packed_by_person[person_id] = {
                 "bits": np.packbits(patch_mask.astype(np.uint8)),
                 "patch_count": patch_count,
+                "target_hw": [int(target_hw[0]), int(target_hw[1])],
+                "grid_hw": [int(grid_hw[0]), int(grid_hw[1])],
+                "num_patches": int(num_patches),
+                "resize_mode": str(args.resize_mode),
+                "image_resolution": int(args.image_resolution or args.image_size),
                 **metadata.get(person_id, {}),
             }
             stats["valid_masks"] += 1
@@ -163,15 +184,17 @@ def prepare_split(
         "version": 1,
         "split": split,
         "image_size": int(args.image_size),
+        "image_resolution": int(args.image_resolution or args.image_size),
+        "resize_mode": str(args.resize_mode),
         "patch_size": int(args.patch_size),
-        "num_patches": int(num_patches),
+        "num_patches": int(max_num_patches),
         "mask_patch_threshold": float(args.mask_patch_threshold),
         "min_mask_patches": int(args.min_mask_patches),
         "frames": cache_frames,
     }
     with output_path.open("wb") as file:
         pickle.dump(cache, file, protocol=pickle.HIGHEST_PROTOCOL)
-    out_summary = {**stats, "cache": str(output_path), "cache_frames": len(cache_frames), "num_patches": int(num_patches)}
+    out_summary = {**stats, "cache": str(output_path), "cache_frames": len(cache_frames), "num_patches": int(max_num_patches)}
     print(f"[3dpw-sam2] split={split} -> {output_path} {out_summary}", flush=True)
     return out_summary
 

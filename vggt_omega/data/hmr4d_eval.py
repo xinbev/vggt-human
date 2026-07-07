@@ -9,6 +9,14 @@ import torch
 from PIL import Image
 from torch.utils.data import Dataset
 
+from vggt_omega.data.geometry import (
+    ResizeGeometry,
+    collate_smpl_geometry_batch,
+    compute_resize_geometry,
+    resize_image_with_geometry,
+    transform_intrinsics,
+    transform_xyxy_to_normalized_cxcywh,
+)
 from vggt_omega.tracking.query_builder import build_detection_query_tensors_from_sidecar, build_external_track_prior_from_sidecar
 
 
@@ -88,6 +96,8 @@ class HMR4DSupportEvalDataset(Dataset):
         sequence_length: int = 32,
         stride: int = 1,
         image_size: int = 518,
+        image_resolution: int | None = None,
+        resize_mode: str = "balanced",
         max_humans: int = 1,
         patch_size: int = 16,
         full_sequence: bool = False,
@@ -99,7 +109,9 @@ class HMR4DSupportEvalDataset(Dataset):
         self.sidecar_root = Path(sidecar_root).expanduser() if sidecar_root else None
         self.sequence_length = int(sequence_length)
         self.stride = int(stride)
-        self.image_size = int(image_size)
+        self.image_resolution = int(image_resolution or image_size)
+        self.resize_mode = str(resize_mode or "balanced")
+        self.image_size = self.image_resolution
         self.max_humans = int(max_humans)
         self.patch_size = int(patch_size)
         self.full_sequence = bool(full_sequence)
@@ -129,20 +141,23 @@ class HMR4DSupportEvalDataset(Dataset):
         frame_indices = [start + step * self.stride for step in range(window)]
         images = []
         intrinsics = []
-        orig_hw = None
+        orig_hws = []
+        geometries = []
         for frame_idx in frame_indices:
-            image, hw = _load_rgb_tensor(self._frame_path(record, frame_idx), self.image_size)
+            image, hw, geometry = _load_rgb_tensor(self._frame_path(record, frame_idx), self.image_resolution, self.patch_size, self.resize_mode)
             images.append(image)
-            orig_hw = hw
-            intrinsics.append(_scale_intrinsics(self._full_intrinsics(record), hw, self.image_size))
-        if orig_hw is None:
+            orig_hws.append(hw)
+            geometries.append(geometry)
+            intrinsics.append(_scale_intrinsics(self._full_intrinsics(record), hw, geometry))
+        if not orig_hws:
             raise RuntimeError("Empty HMR4D eval window")
 
-        gt_boxes, boxes_mask = self._fallback_query_boxes(record, frame_indices, orig_hw)
+        gt_boxes, boxes_mask = self._fallback_query_boxes(record, frame_indices, orig_hws, geometries)
+        image_hw = images[0].shape[-2:]
         sample: dict[str, Any] = {
             "images": torch.stack(images, dim=0),
             "K_scal3r": torch.stack(intrinsics, dim=0),
-            "gt_depth": torch.zeros(window, 1, self.image_size, self.image_size, dtype=torch.float32),
+            "gt_depth": torch.zeros(window, 1, int(image_hw[0]), int(image_hw[1]), dtype=torch.float32),
             "gt_boxes": gt_boxes,
             "boxes_mask": boxes_mask,
             "smpl_mask": boxes_mask.clone(),
@@ -160,8 +175,12 @@ class HMR4DSupportEvalDataset(Dataset):
             },
             "eval_mask": self._select_eval_mask(record, frame_indices),
             "eval_label": self._select_label(record, frame_indices),
+            "valid_hw": torch.tensor([list(image.shape[-2:]) for image in images], dtype=torch.long),
+            "image_hw": torch.tensor([list(image.shape[-2:]) for image in images], dtype=torch.long),
+            "orig_hw": torch.tensor([list(hw) for hw in orig_hws], dtype=torch.long),
+            "patch_size": torch.tensor(self.patch_size, dtype=torch.long),
         }
-        sample.update(self._query_from_sidecar_or_fallback(record, frame_indices, gt_boxes, boxes_mask))
+        sample.update(self._query_from_sidecar_or_fallback(record, frame_indices, gt_boxes, boxes_mask, tuple(int(v) for v in image_hw)))
         return sample
 
     def _load_records(self) -> list[HMR4DSequenceRecord]:
@@ -225,9 +244,15 @@ class HMR4DSupportEvalDataset(Dataset):
             return torch.as_tensor(label["K_fullimg"], dtype=torch.float32).reshape(3, 3)
         if "K" in label:
             return torch.as_tensor(label["K"], dtype=torch.float32).reshape(3, 3)
-        return _default_intrinsics(self.image_size)
+        return _default_intrinsics((self.image_resolution, self.image_resolution))
 
-    def _fallback_query_boxes(self, record: HMR4DSequenceRecord, frame_indices: list[int], orig_hw: tuple[int, int]) -> tuple[torch.Tensor, torch.Tensor]:
+    def _fallback_query_boxes(
+        self,
+        record: HMR4DSequenceRecord,
+        frame_indices: list[int],
+        orig_hws: list[tuple[int, int]],
+        geometries: list[ResizeGeometry],
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         boxes = torch.zeros(len(frame_indices), self.max_humans, 4, dtype=torch.float32)
         mask = torch.zeros(len(frame_indices), self.max_humans, dtype=torch.bool)
         bbx = record.label.get("bbx_xys")
@@ -236,12 +261,16 @@ class HMR4DSupportEvalDataset(Dataset):
         if bbx is None:
             return boxes, mask
         bbx_t = torch.as_tensor(bbx, dtype=torch.float32)
-        src_h, src_w = orig_hw
         for out_idx, frame_idx in enumerate(frame_indices):
             if frame_idx >= bbx_t.shape[0]:
                 continue
             x, y, size = [float(v) for v in bbx_t[frame_idx].reshape(-1)[:3]]
-            boxes[out_idx, 0] = torch.tensor([x / max(src_w, 1), y / max(src_h, 1), size / max(src_w, 1), size / max(src_h, 1)], dtype=torch.float32).clamp(0.0, 1.0)
+            src_h, src_w = orig_hws[out_idx]
+            xyxy = np.asarray([x - 0.5 * size, y - 0.5 * size, x + 0.5 * size, y + 0.5 * size], dtype=np.float32)
+            box, valid = transform_xyxy_to_normalized_cxcywh(xyxy, geometries[out_idx])
+            boxes[out_idx, 0] = torch.as_tensor(box, dtype=torch.float32).clamp(0.0, 1.0)
+            if not valid:
+                continue
             mask[out_idx, 0] = True
         return boxes, mask
 
@@ -269,6 +298,7 @@ class HMR4DSupportEvalDataset(Dataset):
         frame_indices: list[int],
         gt_boxes: torch.Tensor,
         boxes_mask: torch.Tensor,
+        image_hw: tuple[int, int],
     ) -> dict[str, torch.Tensor]:
         sidecar = self._sidecar_dir(record)
         if sidecar is not None:
@@ -278,6 +308,7 @@ class HMR4DSupportEvalDataset(Dataset):
                 frame_ids=frame_ids,
                 max_humans=self.max_humans,
                 image_size=self.image_size,
+                image_hw=image_hw,
                 patch_size=self.patch_size,
             )
             prior = build_external_track_prior_from_sidecar(sidecar, query)
@@ -287,7 +318,7 @@ class HMR4DSupportEvalDataset(Dataset):
                 for key, value in payload.items()
                 if isinstance(value, torch.Tensor)
             }
-        num_patches = (self.image_size // self.patch_size) ** 2
+        num_patches = (int(image_hw[0]) // self.patch_size) * (int(image_hw[1]) // self.patch_size)
         return {
             "smpl_query_boxes": gt_boxes,
             "smpl_query_boxes_mask": boxes_mask,
@@ -317,7 +348,18 @@ class HMR4DSupportEvalDataset(Dataset):
 def hmr4d_eval_collate_fn(batch: list[dict[str, Any]]) -> dict[str, Any]:
     if not batch:
         raise ValueError("Cannot collate an empty HMR4D eval batch")
-    return {key: _collate_values([item[key] for item in batch]) for key in batch[0].keys()}
+    tensor_items = []
+    non_tensor_keys = []
+    for item in batch:
+        tensor_items.append({key: value for key, value in item.items() if isinstance(value, torch.Tensor)})
+    for key, value in batch[0].items():
+        if not isinstance(value, torch.Tensor):
+            non_tensor_keys.append(key)
+    patch_size = int(batch[0].get("patch_size", torch.tensor(16)).reshape(-1)[0].item())
+    out: dict[str, Any] = collate_smpl_geometry_batch(tensor_items, patch_size=patch_size)
+    for key in non_tensor_keys:
+        out[key] = _collate_values([item[key] for item in batch])
+    return out
 
 
 def _collate_values(values: list[Any]) -> Any:
@@ -329,28 +371,24 @@ def _collate_values(values: list[Any]) -> Any:
     return values
 
 
-def _load_rgb_tensor(path: Path, size: int) -> tuple[torch.Tensor, tuple[int, int]]:
+def _load_rgb_tensor(path: Path, image_resolution: int, patch_size: int, resize_mode: str) -> tuple[torch.Tensor, tuple[int, int], ResizeGeometry]:
     image = Image.open(path).convert("RGB")
     orig_hw = (image.height, image.width)
-    image = image.resize((int(size), int(size)), Image.BILINEAR)
-    arr = np.asarray(image, dtype=np.float32) / 255.0
-    return torch.from_numpy(arr).permute(2, 0, 1).contiguous(), orig_hw
+    geometry = compute_resize_geometry(orig_hw, image_resolution=image_resolution, patch_size=patch_size, mode=resize_mode)
+    resized = resize_image_with_geometry(image, geometry, Image.BILINEAR)
+    arr = np.asarray(resized, dtype=np.float32) / 255.0
+    return torch.from_numpy(arr).permute(2, 0, 1).contiguous(), orig_hw, geometry
 
 
-def _scale_intrinsics(intrinsics: torch.Tensor, orig_hw: tuple[int, int], size: int) -> torch.Tensor:
-    src_h, src_w = orig_hw
-    scaled = intrinsics.clone().float()
-    scaled[0, 0] *= float(size) / float(max(src_w, 1))
-    scaled[0, 2] *= float(size) / float(max(src_w, 1))
-    scaled[1, 1] *= float(size) / float(max(src_h, 1))
-    scaled[1, 2] *= float(size) / float(max(src_h, 1))
-    return scaled
+def _scale_intrinsics(intrinsics: torch.Tensor, orig_hw: tuple[int, int], geometry: ResizeGeometry) -> torch.Tensor:
+    del orig_hw
+    return transform_intrinsics(intrinsics, geometry)
 
 
-def _default_intrinsics(size: int) -> torch.Tensor:
-    focal = float(size)
-    center = (float(size) - 1.0) * 0.5
-    return torch.tensor([[focal, 0.0, center], [0.0, focal, center], [0.0, 0.0, 1.0]], dtype=torch.float32)
+def _default_intrinsics(image_hw: tuple[int, int]) -> torch.Tensor:
+    h, w = int(image_hw[0]), int(image_hw[1])
+    focal = float(max(h, w))
+    return torch.tensor([[focal, 0.0, float(w) * 0.5], [0.0, focal, float(h) * 0.5], [0.0, 0.0, 1.0]], dtype=torch.float32)
 
 
 def _select_value(value: Any, frame_indices: list[int]) -> Any:

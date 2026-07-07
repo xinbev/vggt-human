@@ -85,6 +85,21 @@ RESIDUAL = (220, 64, 64)
 NORMAL = (26, 166, 166)
 
 
+def coerce_image_hw(image_size_hw: int | tuple[int, int]) -> tuple[int, int]:
+    if isinstance(image_size_hw, int):
+        return int(image_size_hw), int(image_size_hw)
+    return int(image_size_hw[0]), int(image_size_hw[1])
+
+
+def probe_image_hw(probe: dict[str, torch.Tensor]) -> tuple[int, int]:
+    image_hw = probe.get("image_hw")
+    if isinstance(image_hw, torch.Tensor) and image_hw.numel() >= 2:
+        flat = image_hw.reshape(-1, 2)
+        return int(flat[0, 0].detach().cpu()), int(flat[0, 1].detach().cpu())
+    size = int(probe["image_size"].detach().cpu())
+    return size, size
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image", type=Path, required=True, help="Input RGB image.")
@@ -132,7 +147,7 @@ def main() -> None:
     config = load_config(args)
     checkpoint = resolve_checkpoint(args, config)
     image_path = resolve_project_path(args.image)
-    input_size = int(config.get("data", {}).get("image_size", args.image_size))
+    input_size = int(config.get("data", {}).get("image_resolution", config.get("data", {}).get("image_size", args.image_size)))
     patch_size = int(config.get("model", {}).get("patch_size", 16))
 
     priors = build_query_priors(args, image_path, input_size, patch_size, config, device, output_dir)
@@ -151,8 +166,9 @@ def main() -> None:
             smpl_query_patch_masks=priors["patch_masks"],
         )
 
-    rgb = orig_image.resize((input_size, input_size), Image.BILINEAR).convert("RGB")
-    probe = compute_hsi_probe(predictions, model, input_size)
+    input_hw = (int(image_tensor.shape[-2]), int(image_tensor.shape[-1]))
+    rgb = orig_image.resize((input_hw[1], input_hw[0]), Image.BILINEAR).convert("RGB")
+    probe = compute_hsi_probe(predictions, model, input_hw)
     query_indices = choose_query_indices(predictions, priors, args)
 
     files: list[str] = []
@@ -404,7 +420,7 @@ def mask_to_patch_grid(mask: np.ndarray, grid_h: int, grid_w: int, patch_size: i
     return selected.reshape(-1)
 
 
-def compute_hsi_probe(predictions: dict[str, torch.Tensor], model: torch.nn.Module, input_size: int) -> dict[str, torch.Tensor]:
+def compute_hsi_probe(predictions: dict[str, torch.Tensor], model: torch.nn.Module, input_size: int | tuple[int, int]) -> dict[str, torch.Tensor]:
     if getattr(model, "hsi_refinement_head", None) is None:
         raise ValueError("Model was built without hsi_refinement_head.")
     required = ["pred_pose_6d", "pred_betas", "pred_transl_cam", "depth", "pose_enc"]
@@ -417,6 +433,7 @@ def compute_hsi_probe(predictions: dict[str, torch.Tensor], model: torch.nn.Modu
     transl = predictions["pred_transl_cam"].float()
     depth_hw = _canonical_depth(predictions["depth"]).float()
     height, width = depth_hw.shape[-2:]
+    image_hw = coerce_image_hw(input_size)
     hsi_scale = predictions.get("hsi_scene_scale")
     hsi_bias = predictions.get("hsi_scene_depth_bias")
     if isinstance(hsi_scale, torch.Tensor) and isinstance(hsi_bias, torch.Tensor):
@@ -427,7 +444,7 @@ def compute_hsi_probe(predictions: dict[str, torch.Tensor], model: torch.nn.Modu
         hsi_scale_hw = torch.ones(*depth_hw.shape[:2], 1, 1, device=depth_hw.device, dtype=depth_hw.dtype)
         hsi_bias_hw = torch.zeros(*depth_hw.shape[:2], 1, 1, device=depth_hw.device, dtype=depth_hw.dtype)
         hsi_depth_hw = depth_hw
-    intrinsics = _flatten_intrinsics(predictions["pose_enc"], input_size).to(device=pose6d.device, dtype=pose6d.dtype)
+    intrinsics = _flatten_intrinsics(predictions["pose_enc"], image_hw).to(device=pose6d.device, dtype=pose6d.dtype)
     anchors = head._anchors_cam(pose6d, betas, transl)
     poses_aa = rot6d_to_axis_angle(pose6d.reshape(-1, 24, 6)).reshape(-1, 72)
     smpl_vertices, smpl_joints = head.smpl(poses_aa.float(), betas.reshape(-1, betas.shape[-1]).float())
@@ -441,7 +458,7 @@ def compute_hsi_probe(predictions: dict[str, torch.Tensor], model: torch.nn.Modu
     projected = _project_points(flat_anchors, intrinsics.repeat_interleave(num_queries, dim=0)).reshape(
         batch_size, num_frames, num_queries, 24, 2
     )
-    projected_depth = _scale_points_to_depth(projected, input_size, height, width)
+    projected_depth = _scale_points_to_depth(projected, image_hw, height, width)
     px = projected_depth[..., 0].round().long().clamp(0, width - 1)
     py = projected_depth[..., 1].round().long().clamp(0, height - 1)
     frame_idx = torch.arange(batch_size * num_frames, device=pose6d.device).reshape(batch_size, num_frames, 1, 1)
@@ -481,7 +498,8 @@ def compute_hsi_probe(predictions: dict[str, torch.Tensor], model: torch.nn.Modu
         "patch_center_x": center_x.detach(),
         "patch_center_y": center_y.detach(),
         "patch_grid_hw": torch.tensor([grid_h, grid_w], device=pose6d.device),
-        "image_size": torch.tensor(int(input_size), device=pose6d.device),
+        "image_size": torch.tensor(int(max(image_hw)), device=pose6d.device),
+        "image_hw": torch.tensor([int(image_hw[0]), int(image_hw[1])], device=pose6d.device),
     }
 
 
@@ -844,9 +862,9 @@ def local_depth_side_points(probe: dict[str, torch.Tensor], query_idx: int, anch
     xs = torch.arange(px - radius, px + radius + 1, device=depth.device).clamp(0, width - 1)
     ys = torch.full_like(xs, max(0, min(height - 1, py)))
     z = depth[ys, xs]
-    image_size = float(probe["image_size"].detach().cpu())
-    image_x = xs.to(dtype=depth.dtype) * (image_size / float(width))
-    image_y = ys.to(dtype=depth.dtype) * (image_size / float(height))
+    image_h, image_w = probe_image_hw(probe)
+    image_x = xs.to(dtype=depth.dtype) * (float(image_w) / float(width))
+    image_y = ys.to(dtype=depth.dtype) * (float(image_h) / float(height))
     intr = intrinsics.reshape(-1, 3, 3)[0].to(device=depth.device, dtype=depth.dtype)
     fx = intr[0, 0].clamp(min=1e-6)
     fy = intr[1, 1].clamp(min=1e-6)
@@ -900,7 +918,7 @@ def export_hsi_foot_scene_ply(
         depth=probe[depth_key][0, 0],
         intrinsics=probe["intrinsics"],
         rgb=rgb,
-        image_size=int(probe["image_size"].detach().cpu()),
+        image_size_hw=probe_image_hw(probe),
         stride=max(int(scene_stride), 1),
         upsample=max(int(depth_upsample), 1),
         max_depth=float(max_scene_depth),
@@ -964,7 +982,7 @@ def export_environment_ply(
         depth=probe[depth_key][0, 0],
         intrinsics=probe["intrinsics"],
         rgb=rgb,
-        image_size=int(probe["image_size"].detach().cpu()),
+        image_size_hw=probe_image_hw(probe),
         stride=max(int(scene_stride), 1),
         upsample=max(int(depth_upsample), 1),
         max_depth=float(max_scene_depth),
@@ -1094,7 +1112,7 @@ def depth_to_surface_mesh(
     depth: torch.Tensor,
     intrinsics: torch.Tensor,
     rgb: Image.Image,
-    image_size: int,
+    image_size_hw: int | tuple[int, int],
     stride: int,
     upsample: int,
     max_depth: float,
@@ -1120,8 +1138,9 @@ def depth_to_surface_mesh(
         valid = valid & (~remove_tensor[yy, xx])
     if not bool(valid.any()):
         return np.empty((0, 3), dtype=np.float32), np.empty((0, 3), dtype=np.uint8), np.empty((0, 3), dtype=np.int64)
-    xx_f = xx.to(dtype=depth_hw.dtype) * (float(image_size) / float(width))
-    yy_f = yy.to(dtype=depth_hw.dtype) * (float(image_size) / float(height))
+    image_h, image_w = coerce_image_hw(image_size_hw)
+    xx_f = xx.to(dtype=depth_hw.dtype) * (float(image_w) / float(width))
+    yy_f = yy.to(dtype=depth_hw.dtype) * (float(image_h) / float(height))
     intr = intrinsics.reshape(-1, 3, 3)[0].to(device=depth_hw.device, dtype=depth_hw.dtype)
     fx = intr[0, 0].clamp(min=1e-6)
     fy = intr[1, 1].clamp(min=1e-6)

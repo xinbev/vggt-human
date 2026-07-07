@@ -38,6 +38,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.train.train_smpl import apply_overrides, build_model, load_yaml_config
+from vggt_omega.data.geometry import compute_resize_geometry, resize_image_with_geometry
 from vggt_omega.models.smpl_layer import SMPLLayer
 from vggt_omega.training.config import deep_update, require_path
 from vggt_omega.utils.pose_enc import encoding_to_camera
@@ -220,10 +221,18 @@ def load_image(path: Path, image_size: int) -> tuple[torch.Tensor, Image.Image]:
     if not path.is_file():
         raise FileNotFoundError(f"Image not found: {path}")
     image = Image.open(path).convert("RGB")
-    resized = image.resize((image_size, image_size), Image.BILINEAR)
+    geometry = compute_resize_geometry((image.height, image.width), image_resolution=int(image_size), patch_size=16, mode="balanced")
+    resized = resize_image_with_geometry(image, geometry, Image.BILINEAR)
     arr = np.asarray(resized, dtype=np.float32) / 255.0
     tensor = torch.from_numpy(arr).permute(2, 0, 1).contiguous().unsqueeze(0).unsqueeze(0)
     return tensor, image
+
+
+def _prediction_image_hw(predictions: dict[str, torch.Tensor], fallback_size: int) -> tuple[int, int]:
+    images = predictions.get("images")
+    if isinstance(images, torch.Tensor) and images.ndim >= 4:
+        return int(images.shape[-2]), int(images.shape[-1])
+    return int(fallback_size), int(fallback_size)
 
 
 def load_gt_box_prior(
@@ -350,12 +359,13 @@ def add_projected_smpl_joints(
     smpl_model_dir = require_smpl_model_dir(config, args)
     pred_points = decode_pred_smpl_points(results, predictions, smpl_model_dir, device)
     joints_cam = pred_points["joints"]
-    extrinsics, intrinsics = encoding_to_camera(predictions["pose_enc"], image_size_hw=(input_size, input_size), build_intrinsics=True)
+    input_hw = _prediction_image_hw(predictions, input_size)
+    extrinsics, intrinsics = encoding_to_camera(predictions["pose_enc"], image_size_hw=input_hw, build_intrinsics=True)
     intrinsics_0 = intrinsics[0, 0].to(device=device, dtype=joints_cam.dtype)
     joints_2d_input = project_points(joints_cam, intrinsics_0)
     in_front = joints_cam[..., 2] > 1e-4
     width, height = image_size
-    scale = joints_2d_input.new_tensor([float(width) / float(input_size), float(height) / float(input_size)])
+    scale = joints_2d_input.new_tensor([float(width) / float(input_hw[1]), float(height) / float(input_hw[0])])
     joints_2d = joints_2d_input * scale
     in_image = (
         in_front
@@ -392,12 +402,13 @@ def add_projected_gt_smpl_joints(
     if gt_points is None:
         return
     joints_cam = gt_points["joints"]
-    extrinsics, intrinsics = encoding_to_camera(predictions["pose_enc"], image_size_hw=(input_size, input_size), build_intrinsics=True)
+    input_hw = _prediction_image_hw(predictions, input_size)
+    extrinsics, intrinsics = encoding_to_camera(predictions["pose_enc"], image_size_hw=input_hw, build_intrinsics=True)
     intrinsics_0 = intrinsics[0, 0].to(device=device, dtype=joints_cam.dtype)
     joints_2d_input = project_points(joints_cam, intrinsics_0)
     in_front = joints_cam[..., 2] > 1e-4
     width, height = image_size
-    scale = joints_2d_input.new_tensor([float(width) / float(input_size), float(height) / float(input_size)])
+    scale = joints_2d_input.new_tensor([float(width) / float(input_hw[1]), float(height) / float(input_hw[0])])
     joints_2d = joints_2d_input * scale
     in_image = (
         in_front
@@ -871,7 +882,8 @@ def estimate_scene_to_smpl_scale(
 
     anchor_stride = max(int(anchor_stride), 1)
     vertices = smpl_vertices[:, ::anchor_stride].reshape(-1, 3).to(device=depth.device, dtype=depth.dtype)
-    _, intrinsics = encoding_to_camera(pose_enc, image_size_hw=(input_size, input_size), build_intrinsics=True)
+    depth_hw = (int(depth.shape[-2]), int(depth.shape[-1]))
+    _, intrinsics = encoding_to_camera(pose_enc, image_size_hw=depth_hw, build_intrinsics=True)
     intrinsics_0 = intrinsics[0, 0].to(device=depth.device, dtype=depth.dtype)
     projected = project_points(vertices, intrinsics_0)
     height, width = depth.shape
@@ -1089,7 +1101,7 @@ def dense_depth_to_camera_mesh(
         depth = depth[..., 0]
     if depth.ndim != 2:
         raise ValueError(f"Expected depth shape (H, W) or (H, W, 1), got {tuple(depth.shape)}")
-    _, intrinsics = encoding_to_camera(pose_enc, image_size_hw=(input_size, input_size), build_intrinsics=True)
+    _, intrinsics = encoding_to_camera(pose_enc, image_size_hw=(int(depth.shape[-2]), int(depth.shape[-1])), build_intrinsics=True)
     intrinsics_0 = intrinsics[0, 0].to(device=depth.device, dtype=depth.dtype)
     height, width = depth.shape
     ys, xs = torch.meshgrid(

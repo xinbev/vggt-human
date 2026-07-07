@@ -16,6 +16,7 @@ def build_detection_query_tensors_from_sidecar(
     frame_ids: list[str] | None = None,
     max_humans: int | None = None,
     image_size: int = 518,
+    image_hw: tuple[int, int] | None = None,
     patch_size: int = 16,
     mask_patch_threshold: float = 0.10,
     min_mask_patches: int = 4,
@@ -33,8 +34,9 @@ def build_detection_query_tensors_from_sidecar(
 
     q = int(max_humans or _max_detections(frames) or 1)
     s = len(frames)
-    grid_h = int(image_size) // int(patch_size)
-    grid_w = int(image_size) // int(patch_size)
+    target_hw = _coerce_image_hw(image_hw, image_size)
+    grid_h = int(target_hw[0]) // int(patch_size)
+    grid_w = int(target_hw[1]) // int(patch_size)
     num_patches = grid_h * grid_w
 
     boxes = torch.zeros((1, s, q, 4), dtype=torch.float32, device=device)
@@ -58,7 +60,7 @@ def build_detection_query_tensors_from_sidecar(
             box_mask[0, frame_slot, slot] = True
             scores[0, frame_slot, slot] = float(det.get("det_score", det.get("score", 0.0)))
             det_ids[0, frame_slot, slot] = int(det.get("det_id", slot))
-            mask = _load_detection_mask(root, det, frame, image_size, patch_size, mask_patch_threshold, min_mask_patches)
+            mask = _load_detection_mask(root, det, frame, target_hw, patch_size, mask_patch_threshold, min_mask_patches)
             if mask is not None:
                 patch_masks[0, frame_slot, slot] = torch.as_tensor(mask.reshape(-1), dtype=torch.bool, device=device)
                 patch_mask_valid[0, frame_slot, slot] = True
@@ -195,7 +197,7 @@ def _load_detection_mask(
     root: Path,
     det: dict[str, Any],
     frame: dict[str, Any],
-    image_size: int,
+    image_hw: tuple[int, int],
     patch_size: int,
     threshold: float,
     min_mask_patches: int,
@@ -217,25 +219,38 @@ def _load_detection_mask(
         if key not in data:
             return None
         pixel_mask = np.asarray(data[key]).astype(bool)
-    patch_mask = pixel_mask_to_patch_mask(pixel_mask, image_size, patch_size, threshold)
+    patch_mask = pixel_mask_to_patch_mask(pixel_mask, image_hw=image_hw, patch_size=patch_size, threshold=threshold)
     if int(patch_mask.sum()) < int(min_mask_patches):
         return None
     return patch_mask
 
 
-def pixel_mask_to_patch_mask(pixel_mask: np.ndarray, image_size: int, patch_size: int, threshold: float = 0.10) -> np.ndarray:
+def pixel_mask_to_patch_mask(
+    pixel_mask: np.ndarray,
+    image_size: int | None = None,
+    patch_size: int = 16,
+    threshold: float = 0.10,
+    image_hw: tuple[int, int] | None = None,
+) -> np.ndarray:
     if pixel_mask.ndim != 2:
         raise ValueError(f"Expected 2D pixel mask, got {pixel_mask.shape}")
     import cv2
 
-    resized = cv2.resize(pixel_mask.astype(np.float32), (int(image_size), int(image_size)), interpolation=cv2.INTER_AREA)
-    grid_h = int(image_size) // int(patch_size)
-    grid_w = int(image_size) // int(patch_size)
+    target_h, target_w = _coerce_image_hw(image_hw, int(image_size or pixel_mask.shape[0]))
+    resized = cv2.resize(pixel_mask.astype(np.float32), (int(target_w), int(target_h)), interpolation=cv2.INTER_AREA)
+    grid_h = int(target_h) // int(patch_size)
+    grid_w = int(target_w) // int(patch_size)
     usable_h = grid_h * int(patch_size)
     usable_w = grid_w * int(patch_size)
     resized = resized[:usable_h, :usable_w]
     patch = resized.reshape(grid_h, int(patch_size), grid_w, int(patch_size)).mean(axis=(1, 3))
     return patch >= float(threshold)
+
+
+def _coerce_image_hw(image_hw: tuple[int, int] | None, image_size: int) -> tuple[int, int]:
+    if image_hw is None:
+        return int(image_size), int(image_size)
+    return int(image_hw[0]), int(image_hw[1])
 
 
 def _cxcywh_norm_to_xyxy(box: np.ndarray, image_w: int, image_h: int) -> np.ndarray:

@@ -210,6 +210,7 @@ class VGGTOmega(nn.Module):
     ) -> dict[str, torch.Tensor]:
         if len(images.shape) == 4:
             images = images.unsqueeze(0)
+        image_size_hw = (int(images.shape[-2]), int(images.shape[-1]))
 
         amp_enabled = images.device.type == "cuda"
         amp_dtype = torch.bfloat16 if amp_enabled and torch.cuda.is_bf16_supported() else torch.float16
@@ -268,6 +269,7 @@ class VGGTOmega(nn.Module):
                         token_layout=token_layout,
                         reference_boxes=smpl_reference_boxes,
                         pose_enc=predictions.get("pose_enc"),
+                        image_size_hw=image_size_hw,
                         track_ids=None,
                         track_mask=None,
                         run_temporal_translation=False,
@@ -293,6 +295,7 @@ class VGGTOmega(nn.Module):
                         smpl_outputs=predictions,
                         temporal_hidden=temporal_hidden,
                         pose_enc=predictions.get("pose_enc"),
+                        image_size_hw=image_size_hw,
                         track_ids=predictions.get("assigned_track_ids"),
                         track_mask=predictions.get("assigned_track_mask"),
                     )
@@ -310,6 +313,7 @@ class VGGTOmega(nn.Module):
                         smpl_outputs=predictions,
                         depth=predictions["depth"],
                         pose_enc=predictions["pose_enc"],
+                        image_size_hw=image_size_hw,
                         track_ids=predictions.get("assigned_track_ids"),
                         track_mask=predictions.get("assigned_track_mask"),
                         track_quality=predictions.get("assigned_track_quality"),

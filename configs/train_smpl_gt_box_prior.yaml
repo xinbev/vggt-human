@@ -11,6 +11,8 @@ data:
   sequence_length: 2
   stride: 1
   image_size: 518
+  image_resolution: 512
+  resize_mode: balanced
   max_humans: 20
   boxes_root_key: datasets.bedlam_boxes_root
   require_boxes: true

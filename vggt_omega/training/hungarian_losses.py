@@ -248,6 +248,7 @@ class HungarianSMPLLoss(nn.Module):
         )
 
     def forward(self, predictions: dict[str, torch.Tensor], batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
+        self._active_projection_image_hw = _infer_projection_image_hw(predictions, batch, self.projection_image_size)
         pred_confs = _flatten_prediction(_require_prediction(predictions, "pred_confs"), unframed_ndim=3)
         pred_boxes = _flatten_prediction(_require_prediction(predictions, "pred_boxes"), unframed_ndim=3)
         pred_pose = _flatten_prediction(_require_prediction(predictions, "pred_pose_6d"), unframed_ndim=3)
@@ -438,7 +439,10 @@ class HungarianSMPLLoss(nn.Module):
                 raise ValueError("projection_camera_source='gt' requires batch['gt_intrinsics'] or batch['K_scal3r']")
         if "pose_enc" not in predictions:
             raise ValueError("VGGT projection camera requires model output pose_enc; set model.enable_camera=true")
-        return _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), self.projection_image_size).to(device=device, dtype=dtype)
+        return _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), self._projection_image_hw()).to(device=device, dtype=dtype)
+
+    def _projection_image_hw(self) -> tuple[int, int]:
+        return getattr(self, "_active_projection_image_hw", (int(self.projection_image_size), int(self.projection_image_size)))
 
     def _confidence_loss(self, pred_confs: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         pred_confs = pred_confs.clamp(1e-6, 1.0 - 1e-6)
@@ -610,7 +614,7 @@ class HungarianSMPLLoss(nn.Module):
         points = joints[:, :24] if self.projected_bbox_source == "joints" else vertices
         points_cam = points.to(dtype=pred_betas.dtype) + transl_cam[:, None, :]
         projected = _project_points(points_cam, intrinsics[frame_idx].to(dtype=points_cam.dtype))
-        projected_boxes = _points_to_normalized_cxcywh(projected, self.projection_image_size)
+        projected_boxes = _points_to_normalized_cxcywh(projected, self._projection_image_hw())
         projected_boxes = projected_boxes.to(dtype=target_boxes.dtype)
 
         giou = generalized_box_iou(cxcywh_to_xyxy(projected_boxes), cxcywh_to_xyxy(target_boxes))
@@ -663,8 +667,8 @@ class HungarianSMPLLoss(nn.Module):
             projected_l1 = zero
         else:
             intrinsics = self._projection_intrinsics(predictions, batch, device=pred_betas.device, dtype=pred_betas.dtype)
-            pred_2d = _project_points(pred_joints_cam, intrinsics[frame_idx].to(dtype=pred_joints_cam.dtype)) / float(self.projection_image_size)
-            gt_2d = _project_points(gt_joints_cam, intrinsics[frame_idx].to(dtype=gt_joints_cam.dtype)) / float(self.projection_image_size)
+            pred_2d = _normalize_points_2d(_project_points(pred_joints_cam, intrinsics[frame_idx].to(dtype=pred_joints_cam.dtype)), self._projection_image_hw())
+            gt_2d = _normalize_points_2d(_project_points(gt_joints_cam, intrinsics[frame_idx].to(dtype=gt_joints_cam.dtype)), self._projection_image_hw())
             valid = (pred_joints_cam[..., 2] > 1e-4) & (gt_joints_cam[..., 2] > 1e-4)
             if valid.any():
                 projected_l1 = F.l1_loss(pred_2d[valid], gt_2d[valid])
@@ -1172,9 +1176,9 @@ class HungarianSMPLLoss(nn.Module):
             losses["metric_hsi_gate_mean"] = losses["loss_hsi_gate_reg"].detach()
 
         if "pose_enc" in predictions:
-            intrinsics = _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), self.projection_image_size)
-            pred_2d = _project_points(pred_joints_cam, intrinsics[frame_idx].to(dtype=pred_joints_cam.dtype)) / float(self.projection_image_size)
-            gt_2d = _project_points(gt_joints_cam, intrinsics[frame_idx].to(dtype=gt_joints_cam.dtype)) / float(self.projection_image_size)
+            intrinsics = _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), self._projection_image_hw())
+            pred_2d = _normalize_points_2d(_project_points(pred_joints_cam, intrinsics[frame_idx].to(dtype=pred_joints_cam.dtype)), self._projection_image_hw())
+            gt_2d = _normalize_points_2d(_project_points(gt_joints_cam, intrinsics[frame_idx].to(dtype=gt_joints_cam.dtype)), self._projection_image_hw())
             valid = (pred_joints_cam[..., 2] > 1e-4) & (gt_joints_cam[..., 2] > 1e-4)
             losses["loss_hsi_projected_joints2d"] = F.l1_loss(pred_2d[valid], gt_2d[valid]) if valid.any() else pred_joints_cam.sum() * 0.0
         else:
@@ -1464,11 +1468,11 @@ class HungarianSMPLLoss(nn.Module):
                     mode="bilinear",
                     align_corners=False,
                 ).reshape(*gt_depth.shape[:2], *pred_depth_hw.shape[-2:])
-        intrinsics = _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), self.projection_image_size)
+        intrinsics = _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), self._projection_image_hw())
         foot_idx = torch.tensor([7, 8, 10, 11], dtype=torch.long, device=gt_joints_cam.device)
         gt_foot = gt_joints_cam[:, foot_idx]
         gt_projected = _project_points(gt_foot, intrinsics[frame_idx].to(dtype=gt_foot.dtype))
-        gt_projected = _scale_points_to_depth(gt_projected, self.projection_image_size, gt_depth.shape[-2], gt_depth.shape[-1])
+        gt_projected = _scale_points_to_depth(gt_projected, self._projection_image_hw(), gt_depth.shape[-2], gt_depth.shape[-1])
         sampled_gt, gt_valid = _sample_depth_at_points(gt_depth.reshape(-1, *gt_depth.shape[-2:]), gt_projected, frame_idx)
         return (torch.abs(sampled_gt - gt_foot[..., 2].to(dtype=sampled_gt.dtype)) < float(self.hsi_foot_sliding_contact_threshold_m)) & gt_valid
 
@@ -1681,9 +1685,9 @@ class HungarianSMPLLoss(nn.Module):
 
         if "pose_enc" not in predictions:
             return out
-        intrinsics = _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), self.projection_image_size)
+        intrinsics = _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), self._projection_image_hw())
         projected = _project_points(pred_joints_cam, intrinsics[frame_idx].to(dtype=pred_joints_cam.dtype))
-        projected = _scale_points_to_depth(projected, self.projection_image_size, aligned_depth.shape[-2], aligned_depth.shape[-1])
+        projected = _scale_points_to_depth(projected, self._projection_image_hw(), aligned_depth.shape[-2], aligned_depth.shape[-1])
         sampled_aligned, valid = _sample_depth_at_points(aligned_depth.reshape(-1, *aligned_depth.shape[-2:]), projected, frame_idx)
         if valid.any():
             anchor_l1 = F.smooth_l1_loss(sampled_aligned[valid], pred_joints_cam[..., 2][valid].to(dtype=sampled_aligned.dtype))
@@ -1731,7 +1735,7 @@ class HungarianSMPLLoss(nn.Module):
             return out
         matched_logits = flat_logits[frame_idx, src_idx, :, 0]
         gt_projected = _project_points(gt_joints_cam, intrinsics[frame_idx].to(dtype=gt_joints_cam.dtype))
-        gt_projected = _scale_points_to_depth(gt_projected, self.projection_image_size, gt_depth.shape[-2], gt_depth.shape[-1])
+        gt_projected = _scale_points_to_depth(gt_projected, self._projection_image_hw(), gt_depth.shape[-2], gt_depth.shape[-1])
         sampled_gt, gt_valid = _sample_depth_at_points(gt_depth.reshape(-1, *gt_depth.shape[-2:]), gt_projected, frame_idx)
         contact_target = (torch.abs(sampled_gt - gt_joints_cam[..., 2].to(dtype=sampled_gt.dtype)) < self.hsi_contact_threshold) & gt_valid
         if self.hsi_anchor_scene_xyz_weight != 0.0 and contact_target.any():
@@ -1742,7 +1746,7 @@ class HungarianSMPLLoss(nn.Module):
                 intrinsics[frame_idx].to(dtype=pred_joints_cam.dtype),
                 frame_idx,
                 window_size=int(self.hsi_anchor_scene_window),
-                image_size=self.projection_image_size,
+                image_size_hw=self._projection_image_hw(),
             )
             scene_valid = contact_target & local_valid & torch.isfinite(local_dist)
             if scene_valid.any():
@@ -1777,11 +1781,11 @@ class HungarianSMPLLoss(nn.Module):
         pred_foot = pred_joints_cam[:, foot_idx]
         gt_foot = gt_joints_cam[:, foot_idx]
         pred_projected = _project_points(pred_foot, intrinsics[frame_idx].to(dtype=pred_foot.dtype))
-        pred_projected = _scale_points_to_depth(pred_projected, self.projection_image_size, aligned_depth.shape[-2], aligned_depth.shape[-1])
+        pred_projected = _scale_points_to_depth(pred_projected, self._projection_image_hw(), aligned_depth.shape[-2], aligned_depth.shape[-1])
         sampled_aligned, pred_valid = _sample_depth_at_points(aligned_depth.reshape(-1, *aligned_depth.shape[-2:]), pred_projected, frame_idx)
 
         gt_projected = _project_points(gt_foot, intrinsics[frame_idx].to(dtype=gt_foot.dtype))
-        gt_projected = _scale_points_to_depth(gt_projected, self.projection_image_size, gt_depth.shape[-2], gt_depth.shape[-1])
+        gt_projected = _scale_points_to_depth(gt_projected, self._projection_image_hw(), gt_depth.shape[-2], gt_depth.shape[-1])
         sampled_gt, gt_valid = _sample_depth_at_points(gt_depth.reshape(-1, *gt_depth.shape[-2:]), gt_projected, frame_idx)
         contact_target = (torch.abs(sampled_gt - gt_foot[..., 2].to(dtype=sampled_gt.dtype)) < float(self.hsi_foot_contact_threshold_m)) & gt_valid
         valid = contact_target & pred_valid
@@ -1819,12 +1823,12 @@ class HungarianSMPLLoss(nn.Module):
         gt_sole = gt_vertices_cam[:, foot_idx]
 
         gt_projected = _project_points(gt_sole, intrinsics[frame_idx].to(dtype=gt_sole.dtype))
-        gt_projected = _scale_points_to_depth(gt_projected, self.projection_image_size, gt_depth.shape[-2], gt_depth.shape[-1])
+        gt_projected = _scale_points_to_depth(gt_projected, self._projection_image_hw(), gt_depth.shape[-2], gt_depth.shape[-1])
         sampled_gt, gt_valid = _sample_depth_at_points(gt_depth.reshape(-1, *gt_depth.shape[-2:]), gt_projected, frame_idx)
         contact_target = (torch.abs(sampled_gt - gt_sole[..., 2].to(dtype=sampled_gt.dtype)) < float(self.hsi_foot_sole_contact_threshold_m)) & gt_valid
 
         pred_projected = _project_points(pred_sole, intrinsics[frame_idx].to(dtype=pred_sole.dtype))
-        pred_projected = _scale_points_to_depth(pred_projected, self.projection_image_size, aligned_depth.shape[-2], aligned_depth.shape[-1])
+        pred_projected = _scale_points_to_depth(pred_projected, self._projection_image_hw(), aligned_depth.shape[-2], aligned_depth.shape[-1])
         sampled_aligned, pred_valid = _sample_depth_at_points(aligned_depth.reshape(-1, *aligned_depth.shape[-2:]), pred_projected, frame_idx)
         valid = contact_target & pred_valid
         if not valid.any():
@@ -1865,14 +1869,14 @@ class HungarianSMPLLoss(nn.Module):
         gt_sole = gt_vertices_cam[:, foot_idx]
 
         gt_projected = _project_points(gt_sole, intrinsics[frame_idx].to(dtype=gt_sole.dtype))
-        gt_projected = _scale_points_to_depth(gt_projected, self.projection_image_size, gt_depth.shape[-2], gt_depth.shape[-1])
+        gt_projected = _scale_points_to_depth(gt_projected, self._projection_image_hw(), gt_depth.shape[-2], gt_depth.shape[-1])
         sampled_gt, gt_valid = _sample_depth_at_points(gt_depth.reshape(-1, *gt_depth.shape[-2:]), gt_projected, frame_idx)
         contact_target = (torch.abs(sampled_gt - gt_sole[..., 2].to(dtype=sampled_gt.dtype)) < float(self.hsi_support_plane_contact_threshold_m)) & gt_valid
         if not contact_target.any():
             return out
 
         pred_projected = _project_points(pred_sole, intrinsics[frame_idx].to(dtype=pred_sole.dtype))
-        pred_projected = _scale_points_to_depth(pred_projected, self.projection_image_size, aligned_depth.shape[-2], aligned_depth.shape[-1])
+        pred_projected = _scale_points_to_depth(pred_projected, self._projection_image_hw(), aligned_depth.shape[-2], aligned_depth.shape[-1])
         signed_delta, plane_valid = _sample_local_support_plane_signed_delta(
             aligned_depth.reshape(-1, *aligned_depth.shape[-2:]),
             pred_projected,
@@ -1881,7 +1885,7 @@ class HungarianSMPLLoss(nn.Module):
             frame_idx,
             window_size=int(self.hsi_support_plane_window),
             min_points=int(self.hsi_support_plane_min_points),
-            image_size=self.projection_image_size,
+            image_size_hw=self._projection_image_hw(),
         )
         valid = contact_target & plane_valid & torch.isfinite(signed_delta)
         if not valid.any():
@@ -2076,10 +2080,31 @@ def _target_count(target: dict[str, torch.Tensor]) -> int:
     return 0
 
 
-def _flatten_intrinsics(pose_enc: torch.Tensor, image_size: int) -> torch.Tensor:
+def _coerce_image_size_hw(image_size_hw: int | tuple[int, int]) -> tuple[int, int]:
+    if isinstance(image_size_hw, int):
+        return int(image_size_hw), int(image_size_hw)
+    return int(image_size_hw[0]), int(image_size_hw[1])
+
+
+def _infer_projection_image_hw(
+    predictions: dict[str, torch.Tensor],
+    batch: dict[str, torch.Tensor],
+    fallback_image_size: int,
+) -> tuple[int, int]:
+    for source in (predictions.get("images"), batch.get("images")):
+        if isinstance(source, torch.Tensor) and source.ndim >= 4:
+            return int(source.shape[-2]), int(source.shape[-1])
+    image_hw = batch.get("image_hw")
+    if isinstance(image_hw, torch.Tensor) and image_hw.numel() >= 2:
+        flat = image_hw.reshape(-1, 2)
+        return int(flat[0, 0].item()), int(flat[0, 1].item())
+    return int(fallback_image_size), int(fallback_image_size)
+
+
+def _flatten_intrinsics(pose_enc: torch.Tensor, image_size_hw: int | tuple[int, int]) -> torch.Tensor:
     if pose_enc.ndim == 2:
         pose_enc = pose_enc[:, None]
-    _, intrinsics = encoding_to_camera(pose_enc, image_size_hw=(image_size, image_size), build_intrinsics=True)
+    _, intrinsics = encoding_to_camera(pose_enc, image_size_hw=_coerce_image_size_hw(image_size_hw), build_intrinsics=True)
     if intrinsics is None:
         raise RuntimeError("encoding_to_camera did not return intrinsics")
     return intrinsics.reshape(-1, 3, 3)
@@ -2209,7 +2234,7 @@ def _sample_local_scene_distance(
     intrinsics: torch.Tensor,
     frame_idx: torch.Tensor,
     window_size: int = 5,
-    image_size: int | None = None,
+    image_size_hw: int | tuple[int, int] | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     height, width = depth_flat.shape[-2:]
     window_size = max(int(window_size), 1)
@@ -2248,9 +2273,10 @@ def _sample_local_scene_distance(
     cy = intrinsics[:, 1, 2].reshape(-1, 1, 1)
     pixel_x = xs.to(dtype=sampled_depth.dtype)
     pixel_y = ys.to(dtype=sampled_depth.dtype)
-    if image_size is not None:
-        pixel_x = pixel_x * (float(image_size) / float(width))
-        pixel_y = pixel_y * (float(image_size) / float(height))
+    if image_size_hw is not None:
+        image_h, image_w = _coerce_image_size_hw(image_size_hw)
+        pixel_x = pixel_x * (float(image_w) / float(width))
+        pixel_y = pixel_y * (float(image_h) / float(height))
     scene_x = (pixel_x - cx.to(dtype=sampled_depth.dtype)) * sampled_depth / fx.to(dtype=sampled_depth.dtype)
     scene_y = (pixel_y - cy.to(dtype=sampled_depth.dtype)) * sampled_depth / fy.to(dtype=sampled_depth.dtype)
     scene_xyz = torch.stack([scene_x, scene_y, sampled_depth], dim=-1)
@@ -2271,7 +2297,7 @@ def _sample_local_support_plane_signed_delta(
     frame_idx: torch.Tensor,
     window_size: int = 9,
     min_points: int = 6,
-    image_size: int | None = None,
+    image_size_hw: int | tuple[int, int] | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     height, width = depth_flat.shape[-2:]
     window_size = max(int(window_size), 1)
@@ -2311,9 +2337,10 @@ def _sample_local_support_plane_signed_delta(
     cy = intrinsics[:, 1, 2].reshape(-1, 1, 1)
     pixel_x = xs.to(dtype=sampled_depth.dtype)
     pixel_y = ys.to(dtype=sampled_depth.dtype)
-    if image_size is not None:
-        pixel_x = pixel_x * (float(image_size) / float(width))
-        pixel_y = pixel_y * (float(image_size) / float(height))
+    if image_size_hw is not None:
+        image_h, image_w = _coerce_image_size_hw(image_size_hw)
+        pixel_x = pixel_x * (float(image_w) / float(width))
+        pixel_y = pixel_y * (float(image_h) / float(height))
     scene_x = (pixel_x - cx.to(dtype=sampled_depth.dtype)) * sampled_depth / fx.to(dtype=sampled_depth.dtype)
     scene_y = (pixel_y - cy.to(dtype=sampled_depth.dtype)) * sampled_depth / fy.to(dtype=sampled_depth.dtype)
     scene_xyz = torch.stack([scene_x, scene_y, sampled_depth], dim=-1)
@@ -2340,11 +2367,12 @@ def _sample_local_support_plane_signed_delta(
     return signed, valid
 
 
-def _scale_points_to_depth(points_2d: torch.Tensor, image_size: int, depth_height: int, depth_width: int) -> torch.Tensor:
+def _scale_points_to_depth(points_2d: torch.Tensor, image_size_hw: int | tuple[int, int], depth_height: int, depth_width: int) -> torch.Tensor:
+    image_h, image_w = _coerce_image_size_hw(image_size_hw)
     scale = points_2d.new_tensor(
         [
-            float(depth_width) / float(image_size),
-            float(depth_height) / float(image_size),
+            float(depth_width) / float(image_w),
+            float(depth_height) / float(image_h),
         ]
     )
     return points_2d * scale
@@ -2357,13 +2385,22 @@ def _project_points(points_cam: torch.Tensor, intrinsics: torch.Tensor) -> torch
     return torch.stack([x, y], dim=-1)
 
 
-def _points_to_normalized_cxcywh(points: torch.Tensor, image_size: int) -> torch.Tensor:
-    points = torch.nan_to_num(points, nan=0.0, posinf=float(image_size), neginf=0.0)
-    points = points.clamp(min=0.0, max=float(image_size))
+def _normalize_points_2d(points: torch.Tensor, image_size_hw: int | tuple[int, int]) -> torch.Tensor:
+    image_h, image_w = _coerce_image_size_hw(image_size_hw)
+    scale = points.new_tensor([max(float(image_w), 1.0), max(float(image_h), 1.0)])
+    return points / scale
+
+
+def _points_to_normalized_cxcywh(points: torch.Tensor, image_size_hw: int | tuple[int, int]) -> torch.Tensor:
+    image_h, image_w = _coerce_image_size_hw(image_size_hw)
+    max_xy = points.new_tensor([float(image_w), float(image_h)])
+    points = torch.nan_to_num(points, nan=0.0, posinf=float(max(image_w, image_h)), neginf=0.0)
+    points = torch.maximum(torch.minimum(points, max_xy), torch.zeros_like(points))
     xy_min = points.amin(dim=1)
     xy_max = points.amax(dim=1)
-    center = 0.5 * (xy_min + xy_max) / float(image_size)
-    size = (xy_max - xy_min) / float(image_size)
+    scale = points.new_tensor([max(float(image_w), 1.0), max(float(image_h), 1.0)])
+    center = 0.5 * (xy_min + xy_max) / scale
+    size = (xy_max - xy_min) / scale
     return torch.cat([center, size.clamp(min=1e-6)], dim=-1).clamp(min=0.0, max=1.0)
 
 

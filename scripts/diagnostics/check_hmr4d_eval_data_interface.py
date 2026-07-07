@@ -29,6 +29,8 @@ def main() -> None:
         sequence_length=args.sequence_length,
         stride=args.stride,
         image_size=args.image_size,
+        image_resolution=args.image_size,
+        resize_mode="balanced",
         max_humans=args.max_humans,
         patch_size=args.patch_size,
         full_sequence=args.full_sequence,

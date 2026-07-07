@@ -15,6 +15,7 @@ from vggt_omega.data.geometry import (
     default_intrinsics_for_geometry,
     resize_depth_with_geometry,
     resize_image_with_geometry,
+    resize_mask_with_geometry,
     pixel_mask_to_patch_mask_hw,
     transform_intrinsics,
     transform_xyxy_to_normalized_cxcywh,
@@ -121,6 +122,7 @@ class BedlamDataset(Dataset):
         persons_per_frame = []
         boxes_per_frame = []
         box_frames = []
+        geometries = []
         for frame_id in selected:
             rgb_path = seq_dir / "rgb" / f"{frame_id}.png"
             depth_path = seq_dir / "depth" / f"{frame_id}.npy"
@@ -129,6 +131,7 @@ class BedlamDataset(Dataset):
             box_path = self._box_path(seq_dir, frame_id) if self.boxes_root is not None else None
 
             image, orig_hw, geometry = _load_rgb_tensor(rgb_path, self.image_resolution, self.patch_size, self.resize_mode)
+            geometries.append(geometry)
             images.append(image)
             depths.append(_load_depth_tensor(depth_path, geometry, self.require_depth))
             intrinsics.append(_load_intrinsics(cam_path, orig_hw, geometry))
@@ -162,13 +165,13 @@ class BedlamDataset(Dataset):
                 box_frames=box_frames,
                 max_humans=self.max_humans,
                 image_size=self.image_size,
-                image_hw=geometry.input_hw,
+                geometries=geometries,
                 patch_size=self.patch_size,
                 mask_patch_threshold=self.mask_patch_threshold,
                 min_mask_patches=self.min_mask_patches,
                 sidecar_root=self.boxes_root,
             )
-            external = _build_external_prior_targets(box_frames, query["smpl_query_boxes"], query["smpl_query_boxes_mask"])
+            external = _build_external_prior_targets(box_frames, query["smpl_query_boxes"], query["smpl_query_boxes_mask"], geometries=geometries)
             sample.update(query)
             sample.update(external)
         sample["valid_hw"] = torch.tensor([list(image.shape[-2:]) for image in images], dtype=torch.long)
@@ -386,7 +389,7 @@ def _build_detection_query_targets(
     box_frames: list[dict[str, Any] | None],
     max_humans: int,
     image_size: int,
-    image_hw: tuple[int, int],
+    geometries: list[ResizeGeometry],
     patch_size: int,
     mask_patch_threshold: float,
     min_mask_patches: int,
@@ -394,6 +397,10 @@ def _build_detection_query_targets(
 ) -> dict[str, torch.Tensor]:
     num_frames = len(box_frames)
     del image_size
+    image_hw = (
+        max(int(geometry.input_hw[0]) for geometry in geometries),
+        max(int(geometry.input_hw[1]) for geometry in geometries),
+    )
     grid_h = int(image_hw[0]) // int(patch_size)
     grid_w = int(image_hw[1]) // int(patch_size)
     num_patches = grid_h * grid_w
@@ -413,14 +420,19 @@ def _build_detection_query_targets(
             key=lambda det: (float(det.get("det_score", det.get("score", 0.0))), _det_area(det)),
             reverse=True,
         )[:max_humans]
+        geometry = geometries[frame_idx]
         for slot, det in enumerate(detections):
-            boxes[frame_idx, slot] = torch.as_tensor(_det_cxcywh(det, int(image_hw[1]), int(image_hw[0])), dtype=torch.float32).clamp(0.0, 1.0)
+            model_box, model_box_valid = _det_model_cxcywh(det, image_w, image_h, geometry)
+            if not model_box_valid:
+                continue
+            boxes[frame_idx, slot] = torch.as_tensor(model_box, dtype=torch.float32).clamp(0.0, 1.0)
             box_mask[frame_idx, slot] = True
             scores[frame_idx, slot] = float(det.get("det_score", det.get("score", 0.0)))
             det_ids[frame_idx, slot] = int(det.get("det_id", slot))
             patch_mask = _load_detection_patch_mask(
                 det,
                 sidecar_root=sidecar_root,
+                geometry=geometry,
                 image_hw=image_hw,
                 patch_size=patch_size,
                 threshold=mask_patch_threshold,
@@ -443,6 +455,7 @@ def _build_external_prior_targets(
     box_frames: list[dict[str, Any] | None],
     query_boxes: torch.Tensor,
     query_mask: torch.Tensor,
+    geometries: list[ResizeGeometry] | None = None,
     iou_threshold: float = 0.50,
 ) -> dict[str, torch.Tensor]:
     num_frames, max_humans = query_boxes.shape[:2]
@@ -453,6 +466,7 @@ def _build_external_prior_targets(
         if frame is None:
             continue
         image_h, image_w = _frame_hw(frame)
+        geometry = geometries[frame_idx] if geometries is not None else None
         persons = [
             person
             for person in frame.get("persons", [])
@@ -465,13 +479,21 @@ def _build_external_prior_targets(
         for slot in range(max_humans):
             if not bool(query_mask[frame_idx, slot]):
                 continue
-            q_xyxy = _cxcywh_norm_to_xyxy(query_boxes[frame_idx, slot].numpy(), image_w, image_h)
+            if geometry is not None:
+                q_xyxy = _cxcywh_norm_to_xyxy(query_boxes[frame_idx, slot].numpy(), geometry.input_hw[1], geometry.input_hw[0])
+            else:
+                q_xyxy = _cxcywh_norm_to_xyxy(query_boxes[frame_idx, slot].numpy(), image_w, image_h)
             best_idx = -1
             best_iou = 0.0
             for person_idx, person in enumerate(persons):
                 if person_idx in used:
                     continue
                 p_xyxy = np.asarray(person.get("bbox_xyxy_pixels", [0, 0, 0, 0]), dtype=np.float32)
+                if geometry is not None:
+                    p_box, p_valid = transform_xyxy_to_normalized_cxcywh(p_xyxy, geometry)
+                    if not p_valid:
+                        continue
+                    p_xyxy = _cxcywh_norm_to_xyxy(p_box, geometry.input_hw[1], geometry.input_hw[0])
                 iou = _box_iou(q_xyxy, p_xyxy)
                 if iou > best_iou:
                     best_iou = iou
@@ -646,9 +668,20 @@ def _det_cxcywh(det: dict[str, Any], image_w: int, image_h: int) -> list[float]:
     raise ValueError("Detection is missing bbox_cxcywh_norm and bbox_xyxy_pixels")
 
 
+def _det_model_cxcywh(det: dict[str, Any], image_w: int, image_h: int, geometry: ResizeGeometry) -> tuple[np.ndarray, bool]:
+    if "bbox_xyxy_pixels" in det:
+        xyxy = np.asarray(det["bbox_xyxy_pixels"], dtype=np.float32).reshape(4)
+    elif "bbox_cxcywh_norm" in det:
+        xyxy = _cxcywh_norm_to_xyxy(np.asarray(det["bbox_cxcywh_norm"], dtype=np.float32), image_w, image_h)
+    else:
+        raise ValueError("Detection is missing bbox_cxcywh_norm and bbox_xyxy_pixels")
+    return transform_xyxy_to_normalized_cxcywh(xyxy, geometry)
+
+
 def _load_detection_patch_mask(
     det: dict[str, Any],
     sidecar_root: Path | None,
+    geometry: ResizeGeometry,
     image_hw: tuple[int, int],
     patch_size: int,
     threshold: float,
@@ -670,7 +703,8 @@ def _load_detection_patch_mask(
         if key not in data:
             return None
         pixel_mask = np.asarray(data[key]).astype(bool)
-    patch_mask = pixel_mask_to_patch_mask_hw(pixel_mask, image_hw, patch_size, threshold)
+    resized_mask = resize_mask_with_geometry(pixel_mask, geometry)
+    patch_mask = pixel_mask_to_patch_mask_hw(resized_mask, image_hw, patch_size, threshold)
     if int(patch_mask.sum()) < int(min_mask_patches):
         return None
     return patch_mask

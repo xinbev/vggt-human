@@ -54,6 +54,28 @@ COLOR = {
 }
 
 
+def coerce_image_hw(image_size_hw: int | tuple[int, int]) -> tuple[int, int]:
+    if isinstance(image_size_hw, int):
+        return int(image_size_hw), int(image_size_hw)
+    return int(image_size_hw[0]), int(image_size_hw[1])
+
+
+def probe_image_hw(probe: dict[str, torch.Tensor], fallback_hw: tuple[int, int] | None = None) -> tuple[int, int]:
+    image_hw = probe.get("image_hw")
+    if isinstance(image_hw, torch.Tensor) and image_hw.numel() >= 2:
+        flat = image_hw.reshape(-1, 2)
+        return int(flat[0, 0].detach().cpu()), int(flat[0, 1].detach().cpu())
+    if "image_size" in probe:
+        size = int(probe["image_size"].detach().cpu())
+        return size, size
+    if fallback_hw is not None:
+        return int(fallback_hw[0]), int(fallback_hw[1])
+    depth = probe.get("depth_hw")
+    if isinstance(depth, torch.Tensor):
+        return int(depth.shape[-2]), int(depth.shape[-1])
+    raise KeyError("Probe does not contain image_hw, image_size, or depth_hw")
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image", type=Path, required=True)
@@ -103,7 +125,7 @@ def main() -> None:
     config = load_config(args)
     checkpoint = resolve_checkpoint(args, config)
     image_path = resolve_project_path(args.image)
-    input_size = int(config.get("data", {}).get("image_size", args.image_size))
+    input_size = int(config.get("data", {}).get("image_resolution", config.get("data", {}).get("image_size", args.image_size)))
     patch_size = int(config.get("model", {}).get("patch_size", 16))
 
     priors = build_query_priors(args, image_path, input_size, patch_size, config, device, output_dir)
@@ -113,7 +135,8 @@ def main() -> None:
     model.eval()
 
     image_tensor, original_image = load_image(image_path, input_size)
-    rgb_input = original_image.resize((input_size, input_size), Image.BILINEAR).convert("RGB")
+    input_hw = (int(image_tensor.shape[-2]), int(image_tensor.shape[-1]))
+    rgb_input = original_image.resize((input_hw[1], input_hw[0]), Image.BILINEAR).convert("RGB")
     with torch.no_grad():
         predictions = model(
             image_tensor.to(device),
@@ -122,7 +145,7 @@ def main() -> None:
             smpl_query_patch_masks=priors["patch_masks"],
         )
 
-    base_probe = compute_hsi_probe(predictions, model, input_size)
+    base_probe = compute_hsi_probe(predictions, model, input_hw)
     query_indices = choose_query_indices(predictions, priors, args)
     diagnostics = build_projection_diagnostics(predictions, model, base_probe, query_indices)
     probe, actual_smpl_stage = apply_smpl_stage(base_probe, predictions, model, args.smpl_stage)
@@ -146,7 +169,7 @@ def main() -> None:
         color_source=args.depth_surface_color,
     )
     camera_mesh = MeshBuilder()
-    add_camera_frustum(camera_mesh, probe["intrinsics"], input_size, camera_depth, scale)
+    add_camera_frustum(camera_mesh, probe["intrinsics"], probe_image_hw(probe), camera_depth, scale)
 
     files: list[str] = []
     camera_path = output_dir / "00_camera_frustum.ply"
@@ -352,7 +375,7 @@ def rebuild_probe_geometry_from_prediction_stage(
     )
     height, width = probe["depth_hw"].shape[-2:]
     image_size = int(probe["image_size"].detach().cpu())
-    projected_depth = _scale_points_to_depth(projected, image_size, height, width)
+    projected_depth = _scale_points_to_depth(projected, probe_image_hw(probe, fallback_hw=(height, width)), height, width)
     rebuilt = dict(probe)
     rebuilt.update(
         {
@@ -518,9 +541,9 @@ def sample_mask_depth_points(
     chosen = farthest_sample_pixels(np.stack([xs, ys], axis=1).astype(np.float32), min(int(num_points), int(xs.size)), width, height)
     chosen_x = chosen[:, 0].round().astype(np.int64).clip(0, width - 1)
     chosen_y = chosen[:, 1].round().astype(np.int64).clip(0, height - 1)
-    image_size = float(int(probe["image_size"].detach().cpu()))
-    input_x = torch.as_tensor(chosen_x, device=depth.device, dtype=depth.dtype) * (image_size / float(width))
-    input_y = torch.as_tensor(chosen_y, device=depth.device, dtype=depth.dtype) * (image_size / float(height))
+    image_h, image_w = probe_image_hw(probe, fallback_hw=(height, width))
+    input_x = torch.as_tensor(chosen_x, device=depth.device, dtype=depth.dtype) * (float(image_w) / float(width))
+    input_y = torch.as_tensor(chosen_y, device=depth.device, dtype=depth.dtype) * (float(image_h) / float(height))
     z = depth[torch.as_tensor(chosen_y, device=depth.device), torch.as_tensor(chosen_x, device=depth.device)]
     intr = probe["intrinsics"].reshape(-1, 3, 3)[0].to(device=depth.device, dtype=depth.dtype)
     points = []
@@ -705,12 +728,13 @@ def choose_camera_plane_depth(probe: dict[str, torch.Tensor], selected: list[dic
     return max(0.5, float(np.percentile(depth[valid], 10)) * 0.5) if valid.any() else 1.0
 
 
-def add_camera_frustum(mesh: MeshBuilder, intrinsics: torch.Tensor, image_size: int, z_plane: float, scale: float) -> None:
+def add_camera_frustum(mesh: MeshBuilder, intrinsics: torch.Tensor, image_size_hw: int | tuple[int, int], z_plane: float, scale: float) -> None:
     intr = intrinsics.reshape(-1, 3, 3)[0].detach().float().cpu().numpy()
     fx, fy = float(intr[0, 0]), float(intr[1, 1])
     cx, cy = float(intr[0, 2]), float(intr[1, 2])
+    image_h, image_w = coerce_image_hw(image_size_hw)
     corners_uv = np.asarray(
-        [[0.0, 0.0], [float(image_size), 0.0], [float(image_size), float(image_size)], [0.0, float(image_size)]],
+        [[0.0, 0.0], [float(image_w), 0.0], [float(image_w), float(image_h)], [0.0, float(image_h)]],
         dtype=np.float32,
     )
     corners = []
@@ -739,7 +763,7 @@ def build_depth_component(
     vertices, colors, faces = depth_to_colored_surface_mesh(
         depth=probe[depth_key][0, 0],
         intrinsics=probe["intrinsics"],
-        image_size=int(probe["image_size"].detach().cpu()),
+        image_size_hw=probe_image_hw(probe),
         upsample=upsample,
         stride=stride,
         max_depth=max_depth,
@@ -756,7 +780,7 @@ def build_depth_component(
 def depth_to_colored_surface_mesh(
     depth: torch.Tensor,
     intrinsics: torch.Tensor,
-    image_size: int,
+    image_size_hw: int | tuple[int, int],
     upsample: int,
     stride: int,
     max_depth: float,
@@ -780,8 +804,9 @@ def depth_to_colored_surface_mesh(
     valid = torch.isfinite(z) & (z > 1e-6) & (z <= float(max_depth))
     if not bool(valid.any()):
         return np.empty((0, 3), dtype=np.float32), np.empty((0, 3), dtype=np.uint8), np.empty((0, 3), dtype=np.int64)
-    xx_f = xx.to(dtype=depth_hw.dtype) * (float(image_size) / float(width))
-    yy_f = yy.to(dtype=depth_hw.dtype) * (float(image_size) / float(height))
+    image_h, image_w = coerce_image_hw(image_size_hw)
+    xx_f = xx.to(dtype=depth_hw.dtype) * (float(image_w) / float(width))
+    yy_f = yy.to(dtype=depth_hw.dtype) * (float(image_h) / float(height))
     intr = intrinsics.reshape(-1, 3, 3)[0].to(device=depth_hw.device, dtype=depth_hw.dtype)
     fx = intr[0, 0].clamp(min=1e-6)
     fy = intr[1, 1].clamp(min=1e-6)

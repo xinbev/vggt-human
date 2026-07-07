@@ -163,7 +163,9 @@ def build_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoade
         split=split,
         sequence_length=int(data_cfg["sequence_length"]),
         stride=int(data_cfg["stride"]),
-        image_size=int(data_cfg["image_size"]),
+        image_size=int(data_cfg.get("image_size", data_cfg.get("image_resolution", 512))),
+        image_resolution=int(data_cfg.get("image_resolution", data_cfg.get("image_size", 512))),
+        resize_mode=str(data_cfg.get("resize_mode", "balanced")),
         max_humans=int(data_cfg["max_humans"]),
         require_smpl=bool(data_cfg.get("require_smpl", True)),
         require_depth=bool(data_cfg.get("require_depth", False)),
@@ -193,7 +195,9 @@ def build_3dpw_loader(config: dict[str, Any], split: str, shuffle: bool) -> Data
         split=split,
         sequence_length=int(data_cfg["sequence_length"]),
         stride=int(data_cfg["stride"]),
-        image_size=int(data_cfg["image_size"]),
+        image_size=int(data_cfg.get("image_size", data_cfg.get("image_resolution", 512))),
+        image_resolution=int(data_cfg.get("image_resolution", data_cfg.get("image_size", 512))),
+        resize_mode=str(data_cfg.get("resize_mode", "balanced")),
         max_humans=int(data_cfg.get("max_humans", 2)),
         require_smpl=bool(data_cfg.get("require_smpl", True)),
         require_boxes=bool(data_cfg.get("require_boxes", True)),
@@ -233,7 +237,9 @@ def build_hf_bedlam_loader(config: dict[str, Any], split: str, shuffle: bool) ->
         npz_root=require_path(config, data_cfg.get("npz_root_key", "datasets.hf_bedlam_npz_root")),
         sequence_length=int(data_cfg["sequence_length"]),
         stride=int(data_cfg["stride"]),
-        image_size=int(data_cfg["image_size"]),
+        image_size=int(data_cfg.get("image_size", data_cfg.get("image_resolution", 512))),
+        image_resolution=int(data_cfg.get("image_resolution", data_cfg.get("image_size", 512))),
+        resize_mode=str(data_cfg.get("resize_mode", "balanced")),
         max_humans=int(data_cfg.get("max_humans", 20)),
         require_smpl=bool(data_cfg.get("require_smpl", True)),
         require_boxes=bool(data_cfg.get("require_boxes", True)),
@@ -393,7 +399,7 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_scene_affine_mode=str(model_cfg.get("hsi_scene_affine_mode", "per_frame")),
         hsi_scene_affine_ema_alpha=float(model_cfg.get("hsi_scene_affine_ema_alpha", 0.25)),
         smpl_model_dir=str(config.get("assets", {}).get("smpl_model_dir", "")),
-        image_size=int(config.get("data", {}).get("image_size", 518)),
+        image_size=int(config.get("data", {}).get("image_resolution", config.get("data", {}).get("image_size", 512))),
         freeze_dense_head=bool(model_cfg.get("freeze_dense_head", False)),
         freeze_aggregator_forward=bool(model_cfg.get("freeze_aggregator_forward", False)),
     )
@@ -407,15 +413,14 @@ def build_criterion(config: dict[str, Any]) -> torch.nn.Module:
             smpl_model_dir = config.get("assets", {}).get("smpl_model_dir")
             if smpl_model_dir:
                 loss_cfg["smpl_model_dir"] = smpl_model_dir
-        if "projection_image_size" not in loss_cfg:
-            loss_cfg["projection_image_size"] = int(config.get("data", {}).get("image_size", 518))
         match_cfg = config.get("matching", {})
+        data_image_resolution = int(config.get("data", {}).get("image_resolution", config.get("data", {}).get("image_size", 512)))
         matcher = HungarianSMPLMatcher(
             cost_conf=float(match_cfg.get("cost_conf", 1.0)),
             cost_bbox=float(match_cfg.get("cost_bbox", 5.0)),
             cost_giou=float(match_cfg.get("cost_giou", 2.0)),
             cost_kpts=float(match_cfg.get("cost_kpts", 0.0)),
-            j2ds_norm_scale=float(config.get("data", {}).get("image_size", 518)),
+            j2ds_norm_scale=float(data_image_resolution),
             require_boxes=bool(config.get("data", {}).get("require_boxes", True)),
             require_j2ds=False,
         )

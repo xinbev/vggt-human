@@ -82,6 +82,7 @@ class CameraRayTranslationRefiner(nn.Module):
         betas: torch.Tensor,
         boxes: torch.Tensor,
         intrinsics: torch.Tensor,
+        image_size_hw: tuple[int, int] | None = None,
     ) -> dict[str, torch.Tensor]:
         if hidden.ndim != 3 or base_transl.ndim != 3 or boxes.ndim != 3:
             raise ValueError(
@@ -104,7 +105,8 @@ class CameraRayTranslationRefiner(nn.Module):
         base_transl = base_transl.to(device=hidden.device, dtype=hidden.dtype)
         pose6d = pose6d.to(device=hidden.device, dtype=hidden.dtype)
         betas = betas.to(device=hidden.device, dtype=hidden.dtype)
-        ray, tangent_x, tangent_y, k_features = _camera_ray_basis(boxes, intrinsics, self.image_size)
+        image_size_hw = _resolve_image_size_hw(image_size_hw, self.image_size)
+        ray, tangent_x, tangent_y, k_features = _camera_ray_basis(boxes, intrinsics, image_size_hw)
 
         ray_depth = (base_transl * ray).sum(dim=-1, keepdim=True)
         tangent_coord_x = (base_transl * tangent_x).sum(dim=-1, keepdim=True)
@@ -114,7 +116,7 @@ class CameraRayTranslationRefiner(nn.Module):
         box_depth_prior = _bbox_height_depth_prior(
             boxes=boxes,
             intrinsics=intrinsics,
-            image_size=self.image_size,
+            image_size_hw=image_size_hw,
             human_height_prior_m=self.human_height_prior_m,
         )
         safe_ray_depth = ray_depth.abs().clamp(min=1e-4)
@@ -221,6 +223,7 @@ class RayOffsetDepthTranslationDecoder(nn.Module):
         betas: torch.Tensor,
         boxes: torch.Tensor,
         intrinsics: torch.Tensor,
+        image_size_hw: tuple[int, int] | None = None,
     ) -> dict[str, torch.Tensor]:
         if hidden.ndim != 3 or pose6d.ndim != 3 or betas.ndim != 3 or boxes.ndim != 3:
             raise ValueError(
@@ -237,11 +240,12 @@ class RayOffsetDepthTranslationDecoder(nn.Module):
         intrinsics = intrinsics.to(device=hidden.device, dtype=hidden.dtype)
         pose6d = pose6d.to(device=hidden.device, dtype=hidden.dtype)
         betas = betas.to(device=hidden.device, dtype=hidden.dtype)
-        ray, tangent_x, tangent_y, k_features = _camera_ray_basis(boxes, intrinsics, self.image_size)
+        image_size_hw = _resolve_image_size_hw(image_size_hw, self.image_size)
+        ray, tangent_x, tangent_y, k_features = _camera_ray_basis(boxes, intrinsics, image_size_hw)
         box_depth_prior = _bbox_height_depth_prior(
             boxes=boxes,
             intrinsics=intrinsics,
-            image_size=self.image_size,
+            image_size_hw=image_size_hw,
             human_height_prior_m=self.human_height_prior_m,
         )
         box_area = (boxes[..., 2:3] * boxes[..., 3:4]).clamp(min=1e-6)
@@ -322,6 +326,7 @@ class SimpleRayDepthTranslationDecoder(nn.Module):
         hidden: torch.Tensor,
         boxes: torch.Tensor,
         intrinsics: torch.Tensor,
+        image_size_hw: tuple[int, int] | None = None,
     ) -> dict[str, torch.Tensor]:
         if hidden.ndim != 3 or boxes.ndim != 3:
             raise ValueError(
@@ -335,11 +340,12 @@ class SimpleRayDepthTranslationDecoder(nn.Module):
 
         boxes = boxes.to(device=hidden.device, dtype=hidden.dtype).clamp(0.0, 1.0)
         intrinsics = intrinsics.to(device=hidden.device, dtype=hidden.dtype)
-        ray, tangent_x, tangent_y, k_features = _camera_ray_basis(boxes, intrinsics, self.image_size)
+        image_size_hw = _resolve_image_size_hw(image_size_hw, self.image_size)
+        ray, tangent_x, tangent_y, k_features = _camera_ray_basis(boxes, intrinsics, image_size_hw)
         box_depth_prior = _bbox_height_depth_prior(
             boxes=boxes,
             intrinsics=intrinsics,
-            image_size=self.image_size,
+            image_size_hw=image_size_hw,
             human_height_prior_m=self.human_height_prior_m,
         )
         box_area = (boxes[..., 2:3] * boxes[..., 3:4]).clamp(min=1e-6)
@@ -418,6 +424,7 @@ class TrackTemporalTranslationRefiner(nn.Module):
         pose_enc: torch.Tensor,
         track_ids: torch.Tensor | None = None,
         track_mask: torch.Tensor | None = None,
+        image_size_hw: tuple[int, int] | None = None,
     ) -> dict[str, torch.Tensor]:
         if hidden.ndim != 4 or seed_transl_cam.ndim != 4:
             raise ValueError(f"Expected hidden/seed shapes (B,T,Q,C)/(B,T,Q,3), got {hidden.shape}/{seed_transl_cam.shape}")
@@ -434,7 +441,7 @@ class TrackTemporalTranslationRefiner(nn.Module):
                 "pred_transl_temporal_gate": gate,
             }
 
-        work_transl, extrinsics = self._to_work_coords(seed_transl_cam, pose_enc)
+        work_transl, extrinsics = self._to_work_coords(seed_transl_cam, pose_enc, image_size_hw=image_size_hw)
         norm_hidden = self.norm(hidden.float()).to(dtype=hidden.dtype)
         refined_frames = [work_transl[:, 0]]
         velocity_delta_frames = [work_transl.new_zeros(batch_size, num_queries, 3)]
@@ -492,10 +499,19 @@ class TrackTemporalTranslationRefiner(nn.Module):
             outputs["pred_transl_world_refined"] = refined_work
         return outputs
 
-    def _to_work_coords(self, transl_cam: torch.Tensor, pose_enc: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor | None]:
+    def _to_work_coords(
+        self,
+        transl_cam: torch.Tensor,
+        pose_enc: torch.Tensor,
+        image_size_hw: tuple[int, int] | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor | None]:
         if not self.use_world:
             return transl_cam, None
-        extrinsics, _ = encoding_to_camera(pose_enc, image_size_hw=(self.image_size, self.image_size), build_intrinsics=False)
+        extrinsics, _ = encoding_to_camera(
+            pose_enc,
+            image_size_hw=_resolve_image_size_hw(image_size_hw, self.image_size),
+            build_intrinsics=False,
+        )
         extrinsics = extrinsics.to(device=transl_cam.device, dtype=transl_cam.dtype)
         rot = extrinsics[..., :3, :3]
         trans = extrinsics[..., :3, 3]
@@ -679,6 +695,7 @@ class SMPLRegressionHead(nn.Module):
         hidden_states: torch.Tensor,
         reference_boxes: torch.Tensor | None = None,
         pose_enc: torch.Tensor | None = None,
+        image_size_hw: tuple[int, int] | None = None,
     ) -> dict[str, torch.Tensor | dict[str, torch.Tensor]]:
         if hidden_states.ndim != 4:
             raise ValueError(f"Expected hidden_states shape (L, B, Q, C), got {hidden_states.shape}")
@@ -720,7 +737,11 @@ class SMPLRegressionHead(nn.Module):
                     f"translation_output_mode={self.translation_output_mode!r} requires pose_enc; "
                     "set model.enable_camera=true"
                 )
-            intrinsics_for_translation = _flatten_intrinsics_from_pose_enc(pose_enc, image_size=self.image_size)
+            intrinsics_for_translation = _flatten_intrinsics_from_pose_enc(
+                pose_enc,
+                image_size_hw=image_size_hw,
+                fallback_image_size=self.image_size,
+            )
         for layer_idx in range(self.num_layers):
             hidden = self.norm(hidden_states[layer_idx].float())
             last_hidden = hidden
@@ -750,6 +771,7 @@ class SMPLRegressionHead(nn.Module):
                         hidden=hidden,
                         boxes=boxes_for_translation,
                         intrinsics=intrinsics_for_translation,
+                        image_size_hw=image_size_hw,
                     )
                 else:
                     translation_decode_outputs = self.translation_decode_heads[layer_idx](
@@ -758,6 +780,7 @@ class SMPLRegressionHead(nn.Module):
                         betas=shape,
                         boxes=boxes_for_translation,
                         intrinsics=intrinsics_for_translation,
+                        image_size_hw=image_size_hw,
                     )
                 pred_transl_cam = translation_decode_outputs["pred_transl_cam"]
             else:
@@ -784,7 +807,11 @@ class SMPLRegressionHead(nn.Module):
                 raise RuntimeError("Translation refiner needs final hidden states")
             if pose_enc is None:
                 raise ValueError("SMPL translation refiner requires pose_enc; set model.enable_camera=true")
-            intrinsics = _flatten_intrinsics_from_pose_enc(pose_enc, image_size=self.image_size)
+            intrinsics = _flatten_intrinsics_from_pose_enc(
+                pose_enc,
+                image_size_hw=image_size_hw,
+                fallback_image_size=self.image_size,
+            )
             boxes_for_refine = reference_boxes
             if boxes_for_refine is None and pred_boxes is not None:
                 boxes_for_refine = pred_boxes.detach()
@@ -797,6 +824,7 @@ class SMPLRegressionHead(nn.Module):
                 betas=shape,
                 boxes=boxes_for_refine,
                 intrinsics=intrinsics,
+                image_size_hw=image_size_hw,
             )
             pred_transl_cam = translation_refine_outputs["pred_transl_cam"]
 
@@ -913,6 +941,7 @@ class AggregatorSMPLHead(nn.Module):
         token_layout: AggregatorTokenLayout,
         reference_boxes: torch.Tensor | None = None,
         pose_enc: torch.Tensor | None = None,
+        image_size_hw: tuple[int, int] | None = None,
         track_ids: torch.Tensor | None = None,
         track_mask: torch.Tensor | None = None,
         run_temporal_translation: bool = True,
@@ -941,6 +970,7 @@ class AggregatorSMPLHead(nn.Module):
             torch.stack(hidden_states, dim=0),
             reference_boxes=flat_reference_boxes,
             pose_enc=flat_pose_enc,
+            image_size_hw=image_size_hw,
         )
         if batch_size is None or num_frames is None:
             raise RuntimeError("AggregatorSMPLHead produced no hidden states")
@@ -973,6 +1003,7 @@ class AggregatorSMPLHead(nn.Module):
                     smpl_outputs=outputs,
                     temporal_hidden=final_hidden,
                     pose_enc=pose_enc,
+                    image_size_hw=image_size_hw,
                     track_ids=track_ids,
                     track_mask=track_mask,
                 )
@@ -984,6 +1015,7 @@ class AggregatorSMPLHead(nn.Module):
         smpl_outputs: dict[str, torch.Tensor | dict[str, torch.Tensor]],
         temporal_hidden: torch.Tensor,
         pose_enc: torch.Tensor | None,
+        image_size_hw: tuple[int, int] | None = None,
         track_ids: torch.Tensor | None = None,
         track_mask: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor]:
@@ -1000,6 +1032,7 @@ class AggregatorSMPLHead(nn.Module):
             pose_enc=pose_enc,
             track_ids=track_ids,
             track_mask=track_mask,
+            image_size_hw=image_size_hw,
         )
         updates: dict[str, torch.Tensor] = {"seed_pred_transl_cam": seed_transl, **temporal_outputs}
         updates["pred_cam"] = updates["pred_transl_cam"]
@@ -1037,10 +1070,24 @@ def _identity_pose_6d(num_joints: int) -> torch.Tensor:
     return identity_6d.repeat(num_joints)
 
 
-def _flatten_intrinsics_from_pose_enc(pose_enc: torch.Tensor, image_size: int) -> torch.Tensor:
+def _resolve_image_size_hw(image_size_hw: tuple[int, int] | None, fallback_image_size: int) -> tuple[int, int]:
+    if image_size_hw is None:
+        return int(fallback_image_size), int(fallback_image_size)
+    return int(image_size_hw[0]), int(image_size_hw[1])
+
+
+def _flatten_intrinsics_from_pose_enc(
+    pose_enc: torch.Tensor,
+    image_size_hw: tuple[int, int] | None = None,
+    fallback_image_size: int = 518,
+) -> torch.Tensor:
     if pose_enc.ndim == 2:
         pose_enc = pose_enc[:, None]
-    _, intrinsics = encoding_to_camera(pose_enc, image_size_hw=(image_size, image_size), build_intrinsics=True)
+    _, intrinsics = encoding_to_camera(
+        pose_enc,
+        image_size_hw=_resolve_image_size_hw(image_size_hw, fallback_image_size),
+        build_intrinsics=True,
+    )
     if intrinsics is None:
         raise RuntimeError("encoding_to_camera did not return intrinsics")
     return intrinsics.reshape(-1, 3, 3)
@@ -1049,10 +1096,11 @@ def _flatten_intrinsics_from_pose_enc(pose_enc: torch.Tensor, image_size: int) -
 def _camera_ray_basis(
     boxes: torch.Tensor,
     intrinsics: torch.Tensor,
-    image_size: int,
+    image_size_hw: tuple[int, int],
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     num_frames, num_queries = boxes.shape[:2]
-    center = boxes[..., :2] * float(image_size)
+    image_h, image_w = int(image_size_hw[0]), int(image_size_hw[1])
+    center = torch.stack([boxes[..., 0] * float(image_w), boxes[..., 1] * float(image_h)], dim=-1)
     fx = intrinsics[:, 0, 0].reshape(num_frames, 1).clamp(min=1e-6)
     fy = intrinsics[:, 1, 1].reshape(num_frames, 1).clamp(min=1e-6)
     cx = intrinsics[:, 0, 2].reshape(num_frames, 1)
@@ -1074,10 +1122,10 @@ def _camera_ray_basis(
 
     k_features = torch.stack(
         [
-            fx.expand(-1, num_queries) / float(image_size),
-            fy.expand(-1, num_queries) / float(image_size),
-            cx.expand(-1, num_queries) / float(image_size),
-            cy.expand(-1, num_queries) / float(image_size),
+            fx.expand(-1, num_queries) / float(image_w),
+            fy.expand(-1, num_queries) / float(image_h),
+            cx.expand(-1, num_queries) / float(image_w),
+            cy.expand(-1, num_queries) / float(image_h),
         ],
         dim=-1,
     )
@@ -1087,12 +1135,13 @@ def _camera_ray_basis(
 def _bbox_height_depth_prior(
     boxes: torch.Tensor,
     intrinsics: torch.Tensor,
-    image_size: int,
+    image_size_hw: tuple[int, int],
     human_height_prior_m: float,
 ) -> torch.Tensor:
     num_frames, num_queries = boxes.shape[:2]
+    image_h = int(image_size_hw[0])
     fy = intrinsics[:, 1, 1].reshape(num_frames, 1, 1).clamp(min=1e-6)
-    bbox_h_px = (boxes[..., 3:4] * float(image_size)).clamp(min=1.0)
+    bbox_h_px = (boxes[..., 3:4] * float(image_h)).clamp(min=1.0)
     height = boxes.new_full((num_frames, num_queries, 1), float(human_height_prior_m))
     return fy * height / bbox_h_px
 
