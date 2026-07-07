@@ -94,6 +94,9 @@ def main() -> None:
         "max_export_people": int(args.max_export_people),
         "num_frames_in_forward": int(len(frame_paths)),
         "coordinate_frame": str(args.coordinate_frame),
+        "depth_source": str(args.depth_source),
+        "smpl_source": "hsi_refined" if args.use_hsi_refined else "base",
+        "export_base_smpl": bool(args.export_base_smpl),
         "palette_rgb": [list(color) for color in PAPER_PALETTE_10],
         "frames": [],
     }
@@ -128,7 +131,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sidecar-root", required=True, help="Output folder from prepare_video_person_tracks.py for this frame folder.")
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--path-config", default="configs/path.yaml")
-    parser.add_argument("--train-config", default="configs/train_smpl_base_3dpw_sam2_mask_pose_beta_extreme.yaml")
+    parser.add_argument("--train-config", default="configs/train_smpl_hsi_after_translation_ray_refine.yaml")
     parser.add_argument("--output-dir", default="outputs/vis/full_pipeline_frame_folder_ply")
     parser.add_argument("--device", default="")
     parser.add_argument("--image-size", type=int, default=0)
@@ -143,9 +146,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--depth-point-stride", type=int, default=2)
     parser.add_argument("--max-scene-depth", type=float, default=30.0)
     parser.add_argument("--coordinate-frame", default="world", choices=["world", "camera"], help="Coordinate frame for exported environment/person PLY files.")
+    parser.add_argument("--depth-source", default="hsi", choices=["hsi", "raw"], help="Use raw VGGT depth or HSI affine-corrected depth for environment PLY.")
     parser.add_argument("--smpl-model-dir", default="")
     parser.add_argument("--baseline-checkpoint", default="")
-    parser.add_argument("--use-hsi-refined", action="store_true")
+    parser.add_argument("--use-hsi-refined", dest="use_hsi_refined", action="store_true", default=True)
+    parser.add_argument("--use-base-smpl", dest="use_hsi_refined", action="store_false", help="Export base SMPL as the primary people output instead of HSI refined SMPL.")
+    parser.add_argument("--disable-hsi-refine", action="store_true", help="Build a base-only model without HSI refinement.")
+    parser.add_argument("--export-base-smpl", dest="export_base_smpl", action="store_true", default=True, help="Also export base SMPL meshes before HSI refinement.")
+    parser.add_argument("--no-export-base-smpl", dest="export_base_smpl", action="store_false")
     parser.add_argument("--export-combined-frame", action="store_true", help="Also export one PLY containing environment and all people per frame.")
     parser.add_argument("--log-interval", type=int, default=20)
     parser.add_argument("--override", action="append", default=[])
@@ -166,6 +174,7 @@ def load_config(args: argparse.Namespace) -> dict[str, Any]:
     model_cfg["enable_camera"] = True
     model_cfg["enable_depth"] = True
     model_cfg["enable_smpl"] = True
+    model_cfg["enable_hsi_refine"] = not bool(args.disable_hsi_refine)
     model_cfg["smpl_query_box_prior"] = True
     model_cfg["smpl_query_patch_pool"] = True
     model_cfg["smpl_query_patch_pool_mode"] = "mask_intersection"
@@ -240,6 +249,7 @@ def process_sequence(
             external_track_mask=priors["external_track_mask"],
             external_track_confidence=priors["external_track_confidence"],
         )
+    validate_hsi_outputs(predictions, args)
 
     output_dir.mkdir(parents=True, exist_ok=True)
     env_dir = output_dir / "environment"
@@ -247,19 +257,23 @@ def process_sequence(
     for frame_index, image_path in enumerate(frame_paths):
         frame_dir = output_dir / "frames" / f"{frame_index:06d}_{image_path.stem}"
         people_dir = output_dir / "smpl_people" / f"{frame_index:06d}_{image_path.stem}"
+        base_people_dir = output_dir / "smpl_people_base" / f"{frame_index:06d}_{image_path.stem}"
         frame_dir.mkdir(parents=True, exist_ok=True)
         people_dir.mkdir(parents=True, exist_ok=True)
+        if args.export_base_smpl:
+            base_people_dir.mkdir(parents=True, exist_ok=True)
 
         frame_pose_enc = predictions["pose_enc"][:, frame_index : frame_index + 1]
+        export_depth, depth_meta = select_export_depth(predictions, frame_index, str(args.depth_source))
         env_vertices, env_colors = depth_to_points(
-            depth=predictions["depth"][0, frame_index].detach(),
+            depth=export_depth.detach(),
             pose_enc=frame_pose_enc,
             image_tensor=image_sequence[0, frame_index].detach(),
             stride=int(args.depth_point_stride),
             max_depth=float(args.max_scene_depth),
             coordinate_frame=str(args.coordinate_frame),
         )
-        env_path = env_dir / f"{frame_index:06d}_{image_path.stem}_environment_{args.coordinate_frame}_rgb_depth_points.ply"
+        env_path = env_dir / f"{frame_index:06d}_{image_path.stem}_environment_{args.coordinate_frame}_{args.depth_source}_rgb_depth_points.ply"
         write_ply_vertices_faces(env_path, env_vertices, env_colors, np.empty((0, 3), dtype=np.int64))
 
         people = select_people(
@@ -269,6 +283,20 @@ def process_sequence(
             max_people=int(args.max_export_people),
             conf_threshold=float(args.conf_threshold),
         )
+        base_meshes: list[np.ndarray] = []
+        base_mesh_colors: list[tuple[int, int, int]] = []
+        if args.export_base_smpl:
+            base_meshes, base_mesh_colors = decode_people_meshes(
+                people,
+                predictions,
+                smpl,
+                track_palette,
+                False,
+                device,
+                frame_index=frame_index,
+            )
+            if args.coordinate_frame == "world":
+                base_meshes = transform_camera_meshes_to_world(base_meshes, frame_pose_enc, image_sequence.shape[-2:])
         meshes, mesh_colors = decode_people_meshes(
             people,
             predictions,
@@ -281,17 +309,23 @@ def process_sequence(
         if args.coordinate_frame == "world":
             meshes = transform_camera_meshes_to_world(meshes, frame_pose_enc, image_sequence.shape[-2:])
         people_records = []
-        for person, mesh, color in zip(people, meshes, mesh_colors, strict=True):
+        for person_idx, (person, mesh, color) in enumerate(zip(people, meshes, mesh_colors, strict=True)):
             track_id = int(person["track_id"])
             palette_index = int(person["palette_index"])
             person_path = people_dir / f"person_track{track_id:03d}_q{int(person['query_index']):02d}.ply"
             write_ply_meshes(person_path, [mesh], faces, [color])
+            base_path = None
+            if args.export_base_smpl and person_idx < len(base_meshes):
+                base_path = base_people_dir / f"person_track{track_id:03d}_q{int(person['query_index']):02d}_base.ply"
+                write_ply_meshes(base_path, [base_meshes[person_idx]], faces, [base_mesh_colors[person_idx]])
             people_records.append(
                 {
                     **person,
                     "color_rgb": list(color),
                     "palette_index": palette_index,
                     "ply": str(person_path),
+                    "source": "hsi_refined" if args.use_hsi_refined else "base",
+                    "base_ply": None if base_path is None else str(base_path),
                 }
             )
 
@@ -311,6 +345,7 @@ def process_sequence(
                 "num_query_boxes": int(priors["smpl_query_boxes_mask"][0, frame_index].sum().detach().cpu().item()),
                 "num_query_patch_masks": int(priors["smpl_query_patch_masks_valid"][0, frame_index].sum().detach().cpu().item()),
                 "environment_ply": str(env_path),
+                "depth_source": depth_meta,
                 "combined_ply": None if combined_path is None else str(combined_path),
                 "people": people_records,
             }
@@ -326,6 +361,41 @@ def stack_sequence_priors(priors_per_frame: list[dict[str, torch.Tensor]]) -> di
         raise ValueError("At least one frame prior is required")
     keys = list(priors_per_frame[0].keys())
     return {key: torch.cat([priors[key] for priors in priors_per_frame], dim=1) for key in keys}
+
+
+def validate_hsi_outputs(predictions: dict[str, torch.Tensor], args: argparse.Namespace) -> None:
+    if args.disable_hsi_refine:
+        if args.use_hsi_refined:
+            raise ValueError("--use-hsi-refined requires HSI; remove --disable-hsi-refine")
+        if args.depth_source == "hsi":
+            raise ValueError("--depth-source hsi requires HSI; use --depth-source raw with --disable-hsi-refine")
+        return
+    missing = []
+    if args.use_hsi_refined:
+        for key in ("hsi_refined_pred_poses", "hsi_refined_pred_betas", "hsi_refined_pred_transl_cam"):
+            if key not in predictions:
+                missing.append(key)
+    if args.depth_source == "hsi":
+        for key in ("hsi_scene_scale", "hsi_scene_depth_bias"):
+            if key not in predictions:
+                missing.append(key)
+    if missing:
+        raise RuntimeError(
+            "HSI outputs are missing, so this is not the full HSI pipeline. "
+            f"Missing keys: {sorted(set(missing))}. Use an HSI train config/checkpoint, e.g. "
+            "configs/train_smpl_hsi_after_translation_ray_refine.yaml with a matching HSI checkpoint."
+        )
+
+
+def select_export_depth(predictions: dict[str, torch.Tensor], frame_index: int, depth_source: str) -> tuple[torch.Tensor, dict[str, Any]]:
+    depth = predictions["depth"][0, frame_index]
+    meta: dict[str, Any] = {"requested": depth_source, "actual": "raw"}
+    if depth_source != "hsi":
+        return depth, meta
+    scale = predictions["hsi_scene_scale"][0, frame_index].detach().float().reshape(-1)[0].to(device=depth.device, dtype=depth.dtype)
+    bias = predictions["hsi_scene_depth_bias"][0, frame_index].detach().float().reshape(-1)[0].to(device=depth.device, dtype=depth.dtype)
+    meta.update({"actual": "hsi", "hsi_scene_scale": float(scale.detach().cpu()), "hsi_scene_depth_bias": float(bias.detach().cpu())})
+    return depth * scale + bias, meta
 
 
 def load_frame_tensor(image_path: Path, image_resolution: int, patch_size: int, resize_mode: str) -> tuple[torch.Tensor, ResizeGeometry]:

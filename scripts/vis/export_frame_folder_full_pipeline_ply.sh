@@ -9,7 +9,7 @@ if [[ -z "${FRAMES_DIR:-}" ]]; then
   exit 1
 fi
 if [[ -z "${CHECKPOINT:-}" ]]; then
-  echo "[ERROR] Set CHECKPOINT=/path/to/sam2_3dpw_smpl_checkpoint.pt" >&2
+  echo "[ERROR] Set CHECKPOINT=/path/to/hsi_full_pipeline_checkpoint.pt" >&2
   exit 1
 fi
 
@@ -25,7 +25,7 @@ export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:T
 
 SOURCE_NAME="${SOURCE_NAME:-$(basename "${FRAMES_DIR}")}"
 PATH_CONFIG="${PATH_CONFIG:-configs/path.yaml}"
-TRAIN_CONFIG="${TRAIN_CONFIG:-configs/train_smpl_base_3dpw_sam2_mask_pose_beta_extreme.yaml}"
+TRAIN_CONFIG="${TRAIN_CONFIG:-configs/train_smpl_hsi_after_translation_ray_refine.yaml}"
 TRACK_ROOT="${TRACK_ROOT:-outputs/preprocess/full_pipeline_frame_tracks}"
 TRACK_SUBDIR="${TRACK_SUBDIR:-${SOURCE_NAME}}"
 SIDECAR_ROOT="${SIDECAR_ROOT:-${TRACK_ROOT}/${TRACK_SUBDIR}}"
@@ -46,6 +46,10 @@ echo "Checkpoint      : ${CHECKPOINT}"
 echo "Tracking root   : ${SIDECAR_ROOT}"
 echo "Output dir      : ${OUTPUT_DIR}"
 echo "Device          : ${RUN_DEVICE}"
+echo "HSI refine      : ${ENABLE_HSI_REFINE:-1}"
+echo "Use HSI SMPL    : ${USE_HSI_REFINED:-1}"
+echo "Depth source    : ${DEPTH_SOURCE:-hsi}"
+echo "Export base SMPL: ${EXPORT_BASE_SMPL:-1}"
 
 if [[ "${RUN_PREPROCESS}" == "1" ]]; then
   echo "========== Stage 1: YOLO + BoostTrack + SAM2 sidecar preprocessing =========="
@@ -71,7 +75,7 @@ if [[ "${RUN_PREPROCESS}" == "1" ]]; then
     "${OVERWRITE_TRACKS_FLAG[@]}"
 fi
 
-echo "========== Stage 2: one sequence VGGT/SMPL forward + per-frame PLY export =========="
+echo "========== Stage 2: one sequence VGGT + SMPL base + HSI refinement forward + per-frame PLY export =========="
 ARGS=(
   --frames-dir "${FRAMES_DIR}"
   --sidecar-root "${SIDECAR_ROOT}"
@@ -85,6 +89,7 @@ ARGS=(
   --depth-point-stride "${DEPTH_POINT_STRIDE:-2}"
   --max-scene-depth "${MAX_SCENE_DEPTH:-30.0}"
   --coordinate-frame "${COORDINATE_FRAME:-world}"
+  --depth-source "${DEPTH_SOURCE:-hsi}"
   --log-interval "${EXPORT_LOG_INTERVAL:-20}"
 )
 
@@ -103,8 +108,18 @@ fi
 if [[ "${EXPORT_COMBINED_FRAME:-1}" == "1" ]]; then
   ARGS+=(--export-combined-frame)
 fi
-if [[ "${USE_HSI_REFINED:-0}" == "1" ]]; then
+if [[ "${USE_HSI_REFINED:-1}" == "1" ]]; then
   ARGS+=(--use-hsi-refined)
+else
+  ARGS+=(--use-base-smpl)
+fi
+if [[ "${ENABLE_HSI_REFINE:-1}" == "0" ]]; then
+  ARGS+=(--disable-hsi-refine)
+fi
+if [[ "${EXPORT_BASE_SMPL:-1}" == "1" ]]; then
+  ARGS+=(--export-base-smpl)
+else
+  ARGS+=(--no-export-base-smpl)
 fi
 if [[ -n "${SMPL_MODEL_DIR:-}" ]]; then
   ARGS+=(--smpl-model-dir "${SMPL_MODEL_DIR}")
