@@ -84,6 +84,7 @@ ARGS=(
   --conf-threshold "${CONF_THRESHOLD:-0.05}"
   --depth-point-stride "${DEPTH_POINT_STRIDE:-2}"
   --max-scene-depth "${MAX_SCENE_DEPTH:-30.0}"
+  --coordinate-frame "${COORDINATE_FRAME:-world}"
   --log-interval "${EXPORT_LOG_INTERVAL:-20}"
 )
 

@@ -93,6 +93,7 @@ def main() -> None:
         "num_model_queries": int(num_queries),
         "max_export_people": int(args.max_export_people),
         "num_frames_in_forward": int(len(frame_paths)),
+        "coordinate_frame": str(args.coordinate_frame),
         "palette_rgb": [list(color) for color in PAPER_PALETTE_10],
         "frames": [],
     }
@@ -141,6 +142,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-mask-patches", type=int, default=4)
     parser.add_argument("--depth-point-stride", type=int, default=2)
     parser.add_argument("--max-scene-depth", type=float, default=30.0)
+    parser.add_argument("--coordinate-frame", default="world", choices=["world", "camera"], help="Coordinate frame for exported environment/person PLY files.")
     parser.add_argument("--smpl-model-dir", default="")
     parser.add_argument("--baseline-checkpoint", default="")
     parser.add_argument("--use-hsi-refined", action="store_true")
@@ -248,14 +250,16 @@ def process_sequence(
         frame_dir.mkdir(parents=True, exist_ok=True)
         people_dir.mkdir(parents=True, exist_ok=True)
 
-        env_vertices, env_colors = depth_to_camera_points(
+        frame_pose_enc = predictions["pose_enc"][:, frame_index : frame_index + 1]
+        env_vertices, env_colors = depth_to_points(
             depth=predictions["depth"][0, frame_index].detach(),
-            pose_enc=predictions["pose_enc"][:, frame_index : frame_index + 1],
+            pose_enc=frame_pose_enc,
             image_tensor=image_sequence[0, frame_index].detach(),
             stride=int(args.depth_point_stride),
             max_depth=float(args.max_scene_depth),
+            coordinate_frame=str(args.coordinate_frame),
         )
-        env_path = env_dir / f"{frame_index:06d}_{image_path.stem}_environment_rgb_depth_points.ply"
+        env_path = env_dir / f"{frame_index:06d}_{image_path.stem}_environment_{args.coordinate_frame}_rgb_depth_points.ply"
         write_ply_vertices_faces(env_path, env_vertices, env_colors, np.empty((0, 3), dtype=np.int64))
 
         people = select_people(
@@ -274,6 +278,8 @@ def process_sequence(
             device,
             frame_index=frame_index,
         )
+        if args.coordinate_frame == "world":
+            meshes = transform_camera_meshes_to_world(meshes, frame_pose_enc, image_sequence.shape[-2:])
         people_records = []
         for person, mesh, color in zip(people, meshes, mesh_colors, strict=True):
             track_id = int(person["track_id"])
@@ -445,19 +451,20 @@ def decode_people_meshes(
     return meshes, colors
 
 
-def depth_to_camera_points(
+def depth_to_points(
     depth: torch.Tensor,
     pose_enc: torch.Tensor,
     image_tensor: torch.Tensor,
     stride: int,
     max_depth: float,
+    coordinate_frame: str,
 ) -> tuple[np.ndarray, np.ndarray]:
     if depth.ndim == 3 and depth.shape[-1] == 1:
         depth = depth[..., 0]
     if depth.ndim != 2:
         raise ValueError(f"Expected depth [H,W] or [H,W,1], got {tuple(depth.shape)}")
     height, width = int(depth.shape[-2]), int(depth.shape[-1])
-    _, intrinsics = encoding_to_camera(pose_enc, image_size_hw=(height, width), build_intrinsics=True)
+    extrinsics, intrinsics = encoding_to_camera(pose_enc, image_size_hw=(height, width), build_intrinsics=True)
     intrinsics_0 = intrinsics[0, 0].to(device=depth.device, dtype=depth.dtype)
     step = max(int(stride), 1)
     ys, xs = torch.meshgrid(
@@ -474,7 +481,26 @@ def depth_to_camera_points(
         rgb = F.interpolate(rgb[None], size=(height, width), mode="bilinear", align_corners=False)[0]
     colors = (rgb[:, ys.long(), xs.long()].permute(1, 2, 0).clamp(0.0, 1.0) * 255.0).to(dtype=torch.uint8)
     mask = torch.isfinite(points).all(dim=-1) & torch.isfinite(z) & (z > 1e-6) & (z <= float(max_depth))
-    return points[mask].detach().cpu().numpy(), colors[mask].detach().cpu().numpy()
+    points_out = points[mask]
+    if coordinate_frame == "world":
+        points_out = camera_points_to_world(points_out, extrinsics[0, 0])
+    return points_out.detach().cpu().numpy(), colors[mask].detach().cpu().numpy()
+
+
+def camera_points_to_world(points: torch.Tensor, extrinsic: torch.Tensor) -> torch.Tensor:
+    rotation = extrinsic[:3, :3].to(device=points.device, dtype=points.dtype)
+    translation = extrinsic[:3, 3].to(device=points.device, dtype=points.dtype)
+    return (points - translation) @ rotation
+
+
+def transform_camera_meshes_to_world(meshes: list[np.ndarray], pose_enc: torch.Tensor, image_size_hw: tuple[int, int]) -> list[np.ndarray]:
+    if not meshes:
+        return []
+    extrinsics, _ = encoding_to_camera(pose_enc, image_size_hw=image_size_hw, build_intrinsics=False)
+    extrinsic = extrinsics[0, 0].detach().float().cpu().numpy()
+    rotation = extrinsic[:3, :3]
+    translation = extrinsic[:3, 3]
+    return [((np.asarray(mesh, dtype=np.float32) - translation[None, :]) @ rotation).astype(np.float32) for mesh in meshes]
 
 
 def write_combined_scene_ply(
