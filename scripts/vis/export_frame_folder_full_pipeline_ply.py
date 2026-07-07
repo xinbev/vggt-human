@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Run folder-frame VGGT-Omega inference and export per-frame PLY assets."""
+"""Run one sequence VGGT-Omega inference over a frame folder and export per-frame PLY assets."""
 
 from __future__ import annotations
 
@@ -81,6 +81,7 @@ def main() -> None:
 
     manifest: dict[str, Any] = {
         "purpose": "Full project pipeline export for paper/inspection assets.",
+        "inference_mode": "single_sequence_forward_then_per_frame_export",
         "frames_dir": str(frames_dir),
         "sidecar_root": str(sidecar_root),
         "checkpoint": str(resolve_project_path(args.checkpoint)),
@@ -91,31 +92,28 @@ def main() -> None:
         "patch_size": int(patch_size),
         "num_model_queries": int(num_queries),
         "max_export_people": int(args.max_export_people),
+        "num_frames_in_forward": int(len(frame_paths)),
         "palette_rgb": [list(color) for color in PAPER_PALETTE_10],
         "frames": [],
     }
     track_palette: dict[int, int] = {}
 
-    for out_index, image_path in enumerate(frame_paths):
-        frame_record = process_frame(
-            image_path=image_path,
-            sidecar_root=sidecar_root,
-            output_dir=output_dir,
-            frame_index=out_index,
-            model=model,
-            smpl=smpl,
-            faces=faces,
-            config=config,
-            image_resolution=image_resolution,
-            patch_size=patch_size,
-            num_queries=num_queries,
-            track_palette=track_palette,
-            args=args,
-            device=device,
-        )
-        manifest["frames"].append(frame_record)
-        if args.log_interval > 0 and (out_index + 1) % int(args.log_interval) == 0:
-            print(f"[export] {out_index + 1}/{len(frame_paths)} frame={image_path.name} people={len(frame_record['people'])}", flush=True)
+    frame_records = process_sequence(
+        frame_paths=frame_paths,
+        sidecar_root=sidecar_root,
+        output_dir=output_dir,
+        model=model,
+        smpl=smpl,
+        faces=faces,
+        config=config,
+        image_resolution=image_resolution,
+        patch_size=patch_size,
+        num_queries=num_queries,
+        track_palette=track_palette,
+        args=args,
+        device=device,
+    )
+    manifest["frames"].extend(frame_records)
 
     manifest["track_palette"] = {str(k): {"palette_index": v, "rgb": list(PAPER_PALETTE_10[v])} for k, v in sorted(track_palette.items())}
     manifest_path = output_dir / "manifest.json"
@@ -176,11 +174,10 @@ def load_config(args: argparse.Namespace) -> dict[str, Any]:
     return config
 
 
-def process_frame(
-    image_path: Path,
+def process_sequence(
+    frame_paths: list[Path],
     sidecar_root: Path,
     output_dir: Path,
-    frame_index: int,
     model: torch.nn.Module,
     smpl: SMPLLayer,
     faces: np.ndarray,
@@ -191,22 +188,49 @@ def process_frame(
     track_palette: dict[int, int],
     args: argparse.Namespace,
     device: torch.device,
-) -> dict[str, Any]:
-    image_tensor, original, geometry = load_frame_tensor(image_path, image_resolution, patch_size, str(config["data"].get("resize_mode", "balanced")))
-    priors = build_frame_priors(
-        sidecar_root=sidecar_root,
-        frame_id=image_path.stem,
-        geometry=geometry,
-        num_queries=num_queries,
-        patch_size=patch_size,
-        mask_patch_threshold=float(args.mask_patch_threshold),
-        min_mask_patches=int(args.min_mask_patches),
-        track_iou_threshold=float(args.track_iou_threshold),
-        device=device,
+) -> list[dict[str, Any]]:
+    resize_mode = str(config["data"].get("resize_mode", "balanced"))
+    tensors: list[torch.Tensor] = []
+    geometries: list[ResizeGeometry] = []
+    priors_per_frame: list[dict[str, torch.Tensor]] = []
+
+    for image_path in frame_paths:
+        image_tensor, geometry = load_frame_tensor(image_path, image_resolution, patch_size, resize_mode)
+        tensors.append(image_tensor[0, 0])
+        geometries.append(geometry)
+        priors_per_frame.append(
+            build_frame_priors(
+                sidecar_root=sidecar_root,
+                frame_id=image_path.stem,
+                geometry=geometry,
+                num_queries=num_queries,
+                patch_size=patch_size,
+                mask_patch_threshold=float(args.mask_patch_threshold),
+                min_mask_patches=int(args.min_mask_patches),
+                track_iou_threshold=float(args.track_iou_threshold),
+                device=device,
+            )
+        )
+
+    input_hw_set = {tuple(geometry.input_hw) for geometry in geometries}
+    if len(input_hw_set) != 1:
+        raise ValueError(
+            "All frames must resolve to the same model input H/W for a single VGGT sequence forward. "
+            f"Got {sorted(input_hw_set)}. Use a same-size video frame folder or export in smaller same-size groups."
+        )
+
+    image_sequence = torch.stack(tensors, dim=0).unsqueeze(0).to(device)
+    priors = stack_sequence_priors(priors_per_frame)
+    print(
+        "[export] running one VGGT-Omega forward: "
+        f"images={tuple(image_sequence.shape)} "
+        f"boxes={tuple(priors['smpl_query_boxes'].shape)} "
+        f"patch_masks={tuple(priors['smpl_query_patch_masks'].shape)}",
+        flush=True,
     )
     with torch.no_grad():
         predictions = model(
-            image_tensor.to(device),
+            image_sequence,
             smpl_query_boxes=priors["smpl_query_boxes"],
             smpl_query_boxes_mask=priors["smpl_query_boxes_mask"],
             smpl_query_patch_masks=priors["smpl_query_patch_masks"],
@@ -214,65 +238,97 @@ def process_frame(
             external_track_mask=priors["external_track_mask"],
             external_track_confidence=priors["external_track_confidence"],
         )
-    frame_dir = output_dir / "frames" / f"{frame_index:06d}_{image_path.stem}"
+
+    output_dir.mkdir(parents=True, exist_ok=True)
     env_dir = output_dir / "environment"
-    people_dir = output_dir / "smpl_people" / f"{frame_index:06d}_{image_path.stem}"
-    frame_dir.mkdir(parents=True, exist_ok=True)
-    people_dir.mkdir(parents=True, exist_ok=True)
+    records: list[dict[str, Any]] = []
+    for frame_index, image_path in enumerate(frame_paths):
+        frame_dir = output_dir / "frames" / f"{frame_index:06d}_{image_path.stem}"
+        people_dir = output_dir / "smpl_people" / f"{frame_index:06d}_{image_path.stem}"
+        frame_dir.mkdir(parents=True, exist_ok=True)
+        people_dir.mkdir(parents=True, exist_ok=True)
 
-    env_vertices, env_colors = depth_to_camera_points(
-        depth=predictions["depth"][0, 0].detach(),
-        pose_enc=predictions["pose_enc"],
-        image_tensor=image_tensor[0, 0].detach(),
-        stride=int(args.depth_point_stride),
-        max_depth=float(args.max_scene_depth),
-    )
-    env_path = env_dir / f"{frame_index:06d}_{image_path.stem}_environment_rgb_depth_points.ply"
-    write_ply_vertices_faces(env_path, env_vertices, env_colors, np.empty((0, 3), dtype=np.int64))
+        env_vertices, env_colors = depth_to_camera_points(
+            depth=predictions["depth"][0, frame_index].detach(),
+            pose_enc=predictions["pose_enc"][:, frame_index : frame_index + 1],
+            image_tensor=image_sequence[0, frame_index].detach(),
+            stride=int(args.depth_point_stride),
+            max_depth=float(args.max_scene_depth),
+        )
+        env_path = env_dir / f"{frame_index:06d}_{image_path.stem}_environment_rgb_depth_points.ply"
+        write_ply_vertices_faces(env_path, env_vertices, env_colors, np.empty((0, 3), dtype=np.int64))
 
-    people = select_people(predictions, priors, max_people=int(args.max_export_people), conf_threshold=float(args.conf_threshold))
-    meshes, mesh_colors = decode_people_meshes(people, predictions, smpl, track_palette, bool(args.use_hsi_refined), device)
-    people_records = []
-    for person, mesh, color in zip(people, meshes, mesh_colors, strict=True):
-        track_id = int(person["track_id"])
-        palette_index = int(person["palette_index"])
-        person_path = people_dir / f"person_track{track_id:03d}_q{int(person['query_index']):02d}.ply"
-        write_ply_meshes(person_path, [mesh], faces, [color])
-        people_records.append(
+        people = select_people(
+            predictions,
+            priors,
+            frame_index=frame_index,
+            max_people=int(args.max_export_people),
+            conf_threshold=float(args.conf_threshold),
+        )
+        meshes, mesh_colors = decode_people_meshes(
+            people,
+            predictions,
+            smpl,
+            track_palette,
+            bool(args.use_hsi_refined),
+            device,
+            frame_index=frame_index,
+        )
+        people_records = []
+        for person, mesh, color in zip(people, meshes, mesh_colors, strict=True):
+            track_id = int(person["track_id"])
+            palette_index = int(person["palette_index"])
+            person_path = people_dir / f"person_track{track_id:03d}_q{int(person['query_index']):02d}.ply"
+            write_ply_meshes(person_path, [mesh], faces, [color])
+            people_records.append(
+                {
+                    **person,
+                    "color_rgb": list(color),
+                    "palette_index": palette_index,
+                    "ply": str(person_path),
+                }
+            )
+
+        combined_path = None
+        if args.export_combined_frame:
+            combined_path = frame_dir / f"{frame_index:06d}_{image_path.stem}_environment_plus_people.ply"
+            write_combined_scene_ply(combined_path, env_vertices, env_colors, meshes, faces, mesh_colors)
+
+        geometry = geometries[frame_index]
+        records.append(
             {
-                **person,
-                "color_rgb": list(color),
-                "palette_index": palette_index,
-                "ply": str(person_path),
+                "frame_index": int(frame_index),
+                "frame_id": image_path.stem,
+                "image": str(image_path),
+                "orig_hw": [int(geometry.orig_hw[0]), int(geometry.orig_hw[1])],
+                "model_hw": [int(geometry.input_hw[0]), int(geometry.input_hw[1])],
+                "num_query_boxes": int(priors["smpl_query_boxes_mask"][0, frame_index].sum().detach().cpu().item()),
+                "num_query_patch_masks": int(priors["smpl_query_patch_masks_valid"][0, frame_index].sum().detach().cpu().item()),
+                "environment_ply": str(env_path),
+                "combined_ply": None if combined_path is None else str(combined_path),
+                "people": people_records,
             }
         )
+        if args.log_interval > 0 and (frame_index + 1) % int(args.log_interval) == 0:
+            print(f"[export] {frame_index + 1}/{len(frame_paths)} frame={image_path.name} people={len(people_records)}", flush=True)
 
-    combined_path = None
-    if args.export_combined_frame:
-        combined_path = frame_dir / f"{frame_index:06d}_{image_path.stem}_environment_plus_people.ply"
-        write_combined_scene_ply(combined_path, env_vertices, env_colors, meshes, faces, mesh_colors)
-
-    return {
-        "frame_index": int(frame_index),
-        "frame_id": image_path.stem,
-        "image": str(image_path),
-        "orig_hw": [int(geometry.orig_hw[0]), int(geometry.orig_hw[1])],
-        "model_hw": [int(geometry.input_hw[0]), int(geometry.input_hw[1])],
-        "num_query_boxes": int(priors["smpl_query_boxes_mask"].sum().detach().cpu().item()),
-        "num_query_patch_masks": int(priors["smpl_query_patch_masks_valid"].sum().detach().cpu().item()),
-        "environment_ply": str(env_path),
-        "combined_ply": None if combined_path is None else str(combined_path),
-        "people": people_records,
-    }
+    return records
 
 
-def load_frame_tensor(image_path: Path, image_resolution: int, patch_size: int, resize_mode: str) -> tuple[torch.Tensor, Image.Image, ResizeGeometry]:
+def stack_sequence_priors(priors_per_frame: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
+    if not priors_per_frame:
+        raise ValueError("At least one frame prior is required")
+    keys = list(priors_per_frame[0].keys())
+    return {key: torch.cat([priors[key] for priors in priors_per_frame], dim=1) for key in keys}
+
+
+def load_frame_tensor(image_path: Path, image_resolution: int, patch_size: int, resize_mode: str) -> tuple[torch.Tensor, ResizeGeometry]:
     image = Image.open(image_path).convert("RGB")
     geometry = compute_resize_geometry((image.height, image.width), image_resolution=image_resolution, patch_size=patch_size, mode=resize_mode)
     resized = resize_image_with_geometry(image, geometry, Image.BILINEAR)
     arr = np.asarray(resized, dtype=np.float32) / 255.0
     tensor = torch.from_numpy(arr).permute(2, 0, 1).contiguous().unsqueeze(0).unsqueeze(0)
-    return tensor, image, geometry
+    return tensor, geometry
 
 
 def build_frame_priors(
@@ -327,12 +383,18 @@ def build_frame_priors(
     }
 
 
-def select_people(predictions: dict[str, torch.Tensor], priors: dict[str, torch.Tensor], max_people: int, conf_threshold: float) -> list[dict[str, Any]]:
-    confs = predictions["pred_confs"][0, 0, :, 0].detach().float().cpu()
-    valid = priors["smpl_query_boxes_mask"][0, 0].detach().cpu().bool()
+def select_people(
+    predictions: dict[str, torch.Tensor],
+    priors: dict[str, torch.Tensor],
+    frame_index: int,
+    max_people: int,
+    conf_threshold: float,
+) -> list[dict[str, Any]]:
+    confs = predictions["pred_confs"][0, frame_index, :, 0].detach().float().cpu()
+    valid = priors["smpl_query_boxes_mask"][0, frame_index].detach().cpu().bool()
     order = torch.argsort(confs, descending=True).tolist()
     assigned = predictions.get("assigned_track_ids", priors["external_track_ids"])
-    assigned_cpu = assigned[0, 0].detach().cpu().long() if isinstance(assigned, torch.Tensor) else priors["external_track_ids"][0, 0].detach().cpu().long()
+    assigned_cpu = assigned[0, frame_index].detach().cpu().long() if isinstance(assigned, torch.Tensor) else priors["external_track_ids"][0, frame_index].detach().cpu().long()
     out = []
     for rank, query_idx in enumerate(order):
         if len(out) >= int(max_people):
@@ -360,6 +422,7 @@ def decode_people_meshes(
     track_palette: dict[int, int],
     use_hsi_refined: bool,
     device: torch.device,
+    frame_index: int,
 ) -> tuple[list[np.ndarray], list[tuple[int, int, int]]]:
     if not people:
         return [], []
@@ -367,9 +430,9 @@ def decode_people_meshes(
     betas_key = "hsi_refined_pred_betas" if use_hsi_refined and "hsi_refined_pred_betas" in predictions else "pred_betas"
     transl_key = "hsi_refined_pred_transl_cam" if use_hsi_refined and "hsi_refined_pred_transl_cam" in predictions else "pred_transl_cam"
     query_indices = torch.as_tensor([int(item["query_index"]) for item in people], dtype=torch.long, device=device)
-    poses = predictions[pose_key][0, 0, query_indices].detach()
-    betas = predictions[betas_key][0, 0, query_indices].detach()
-    transl = predictions[transl_key][0, 0, query_indices].detach()
+    poses = predictions[pose_key][0, frame_index, query_indices].detach()
+    betas = predictions[betas_key][0, frame_index, query_indices].detach()
+    transl = predictions[transl_key][0, frame_index, query_indices].detach()
     with torch.no_grad():
         vertices, _ = smpl(poses.reshape(-1, 72), betas)
     vertices = vertices + transl[:, None, :]

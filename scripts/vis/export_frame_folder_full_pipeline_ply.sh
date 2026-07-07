@@ -71,7 +71,7 @@ if [[ "${RUN_PREPROCESS}" == "1" ]]; then
     "${OVERWRITE_TRACKS_FLAG[@]}"
 fi
 
-echo "========== Stage 2: VGGT depth + SAM2-query SMPL inference + per-frame PLY export =========="
+echo "========== Stage 2: one sequence VGGT/SMPL forward + per-frame PLY export =========="
 ARGS=(
   --frames-dir "${FRAMES_DIR}"
   --sidecar-root "${SIDECAR_ROOT}"
