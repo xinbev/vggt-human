@@ -162,6 +162,10 @@ def main() -> None:
     depth_png_path = output_dir / f"00_depth_map_{actual_depth_source}_{args.depth_colormap}.png"
     depth_png.save(depth_png_path)
     files.append(depth_png_path.name)
+    depth_png_original = depth_png.resize(original_image.size, Image.BILINEAR)
+    depth_png_original_path = output_dir / f"00_depth_map_{actual_depth_source}_{args.depth_colormap}_original_aspect.png"
+    depth_png_original.save(depth_png_original_path)
+    files.append(depth_png_original_path.name)
 
     collection = MeshBuilder()
     collection.merge(camera_mesh)
@@ -236,6 +240,15 @@ def main() -> None:
                 patch_png_path = output_dir / f"02_{person_prefix}_mask_depth_samples_9patch_rgb.png"
                 patch_png.save(patch_png_path)
                 files.append(patch_png_path.name)
+                patch_original_png = create_mask_sample_patch_png_original_aspect(
+                    original_rgb=original_image.convert("RGB"),
+                    samples=mask_samples,
+                    input_size=input_size,
+                    grid_hw=tuple(int(v) for v in probe["patch_grid_hw"].detach().cpu().tolist()),
+                )
+                patch_original_png_path = output_dir / f"02_{person_prefix}_mask_depth_samples_9patch_rgb_original_aspect.png"
+                patch_original_png.save(patch_original_png_path)
+                files.append(patch_original_png_path.name)
 
                 mask_samples_meta = write_mask_sample_json(output_dir / f"mask_depth_samples_{person_prefix}.json", mask_samples)
                 files.append(f"mask_depth_samples_{person_prefix}.json")
@@ -262,6 +275,8 @@ def main() -> None:
         "actual_smpl_stage": actual_smpl_stage,
         "depth_colormap": args.depth_colormap,
         "depth_surface_color": args.depth_surface_color,
+        "original_image_size_wh": [int(original_image.width), int(original_image.height)],
+        "model_input_size": int(input_size),
         "projection_point_color": "bright yellow",
         "mask_depth_sample_color": "green",
         "camera_style": "classic CV frustum pyramid",
@@ -275,6 +290,7 @@ def main() -> None:
             "Yellow spheres are the anchor-corresponding depth samples after projection.",
             "Green spheres use SAM2 person masks to sample real depth points for paper visualization when SMPL projection is unreliable.",
             "The 9patch PNG files show the 3x3 patch-token neighborhoods around mask-depth sample points.",
+            "The *_original_aspect.png files map model-square coordinates back to the original image aspect ratio for paper composition.",
             "The *_only.ply files are layer-only exports for manual figure assembly.",
         ],
     }
@@ -602,6 +618,52 @@ def draw_dot_2d(
 ) -> None:
     x, y = xy
     draw.ellipse([x - radius, y - radius, x + radius, y + radius], fill=(*color, alpha), outline=(255, 255, 255, 230), width=2)
+
+
+def create_mask_sample_patch_png_original_aspect(
+    original_rgb: Image.Image,
+    samples: dict[str, np.ndarray],
+    input_size: int,
+    grid_hw: tuple[int, int],
+) -> Image.Image:
+    out = original_rgb.convert("RGBA")
+    overlay = Image.new("RGBA", out.size, (255, 255, 255, 0))
+    draw = ImageDraw.Draw(overlay, "RGBA")
+    width, height = out.size
+    grid_h, grid_w = grid_hw
+    cell_w = float(width) / max(float(grid_w), 1.0)
+    cell_h = float(height) / max(float(grid_h), 1.0)
+    input_cell_w = float(input_size) / max(float(grid_w), 1.0)
+    input_cell_h = float(input_size) / max(float(grid_h), 1.0)
+
+    for col in range(grid_w + 1):
+        x = col * cell_w
+        draw.line([(x, 0), (x, height)], fill=(*COLOR["patch_grid"], 72), width=1)
+    for row in range(grid_h + 1):
+        y = row * cell_h
+        draw.line([(0, y), (width, y)], fill=(*COLOR["patch_grid"], 72), width=1)
+
+    uv_input = np.asarray(samples["uv_input"], dtype=np.float32).reshape(-1, 2)
+    highlighted: set[tuple[int, int]] = set()
+    for u, v in uv_input:
+        center_col = int(np.floor(float(u) / max(input_cell_w, 1e-6)))
+        center_row = int(np.floor(float(v) / max(input_cell_h, 1e-6)))
+        center_col = max(0, min(grid_w - 1, center_col))
+        center_row = max(0, min(grid_h - 1, center_row))
+        for row in range(max(0, center_row - 1), min(grid_h, center_row + 2)):
+            for col in range(max(0, center_col - 1), min(grid_w, center_col + 2)):
+                highlighted.add((row, col))
+
+    for row, col in sorted(highlighted):
+        rect = [col * cell_w, row * cell_h, (col + 1) * cell_w, (row + 1) * cell_h]
+        draw.rectangle(rect, fill=(*COLOR["sample_gt"], 54), outline=(*COLOR["sample_gt"], 180), width=2)
+
+    scale_x = float(width) / max(float(input_size), 1.0)
+    scale_y = float(height) / max(float(input_size), 1.0)
+    for u, v in uv_input:
+        draw_dot_2d(draw, (float(u) * scale_x, float(v) * scale_y), COLOR["sample_gt"], radius=5, alpha=245)
+    out.alpha_composite(overlay)
+    return out
 
 
 def write_mask_sample_json(path: Path, samples: dict[str, np.ndarray]) -> dict[str, Any]:

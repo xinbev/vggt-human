@@ -62,3 +62,5 @@ third_party:
   boosttrack_weights_root: "third_party/weights/BoostTrack"
   sam2_root: "third_party/sam2"
   sam2_checkpoint: "third_party/weights/sam/sam2.1_hiera_large.pt"
+  Omnieraser_root: "third_party/Omnieraser"
+  Omnieraser_checkpoint: "third_party/weights/Omnieraser/controlnet_flux_pytorch_lora_weights.safetensors"

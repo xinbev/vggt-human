@@ -8,7 +8,17 @@ from PIL import Image
 from torch.utils.data import Dataset
 import sys
 from vggt_omega.data.bedlam_boxes import extract_person_id
-from vggt_omega.tracking.query_builder import pixel_mask_to_patch_mask
+from vggt_omega.data.geometry import (
+    ResizeGeometry,
+    collate_smpl_geometry_batch,
+    compute_resize_geometry,
+    default_intrinsics_for_geometry,
+    resize_depth_with_geometry,
+    resize_image_with_geometry,
+    pixel_mask_to_patch_mask_hw,
+    transform_intrinsics,
+    transform_xyxy_to_normalized_cxcywh,
+)
 from vggt_omega.utils.rotation import axis_angle_to_rot6d
 import numpy
 import numpy.core
@@ -49,6 +59,8 @@ class BedlamDataset(Dataset):
         sequence_length: int = 2,
         stride: int = 1,
         image_size: int = 518,
+        image_resolution: int | None = None,
+        resize_mode: str = "balanced",
         max_humans: int = 20,
         require_smpl: bool = True,
         require_depth: bool = False,
@@ -64,7 +76,9 @@ class BedlamDataset(Dataset):
         self.split = split
         self.sequence_length = int(sequence_length)
         self.stride = int(stride)
-        self.image_size = int(image_size)
+        self.image_resolution = int(image_resolution or image_size)
+        self.resize_mode = str(resize_mode or "balanced")
+        self.image_size = self.image_resolution
         self.max_humans = int(max_humans)
         self.require_smpl = require_smpl
         self.require_depth = require_depth
@@ -114,14 +128,14 @@ class BedlamDataset(Dataset):
             smpl_path = seq_dir / "smpl" / f"{frame_id}.pkl"
             box_path = self._box_path(seq_dir, frame_id) if self.boxes_root is not None else None
 
-            image, orig_hw = _load_rgb_tensor(rgb_path, self.image_size)
+            image, orig_hw, geometry = _load_rgb_tensor(rgb_path, self.image_resolution, self.patch_size, self.resize_mode)
             images.append(image)
-            depths.append(_load_depth_tensor(depth_path, self.image_size, self.require_depth))
-            intrinsics.append(_load_intrinsics(cam_path, orig_hw, self.image_size))
+            depths.append(_load_depth_tensor(depth_path, geometry, self.require_depth))
+            intrinsics.append(_load_intrinsics(cam_path, orig_hw, geometry))
             persons_per_frame.append(_load_persons(smpl_path, self.require_smpl))
             box_frame = _load_box_frame(box_path, self.require_boxes) if box_path is not None else None
             box_frames.append(box_frame)
-            boxes_per_frame.append(_frame_persons(box_frame))
+            boxes_per_frame.append(_frame_persons(box_frame, geometry))
 
         smpl = _build_smpl_targets(persons_per_frame, self.max_humans)
         boxes = _build_box_targets(boxes_per_frame, persons_per_frame, self.max_humans, self.require_boxes)
@@ -148,6 +162,7 @@ class BedlamDataset(Dataset):
                 box_frames=box_frames,
                 max_humans=self.max_humans,
                 image_size=self.image_size,
+                image_hw=geometry.input_hw,
                 patch_size=self.patch_size,
                 mask_patch_threshold=self.mask_patch_threshold,
                 min_mask_patches=self.min_mask_patches,
@@ -156,6 +171,10 @@ class BedlamDataset(Dataset):
             external = _build_external_prior_targets(box_frames, query["smpl_query_boxes"], query["smpl_query_boxes_mask"])
             sample.update(query)
             sample.update(external)
+        sample["valid_hw"] = torch.tensor([list(image.shape[-2:]) for image in images], dtype=torch.long)
+        sample["image_hw"] = sample["valid_hw"].clone()
+        sample["orig_hw"] = torch.tensor([list(orig_hw)] * len(images), dtype=torch.long)
+        sample["patch_size"] = torch.tensor(self.patch_size, dtype=torch.long)
         return sample
 
     def _box_path(self, seq_dir: Path, frame_id: str) -> Path:
@@ -164,12 +183,8 @@ class BedlamDataset(Dataset):
 
 
 def bedlam_collate_fn(batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
-    if not batch:
-        raise ValueError("Cannot collate an empty BEDLAM batch")
-    out: dict[str, torch.Tensor] = {}
-    for key in batch[0].keys():
-        out[key] = torch.stack([_require_tensor(item[key], key) for item in batch], dim=0)
-    return out
+    patch_size = int(batch[0].get("patch_size", torch.tensor(16)).reshape(-1)[0].item())
+    return collate_smpl_geometry_batch(batch, patch_size=patch_size)
 
 
 def _build_sequence_index(root: Path, split: str) -> list[tuple[Path, list[str]]]:
@@ -189,47 +204,38 @@ def _build_sequence_index(root: Path, split: str) -> list[tuple[Path, list[str]]
     return sequences
 
 
-def _load_rgb_tensor(path: Path, size: int) -> tuple[torch.Tensor, tuple[int, int]]:
+def _load_rgb_tensor(path: Path, image_resolution: int, patch_size: int, resize_mode: str) -> tuple[torch.Tensor, tuple[int, int], ResizeGeometry]:
     if not path.is_file():
         raise FileNotFoundError(f"RGB frame not found: {path}")
     image = Image.open(path).convert("RGB")
     orig_hw = (image.height, image.width)
-    image = image.resize((int(size), int(size)), Image.BILINEAR)
-    arr = np.asarray(image, dtype=np.float32) / 255.0
-    return torch.from_numpy(arr).permute(2, 0, 1).contiguous(), orig_hw
+    geometry = compute_resize_geometry(orig_hw, image_resolution=image_resolution, patch_size=patch_size, mode=resize_mode)
+    resized = resize_image_with_geometry(image, geometry, Image.BILINEAR)
+    arr = np.asarray(resized, dtype=np.float32) / 255.0
+    return torch.from_numpy(arr).permute(2, 0, 1).contiguous(), orig_hw, geometry
 
 
-def _load_depth_tensor(path: Path, size: int, require_depth: bool) -> torch.Tensor:
+def _load_depth_tensor(path: Path, geometry: ResizeGeometry, require_depth: bool) -> torch.Tensor:
     if not path.is_file():
         if require_depth:
             raise FileNotFoundError(f"Depth frame not found: {path}")
-        return torch.zeros(1, size, size, dtype=torch.float32)
+        return torch.zeros(1, *geometry.input_hw, dtype=torch.float32)
     depth = np.load(path).astype(np.float32).squeeze()
     if depth.ndim != 2:
         raise ValueError(f"Expected 2D depth map from {path}, got {depth.shape}")
-    image = Image.fromarray(depth, mode="F").resize((int(size), int(size)), Image.BILINEAR)
-    return torch.from_numpy(np.asarray(image, dtype=np.float32)).unsqueeze(0)
+    return torch.from_numpy(resize_depth_with_geometry(depth, geometry)).unsqueeze(0)
 
 
-def _load_intrinsics(path: Path, orig_hw: tuple[int, int], size: int) -> torch.Tensor:
+def _load_intrinsics(path: Path, orig_hw: tuple[int, int], geometry: ResizeGeometry) -> torch.Tensor:
     if path.is_file():
         data = np.load(path)
         if "intrinsics" not in data:
             raise ValueError(f"Camera file missing 'intrinsics': {path}")
         intrinsics = data["intrinsics"].astype(np.float32)
     else:
-        focal = float(size)
-        center = (float(size) - 1.0) * 0.5
-        intrinsics = np.asarray([[focal, 0.0, center], [0.0, focal, center], [0.0, 0.0, 1.0]], dtype=np.float32)
-        return torch.from_numpy(intrinsics)
-
-    src_h, src_w = orig_hw
-    scaled = intrinsics.copy()
-    scaled[0, 0] *= float(size) / float(src_w)
-    scaled[0, 2] *= float(size) / float(src_w)
-    scaled[1, 1] *= float(size) / float(src_h)
-    scaled[1, 2] *= float(size) / float(src_h)
-    return torch.from_numpy(scaled)
+        del orig_hw
+        return default_intrinsics_for_geometry(geometry)
+    return transform_intrinsics(intrinsics, geometry)
 
 
 def _load_persons(path: Path, require_smpl: bool) -> list[dict[str, Any]]:
@@ -258,13 +264,26 @@ def _load_box_frame(path: Path | None, require_boxes: bool) -> dict[str, Any] | 
     return data
 
 
-def _frame_persons(frame: dict[str, Any] | None) -> list[dict[str, Any]] | None:
+def _frame_persons(frame: dict[str, Any] | None, geometry: ResizeGeometry) -> list[dict[str, Any]] | None:
     if frame is None:
         return None
     persons = frame.get("persons")
     if not isinstance(persons, list):
         return None
-    return persons
+    out = []
+    for person in persons:
+        mapped = dict(person)
+        if bool(mapped.get("bbox_valid", False)):
+            xyxy = mapped.get("bbox_xyxy_pixels")
+            if xyxy is None and "bbox_cxcywh_norm" in mapped:
+                image_h, image_w = _frame_hw(frame)
+                xyxy = _cxcywh_norm_to_xyxy(np.asarray(mapped["bbox_cxcywh_norm"], dtype=np.float32), image_w, image_h)
+            if xyxy is not None:
+                box, valid = transform_xyxy_to_normalized_cxcywh(xyxy, geometry)
+                mapped["bbox_cxcywh_norm"] = box.tolist()
+                mapped["bbox_valid"] = bool(valid)
+        out.append(mapped)
+    return out
 
 
 def _build_smpl_targets(persons_per_frame: list[list[dict[str, Any]]], max_humans: int) -> dict[str, torch.Tensor]:
@@ -367,14 +386,16 @@ def _build_detection_query_targets(
     box_frames: list[dict[str, Any] | None],
     max_humans: int,
     image_size: int,
+    image_hw: tuple[int, int],
     patch_size: int,
     mask_patch_threshold: float,
     min_mask_patches: int,
     sidecar_root: Path | None,
 ) -> dict[str, torch.Tensor]:
     num_frames = len(box_frames)
-    grid_h = int(image_size) // int(patch_size)
-    grid_w = int(image_size) // int(patch_size)
+    del image_size
+    grid_h = int(image_hw[0]) // int(patch_size)
+    grid_w = int(image_hw[1]) // int(patch_size)
     num_patches = grid_h * grid_w
     boxes = torch.zeros(num_frames, max_humans, 4, dtype=torch.float32)
     box_mask = torch.zeros(num_frames, max_humans, dtype=torch.bool)
@@ -393,14 +414,14 @@ def _build_detection_query_targets(
             reverse=True,
         )[:max_humans]
         for slot, det in enumerate(detections):
-            boxes[frame_idx, slot] = torch.as_tensor(_det_cxcywh(det, image_w, image_h), dtype=torch.float32).clamp(0.0, 1.0)
+            boxes[frame_idx, slot] = torch.as_tensor(_det_cxcywh(det, int(image_hw[1]), int(image_hw[0])), dtype=torch.float32).clamp(0.0, 1.0)
             box_mask[frame_idx, slot] = True
             scores[frame_idx, slot] = float(det.get("det_score", det.get("score", 0.0)))
             det_ids[frame_idx, slot] = int(det.get("det_id", slot))
             patch_mask = _load_detection_patch_mask(
                 det,
                 sidecar_root=sidecar_root,
-                image_size=image_size,
+                image_hw=image_hw,
                 patch_size=patch_size,
                 threshold=mask_patch_threshold,
                 min_mask_patches=min_mask_patches,
@@ -628,7 +649,7 @@ def _det_cxcywh(det: dict[str, Any], image_w: int, image_h: int) -> list[float]:
 def _load_detection_patch_mask(
     det: dict[str, Any],
     sidecar_root: Path | None,
-    image_size: int,
+    image_hw: tuple[int, int],
     patch_size: int,
     threshold: float,
     min_mask_patches: int,
@@ -649,7 +670,7 @@ def _load_detection_patch_mask(
         if key not in data:
             return None
         pixel_mask = np.asarray(data[key]).astype(bool)
-    patch_mask = pixel_mask_to_patch_mask(pixel_mask, image_size, patch_size, threshold)
+    patch_mask = pixel_mask_to_patch_mask_hw(pixel_mask, image_hw, patch_size, threshold)
     if int(patch_mask.sum()) < int(min_mask_patches):
         return None
     return patch_mask

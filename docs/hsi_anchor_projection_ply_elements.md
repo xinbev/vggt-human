@@ -179,6 +179,14 @@ Standalone dense-depth image using the selected heatmap colormap. The default
 wrapper uses `DEPTH_COLORMAP=turbo`; supported values are `turbo`, `inferno`,
 `magma`, `viridis`, and `teal`.
 
+```text
+00_depth_map_hsi_turbo_original_aspect.png
+```
+
+Effect-B depth image: the same dense-depth heatmap mapped back to the original
+input image aspect ratio. Use this for paper-side 2D composition when the source
+frame is not square, such as `612x408`.
+
 Per selected person/query:
 
 ```text
@@ -238,6 +246,14 @@ one person.
 
 Image-space patch-token material: resized RGB input, patch grid, green sampled
 depth points, and the union of each point's surrounding 3x3 patch window.
+
+```text
+02_person*_q*_mask_depth_samples_9patch_rgb_original_aspect.png
+```
+
+Effect-B patch material: the same sampled points and 3x3 patch windows mapped
+back to the original image aspect ratio. The model still runs in square
+coordinates; this file only reverses the visualization stretch.
 
 Combined layer:
 
