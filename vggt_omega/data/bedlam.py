@@ -7,7 +7,7 @@ import torch
 from PIL import Image
 from torch.utils.data import Dataset
 import sys
-from vggt_omega.data.bedlam_boxes import extract_person_id
+from vggt_omega.data.bedlam_boxes import extract_best_box, extract_person_id
 from vggt_omega.data.geometry import (
     ResizeGeometry,
     collate_smpl_geometry_batch,
@@ -141,7 +141,7 @@ class BedlamDataset(Dataset):
             boxes_per_frame.append(_frame_persons(box_frame, geometry))
 
         smpl = _build_smpl_targets(persons_per_frame, self.max_humans)
-        boxes = _build_box_targets(boxes_per_frame, persons_per_frame, self.max_humans, self.require_boxes)
+        boxes = _build_box_targets(boxes_per_frame, persons_per_frame, geometries, self.max_humans, self.require_boxes)
         sample = {
             "images": torch.stack(images, dim=0),
             "gt_depth": torch.stack(depths, dim=0),
@@ -226,7 +226,7 @@ def _load_depth_tensor(path: Path, geometry: ResizeGeometry, require_depth: bool
     depth = np.load(path).astype(np.float32).squeeze()
     if depth.ndim != 2:
         raise ValueError(f"Expected 2D depth map from {path}, got {depth.shape}")
-    return torch.from_numpy(resize_depth_with_geometry(depth, geometry)).unsqueeze(0)
+    return torch.from_numpy(resize_depth_with_geometry(depth, geometry).copy()).unsqueeze(0)
 
 
 def _load_intrinsics(path: Path, orig_hw: tuple[int, int], geometry: ResizeGeometry) -> torch.Tensor:
@@ -319,6 +319,7 @@ def _build_smpl_targets(persons_per_frame: list[list[dict[str, Any]]], max_human
 def _build_box_targets(
     boxes_per_frame: list[list[dict[str, Any]] | None],
     persons_per_frame: list[list[dict[str, Any]]],
+    geometries: list[ResizeGeometry],
     max_humans: int,
     require_boxes: bool,
 ) -> dict[str, torch.Tensor]:
@@ -355,6 +356,11 @@ def _build_box_targets(
                 if bool(box_person.get("bbox_valid", False)):
                     boxes[person_idx] = torch.as_tensor(box_person["bbox_cxcywh_norm"], dtype=torch.float32).reshape(4).clamp(0.0, 1.0)
                     boxes_mask[person_idx] = True
+            if not boxes_mask[person_idx]:
+                fallback_box, fallback_valid = _fallback_person_box(person, geometries[frame_idx])
+                if fallback_valid:
+                    boxes[person_idx] = torch.as_tensor(fallback_box, dtype=torch.float32).reshape(4).clamp(0.0, 1.0)
+                    boxes_mask[person_idx] = True
             track_id, source = _resolve_track_id(box_person, person, person_idx, explicit_by_person_index, explicit_by_slot)
             person_ids[person_idx] = track_id
             person_id_mask[person_idx] = True
@@ -362,7 +368,9 @@ def _build_box_targets(
             if require_boxes and not boxes_mask[person_idx]:
                 raise ValueError(
                     "Valid SMPL person is missing a preprocessed bbox. "
-                    "Run scripts/preprocess/prepare_bedlam_boxes.py with usable bbox/j2d annotations."
+                    f"frame_index={frame_idx} person_index={person_idx}. "
+                    "Run scripts/preprocess/prepare_bedlam_boxes.py with usable bbox/j2d annotations, "
+                    "or verify the BEDLAM SMPL pickle contains bbox/j2d fallback fields."
                 )
         box_frames.append(boxes)
         box_mask_frames.append(boxes_mask)
@@ -383,6 +391,19 @@ def _build_box_targets(
         "gt_track_source": track_source,
         "gt_track_quality": track_quality,
     }
+
+
+def _fallback_person_box(person: dict[str, Any], geometry: ResizeGeometry) -> tuple[np.ndarray, bool]:
+    try:
+        raw = extract_best_box(person, geometry.orig_hw)
+    except (KeyError, TypeError, ValueError):
+        return np.zeros(4, dtype=np.float32), False
+    if not bool(raw.get("bbox_valid", False)):
+        return np.zeros(4, dtype=np.float32), False
+    xyxy = raw.get("bbox_xyxy_pixels")
+    if xyxy is None:
+        return np.zeros(4, dtype=np.float32), False
+    return transform_xyxy_to_normalized_cxcywh(xyxy, geometry)
 
 
 def _build_detection_query_targets(
