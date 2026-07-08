@@ -3,6 +3,9 @@ checkpoints:
   # Expected: VGGT-Omega/VGGT baseline state_dict or checkpoint containing model/state_dict/model_state_dict.
   vggt_baseline: "/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt"
   yolo8x: "/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/yolov8x.torchscript"
+  # Required for model.smpl_provider=nlf.
+  # Expected: TorchScript NLF multiperson model exposing detect_smpl_batched/estimate_smpl_batched.
+  nlf_smpl: "/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/nlf/nlf_smpl.pt"
 
   # Optional future use; current training script does not require this checkpoint.
   sat_hmr_smpl: "/home/zhw/xyb_space/SAT-HMR/weights/sat_hmr/sat_644.pth"
@@ -64,3 +67,4 @@ third_party:
   sam2_checkpoint: "third_party/weights/sam/sam2.1_hiera_large.pt"
   Omnieraser_root: "third_party/Omnieraser"
   Omnieraser_checkpoint: "third_party/weights/Omnieraser/controlnet_flux_pytorch_lora_weights.safetensors"
+  nlf_root: "third_party/nlf"

@@ -10,6 +10,7 @@ import torch
 import torch.nn as nn
 
 from vggt_omega.models.aggregator import Aggregator
+from vggt_omega.integrations import NLFSMPLProvider
 from vggt_omega.models.heads import AggregatorSMPLHead, CameraHead, DenseHead, HSIRefinementHead, TextAlignmentHead
 from vggt_omega.tracking.smpl_track_assigner import BaseSMPLTrackAssigner
 from vggt_omega.utils.hsi_affine import apply_hsi_scene_affine_mode
@@ -88,6 +89,17 @@ class VGGTOmega(nn.Module):
         hsi_scene_affine_mode: str = "per_frame",
         hsi_scene_affine_ema_alpha: float = 0.25,
         smpl_model_dir: str = "",
+        smpl_provider: str = "internal",
+        nlf_model_path: str = "",
+        nlf_third_party_root: str = "third_party/nlf",
+        nlf_model_name: str = "smpl",
+        nlf_use_detector: bool = False,
+        nlf_require_boxes: bool = True,
+        nlf_internal_batch_size: int = 64,
+        nlf_num_aug: int = 1,
+        nlf_detector_threshold: float = 0.3,
+        nlf_detector_nms_iou_threshold: float = 0.7,
+        nlf_max_detections: int = 150,
         image_size: int = 518,
         freeze_dense_head: bool = False,
         freeze_aggregator_forward: bool = False,
@@ -97,6 +109,11 @@ class VGGTOmega(nn.Module):
             raise ValueError("enable_smpl=True requires num_smpl_queries > 0")
         if smpl_enable_translation_refine and not enable_camera:
             raise ValueError("smpl_enable_translation_refine=True requires enable_camera=True")
+        self.smpl_provider = str(smpl_provider or "internal").lower()
+        if self.smpl_provider not in {"internal", "nlf"}:
+            raise ValueError(f"Unsupported smpl_provider: {self.smpl_provider}")
+        if self.smpl_provider == "nlf" and enable_smpl and not enable_camera:
+            raise ValueError("smpl_provider='nlf' requires enable_camera=True")
 
         self.aggregator = Aggregator(
             patch_size=patch_size,
@@ -165,7 +182,23 @@ class VGGTOmega(nn.Module):
                 temporal_translation_use_world=smpl_temporal_translation_use_world,
                 image_size=image_size,
             )
-            if enable_smpl
+            if enable_smpl and self.smpl_provider == "internal"
+            else None
+        )
+        self.nlf_smpl_provider = (
+            NLFSMPLProvider(
+                model_path=nlf_model_path,
+                third_party_root=nlf_third_party_root,
+                model_name=nlf_model_name,
+                use_detector=nlf_use_detector,
+                require_boxes=nlf_require_boxes,
+                internal_batch_size=nlf_internal_batch_size,
+                num_aug=nlf_num_aug,
+                detector_threshold=nlf_detector_threshold,
+                detector_nms_iou_threshold=nlf_detector_nms_iou_threshold,
+                max_detections=nlf_max_detections,
+            )
+            if enable_smpl and self.smpl_provider == "nlf"
             else None
         )
         self.hsi_refinement_head = (
@@ -193,8 +226,10 @@ class VGGTOmega(nn.Module):
             if enable_hsi_refine
             else None
         )
-        if self.hsi_refinement_head is not None and (self.smpl_head is None or self.dense_head is None or self.camera_head is None):
-            raise ValueError("enable_hsi_refine=True requires enable_smpl, enable_depth, and enable_camera")
+        if self.hsi_refinement_head is not None and (
+            (self.smpl_head is None and self.nlf_smpl_provider is None) or self.dense_head is None or self.camera_head is None
+        ):
+            raise ValueError("enable_hsi_refine=True requires a SMPL provider, enable_depth, and enable_camera")
 
     def forward(
         self,
@@ -276,6 +311,17 @@ class VGGTOmega(nn.Module):
                         return_temporal_hidden=self.smpl_enable_post_track_temporal_translation,
                     )
                 )
+            elif self.nlf_smpl_provider is not None:
+                predictions.update(
+                    self.nlf_smpl_provider(
+                        images=images,
+                        pose_enc=predictions.get("pose_enc"),
+                        smpl_query_boxes=smpl_reference_boxes if smpl_query_boxes is not None else None,
+                        smpl_query_boxes_mask=smpl_query_boxes_mask,
+                        max_humans=token_layout.num_smpl_queries,
+                    )
+                )
+            if self.smpl_head is not None or self.nlf_smpl_provider is not None:
                 assigned = self._assign_smpl_tracks(
                     predictions=predictions,
                     reference_boxes=smpl_reference_boxes,

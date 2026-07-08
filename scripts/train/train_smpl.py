@@ -403,6 +403,17 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_scene_affine_mode=str(model_cfg.get("hsi_scene_affine_mode", "per_frame")),
         hsi_scene_affine_ema_alpha=float(model_cfg.get("hsi_scene_affine_ema_alpha", 0.25)),
         smpl_model_dir=str(config.get("assets", {}).get("smpl_model_dir", "")),
+        smpl_provider=str(model_cfg.get("smpl_provider", "internal")),
+        nlf_model_path=str(model_cfg.get("nlf_model_path", config.get("checkpoints", {}).get("nlf_smpl", ""))),
+        nlf_third_party_root=str(model_cfg.get("nlf_third_party_root", config.get("third_party", {}).get("nlf_root", "third_party/nlf"))),
+        nlf_model_name=str(model_cfg.get("nlf_model_name", "smpl")),
+        nlf_use_detector=bool(model_cfg.get("nlf_use_detector", False)),
+        nlf_require_boxes=bool(model_cfg.get("nlf_require_boxes", True)),
+        nlf_internal_batch_size=int(model_cfg.get("nlf_internal_batch_size", 64)),
+        nlf_num_aug=int(model_cfg.get("nlf_num_aug", 1)),
+        nlf_detector_threshold=float(model_cfg.get("nlf_detector_threshold", 0.3)),
+        nlf_detector_nms_iou_threshold=float(model_cfg.get("nlf_detector_nms_iou_threshold", 0.7)),
+        nlf_max_detections=int(model_cfg.get("nlf_max_detections", 150)),
         image_size=int(config.get("data", {}).get("image_resolution", config.get("data", {}).get("image_size", 512))),
         freeze_dense_head=bool(model_cfg.get("freeze_dense_head", False)),
         freeze_aggregator_forward=bool(model_cfg.get("freeze_aggregator_forward", False)),
@@ -815,7 +826,9 @@ def move_to_device(batch: dict[str, torch.Tensor], device: torch.device) -> dict
 
 
 def forward_model(model: torch.nn.Module, batch: dict[str, torch.Tensor], config: dict[str, Any]) -> dict[str, torch.Tensor]:
-    if not bool(config.get("model", {}).get("smpl_query_box_prior", False)):
+    model_cfg = config.get("model", {})
+    needs_query_inputs = bool(model_cfg.get("smpl_query_box_prior", False)) or str(model_cfg.get("smpl_provider", "internal")).lower() == "nlf"
+    if not needs_query_inputs:
         return model(batch["images"])
     boxes = batch.get("smpl_query_boxes", batch.get("gt_boxes"))
     mask = batch.get("smpl_query_boxes_mask", batch.get("boxes_mask"))
