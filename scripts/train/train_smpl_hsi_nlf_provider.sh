@@ -10,10 +10,6 @@ OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/outputs/train/smpl_hsi_nlf_provider_stage
 CUDA_VISIBLE_DEVICES_VALUE="${CUDA_VISIBLE_DEVICES_VALUE:-0}"
 export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 
-VGGT_CKPT="${VGGT_CKPT:-/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt}"
-NLF_CKPT="${NLF_CKPT:-/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/nlf/nlf_smpl.pt}"
-NLF_ROOT="${NLF_ROOT:-${REPO_ROOT}/third_party/nlf}"
-SMPL_MODEL_DIR="${SMPL_MODEL_DIR:-/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/body_models/smpl}"
 MAX_HUMANS="${MAX_HUMANS:-20}"
 NUM_VIEWS="${NUM_VIEWS:-2}"
 EPOCHS="${EPOCHS:-80}"
@@ -26,6 +22,40 @@ mkdir -p "${OUTPUT_DIR}"
 [[ -f "${TRAIN_CONFIG}" ]] || { echo "[ERROR] Missing train config: ${TRAIN_CONFIG}" >&2; exit 1; }
 [[ -d "${BEDLAM_ROOT}" ]] || { echo "[ERROR] Missing BEDLAM root: ${BEDLAM_ROOT}" >&2; exit 1; }
 [[ -d "${PREPROCESSED_ROOT}" ]] || { echo "[ERROR] Missing preprocessed boxes: ${PREPROCESSED_ROOT}" >&2; exit 1; }
+
+VGGT_CKPT="${VGGT_CKPT:-$(python - "${PATH_CONFIG}" <<'PY'
+import sys
+import yaml
+from pathlib import Path
+cfg = yaml.safe_load(Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(cfg.get("checkpoints", {}).get("vggt_baseline", ""))
+PY
+)}"
+NLF_CKPT="${NLF_CKPT:-$(python - "${PATH_CONFIG}" <<'PY'
+import sys
+import yaml
+from pathlib import Path
+cfg = yaml.safe_load(Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(cfg.get("checkpoints", {}).get("nlf_smpl", ""))
+PY
+)}"
+NLF_ROOT="${NLF_ROOT:-$(python - "${PATH_CONFIG}" <<'PY'
+import sys
+import yaml
+from pathlib import Path
+cfg = yaml.safe_load(Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(cfg.get("third_party", {}).get("nlf_root", "third_party/nlf"))
+PY
+)}"
+SMPL_MODEL_DIR="${SMPL_MODEL_DIR:-$(python - "${PATH_CONFIG}" <<'PY'
+import sys
+import yaml
+from pathlib import Path
+cfg = yaml.safe_load(Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(cfg.get("assets", {}).get("smpl_model_dir", ""))
+PY
+)}"
+
 [[ -f "${VGGT_CKPT}" ]] || { echo "[ERROR] Missing VGGT checkpoint: ${VGGT_CKPT}" >&2; exit 1; }
 [[ -f "${NLF_CKPT}" ]] || { echo "[ERROR] Missing NLF checkpoint: ${NLF_CKPT}" >&2; exit 1; }
 [[ -d "${NLF_ROOT}" ]] || { echo "[ERROR] Missing NLF source directory: ${NLF_ROOT}" >&2; exit 1; }
