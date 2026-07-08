@@ -123,6 +123,7 @@ Config:
 
 Smoke:
 
+- `scripts/smoke/check_nlf_runtime_requirements.sh`
 - `scripts/smoke/check_nlf_provider_interface.sh`
 - `scripts/smoke/check_nlf_hsi_forward.sh`
 
@@ -158,6 +159,7 @@ Server paths:
 Run before Stage 1:
 
 ```bash
+bash scripts/smoke/check_nlf_runtime_requirements.sh
 bash scripts/smoke/check_nlf_provider_interface.sh
 bash scripts/smoke/check_nlf_hsi_forward.sh
 ```
