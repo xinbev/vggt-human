@@ -70,7 +70,19 @@ optim:
   lr: 0.000005
   weight_decay: 0.05
   grad_clip_norm: 1.0
-  log_interval: 10
+  log_interval: 20
+  log_style: progress
+  progress_bar_width: 28
+  progress_max_loss_items: 8
+  progress_log_keys:
+    - loss_total
+    - loss_hsi_depth_teacher
+    - loss_hsi_anchor_depth
+    - loss_hsi_transl_cam
+    - loss_hsi_joints3d
+    - loss_hsi_projected_joints2d
+    - metric_hsi_joint_error_delta
+    - metric_hsi_depth_teacher_l1
   save_interval: 1
   val_interval: 1
 

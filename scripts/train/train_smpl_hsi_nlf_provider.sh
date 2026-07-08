@@ -104,6 +104,7 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_
   --override "model.smpl_query_box_prior=true" \
   --override "optim.epochs=${EPOCHS}" \
   --override "optim.lr=${LR}" \
+  --override "optim.log_style=progress" \
   --override "optim.batch_size=1"
 
 echo "========== Frozen NLF + HSI refinement finished =========="

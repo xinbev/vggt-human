@@ -754,6 +754,7 @@ def train_one_epoch(
     apply_freeze_policy(model, config)
     log_interval = int(config["optim"].get("log_interval", 10))
     grad_clip_norm = float(config["optim"].get("grad_clip_norm", 0.0))
+    log_style = str(config.get("optim", {}).get("log_style", "full")).lower()
     for step, batch in enumerate(loader):
         batch = move_to_device(batch, device)
         optimizer.zero_grad(set_to_none=True)
@@ -771,26 +772,28 @@ def train_one_epoch(
 
         global_step += 1
         if global_step % log_interval == 0:
-            log_style = str(config.get("optim", {}).get("log_style", "full")).lower()
             if log_style in {"progress", "compact"}:
-                print(
-                    format_progress_log(
-                        prefix="train",
-                        epoch=epoch,
-                        total_epochs=total_epochs or int(config["optim"]["epochs"]),
-                        step=step,
-                        steps=len(loader),
-                        global_step=global_step,
-                        losses=losses,
-                        started_at=progress_start_time,
-                        total_steps=progress_total_steps,
-                        done_steps=progress_done_offset + step + 1,
-                        config=config,
-                    ),
-                    flush=True,
+                line = format_progress_log(
+                    prefix="train",
+                    epoch=epoch,
+                    total_epochs=total_epochs or int(config["optim"]["epochs"]),
+                    step=step,
+                    steps=len(loader),
+                    global_step=global_step,
+                    losses=losses,
+                    started_at=progress_start_time,
+                    total_steps=progress_total_steps,
+                    done_steps=progress_done_offset + step + 1,
+                    config=config,
                 )
+                if log_style == "progress":
+                    print("\r" + line, end="", flush=True)
+                else:
+                    print(line, flush=True)
             else:
                 print(format_log("train", epoch, step, len(loader), global_step, losses), flush=True)
+    if log_style == "progress":
+        print("", flush=True)
     return global_step
 
 
