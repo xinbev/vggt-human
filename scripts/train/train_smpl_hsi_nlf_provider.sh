@@ -14,6 +14,10 @@ MAX_HUMANS="${MAX_HUMANS:-20}"
 NUM_VIEWS="${NUM_VIEWS:-2}"
 EPOCHS="${EPOCHS:-80}"
 LR="${LR:-5e-6}"
+BATCH_SIZE="${BATCH_SIZE:-1}"
+NUM_WORKERS="${NUM_WORKERS:-4}"
+PIN_MEMORY="${PIN_MEMORY:-true}"
+NLF_INTERNAL_BATCH_SIZE="${NLF_INTERNAL_BATCH_SIZE:-64}"
 
 cd "${REPO_ROOT}"
 mkdir -p "${OUTPUT_DIR}"
@@ -71,8 +75,12 @@ echo "SMPL models  : ${SMPL_MODEL_DIR}"
 echo "Output       : ${OUTPUT_DIR}"
 echo "Epochs       : ${EPOCHS}"
 echo "LR           : ${LR}"
+echo "Batch size   : ${BATCH_SIZE}"
 echo "Max humans   : ${MAX_HUMANS}"
 echo "Num views    : ${NUM_VIEWS}"
+echo "Workers      : ${NUM_WORKERS}"
+echo "GPU visible  : ${CUDA_VISIBLE_DEVICES_VALUE}"
+echo "NLF int batch: ${NLF_INTERNAL_BATCH_SIZE}"
 
 CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_smpl.py \
   --path-config "${PATH_CONFIG}" \
@@ -87,11 +95,14 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_
   --override "data.sequence_length=${NUM_VIEWS}" \
   --override "data.val_split=" \
   --override "data.max_humans=${MAX_HUMANS}" \
+  --override "data.num_workers=${NUM_WORKERS}" \
+  --override "data.pin_memory=${PIN_MEMORY}" \
   --override "data.require_boxes=true" \
   --override "data.require_depth=true" \
   --override "model.smpl_provider=nlf" \
   --override "model.nlf_use_detector=false" \
   --override "model.nlf_require_boxes=true" \
+  --override "model.nlf_internal_batch_size=${NLF_INTERNAL_BATCH_SIZE}" \
   --override "model.num_smpl_queries=${MAX_HUMANS}" \
   --override "model.enable_camera=true" \
   --override "model.enable_depth=true" \
@@ -105,7 +116,7 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_
   --override "optim.epochs=${EPOCHS}" \
   --override "optim.lr=${LR}" \
   --override "optim.log_style=progress" \
-  --override "optim.batch_size=1"
+  --override "optim.batch_size=${BATCH_SIZE}"
 
 echo "========== Frozen NLF + HSI refinement finished =========="
 echo "Last checkpoint: ${OUTPUT_DIR}/checkpoint_latest.pt"

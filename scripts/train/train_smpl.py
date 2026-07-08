@@ -787,7 +787,7 @@ def train_one_epoch(
                     config=config,
                 )
                 if log_style == "progress":
-                    print("\r" + line, end="", flush=True)
+                    print("\r\033[K" + line, end="", flush=True)
                 else:
                     print(line, flush=True)
             else:
