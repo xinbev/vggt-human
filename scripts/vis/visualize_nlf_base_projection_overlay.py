@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import torch
+from PIL import Image
 from PIL import ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -18,7 +19,8 @@ if str(ROOT) not in sys.path:
 
 from scripts.eval.evaluate_hsi_refine_metrics import load_vggt_baseline, project_points  # noqa: E402
 from scripts.train.train_smpl import apply_overrides, build_model, load_yaml_config  # noqa: E402
-from scripts.vis.visualize_hsi_depth_smpl_diagnostics import load_single_bedlam_batch  # noqa: E402
+from vggt_omega.data import BedlamDataset  # noqa: E402
+from vggt_omega.data.geometry import resolve_image_size_config  # noqa: E402
 from vggt_omega.models.smpl_layer import SMPLLayer  # noqa: E402
 from vggt_omega.training.config import deep_update, require_path  # noqa: E402
 from vggt_omega.utils.pose_enc import encoding_to_camera  # noqa: E402
@@ -58,7 +60,7 @@ def main() -> None:
 
     config = load_config(args)
     image_path = Path(args.image).expanduser()
-    batch, rgb = load_single_bedlam_batch(image_path, config, args)
+    batch, rgb = load_bedlam_batch_for_image(image_path, config, args)
     batch = {key: value.to(device, non_blocking=True) for key, value in batch.items()}
 
     model = build_model(config).to(device)
@@ -116,6 +118,58 @@ def load_config(args: argparse.Namespace) -> dict[str, Any]:
     data_cfg["require_boxes"] = True
     data_cfg["require_depth"] = True
     return config
+
+
+def load_bedlam_batch_for_image(image_path: Path, config: dict[str, Any], args: argparse.Namespace) -> tuple[dict[str, torch.Tensor], Image.Image]:
+    data_cfg = config["data"]
+    image_size, image_resolution = resolve_image_size_config(data_cfg)
+    dataset_root = Path(require_path(config, data_cfg.get("root_key", "datasets.bedlam_root"), allow_empty=False)).expanduser()
+    boxes_root = Path(require_path(config, data_cfg["boxes_root_key"], allow_empty=False)).expanduser()
+    dataset = BedlamDataset(
+        root=dataset_root,
+        split=str(args.split),
+        sequence_length=int(data_cfg["sequence_length"]),
+        stride=int(data_cfg["stride"]),
+        image_size=image_size,
+        image_resolution=image_resolution,
+        resize_mode=str(data_cfg.get("resize_mode", "balanced")),
+        max_humans=int(data_cfg["max_humans"]),
+        require_smpl=bool(data_cfg.get("require_smpl", True)),
+        require_depth=bool(data_cfg.get("require_depth", False)),
+        boxes_root=boxes_root,
+        require_boxes=bool(data_cfg.get("require_boxes", False)),
+        query_source=str(data_cfg.get("query_source", "persons")),
+        patch_size=int(config.get("model", {}).get("patch_size", 16)),
+        mask_patch_threshold=float(data_cfg.get("mask_patch_threshold", 0.10)),
+        min_mask_patches=int(data_cfg.get("min_mask_patches", 4)),
+    )
+    dataset_index = find_dataset_index(dataset, image_path, dataset_root, str(args.split))
+    sample = dataset[dataset_index]
+    batch = {key: value.unsqueeze(0) for key, value in sample.items() if isinstance(value, torch.Tensor)}
+    rgb = tensor_image_to_pil(sample["images"][0])
+    return batch, rgb
+
+
+def find_dataset_index(dataset: BedlamDataset, image_path: Path, dataset_root: Path, split: str) -> int:
+    frame_id = image_path.stem
+    seq_dir = image_path.parent.parent
+    try:
+        expected_seq = seq_dir.relative_to(dataset_root / split)
+    except ValueError as exc:
+        raise ValueError(f"Image path must live under {dataset_root / split}: {image_path}") from exc
+    for dataset_index, (seq_idx, start_idx) in enumerate(dataset._index):
+        seq_path, frame_ids = dataset._sequences[seq_idx]
+        if seq_path.relative_to(dataset_root / split) == expected_seq and frame_ids[start_idx] == frame_id:
+            return dataset_index
+    raise ValueError(
+        f"Could not find image as the first frame of a BEDLAM window: split={split} "
+        f"sequence={expected_seq} frame={frame_id}. Try IMAGE_PATH pointing to an earlier frame with enough following frames."
+    )
+
+
+def tensor_image_to_pil(image: torch.Tensor) -> Image.Image:
+    array = image.detach().float().clamp(0.0, 1.0).permute(1, 2, 0).cpu().numpy()
+    return Image.fromarray((array * 255.0).round().astype("uint8"), mode="RGB")
 
 
 def decode_pred_joints(predictions: dict[str, torch.Tensor], smpl: SMPLLayer) -> torch.Tensor:
