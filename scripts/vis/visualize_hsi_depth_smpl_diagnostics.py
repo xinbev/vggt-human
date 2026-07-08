@@ -55,16 +55,8 @@ from scripts.eval.evaluate_hsi_refine_metrics import (  # noqa: E402
     scale_points_to_depth,
 )
 from scripts.train.train_smpl import apply_overrides, build_model, load_yaml_config  # noqa: E402
-from vggt_omega.data.bedlam import (  # noqa: E402
-    _build_box_targets,
-    _build_smpl_targets,
-    _frame_persons,
-    _load_box_persons,
-    _load_depth_tensor,
-    _load_persons,
-    _load_rgb_tensor,
-)
-from vggt_omega.data.geometry import resize_image_with_geometry  # noqa: E402
+from vggt_omega.data import BedlamDataset  # noqa: E402
+from vggt_omega.data.geometry import resolve_image_size_config  # noqa: E402
 from vggt_omega.models.smpl_layer import SMPLLayer  # noqa: E402
 from vggt_omega.training.config import deep_update, require_path  # noqa: E402
 from vggt_omega.utils.pose_enc import encoding_to_camera  # noqa: E402
@@ -167,42 +159,55 @@ def load_config(args: argparse.Namespace) -> dict[str, Any]:
 
 def load_single_bedlam_batch(image_path: Path, config: dict[str, Any], args: argparse.Namespace) -> tuple[dict[str, torch.Tensor], Image.Image]:
     data_cfg = config["data"]
-    image_resolution = int(data_cfg.get("image_resolution", data_cfg.get("image_size", 512)))
-    resize_mode = str(data_cfg.get("resize_mode", "balanced"))
-    patch_size = int(config.get("model", {}).get("patch_size", 16))
-    max_humans = int(data_cfg.get("max_humans", config.get("model", {}).get("num_smpl_queries", 20)))
+    image_size, image_resolution = resolve_image_size_config(data_cfg)
     dataset_root = Path(require_path(config, data_cfg.get("root_key", "datasets.bedlam_root"), allow_empty=False)).expanduser()
     boxes_root = Path(require_path(config, data_cfg["boxes_root_key"], allow_empty=False)).expanduser()
     split = str(args.split)
+    dataset = BedlamDataset(
+        root=dataset_root,
+        split=split,
+        sequence_length=int(data_cfg["sequence_length"]),
+        stride=int(data_cfg["stride"]),
+        image_size=image_size,
+        image_resolution=image_resolution,
+        resize_mode=str(data_cfg.get("resize_mode", "balanced")),
+        max_humans=int(data_cfg.get("max_humans", config.get("model", {}).get("num_smpl_queries", 20))),
+        require_smpl=bool(data_cfg.get("require_smpl", True)),
+        require_depth=bool(data_cfg.get("require_depth", True)),
+        boxes_root=boxes_root,
+        require_boxes=bool(data_cfg.get("require_boxes", True)),
+        query_source=str(data_cfg.get("query_source", "persons")),
+        patch_size=int(config.get("model", {}).get("patch_size", 16)),
+        mask_patch_threshold=float(data_cfg.get("mask_patch_threshold", 0.10)),
+        min_mask_patches=int(data_cfg.get("min_mask_patches", 4)),
+    )
+    dataset_index = find_bedlam_window_index(dataset, image_path, dataset_root, split)
+    sample = dataset[dataset_index]
+    batch = {key: value.unsqueeze(0) for key, value in sample.items() if isinstance(value, torch.Tensor)}
+    rgb = tensor_image_to_pil(sample["images"][0])
+    return batch, rgb
+
+
+def find_bedlam_window_index(dataset: BedlamDataset, image_path: Path, dataset_root: Path, split: str) -> int:
     seq_dir = image_path.parent.parent
     frame_id = image_path.stem
-    sequence_rel = seq_dir.relative_to(dataset_root / split)
+    try:
+        sequence_rel = seq_dir.relative_to(dataset_root / split)
+    except ValueError as exc:
+        raise ValueError(f"Image path must live under {dataset_root / split}: {image_path}") from exc
+    for dataset_index, (seq_idx, start_idx) in enumerate(dataset._index):
+        seq_path, frame_ids = dataset._sequences[seq_idx]
+        if seq_path.relative_to(dataset_root / split) == sequence_rel and frame_ids[start_idx] == frame_id:
+            return dataset_index
+    raise ValueError(
+        f"Could not find image as the first frame of a BEDLAM window: split={split} "
+        f"sequence={sequence_rel} frame={frame_id}. Try an earlier IMAGE_PATH with enough following frames."
+    )
 
-    image_tensor, orig_hw, geometry = _load_rgb_tensor(image_path, image_resolution, patch_size, resize_mode)
-    rgb = resize_image_with_geometry(Image.open(image_path).convert("RGB"), geometry, Image.BILINEAR)
-    depth = _load_depth_tensor(seq_dir / "depth" / f"{frame_id}.npy", geometry, require_depth=True)
-    persons = _load_persons(seq_dir / "smpl" / f"{frame_id}.pkl", require_smpl=True)
-    raw_box_frame = {"persons": _load_box_persons(boxes_root / split / sequence_rel / "smpl_boxes" / f"{frame_id}.pkl", require_boxes=True)}
-    box_persons = _frame_persons(raw_box_frame, geometry)
-    smpl = _build_smpl_targets([persons], max_humans)
-    boxes = _build_box_targets([box_persons], [persons], max_humans, require_boxes=True)
-    batch = {
-        "images": image_tensor.unsqueeze(0).unsqueeze(0),
-        "gt_depth": depth.unsqueeze(0).unsqueeze(0),
-        "gt_pose_6d": smpl["pose_6d"].unsqueeze(0),
-        "gt_betas": smpl["betas"].unsqueeze(0),
-        "gt_transl_cam": smpl["transl_cam"].unsqueeze(0),
-        "gt_cam_trans": smpl["transl_cam"].unsqueeze(0),
-        "smpl_mask": smpl["smpl_mask"].unsqueeze(0),
-        "gt_boxes": boxes["boxes"].unsqueeze(0),
-        "boxes_mask": boxes["boxes_mask"].unsqueeze(0),
-        "person_ids": boxes["person_ids"].unsqueeze(0),
-        "person_id_mask": boxes["person_id_mask"].unsqueeze(0),
-        "valid_hw": torch.tensor([[[image_tensor.shape[-2], image_tensor.shape[-1]]]], dtype=torch.long),
-        "image_hw": torch.tensor([[[image_tensor.shape[-2], image_tensor.shape[-1]]]], dtype=torch.long),
-        "orig_hw": torch.tensor([[[orig_hw[0], orig_hw[1]]]], dtype=torch.long),
-    }
-    return batch, rgb
+
+def tensor_image_to_pil(image: torch.Tensor) -> Image.Image:
+    array = image.detach().float().clamp(0.0, 1.0).permute(1, 2, 0).cpu().numpy()
+    return Image.fromarray((array * 255.0).round().astype("uint8"), mode="RGB")
 
 
 def compute_depth_diagnostics(predictions: dict[str, torch.Tensor], batch: dict[str, torch.Tensor]) -> tuple[dict[str, Any], dict[str, np.ndarray]]:
