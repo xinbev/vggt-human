@@ -61,6 +61,14 @@ def main() -> None:
         module = importlib.import_module(module_name)
         summary["imports"][module_name] = str(getattr(module, "__version__", "ok"))
 
+    torch = importlib.import_module("torch")
+    torchvision = importlib.import_module("torchvision")
+    importlib.import_module("torchvision.ops")
+    boxes = torch.zeros((0, 4), dtype=torch.float32)
+    scores = torch.zeros((0,), dtype=torch.float32)
+    torchvision.ops.nms(boxes, scores, 0.5)
+    summary["assets"]["torchvision_nms_registered"] = True
+
     smplx = importlib.import_module("smplx")
     smpl_layer = smplx.create(
         str(smpl_model_dir),
@@ -81,7 +89,6 @@ def main() -> None:
     summary["assets"]["projdir_required_files"] = check_optional_projdir(projdir)
 
     if not args.skip_load_nlf:
-        torch = importlib.import_module("torch")
         model = torch.jit.load(str(nlf_ckpt), map_location="cpu").eval()
         summary["assets"]["nlf_has_estimate_smpl_batched"] = bool(hasattr(model, "estimate_smpl_batched"))
         summary["assets"]["nlf_has_detect_smpl_batched"] = bool(hasattr(model, "detect_smpl_batched"))

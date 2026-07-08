@@ -135,6 +135,7 @@ class NLFSMPLProvider(nn.Module):
                 model_path = Path.cwd() / model_path
             if not model_path.is_file():
                 raise FileNotFoundError(f"NLF checkpoint not found: {model_path}")
+            _ensure_torchvision_nms_registered()
             model = torch.jit.load(str(model_path), map_location=device)
         if hasattr(model, "eval"):
             model = model.eval()
@@ -352,3 +353,27 @@ def _xywh_to_normalized_cxcywh(xywh: torch.Tensor, image_hw: tuple[int, int]) ->
         ],
         dim=-1,
     ).clamp(0.0, 1.0)
+
+
+def _ensure_torchvision_nms_registered() -> None:
+    """Register torchvision custom ops required by the serialized NLF detector."""
+    try:
+        import torchvision
+        import torchvision.ops  # noqa: F401
+
+        boxes = torch.zeros((0, 4), dtype=torch.float32)
+        scores = torch.zeros((0,), dtype=torch.float32)
+        torchvision.ops.nms(boxes, scores, 0.5)
+    except Exception as exc:
+        torch_version = getattr(torch, "__version__", "unknown")
+        try:
+            import torchvision as _torchvision
+
+            torchvision_version = getattr(_torchvision, "__version__", "unknown")
+        except Exception:
+            torchvision_version = "unavailable"
+        raise RuntimeError(
+            "NLF TorchScript requires the torchvision::nms custom op, but it is not available. "
+            "Install a torchvision build that matches the active torch/CUDA environment, then rerun the smoke test. "
+            f"torch={torch_version}, torchvision={torchvision_version}"
+        ) from exc
