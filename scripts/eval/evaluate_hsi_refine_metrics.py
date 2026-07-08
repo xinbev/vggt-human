@@ -377,7 +377,7 @@ def add_human_metrics(
     intrinsics: torch.Tensor,
     hsi_depth: torch.Tensor,
     gt_depth: torch.Tensor,
-    image_size: int,
+    image_size: int | tuple[int, int],
     args: argparse.Namespace,
     b: int,
     s: int,
@@ -472,7 +472,7 @@ def add_foot_contact_metrics(
     intrinsics: torch.Tensor,
     hsi_depth: torch.Tensor,
     gt_depth: torch.Tensor,
-    image_size: int,
+    image_size: int | tuple[int, int],
     args: argparse.Namespace,
 ) -> None:
     foot_idx = torch.tensor([7, 8, 10, 11], dtype=torch.long, device=hsi_joints.device)
@@ -508,7 +508,7 @@ def add_foot_sole_contact_metrics(
     intrinsics: torch.Tensor,
     hsi_depth: torch.Tensor,
     gt_depth: torch.Tensor,
-    image_size: int,
+    image_size: int | tuple[int, int],
     args: argparse.Namespace,
 ) -> None:
     gt_sole = gt_vertices[sole_indices]
@@ -584,11 +584,15 @@ def sample_local_support_plane_signed_delta(
     points_2d: torch.Tensor,
     points_cam: torch.Tensor,
     intrinsics: torch.Tensor,
-    image_size: int,
+    image_size: int | tuple[int, int],
     window_size: int = 9,
     min_points: int = 6,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     height, width = depth.shape[-2:]
+    if isinstance(image_size, int):
+        image_h, image_w = int(image_size), int(image_size)
+    else:
+        image_h, image_w = int(image_size[0]), int(image_size[1])
     window_size = max(int(window_size), 1)
     if window_size % 2 == 0:
         window_size += 1
@@ -619,8 +623,8 @@ def sample_local_support_plane_signed_delta(
 
     sampled_depth = depth[ys, xs]
     local_valid = local_valid & torch.isfinite(sampled_depth) & (sampled_depth > 1e-6)
-    pixel_x = xs.to(dtype=sampled_depth.dtype) * (float(image_size) / float(width))
-    pixel_y = ys.to(dtype=sampled_depth.dtype) * (float(image_size) / float(height))
+    pixel_x = xs.to(dtype=sampled_depth.dtype) * (float(image_w) / float(width))
+    pixel_y = ys.to(dtype=sampled_depth.dtype) * (float(image_h) / float(height))
     fx = intrinsics[0, 0].to(dtype=sampled_depth.dtype).clamp(min=1e-6)
     fy = intrinsics[1, 1].to(dtype=sampled_depth.dtype).clamp(min=1e-6)
     cx = intrinsics[0, 2].to(dtype=sampled_depth.dtype)

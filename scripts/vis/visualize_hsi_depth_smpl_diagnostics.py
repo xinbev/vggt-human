@@ -406,7 +406,7 @@ def human_metric_values(
     intrinsics: torch.Tensor,
     hsi_depth: torch.Tensor,
     gt_depth: torch.Tensor,
-    image_size: int,
+    image_size: int | tuple[int, int],
     args: argparse.Namespace,
     q: int,
     g: int,
@@ -454,7 +454,7 @@ def foot_contact_values(
     intrinsics: torch.Tensor,
     hsi_depth: torch.Tensor,
     gt_depth: torch.Tensor,
-    image_size: int,
+    image_size: int | tuple[int, int],
     args: argparse.Namespace,
 ) -> dict[str, float | None]:
     foot_idx = torch.tensor([7, 8, 10, 11], dtype=torch.long, device=hsi_joints.device)
@@ -497,9 +497,10 @@ def sole_contact_values(
     intrinsics: torch.Tensor,
     hsi_depth: torch.Tensor,
     gt_depth: torch.Tensor,
-    image_size: int,
+    image_size: int | tuple[int, int],
     args: argparse.Namespace,
 ) -> dict[str, Any]:
+    image_h, image_w = image_size_hw(image_size)
     gt_sole = gt_vertices[sole_indices]
     gt_projected = scale_points_to_depth(project_points(gt_sole, intrinsics), image_size, gt_depth.shape[-2], gt_depth.shape[-1])
     sampled_gt, gt_valid = sample_depth_at_points(gt_depth, gt_projected)
@@ -569,13 +570,19 @@ def sole_contact_values(
             status = contact_status(delta, float(args.foot_float_margin_m), float(args.foot_penetration_margin_m))
             values["_contact_points"][prefix].append(
                 {
-                    "x": float(projected[idx_int, 0].detach().cpu()) * float(image_size) / float(hsi_depth.shape[-1]),
-                    "y": float(projected[idx_int, 1].detach().cpu()) * float(image_size) / float(hsi_depth.shape[-2]),
+                    "x": float(projected[idx_int, 0].detach().cpu()) * float(image_w) / float(hsi_depth.shape[-1]),
+                    "y": float(projected[idx_int, 1].detach().cpu()) * float(image_h) / float(hsi_depth.shape[-2]),
                     "delta_m": delta,
                     "status": status,
                 }
             )
     return values
+
+
+def image_size_hw(image_size: int | tuple[int, int]) -> tuple[int, int]:
+    if isinstance(image_size, int):
+        return int(image_size), int(image_size)
+    return int(image_size[0]), int(image_size[1])
 
 
 def contact_status(delta: float, float_margin: float, penetration_margin: float) -> str:
