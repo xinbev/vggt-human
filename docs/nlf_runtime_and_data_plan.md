@@ -77,6 +77,8 @@ NLF source imports `posepile.paths.DATA_ROOT`; if your environment complains abo
 export DATA_ROOT=/home/zhw/xyb_space
 ```
 
+The project smoke scripts now default to this value, but keeping it in your shell profile is still cleaner.
+
 For the TorchScript checkpoint, `PROJDIR` is usually not needed because the serialized model carries the trained buffers. If loading asks for NLF canonical files, set:
 
 ```bash

@@ -11,6 +11,8 @@ CUDA_VISIBLE_DEVICES_VALUE="${CUDA_VISIBLE_DEVICES_VALUE:-0}"
 MAX_HUMANS="${MAX_HUMANS:-20}"
 NUM_VIEWS="${NUM_VIEWS:-2}"
 FORCE_PREPROCESS="${FORCE_PREPROCESS:-false}"
+DATA_ROOT="${DATA_ROOT:-/home/zhw/xyb_space}"
+export DATA_ROOT
 
 cd "${REPO_ROOT}"
 mkdir -p "${OUTPUT_DIR}"
@@ -24,6 +26,7 @@ echo "Repo        : ${REPO_ROOT}"
 echo "BEDLAM root : ${BEDLAM_ROOT}"
 echo "Boxes root  : ${PREPROCESSED_ROOT}"
 echo "Output      : ${OUTPUT_DIR}"
+echo "DATA_ROOT   : ${DATA_ROOT}"
 
 bash scripts/smoke/check_nlf_runtime_requirements.sh
 bash scripts/smoke/check_nlf_provider_interface.sh

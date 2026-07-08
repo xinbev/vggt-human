@@ -37,6 +37,10 @@ def main() -> None:
     nlf_root = Path(args.nlf_root or config.get("third_party", {}).get("nlf_root", "third_party/nlf")).expanduser()
     nlf_ckpt = Path(args.nlf_checkpoint or config.get("checkpoints", {}).get("nlf_smpl", "")).expanduser()
     smpl_model_dir = Path(args.smpl_model_dir or config.get("assets", {}).get("smpl_model_dir", "")).expanduser()
+    if "DATA_ROOT" not in os.environ:
+        inferred_data_root = infer_data_root(config)
+        if inferred_data_root:
+            os.environ["DATA_ROOT"] = inferred_data_root
     if str(nlf_root) not in sys.path:
         sys.path.insert(0, str(nlf_root))
 
@@ -107,6 +111,20 @@ def check_optional_projdir(projdir: Path) -> dict[str, bool]:
         "canonical_joints/smplx.npy",
     )
     return {name: (projdir / name).is_file() for name in files}
+
+
+def infer_data_root(config: dict[str, Any]) -> str:
+    for key in ("bedlam_root", "hf_bedlam_images_root", "threedpw_root"):
+        raw = str(config.get("datasets", {}).get(key, "") or "")
+        if not raw:
+            continue
+        path = Path(raw).expanduser()
+        parts = path.parts
+        if len(parts) >= 4 and parts[-2:] == ("bedlam", "processed_bedlam"):
+            return str(Path(*parts[:-2]))
+        if len(parts) >= 2:
+            return str(path.parent)
+    return ""
 
 
 if __name__ == "__main__":
