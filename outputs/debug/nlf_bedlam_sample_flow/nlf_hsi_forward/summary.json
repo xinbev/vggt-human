@@ -1,0 +1,48 @@
+{
+  "batches": [
+    {
+      "batch_idx": 0,
+      "image_shape": [
+        1,
+        2,
+        3,
+        384,
+        688
+      ],
+      "image_hw": [
+        384,
+        688
+      ],
+      "pred_transl_cam_shape": [
+        1,
+        2,
+        20,
+        3
+      ],
+      "pred_transl_cam_finite": true,
+      "pred_confs_shape": [
+        1,
+        2,
+        20,
+        1
+      ],
+      "nlf_image_hw": [
+        384,
+        688
+      ],
+      "hsi_refined_pred_transl_cam_shape": [
+        1,
+        2,
+        20,
+        3
+      ],
+      "hsi_refined_pred_transl_cam_finite": true,
+      "hsi_scene_scale_shape": [
+        1,
+        2,
+        1
+      ],
+      "hsi_scene_scale_finite": true
+    }
+  ]
+}

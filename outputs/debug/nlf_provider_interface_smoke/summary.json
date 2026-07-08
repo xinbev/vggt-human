@@ -1,0 +1,87 @@
+{
+  "image_hw": [
+    480,
+    544
+  ],
+  "intrinsics_cxy": [
+    [
+      272.0,
+      240.0
+    ],
+    [
+      272.0,
+      240.0
+    ]
+  ],
+  "first_box_xywh": [
+    204.0,
+    144.0,
+    136.0,
+    192.0
+  ],
+  "output_shapes": {
+    "pred_poses": [
+      1,
+      2,
+      3,
+      72
+    ],
+    "pred_pose_6d": [
+      1,
+      2,
+      3,
+      144
+    ],
+    "pred_betas": [
+      1,
+      2,
+      3,
+      10
+    ],
+    "pred_transl_cam": [
+      1,
+      2,
+      3,
+      3
+    ],
+    "pred_confs": [
+      1,
+      2,
+      3,
+      1
+    ],
+    "pred_boxes": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "nlf_valid_mask": [
+      1,
+      2,
+      3,
+      1
+    ],
+    "pred_cam": [
+      1,
+      2,
+      3,
+      3
+    ],
+    "base_pred_transl_cam": [
+      1,
+      2,
+      3,
+      3
+    ],
+    "nlf_intrinsics": [
+      1,
+      2,
+      3,
+      3
+    ],
+    "nlf_image_hw": [
+      2
+    ]
+  }
+}

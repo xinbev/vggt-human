@@ -1,0 +1,30 @@
+{
+  "path_config": "/home/zhw/lab_users/xyb/home/projects/vggt-human/configs/path.yaml",
+  "nlf_root": "third_party/nlf",
+  "nlf_checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/third_party/weights/nlf/nlf_l_multi_0.3.2.torchscript",
+  "smpl_model_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/body_models/smpl",
+  "imports": {
+    "torch": "2.10.0+cu128",
+    "torchvision": "0.25.0+cu128",
+    "smplx": "ok",
+    "smplfitter.pt": "ok",
+    "posepile.paths": "ok",
+    "simplepyutils": "ok"
+  },
+  "assets": {
+    "torchvision_nms_registered": true,
+    "smplx_vertices": 6890,
+    "posepile_DATA_ROOT": "/home/zhw/xyb_space",
+    "nlf_PROJDIR": "/home/zhw/xyb_space/projects/localizerfields",
+    "projdir_required_files": {
+      "joint_info_866.pkl": false,
+      "canonical_loc_symmetric_init_866.npy": false,
+      "canonical_verts/smpl.npy": false,
+      "canonical_joints/smpl.npy": false,
+      "canonical_verts/smplx.npy": false,
+      "canonical_joints/smplx.npy": false
+    },
+    "nlf_has_estimate_smpl_batched": true,
+    "nlf_has_detect_smpl_batched": true
+  }
+}

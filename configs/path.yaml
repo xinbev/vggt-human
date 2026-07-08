@@ -5,7 +5,7 @@ checkpoints:
   yolo8x: "/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/yolov8x.torchscript"
   # Required for model.smpl_provider=nlf.
   # Expected: TorchScript NLF multiperson model exposing detect_smpl_batched/estimate_smpl_batched.
-  nlf_smpl: "/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/nlf/nlf_smpl.pt"
+  nlf_smpl: "/home/zhw/lab_users/xyb/home/projects/vggt-human/third_party/weights/nlf/nlf_l_multi_0.3.2.torchscript"
 
   # Optional future use; current training script does not require this checkpoint.
   sat_hmr_smpl: "/home/zhw/xyb_space/SAT-HMR/weights/sat_hmr/sat_644.pth"

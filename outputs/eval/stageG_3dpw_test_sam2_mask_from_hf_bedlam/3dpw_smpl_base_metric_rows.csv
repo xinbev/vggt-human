@@ -1,0 +1,2 @@
+dataset_index,frame_offset,query_idx,gt_idx,person_id,mpjpe_mm,pa_mpjpe_mm,pve_mm,transl_l2_mm,transl_xy_l2_mm,transl_z_abs_mm,cam_mpjpe_no_align_mm,cam_pve_no_align_mm,oracle_pred_pose_gt_transl_mpjpe_mm,oracle_pred_pose_gt_transl_pve_mm,oracle_gt_pose_pred_transl_mpjpe_mm,oracle_gt_pose_pred_transl_pve_mm
+14198,0,0,0,0,87.13736724853516,80.58138275146484,92.02369689941406,783.435791015625,167.41770935058594,765.3384399414062,796.4820556640625,788.05029296875,88.80329132080078,94.51390075683594,783.435791015625,783.435791015625

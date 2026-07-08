@@ -24,3 +24,7 @@ outputs/vis/hsi_bad_frame_after_translation_ray_refine_sequence_ply
 *.mp4
 outputs/vis/bedlam_boxes
 outputs/vis/video_person_tracks
+outputs/preprocess
+outputs/vis/full_pipeline_frame_folder_ply
+outputs/vis/vggt_omega_folder_depth_ply
+third_party/weights/nlf/nlf_l_multi_0.3.2.torchscript
