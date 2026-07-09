@@ -1,6 +1,6 @@
 experiment:
-  name: smpl_hsi_nlf_provider_stage1
-  output_dir: outputs/train/smpl_hsi_nlf_provider_stage1
+  name: smpl_hsi_nlf_provider_stage1_roi_depth
+  output_dir: outputs/train/smpl_hsi_nlf_provider_stage1_roi_depth
   seed: 42
 
 data:
@@ -63,6 +63,18 @@ checkpoint:
   strict: false
   resume_strict: false
   resume_optimizer: false
+  save_scope: hsi
+  save_prefixes:
+    - hsi_refinement_head.
+  save_optimizer: false
+  save_epoch_checkpoint: false
+  save_latest: true
+  save_final: false
+  save_top_k: 3
+  save_top_k_from_train: true
+  topk_create_stable_copies: false
+  monitor: loss_total
+  monitor_mode: min
 
 optim:
   batch_size: 1
@@ -109,11 +121,36 @@ loss:
   hsi_betas_weight: 0.8
   hsi_transl_cam_weight: 3.0
   hsi_joints3d_weight: 16.0
+  hsi_vertices_weight: 4.0
   hsi_projected_joints2d_weight: 0.35
-  hsi_depth_teacher_weight: 0.20
-  hsi_anchor_depth_weight: 0.10
-  hsi_contact_weight: 0.05
+  hsi_depth_teacher_weight: 0.15
+  hsi_depth_teacher_max_m: 30.0
+  hsi_depth_teacher_error_clip_m: 2.0
+  hsi_depth_teacher_use_human_roi: true
+  hsi_depth_teacher_roi_expand: 0.85
+  hsi_depth_teacher_min_valid_pixels: 2048
+  hsi_anchor_depth_weight: 0.05
+  hsi_anchor_scene_xyz_weight: 0.0
+  hsi_delta_reg_weight: 0.50
+  hsi_no_worse_weight: 1.0
+  hsi_no_worse_margin_m: 0.02
+  hsi_gate_reg_weight: 0.01
+  hsi_contact_weight: 0.0
   hsi_contact_threshold: 0.08
+  hsi_foot_contact_weight: 0.0
+  hsi_foot_sole_contact_weight: 0.0
+  hsi_support_plane_contact_weight: 0.0
+  hsi_pose_velocity_weight: 0.0
+  hsi_betas_velocity_weight: 0.0
+  hsi_transl_velocity_weight: 0.0
+  hsi_joints_velocity_weight: 0.0
+  hsi_joints_acceleration_weight: 0.0
+  hsi_temporal_no_worse_weight: 0.0
+  hsi_foot_sliding_weight: 0.0
+  hsi_scene_scale_temporal_weight: 0.0
+  hsi_scene_scale_sequence_weight: 0.0
+  hsi_scene_bias_temporal_weight: 0.0
+  hsi_scene_bias_sequence_weight: 0.0
   id_weight: 0.0
   id_temperature: 0.07
 

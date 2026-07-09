@@ -89,7 +89,11 @@ nlf_valid_mask
 
 Training defaults to sidecar boxes and stable slots. Detector fallback is kept for demo use through `model.nlf_use_detector=true`.
 
-## Training Stages
+## HSI Training Stages After NLF
+
+The NLF base projection has already been verified on the BEDLAM sample path. The next training path is intentionally staged because full-scene depth, human translation, contact, and tracking have different failure modes.
+
+Do not use full-image depth loss as the main objective. Sky, windows, far background, and invalid long-range depth can dominate the loss and push `hsi_scene_scale` toward a value that improves the whole image while hurting human-scene alignment. HSI depth supervision should first use human or foreground ROI masks and a maximum valid depth cutoff.
 
 Stage 0: interface and projection validation.
 
@@ -97,22 +101,97 @@ Stage 0: interface and projection validation.
 - Run a small batch and export overlays on processed images.
 - Confirm K, image plane, translation units, and slot padding.
 
-Stage 1: frozen NLF plus HSI geometry correction.
+Stage 1: ROI depth scale.
 
 - Freeze VGGT backbone, camera head, depth head, and NLF.
-- Train only HSI residual fields and scene affine depth correction.
-- Main target: depth scale, depth bias, and human-environment geometric fusion.
+- Train only HSI.
+- Use human ROI depth teacher:
+  - `loss.hsi_depth_teacher_use_human_roi=true`
+  - `loss.hsi_depth_teacher_max_m=30.0`
+  - `loss.hsi_depth_teacher_error_clip_m=2.0`
+  - `loss.hsi_depth_teacher_roi_expand=0.85`
+- Keep foot/support-plane contact off.
+- Main target: make depth scale and bias correct near humans without being dragged by sky or far background.
 
-Stage 2: temporal and ID tracking.
+Success criteria:
 
-- Enable `smpl_track_ids`, `external_track_ids`, or track sidecars.
-- Train or validate HSI temporal branch and track-aware refinement.
-- Keep this after Stage 1 so ID losses do not destabilize early geometry.
+- Human ROI depth L1 improves.
+- Overall near-depth improves without relying on far background.
+- SMPL MPJPE, PVE, and translation do not regress.
+- `hsi_scene_scale` stays finite and does not jump wildly between frames.
 
-Stage 3: optional calibration.
+Stage 2: anchor plus human translation residual.
+
+- Resume from Stage 1.
+- Keep ROI depth teacher, but reduce its weight.
+- Increase human translation and anchor depth weights.
+- Enable a small local scene XYZ anchor weight.
+- Keep contact losses mostly off.
+- Main target: allow `hsi_refined_pred_transl_cam` to move the person a little when pure scene scale cannot align the SMPL body with the local depth.
+
+Success criteria:
+
+- `metric_hsi_joint_error_delta < 0` on average.
+- `SMPL HSI transl L2` improves or at least does not regress.
+- Human ROI depth keeps improving.
+- Projection stays inside the person box.
+- HSI delta regularization remains small enough that the model is not solving alignment by large arbitrary human motion.
+
+Stage 3: contact and support-plane detail.
+
+- Resume from Stage 2.
+- Use a smaller ROI depth weight.
+- Turn on sole and local support-plane contact losses.
+- Keep strong no-worse and delta regularization.
+- Main target: improve foot float/penetration only after coarse scale and human translation are stable.
+
+Success criteria:
+
+- Sole plane float/penetration improves.
+- Foot penetration does not increase.
+- MPJPE/PVE/translation do not regress.
+- Visual overlays show feet aligning with a local support surface, not being pulled to an unrelated plane.
+
+Stage 4: temporal and tracking.
+
+- Resume from Stage 3.
+- Increase `NUM_VIEWS` to 4 first; move to 8 only after memory use is stable.
+- Use BEDLAM GT track IDs first:
+  - `model.smpl_track_assignment_mode=gt`
+  - `model.hsi_temporal_momentum_use_track_ids=true`
+- Use external tracker priors only after geometry is stable and tracking sidecars have been evaluated.
+- Main target: reduce frame-to-frame jitter for translation, joints, scene scale, and contact while avoiding ID-memory pollution.
+
+Success criteria:
+
+- Temporal velocity and acceleration losses decrease.
+- `hsi_scene_scale` and `hsi_scene_depth_bias` become smoother.
+- Same-person refined SMPL is stable across frames.
+- Short tracks, low-confidence tracks, and long gaps are not allowed to corrupt long-term HSI memory.
+
+Optional calibration:
 
 - Add confidence calibration or a light adapter only if NLF domain gap is large.
 - Do not train NLF itself by default.
+
+## Checkpoint Policy
+
+For NLF-HSI training, checkpoints are HSI-only by default:
+
+```yaml
+checkpoint:
+  save_scope: hsi
+  save_prefixes:
+    - hsi_refinement_head.
+  save_optimizer: false
+  save_epoch_checkpoint: false
+  save_latest: true
+  save_top_k: 3
+```
+
+This prevents frozen VGGT and external NLF weights from being serialized repeatedly. Loading remains compatible because evaluation scripts first load the VGGT baseline and then load the HSI-only checkpoint with `strict=False`.
+
+If `val_split` is empty, top-k checkpoints are ranked by epoch-averaged training metrics. If validation exists, top-k uses validation metrics.
 
 ## Configs And Scripts
 
@@ -130,6 +209,11 @@ Smoke:
 Training:
 
 - `scripts/train/train_smpl_hsi_nlf_provider.sh`
+- `scripts/train/train_smpl_hsi_nlf_four_stage.sh`
+- `scripts/train/train_smpl_hsi_nlf_stage1_roi_depth.sh`
+- `scripts/train/train_smpl_hsi_nlf_stage2_anchor_transl.sh`
+- `scripts/train/train_smpl_hsi_nlf_stage3_contact_detail.sh`
+- `scripts/train/train_smpl_hsi_nlf_stage4_temporal_tracks.sh`
 
 Visualization:
 
@@ -141,6 +225,11 @@ Server paths:
 /home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/smoke/check_nlf_provider_interface.sh
 /home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/smoke/check_nlf_hsi_forward.sh
 /home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/train/train_smpl_hsi_nlf_provider.sh
+/home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/train/train_smpl_hsi_nlf_four_stage.sh
+/home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/train/train_smpl_hsi_nlf_stage1_roi_depth.sh
+/home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/train/train_smpl_hsi_nlf_stage2_anchor_transl.sh
+/home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/train/train_smpl_hsi_nlf_stage3_contact_detail.sh
+/home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/train/train_smpl_hsi_nlf_stage4_temporal_tracks.sh
 ```
 
 ## Pre-Training Checklist
@@ -172,10 +261,32 @@ Expected smoke result:
 - `nlf_image_hw` equals the actual processed tensor `[H, W]`.
 - HSI outputs `hsi_scene_scale` and refined SMPL fields.
 
-Then start Stage 1:
+Then start the full four-stage training:
 
 ```bash
-bash scripts/train/train_smpl_hsi_nlf_provider.sh
+DATA_ROOT=/home/zhw/xyb_space \
+BEDLAM_ROOT=/home/zhw/xyb_space/bedlam/processed_bedlam \
+CUDA_VISIBLE_DEVICES_VALUE=6 \
+bash scripts/train/train_smpl_hsi_nlf_four_stage.sh
+```
+
+For a quick pipeline smoke, reduce epochs:
+
+```bash
+DATA_ROOT=/home/zhw/xyb_space \
+BEDLAM_ROOT=/home/zhw/xyb_space/bedlam/processed_bedlam \
+CUDA_VISIBLE_DEVICES_VALUE=6 \
+STAGE1_EPOCHS=1 STAGE2_EPOCHS=1 STAGE3_EPOCHS=1 STAGE4_EPOCHS=1 \
+bash scripts/train/train_smpl_hsi_nlf_four_stage.sh
+```
+
+Single-stage scripts are still available for debugging or resuming a specific phase:
+
+```bash
+bash scripts/train/train_smpl_hsi_nlf_stage1_roi_depth.sh
+bash scripts/train/train_smpl_hsi_nlf_stage2_anchor_transl.sh
+bash scripts/train/train_smpl_hsi_nlf_stage3_contact_detail.sh
+bash scripts/train/train_smpl_hsi_nlf_stage4_temporal_tracks.sh
 ```
 
 Outputs are written to:
@@ -183,7 +294,10 @@ Outputs are written to:
 ```text
 outputs/debug/nlf_provider_interface_smoke
 outputs/debug/nlf_hsi_forward_smoke
-outputs/train/smpl_hsi_nlf_provider_stage1
+outputs/train/smpl_hsi_nlf/stage1_roi_depth
+outputs/train/smpl_hsi_nlf/stage2_anchor_transl
+outputs/train/smpl_hsi_nlf/stage3_contact_detail
+outputs/train/smpl_hsi_nlf/stage4_temporal_tracks
 outputs/vis/nlf_hsi_depth_smpl_diagnostics
 ```
 

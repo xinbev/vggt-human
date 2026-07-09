@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="${REPO_ROOT:-/home/zhw/lab_users/xyb/home/projects/vggt-human}"
+export REPO_ROOT
+
+STAGE1_DIR="${STAGE1_DIR:-${REPO_ROOT}/outputs/train/smpl_hsi_nlf/stage1_roi_depth}"
+export RESUME_CKPT="${RESUME_CKPT:-${STAGE1_DIR}/checkpoint_latest.pt}"
+export OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/outputs/train/smpl_hsi_nlf/stage2_anchor_transl}"
+export RESET_EPOCH="${RESET_EPOCH:-true}"
+export NUM_VIEWS="${NUM_VIEWS:-2}"
+export EPOCHS="${EPOCHS:-10}"
+export LR="${LR:-3e-6}"
+export BATCH_SIZE="${BATCH_SIZE:-4}"
+export NUM_WORKERS="${NUM_WORKERS:-8}"
+
+export DEPTH_TEACHER_WEIGHT="${DEPTH_TEACHER_WEIGHT:-0.08}"
+export DEPTH_USE_HUMAN_ROI="${DEPTH_USE_HUMAN_ROI:-true}"
+export DEPTH_ROI_EXPAND="${DEPTH_ROI_EXPAND:-0.65}"
+export DEPTH_MAX_M="${DEPTH_MAX_M:-25.0}"
+export DEPTH_ERROR_CLIP_M="${DEPTH_ERROR_CLIP_M:-1.5}"
+export ANCHOR_DEPTH_WEIGHT="${ANCHOR_DEPTH_WEIGHT:-0.12}"
+export ANCHOR_SCENE_XYZ_WEIGHT="${ANCHOR_SCENE_XYZ_WEIGHT:-0.15}"
+
+export HSI_POSE_WEIGHT="${HSI_POSE_WEIGHT:-3.0}"
+export HSI_BETAS_WEIGHT="${HSI_BETAS_WEIGHT:-0.4}"
+export HSI_TRANSL_WEIGHT="${HSI_TRANSL_WEIGHT:-5.0}"
+export HSI_JOINTS3D_WEIGHT="${HSI_JOINTS3D_WEIGHT:-12.0}"
+export HSI_VERTICES_WEIGHT="${HSI_VERTICES_WEIGHT:-4.0}"
+export HSI_PROJECTED_J2D_WEIGHT="${HSI_PROJECTED_J2D_WEIGHT:-0.20}"
+export HSI_DELTA_REG_WEIGHT="${HSI_DELTA_REG_WEIGHT:-0.75}"
+export HSI_NO_WORSE_WEIGHT="${HSI_NO_WORSE_WEIGHT:-5.0}"
+export HSI_NO_WORSE_MARGIN_M="${HSI_NO_WORSE_MARGIN_M:-0.015}"
+
+export HSI_CONTACT_WEIGHT="${HSI_CONTACT_WEIGHT:-0.03}"
+export HSI_FOOT_CONTACT_WEIGHT="${HSI_FOOT_CONTACT_WEIGHT:-0.0}"
+export HSI_FOOT_SOLE_CONTACT_WEIGHT="${HSI_FOOT_SOLE_CONTACT_WEIGHT:-0.0}"
+export HSI_SUPPORT_PLANE_CONTACT_WEIGHT="${HSI_SUPPORT_PLANE_CONTACT_WEIGHT:-0.0}"
+
+export SAVE_SCOPE="${SAVE_SCOPE:-hsi}"
+export SAVE_TOP_K="${SAVE_TOP_K:-3}"
+export SAVE_EPOCH_CHECKPOINT="${SAVE_EPOCH_CHECKPOINT:-false}"
+export SAVE_OPTIMIZER="${SAVE_OPTIMIZER:-false}"
+export MONITOR="${MONITOR:-loss_total}"
+
+[[ -f "${RESUME_CKPT}" ]] || { echo "[ERROR] Missing Stage1 checkpoint: ${RESUME_CKPT}" >&2; exit 1; }
+bash "${REPO_ROOT}/scripts/train/train_smpl_hsi_nlf_provider.sh"

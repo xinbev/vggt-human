@@ -109,7 +109,7 @@ def main() -> None:
         flush=True,
     )
     for epoch in range(start_epoch, epochs):
-        global_step = train_one_epoch(
+        global_step, train_losses = train_one_epoch(
             model=model,
             criterion=criterion,
             optimizer=optimizer,
@@ -124,9 +124,33 @@ def main() -> None:
             progress_done_offset=(epoch - start_epoch) * len(train_loader),
             total_epochs=epochs,
         )
+        monitor_losses = train_losses
         if val_loader is not None and (epoch + 1) % int(config["optim"].get("val_interval", 1)) == 0:
             val_losses = validate(model, criterion, val_loader, device, epoch, config, teacher_model=teacher_model)
-            maybe_save_topk_checkpoint(model, optimizer, epoch + 1, global_step, config, output_dir, topk_state, val_losses)
+            monitor_losses = val_losses
+            maybe_save_topk_checkpoint(
+                model,
+                optimizer,
+                epoch + 1,
+                global_step,
+                config,
+                output_dir,
+                topk_state,
+                monitor_losses,
+                source="val",
+            )
+        elif bool(config.get("checkpoint", {}).get("save_top_k_from_train", True)):
+            maybe_save_topk_checkpoint(
+                model,
+                optimizer,
+                epoch + 1,
+                global_step,
+                config,
+                output_dir,
+                topk_state,
+                monitor_losses,
+                source="train",
+            )
         if should_save_checkpoint(config, epoch + 1, epochs):
             checkpoint_cfg = config.get("checkpoint", {})
             if bool(checkpoint_cfg.get("save_epoch_checkpoint", True)):
@@ -749,12 +773,14 @@ def train_one_epoch(
     progress_total_steps: int | None = None,
     progress_done_offset: int = 0,
     total_epochs: int | None = None,
-) -> int:
+) -> tuple[int, dict[str, float]]:
     model.train()
     apply_freeze_policy(model, config)
     log_interval = int(config["optim"].get("log_interval", 10))
     grad_clip_norm = float(config["optim"].get("grad_clip_norm", 0.0))
     log_style = str(config.get("optim", {}).get("log_style", "full")).lower()
+    totals: dict[str, float] = {}
+    count = 0
     for step, batch in enumerate(loader):
         batch = move_to_device(batch, device)
         optimizer.zero_grad(set_to_none=True)
@@ -770,6 +796,9 @@ def train_one_epoch(
             torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip_norm)
         optimizer.step()
 
+        for key, value in scalarize_losses(losses).items():
+            totals[key] = totals.get(key, 0.0) + float(value)
+        count += 1
         global_step += 1
         if global_step % log_interval == 0:
             if log_style in {"progress", "compact"}:
@@ -794,7 +823,10 @@ def train_one_epoch(
                 print(format_log("train", epoch, step, len(loader), global_step, losses), flush=True)
     if log_style == "progress":
         print("", flush=True)
-    return global_step
+    averaged = {key: value / max(count, 1) for key, value in totals.items()}
+    if averaged:
+        print(format_epoch_summary("train-epoch", epoch, averaged, config), flush=True)
+    return global_step, averaged
 
 
 @torch.no_grad()
@@ -948,6 +980,20 @@ def format_log(prefix: str, epoch: int, step: int, steps: int, global_step: int,
         if math.isfinite(scalar):
             loss_items.append(f"{key}={scalar:.6f}")
     return f"[{prefix}] epoch={epoch + 1} step={step + 1}/{steps} global_step={global_step} " + " ".join(loss_items)
+
+
+def format_epoch_summary(prefix: str, epoch: int, losses: dict[str, float], config: dict[str, Any]) -> str:
+    keys = get_progress_log_keys(config)
+    max_items = int(config.get("optim", {}).get("progress_max_loss_items", 8))
+    items: list[str] = []
+    for key in keys:
+        if key in losses and math.isfinite(float(losses[key])):
+            items.append(f"{compact_loss_name(key)}={float(losses[key]):.6g}")
+        if len(items) >= max_items:
+            break
+    if "loss_total" not in keys and "loss_total" in losses and len(items) < max_items:
+        items.insert(0, f"total={float(losses['loss_total']):.6g}")
+    return f"[{prefix}] epoch={epoch + 1} " + " ".join(items)
 
 
 def format_progress_log(
@@ -1110,23 +1156,72 @@ def save_checkpoint(
     path: Path,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    torch.save(
-        {
-            "model": model.state_dict(),
-            "optimizer": optimizer.state_dict(),
-            "epoch": epoch,
-            "global_step": global_step,
-            "config": config,
+    ckpt_cfg = config.get("checkpoint", {})
+    state_dict = build_checkpoint_state_dict(model, config)
+    payload: dict[str, Any] = {
+        "model": state_dict,
+        "epoch": epoch,
+        "global_step": global_step,
+        "config": config,
+        "checkpoint_format": {
+            "save_scope": str(ckpt_cfg.get("save_scope", "full")),
+            "save_prefixes": normalize_string_list(ckpt_cfg.get("save_prefixes", [])),
+            "num_model_tensors": len(state_dict),
         },
-        path,
-    )
-    print(f"[ckpt] saved: {path}")
+    }
+    if bool(ckpt_cfg.get("save_optimizer", False)):
+        payload["optimizer"] = optimizer.state_dict()
+    torch.save(payload, path)
+    print(f"[ckpt] saved: {path} tensors={len(state_dict)} scope={payload['checkpoint_format']['save_scope']}")
+
+
+def build_checkpoint_state_dict(model: torch.nn.Module, config: dict[str, Any]) -> dict[str, torch.Tensor]:
+    ckpt_cfg = config.get("checkpoint", {})
+    scope = str(ckpt_cfg.get("save_scope", "full") or "full").lower()
+    full_state = model.state_dict()
+    if scope == "full":
+        return full_state
+    if scope == "hsi":
+        prefixes = normalize_string_list(ckpt_cfg.get("save_prefixes", ["hsi_refinement_head."]))
+        if not prefixes:
+            prefixes = ["hsi_refinement_head."]
+        return {
+            key: value
+            for key, value in full_state.items()
+            if any(key.startswith(prefix) for prefix in prefixes)
+        }
+    if scope == "trainable":
+        trainable_names = {name for name, param in model.named_parameters() if param.requires_grad}
+        return {key: value for key, value in full_state.items() if key in trainable_names}
+    raise ValueError(f"Unsupported checkpoint.save_scope: {scope!r}. Expected full, hsi, or trainable.")
 
 
 def init_topk_state(output_dir: Path, config: dict[str, Any]) -> list[dict[str, Any]]:
-    _ = output_dir
-    _ = config
-    return []
+    if int(config.get("checkpoint", {}).get("save_top_k", 0) or 0) <= 0:
+        return []
+    index_path = output_dir / "checkpoint_topk_index.json"
+    if not index_path.exists():
+        return []
+    try:
+        data = json.loads(index_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return []
+    entries = data.get("entries", []) if isinstance(data, dict) else []
+    state: list[dict[str, Any]] = []
+    for item in entries:
+        if not isinstance(item, dict):
+            continue
+        path = Path(str(item.get("path", "")))
+        if path.exists():
+            state.append(
+                {
+                    "metric": float(item.get("metric", math.inf)),
+                    "epoch": int(item.get("epoch", 0)),
+                    "path": path,
+                    "source": str(item.get("source", "unknown")),
+                }
+            )
+    return state
 
 
 def maybe_save_topk_checkpoint(
@@ -1137,7 +1232,8 @@ def maybe_save_topk_checkpoint(
     config: dict[str, Any],
     output_dir: Path,
     topk_state: list[dict[str, Any]],
-    val_losses: dict[str, float],
+    losses: dict[str, float],
+    source: str,
 ) -> None:
     ckpt_cfg = config.get("checkpoint", {})
     top_k = int(ckpt_cfg.get("save_top_k", 0) or 0)
@@ -1145,26 +1241,52 @@ def maybe_save_topk_checkpoint(
         return
     monitor = str(ckpt_cfg.get("monitor", "loss_total"))
     mode = str(ckpt_cfg.get("monitor_mode", "min")).lower()
-    if monitor not in val_losses:
-        print(f"[ckpt] top-k skipped: monitor={monitor!r} not found in validation losses")
+    if monitor not in losses:
+        print(f"[ckpt] top-k skipped: monitor={monitor!r} not found in {source} losses")
         return
-    metric = float(val_losses[monitor])
+    metric = float(losses[monitor])
     better = (lambda a, b: a < b) if mode == "min" else (lambda a, b: a > b)
     if len(topk_state) >= top_k and not better(metric, float(topk_state[-1]["metric"])):
         return
-    raw_path = output_dir / f"checkpoint_top_epoch_{epoch:04d}_{monitor}_{metric:.6f}.pt"
+    safe_monitor = monitor.replace("/", "_").replace("\\", "_")
+    raw_path = output_dir / f"checkpoint_top_{source}_epoch_{epoch:04d}_{safe_monitor}_{metric:.6f}.pt"
     save_checkpoint(model, optimizer, epoch, global_step, config, raw_path)
-    topk_state.append({"metric": metric, "epoch": int(epoch), "path": raw_path})
+    topk_state.append({"metric": metric, "epoch": int(epoch), "path": raw_path, "source": source})
     topk_state.sort(key=lambda item: float(item["metric"]), reverse=(mode == "max"))
     while len(topk_state) > top_k:
         removed = topk_state.pop()
         path = Path(removed["path"])
         if path.exists():
             path.unlink()
+    save_topk_index(output_dir, monitor, mode, topk_state)
+    if not bool(ckpt_cfg.get("topk_create_stable_copies", False)):
+        for rank, item in enumerate(topk_state, start=1):
+            print(
+                f"[ckpt] top{rank:02d} {source} {monitor}={float(item['metric']):.6f}: {item['path']}"
+            )
+        return
     for rank, item in enumerate(topk_state, start=1):
         stable_path = output_dir / f"checkpoint_top{rank:02d}.pt"
         shutil.copyfile(item["path"], stable_path)
         print(f"[ckpt] top{rank:02d} {monitor}={float(item['metric']):.6f}: {stable_path}")
+
+
+def save_topk_index(output_dir: Path, monitor: str, mode: str, topk_state: list[dict[str, Any]]) -> None:
+    payload = {
+        "monitor": monitor,
+        "monitor_mode": mode,
+        "entries": [
+            {
+                "rank": rank,
+                "metric": float(item["metric"]),
+                "epoch": int(item["epoch"]),
+                "source": str(item.get("source", "unknown")),
+                "path": str(item["path"]),
+            }
+            for rank, item in enumerate(topk_state, start=1)
+        ],
+    }
+    save_json(payload, output_dir / "checkpoint_topk_index.json")
 
 
 def should_save_checkpoint(config: dict[str, Any], epoch: int, total_epochs: int) -> bool:
