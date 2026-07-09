@@ -1,6 +1,0 @@
-{
-  "image": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000000/rgb/seq_000000_0000.png",
-  "checkpoint": "outputs/train/smpl_gt_box_prior_20q/checkpoint_latest.pt",
-  "use_gt_box_prior": true,
-  "predictions": []
-}

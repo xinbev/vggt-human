@@ -1,0 +1,89 @@
+{
+  "dataset_root": "/home/zhw/xyb_space/bedlam/processed_bedlam",
+  "splits": {
+    "Training": {
+      "total_frames": 400,
+      "total_persons": 2606,
+      "persons_per_frame": {
+        "2": 14,
+        "3": 86,
+        "4": 13,
+        "5": 7,
+        "6": 40,
+        "7": 101,
+        "8": 19,
+        "9": 66,
+        "10": 54
+      },
+      "key_counts": {
+        "smplx_root_pose": 2606,
+        "smplx_body_pose": 2606,
+        "smplx_jaw_pose": 2606,
+        "smplx_leye_pose": 2606,
+        "smplx_reye_pose": 2606,
+        "smplx_left_hand_pose": 2606,
+        "smplx_right_hand_pose": 2606,
+        "smplx_shape": 2606,
+        "smplx_gender": 2606,
+        "smplx_transl": 2606
+      },
+      "key_shape_examples": {
+        "smplx_root_pose": {
+          "ndarray(1, 3):float32": 2606
+        },
+        "smplx_body_pose": {
+          "ndarray(21, 3):float32": 2606
+        },
+        "smplx_jaw_pose": {
+          "ndarray(1, 3):float32": 2606
+        },
+        "smplx_leye_pose": {
+          "ndarray(1, 3):float32": 2606
+        },
+        "smplx_reye_pose": {
+          "ndarray(1, 3):float32": 2606
+        },
+        "smplx_left_hand_pose": {
+          "ndarray(15, 3):float32": 2606
+        },
+        "smplx_right_hand_pose": {
+          "ndarray(15, 3):float32": 2606
+        },
+        "smplx_shape": {
+          "ndarray(11,):float32": 2606
+        },
+        "smplx_gender": {
+          "str": 2606
+        },
+        "smplx_transl": {
+          "ndarray(3,):float64": 2606
+        }
+      },
+      "bbox_field_counts": {},
+      "j2d_field_counts": {},
+      "bbox_source_counts": {
+        "missing": 2606
+      },
+      "visible_joint_hist": {
+        "0": 2606
+      },
+      "bbox_area_bins": {
+        "[0,10)": 2606
+      },
+      "person_id_counts": {
+        "valid": 0,
+        "missing": 2606
+      },
+      "default_filter_counts": {
+        "missing_box": 2606
+      },
+      "strict_require_j2d_filter_counts": {
+        "missing_box": 2606
+      }
+    }
+  },
+  "thresholds": {
+    "min_visible_joints": 4,
+    "min_box_area": 100.0
+  }
+}

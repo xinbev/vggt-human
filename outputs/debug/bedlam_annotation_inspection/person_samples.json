@@ -1,0 +1,4002 @@
+[
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0000",
+    "person_index": 0,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0000",
+    "person_index": 1,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0000",
+    "person_index": 2,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0000",
+    "person_index": 3,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0000",
+    "person_index": 4,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0000",
+    "person_index": 5,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0000",
+    "person_index": 6,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0005",
+    "person_index": 0,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0005",
+    "person_index": 1,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0005",
+    "person_index": 2,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0005",
+    "person_index": 3,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0005",
+    "person_index": 4,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0005",
+    "person_index": 5,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0005",
+    "person_index": 6,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0010",
+    "person_index": 0,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0010",
+    "person_index": 1,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0010",
+    "person_index": 2,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0010",
+    "person_index": 3,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0010",
+    "person_index": 4,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0010",
+    "person_index": 5,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0010",
+    "person_index": 6,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0015",
+    "person_index": 0,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0015",
+    "person_index": 1,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0015",
+    "person_index": 2,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0015",
+    "person_index": 3,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0015",
+    "person_index": 4,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0015",
+    "person_index": 5,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0015",
+    "person_index": 6,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0020",
+    "person_index": 0,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0020",
+    "person_index": 1,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0020",
+    "person_index": 2,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0020",
+    "person_index": 3,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0020",
+    "person_index": 4,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0020",
+    "person_index": 5,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0020",
+    "person_index": 6,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0020",
+    "person_index": 7,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0025",
+    "person_index": 0,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0025",
+    "person_index": 1,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0025",
+    "person_index": 2,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0025",
+    "person_index": 3,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0025",
+    "person_index": 4,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0025",
+    "person_index": 5,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0025",
+    "person_index": 6,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0030",
+    "person_index": 0,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0030",
+    "person_index": 1,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0030",
+    "person_index": 2,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0030",
+    "person_index": 3,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0030",
+    "person_index": 4,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0030",
+    "person_index": 5,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0030",
+    "person_index": 6,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0035",
+    "person_index": 0,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0035",
+    "person_index": 1,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0035",
+    "person_index": 2,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0035",
+    "person_index": 3,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0035",
+    "person_index": 4,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0035",
+    "person_index": 5,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0035",
+    "person_index": 6,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0040",
+    "person_index": 0,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0040",
+    "person_index": 1,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0040",
+    "person_index": 2,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0040",
+    "person_index": 3,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0040",
+    "person_index": 4,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0040",
+    "person_index": 5,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0040",
+    "person_index": 6,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0045",
+    "person_index": 0,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0045",
+    "person_index": 1,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0045",
+    "person_index": 2,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0045",
+    "person_index": 3,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0045",
+    "person_index": 4,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0045",
+    "person_index": 5,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0045",
+    "person_index": 6,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0050",
+    "person_index": 0,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0050",
+    "person_index": 1,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0050",
+    "person_index": 2,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0050",
+    "person_index": 3,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0050",
+    "person_index": 4,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0050",
+    "person_index": 5,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0050",
+    "person_index": 6,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0055",
+    "person_index": 0,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  },
+  {
+    "split": "Training",
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+    "frame": "seq_000000_0055",
+    "person_index": 1,
+    "person_id": -1,
+    "person_id_valid": 0,
+    "num_keys": 10,
+    "keys": "smplx_body_pose,smplx_gender,smplx_jaw_pose,smplx_left_hand_pose,smplx_leye_pose,smplx_reye_pose,smplx_right_hand_pose,smplx_root_pose,smplx_shape,smplx_transl",
+    "bbox_valid": 0,
+    "bbox_source": "missing",
+    "bbox_area_pixels": 0.0,
+    "has_j2d_visibility": 0,
+    "j2d_source": "missing",
+    "visible_joints": 0,
+    "total_joints": 0,
+    "filter_reason_default": "missing_box",
+    "filter_reason_require_j2d": "missing_box",
+    "bbox_cxcywh_norm": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "bbox_xyxy_pixels": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "visibility": {
+      "has_j2d_visibility": false,
+      "j2d_source": "missing",
+      "visible_joints": 0,
+      "total_joints": 0,
+      "bbox_area_pixels": 0.0
+    },
+    "field_summaries": {
+      "smplx_body_pose": "ndarray(21, 3):float32",
+      "smplx_gender": "str",
+      "smplx_jaw_pose": "ndarray(1, 3):float32",
+      "smplx_left_hand_pose": "ndarray(15, 3):float32",
+      "smplx_leye_pose": "ndarray(1, 3):float32",
+      "smplx_reye_pose": "ndarray(1, 3):float32",
+      "smplx_right_hand_pose": "ndarray(15, 3):float32",
+      "smplx_root_pose": "ndarray(1, 3):float32",
+      "smplx_shape": "ndarray(11,):float32",
+      "smplx_transl": "ndarray(3,):float64"
+    }
+  }
+]
