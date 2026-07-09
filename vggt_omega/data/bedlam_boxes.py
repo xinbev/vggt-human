@@ -134,6 +134,50 @@ def extract_best_box(person: dict[str, Any], image_hw: tuple[int, int]) -> dict[
     return out
 
 
+def extract_visibility_stats(
+    person: dict[str, Any],
+    image_hw: tuple[int, int],
+    bbox_xyxy_pixels: Any | None = None,
+) -> dict[str, Any]:
+    """Return lightweight visible-person diagnostics for BEDLAM sidecars."""
+    j2ds = None
+    j2d_source = "missing"
+    for key in J2D_KEYS:
+        if key not in person:
+            continue
+        j2ds = _as_j2d_tensor(person[key])
+        if j2ds is not None:
+            j2d_source = key
+            break
+
+    visible_joints = 0
+    total_joints = 0
+    if j2ds is not None:
+        visible = _j2d_visibility(j2ds, image_hw)
+        visible_joints = int(visible.sum().item())
+        total_joints = int(visible.numel())
+
+    bbox_area = 0.0
+    if bbox_xyxy_pixels is not None:
+        try:
+            xyxy = torch.as_tensor(bbox_xyxy_pixels, dtype=torch.float32).reshape(4)
+            repaired = repair_xyxy_box(xyxy, image_hw)
+            if repaired is not None:
+                width = max(float(repaired[2] - repaired[0]), 0.0)
+                height = max(float(repaired[3] - repaired[1]), 0.0)
+                bbox_area = float(width * height)
+        except (TypeError, ValueError):
+            bbox_area = 0.0
+
+    return {
+        "has_j2d_visibility": j2ds is not None,
+        "j2d_source": j2d_source,
+        "visible_joints": visible_joints,
+        "total_joints": total_joints,
+        "bbox_area_pixels": bbox_area,
+    }
+
+
 def build_smpl_model_cache(
     model_dir: str | Path,
     device: torch.device | str = "cpu",

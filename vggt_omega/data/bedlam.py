@@ -135,10 +135,12 @@ class BedlamDataset(Dataset):
             images.append(image)
             depths.append(_load_depth_tensor(depth_path, geometry, self.require_depth))
             intrinsics.append(_load_intrinsics(cam_path, orig_hw, geometry))
-            persons_per_frame.append(_load_persons(smpl_path, self.require_smpl))
+            raw_persons = _load_persons(smpl_path, self.require_smpl)
             box_frame = _load_box_frame(box_path, self.require_boxes) if box_path is not None else None
             box_frames.append(box_frame)
-            boxes_per_frame.append(_frame_persons(box_frame, geometry))
+            box_persons = _frame_persons(box_frame, geometry)
+            boxes_per_frame.append(box_persons)
+            persons_per_frame.append(_filter_persons_by_sidecar(raw_persons, box_persons))
 
         smpl = _build_smpl_targets(persons_per_frame, self.max_humans)
         boxes = _build_box_targets(boxes_per_frame, persons_per_frame, geometries, self.max_humans, self.require_boxes)
@@ -276,6 +278,8 @@ def _frame_persons(frame: dict[str, Any] | None, geometry: ResizeGeometry) -> li
     out = []
     for person in persons:
         mapped = dict(person)
+        if not _sidecar_person_train_valid(mapped):
+            continue
         if bool(mapped.get("bbox_valid", False)):
             xyxy = mapped.get("bbox_xyxy_pixels")
             if xyxy is None and "bbox_cxcywh_norm" in mapped:
@@ -287,6 +291,30 @@ def _frame_persons(frame: dict[str, Any] | None, geometry: ResizeGeometry) -> li
                 mapped["bbox_valid"] = bool(valid)
         out.append(mapped)
     return out
+
+
+def _sidecar_person_train_valid(person: dict[str, Any]) -> bool:
+    if "train_valid" in person:
+        return bool(person["train_valid"])
+    if "valid" in person:
+        return bool(person["valid"])
+    return bool(person.get("bbox_valid", False))
+
+
+def _filter_persons_by_sidecar(persons: list[dict[str, Any]], box_persons: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    if box_persons is None:
+        return persons
+    filtered = []
+    for slot_idx, box_person in enumerate(box_persons):
+        person_idx = slot_idx
+        if "person_index" in box_person:
+            try:
+                person_idx = int(box_person["person_index"])
+            except (TypeError, ValueError):
+                person_idx = slot_idx
+        if 0 <= person_idx < len(persons):
+            filtered.append(persons[person_idx])
+    return filtered
 
 
 def _build_smpl_targets(persons_per_frame: list[list[dict[str, Any]]], max_humans: int) -> dict[str, torch.Tensor]:
