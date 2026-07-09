@@ -224,6 +224,10 @@ def optional_smpl_projection_box(
     intrinsics: Any,
     smpl_models: dict[str, Any] | None = None,
     projection_source: str = "vertices",
+    depth: Any | None = None,
+    use_depth_visibility: bool = False,
+    depth_visibility_tolerance_m: float = 0.20,
+    depth_visibility_mode: str = "abs",
 ) -> dict[str, Any]:
     """Project a BEDLAM SMPL body to image pixels and return sidecar bbox data.
 
@@ -249,14 +253,32 @@ def optional_smpl_projection_box(
 
     k = torch.as_tensor(intrinsics, dtype=torch.float32).reshape(3, 3)
     bbox_points = vertices if projection_source == "vertices" else joints
-    xyxy = _projected_points_to_xyxy(bbox_points, k, image_hw)
+    depth_tensor = torch.as_tensor(depth, dtype=torch.float32) if depth is not None else None
+    if use_depth_visibility and depth_tensor is None:
+        raise ValueError("use_depth_visibility=True requires a depth map")
+
+    if use_depth_visibility:
+        xyxy, projection_stats = _depth_visible_points_to_xyxy(
+            bbox_points,
+            k,
+            image_hw,
+            depth_tensor,
+            tolerance_m=depth_visibility_tolerance_m,
+            mode=depth_visibility_mode,
+        )
+        bbox_source = f"smpl_projection_{projection_source}_depth_visible"
+    else:
+        xyxy = _projected_points_to_xyxy(bbox_points, k, image_hw)
+        projection_stats = _projection_visibility_stats(bbox_points, k, image_hw)
+        bbox_source = f"smpl_projection_{projection_source}"
     repaired = repair_xyxy_box(xyxy, image_hw) if xyxy is not None else None
     if repaired is None:
         return {
             "bbox_cxcywh_norm": [0.0, 0.0, 0.0, 0.0],
             "bbox_xyxy_pixels": [0.0, 0.0, 0.0, 0.0],
             "bbox_valid": False,
-            "bbox_source": f"smpl_projection_{projection_source}_invalid",
+            "bbox_source": f"{bbox_source}_invalid",
+            **projection_stats,
         }
 
     j2ds, j2ds_mask = _project_points(joints, k, image_hw)
@@ -264,9 +286,10 @@ def optional_smpl_projection_box(
         "bbox_cxcywh_norm": xyxy_to_cxcywh_norm(repaired, image_hw).tolist(),
         "bbox_xyxy_pixels": repaired.tolist(),
         "bbox_valid": True,
-        "bbox_source": f"smpl_projection_{projection_source}",
+        "bbox_source": bbox_source,
         "j2ds": j2ds.tolist(),
         "j2ds_mask": j2ds_mask[:, None].expand(-1, 2).contiguous().tolist(),
+        **projection_stats,
     }
 
 
@@ -306,6 +329,77 @@ def _projected_points_to_xyxy(points3d: torch.Tensor, intrinsics: torch.Tensor, 
         return None
     coords = points2d[visible]
     return torch.cat([coords.amin(dim=0), coords.amax(dim=0)], dim=0)
+
+
+def _projection_visibility_stats(points3d: torch.Tensor, intrinsics: torch.Tensor, image_hw: tuple[int, int]) -> dict[str, Any]:
+    _, visible = _project_points(points3d, intrinsics, image_hw, require_in_image=True)
+    total = int(points3d.reshape(-1, 3).shape[0])
+    in_image = int(visible.sum().item())
+    return {
+        "projection_total_points": total,
+        "projection_in_image_points": in_image,
+        "projection_visible_points": in_image,
+        "projection_visible_ratio": float(in_image / max(total, 1)),
+        "projection_depth_valid_points": 0,
+        "projection_depth_error_mean_m": 0.0,
+        "projection_depth_error_median_m": 0.0,
+        "projection_depth_visibility_mode": "none",
+    }
+
+
+def _depth_visible_points_to_xyxy(
+    points3d: torch.Tensor,
+    intrinsics: torch.Tensor,
+    image_hw: tuple[int, int],
+    depth: torch.Tensor,
+    tolerance_m: float,
+    mode: str,
+) -> tuple[torch.Tensor | None, dict[str, Any]]:
+    if mode not in {"abs", "leq"}:
+        raise ValueError(f"Unsupported depth visibility mode: {mode}")
+    points2d, in_image = _project_points(points3d, intrinsics, image_hw, require_in_image=True)
+    points = points3d.float().reshape(-1, 3)
+    points2d = points2d.reshape(-1, 2)
+    in_image = in_image.reshape(-1)
+    total = int(points.shape[0])
+    sampled_depth = _sample_depth_nearest(depth, points2d, image_hw)
+    depth_valid = torch.isfinite(sampled_depth) & (sampled_depth > 1e-6)
+    candidate = in_image & depth_valid
+    depth_delta = points[:, 2] - sampled_depth
+    if mode == "abs":
+        visible = candidate & (torch.abs(depth_delta) <= float(tolerance_m))
+    else:
+        visible = candidate & (depth_delta <= float(tolerance_m))
+
+    coords = points2d[visible]
+    xyxy = None if coords.numel() == 0 else torch.cat([coords.amin(dim=0), coords.amax(dim=0)], dim=0)
+    valid_errors = torch.abs(depth_delta[candidate])
+    stats = {
+        "projection_total_points": total,
+        "projection_in_image_points": int(in_image.sum().item()),
+        "projection_depth_valid_points": int(candidate.sum().item()),
+        "projection_visible_points": int(visible.sum().item()),
+        "projection_visible_ratio": float(visible.sum().item() / max(total, 1)),
+        "projection_depth_error_mean_m": float(valid_errors.mean().item()) if valid_errors.numel() else 0.0,
+        "projection_depth_error_median_m": float(valid_errors.median().item()) if valid_errors.numel() else 0.0,
+        "projection_depth_visibility_mode": mode,
+        "projection_depth_visibility_tolerance_m": float(tolerance_m),
+    }
+    return xyxy, stats
+
+
+def _sample_depth_nearest(depth: torch.Tensor, points2d: torch.Tensor, image_hw: tuple[int, int]) -> torch.Tensor:
+    if depth.ndim == 3:
+        depth = depth.squeeze()
+    if depth.ndim != 2:
+        raise ValueError(f"Expected 2D depth map, got shape={tuple(depth.shape)}")
+    image_h, image_w = image_hw
+    depth_h, depth_w = int(depth.shape[0]), int(depth.shape[1])
+    scale_x = float(depth_w) / float(max(image_w, 1))
+    scale_y = float(depth_h) / float(max(image_h, 1))
+    xs = torch.round(points2d[:, 0].float() * scale_x).long().clamp(0, max(depth_w - 1, 0))
+    ys = torch.round(points2d[:, 1].float() * scale_y).long().clamp(0, max(depth_h - 1, 0))
+    return depth.float()[ys, xs]
 
 
 def _project_points(

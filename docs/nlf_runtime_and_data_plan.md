@@ -147,13 +147,19 @@ smpl_query_boxes
 smpl_query_boxes_mask
 ```
 
-For NLF-HSI training, these boxes should describe visible trainable people, not every GT SMPL body in the annotation. The preprocessing script writes visibility diagnostics and sets `train_valid=false` for people that should not create an NLF crop, such as fully occluded bodies or tiny boxes. The dataset reader then removes those people from both query boxes and SMPL supervision so slot order remains aligned.
+For NLF-HSI training, these boxes should describe visible trainable people, not every GT SMPL body in the annotation. The inspected processed BEDLAM subset has SMPL parameters only, with no bbox fields, no 2D joints, and no explicit person IDs. The preprocessing script therefore uses SMPL projection plus GT depth visibility to create boxes, writes visibility diagnostics, and sets `train_valid=false` for people that should not create an NLF crop, such as fully occluded bodies or tiny boxes. The dataset reader then removes those people from both query boxes and SMPL supervision so slot order remains aligned.
 
 Generate them on the BEDLAM sample with:
 
 ```bash
+USE_SMPL_PROJECTION=true \
+USE_DEPTH_VISIBILITY=true \
+PROJECTION_SOURCE=vertices \
+DEPTH_VISIBILITY_MODE=abs \
+DEPTH_VISIBILITY_TOLERANCE_M=0.20 \
 VISIBLE_ONLY=true \
-MIN_VISIBLE_JOINTS=4 \
+MIN_VISIBLE_PROJECTED_POINTS=20 \
+MIN_VISIBLE_PROJECTED_RATIO=0.001 \
 MIN_BOX_AREA=100 \
 bash scripts/preprocess/prepare_bedlam_boxes.sh
 ```
