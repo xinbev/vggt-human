@@ -9,13 +9,9 @@ OUTDIR="${OUTDIR:-/home/zhw/xyb_space/bedlam/processed_bedlam}"
 NUM_WORKERS="${NUM_WORKERS:-8}"
 WORK_ROOT="${WORK_ROOT:-${REPO_ROOT}/outputs/preprocess/bedlam_raw_scene_links}"
 
-# Human3R's BEDLAM preprocessor expects:
-#   <RAW_ROOT>/<SCENE>/be_seq.csv
-#   <RAW_ROOT>/<SCENE>/ground_truth/camera/*.csv
-# HF's dataset layout may instead place them under:
-#   <RAW_ROOT>/<SCENE>/ground_truth/<SCENE>/be_seq.csv
-#   <RAW_ROOT>/<SCENE>/ground_truth/<SCENE>/ground_truth/camera/*.csv
-HUMAN3R_PREPROCESS="${HUMAN3R_PREPROCESS:-/home/zhw/lab_users/xyb/home/projects/Human3R/datasets_preprocess/preprocess_bedlam.py}"
+# This wrapper now uses the project-local robust BEDLAM preprocessor. It keeps
+# the historical script name because older notes referenced the Human3R path.
+PREPROCESS_SCRIPT="${PREPROCESS_SCRIPT:-${REPO_ROOT}/scripts/preprocess/prepare_bedlam_raw_scene.py}"
 
 SCENE_ROOT="${RAW_ROOT}/${SCENE}"
 NESTED_GT="${SCENE_ROOT}/ground_truth/${SCENE}"
@@ -32,9 +28,9 @@ cd "${REPO_ROOT}"
   echo "[ERROR] Missing BEDLAM label npz: ${ANNOT_6FPS} or ${ANNOT_30FPS}" >&2
   exit 1
 }
-[[ -f "${HUMAN3R_PREPROCESS}" ]] || {
-  echo "[ERROR] Missing Human3R preprocess script: ${HUMAN3R_PREPROCESS}" >&2
-  echo "Set HUMAN3R_PREPROCESS=/path/to/Human3R/datasets_preprocess/preprocess_bedlam.py" >&2
+[[ -f "${PREPROCESS_SCRIPT}" ]] || {
+  echo "[ERROR] Missing preprocess script: ${PREPROCESS_SCRIPT}" >&2
+  echo "Set PREPROCESS_SCRIPT=/path/to/scripts/preprocess/prepare_bedlam_raw_scene.py" >&2
   exit 1
 }
 
@@ -55,15 +51,16 @@ echo "Annot dir   : ${ANNOT_DIR}"
 echo "Output      : ${OUTDIR}"
 echo "Work root   : ${WORK_ROOT}"
 echo "Workers     : ${NUM_WORKERS}"
-echo "Preprocess  : ${HUMAN3R_PREPROCESS}"
+echo "Preprocess  : ${PREPROCESS_SCRIPT}"
 echo "be_seq link : ${SCENE_ROOT}/be_seq.csv -> ${NESTED_GT}/be_seq.csv"
 echo "camera link : ${SCENE_ROOT}/ground_truth/camera -> ${NESTED_CAMERA}/*.csv"
 
-python "${HUMAN3R_PREPROCESS}" \
-  --root "${WORK_ROOT}" \
+python "${PREPROCESS_SCRIPT}" \
+  --raw-root "${WORK_ROOT}" \
+  --scene "${SCENE}" \
   --outdir "${OUTDIR}" \
-  --annot_dir "${ANNOT_DIR}" \
-  --num_workers "${NUM_WORKERS}"
+  --annot-dir "${ANNOT_DIR}" \
+  --overwrite
 
 echo "========== Raw BEDLAM scene processed =========="
 echo "Output split dirs under: ${OUTDIR}"
