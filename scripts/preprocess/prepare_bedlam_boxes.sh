@@ -2,6 +2,7 @@
 set -euo pipefail
 
 REPO_ROOT="${REPO_ROOT:-/home/zhw/lab_users/xyb/home/projects/vggt-human}"
+PATH_CONFIG="${PATH_CONFIG:-${REPO_ROOT}/configs/path.yaml}"
 BEDLAM_ROOT="${BEDLAM_ROOT:-/home/zhw/xyb_space/bedlam/processed_bedlam}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-${REPO_ROOT}/outputs/preprocess/bedlam_boxes}"
 SPLITS="${SPLITS:-Training}"
@@ -9,7 +10,15 @@ MAX_HUMANS="${MAX_HUMANS:-20}"
 IMAGE_SIZE="${IMAGE_SIZE:-512}"
 REQUIRE_BOXES="${REQUIRE_BOXES:-true}"
 USE_SMPL_PROJECTION="${USE_SMPL_PROJECTION:-true}"
-SMPL_MODEL_DIR="${SMPL_MODEL_DIR:-/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/body_models}"
+SMPL_MODEL_DIR="${SMPL_MODEL_DIR:-$(python - "${PATH_CONFIG}" <<'PY'
+import sys
+import yaml
+path = sys.argv[1]
+with open(path, "r", encoding="utf-8") as f:
+    cfg = yaml.safe_load(f) or {}
+print(cfg.get("assets", {}).get("smpl_model_dir", ""))
+PY
+)}"
 PROJECTION_SOURCE="${PROJECTION_SOURCE:-vertices}"
 USE_DEPTH_VISIBILITY="${USE_DEPTH_VISIBILITY:-true}"
 DEPTH_VISIBILITY_TOLERANCE_M="${DEPTH_VISIBILITY_TOLERANCE_M:-0.20}"
@@ -25,6 +34,7 @@ cd "${REPO_ROOT}"
 mkdir -p "${OUTPUT_ROOT}"
 
 [[ -d "${BEDLAM_ROOT}" ]] || { echo "[ERROR] Missing BEDLAM root: ${BEDLAM_ROOT}" >&2; exit 1; }
+[[ -f "${PATH_CONFIG}" ]] || { echo "[ERROR] Missing path config: ${PATH_CONFIG}" >&2; exit 1; }
 
 ARGS=(
   --dataset-root "${BEDLAM_ROOT}"

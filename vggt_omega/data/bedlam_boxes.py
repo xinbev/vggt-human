@@ -207,13 +207,21 @@ def build_smpl_model_cache(
 
 def resolve_smpl_model_dir(path: str | Path) -> Path:
     p = Path(path).expanduser().resolve()
-    if (p / "smpl" / "SMPL_NEUTRAL.pkl").is_file():
-        return p
-    if (p / "SMPL_NEUTRAL.pkl").is_file():
-        return p.parent
+    candidates = (
+        p,
+        p.parent,
+        p / "smpl",
+        p / "smpl" / "smpl",
+    )
+    for candidate in candidates:
+        if (candidate / "SMPL_NEUTRAL.pkl").is_file():
+            return candidate.parent
+        if (candidate / "smpl" / "SMPL_NEUTRAL.pkl").is_file():
+            return candidate
     raise FileNotFoundError(
         "Could not locate SMPL model files under "
-        f"{p}. Expected either <dir>/smpl/SMPL_NEUTRAL.pkl or <dir>/SMPL_NEUTRAL.pkl."
+        f"{p}. Expected one of: <dir>/smpl/SMPL_NEUTRAL.pkl, "
+        "<dir>/SMPL_NEUTRAL.pkl, or <dir>/smpl/smpl/SMPL_NEUTRAL.pkl."
     )
 
 
