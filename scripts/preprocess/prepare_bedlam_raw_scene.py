@@ -75,21 +75,35 @@ def main() -> None:
     }
 
     sequence_names = collect_sequence_names(csv_data)
-    for seq_name in tqdm(sequence_names, desc="Processing sequences"):
+    image_dirs = discover_image_dirs(image_root)
+    depth_dirs = discover_named_dirs(depth_root)
+    mask_dirs = discover_named_dirs(mask_root) if mask_root.is_dir() else {}
+    camera_csvs = discover_camera_csvs(camera_dir)
+    discovered_names = sorted((set(sequence_names) | set(image_dirs) | set(camera_csvs)))
+    summary["sequence_name_count_csv"] = len(sequence_names)
+    summary["sequence_name_count_image_dirs"] = len(image_dirs)
+    summary["sequence_name_count_camera_csvs"] = len(camera_csvs)
+    summary["missing_image_examples"] = []
+    summary["missing_camera_examples"] = []
+    for seq_name in tqdm(discovered_names, desc="Processing sequences"):
         seq_summary = process_sequence(
             scene=scene,
             seq_name=seq_name,
             outdir=outdir,
-            image_root=image_root,
-            depth_root=depth_root,
-            mask_root=mask_root,
-            camera_dir=camera_dir,
+            image_dir=image_dirs.get(seq_name),
+            depth_dir=depth_dirs.get(seq_name),
+            mask_dir=mask_dirs.get(seq_name),
+            cam_csv=camera_csvs.get(seq_name),
             annot=annot,
             annot_index=index,
             frame_stride=int(args.frame_stride),
             overwrite=bool(args.overwrite),
         )
         if seq_summary["frames"] == 0:
+            if seq_summary.get("missing_image") and len(summary["missing_image_examples"]) < 20:
+                summary["missing_image_examples"].append(seq_name)
+            if seq_summary.get("missing_camera") and len(summary["missing_camera_examples"]) < 20:
+                summary["missing_camera_examples"].append(seq_name)
             continue
         summary["sequences"][seq_name] = seq_summary
         summary["total_frames"] += seq_summary["frames"]
@@ -158,6 +172,36 @@ def collect_sequence_names(csv_data: dict[str, list[Any]]) -> list[str]:
     return out
 
 
+def discover_image_dirs(image_root: Path) -> dict[str, Path]:
+    out: dict[str, Path] = {}
+    if not image_root.is_dir():
+        return out
+    for png_path in sorted(image_root.rglob("*.png")):
+        seq_dir = png_path.parent
+        seq_name = seq_dir.name
+        out.setdefault(seq_name, seq_dir)
+    return out
+
+
+def discover_named_dirs(root: Path) -> dict[str, Path]:
+    out: dict[str, Path] = {}
+    if not root.is_dir():
+        return out
+    for path in sorted(p for p in root.rglob("*") if p.is_dir()):
+        out.setdefault(path.name, path)
+    return out
+
+
+def discover_camera_csvs(camera_dir: Path) -> dict[str, Path]:
+    out: dict[str, Path] = {}
+    if not camera_dir.is_dir():
+        return out
+    for csv_path in sorted(camera_dir.rglob("*_camera.csv")):
+        seq_name = csv_path.name.removesuffix("_camera.csv")
+        out.setdefault(seq_name, csv_path)
+    return out
+
+
 def build_annotation_index(imgnames: np.ndarray) -> dict[str, list[int]]:
     index: dict[str, list[int]] = {}
     for idx, raw in enumerate(imgnames):
@@ -189,19 +233,19 @@ def process_sequence(
     scene: str,
     seq_name: str,
     outdir: Path,
-    image_root: Path,
-    depth_root: Path,
-    mask_root: Path,
-    camera_dir: Path,
+    image_dir: Path | None,
+    depth_dir: Path | None,
+    mask_dir: Path | None,
+    cam_csv: Path | None,
     annot: Any,
     annot_index: dict[str, list[int]],
     frame_stride: int,
     overwrite: bool,
 ) -> dict[str, Any]:
-    image_dir = image_root / seq_name
-    cam_csv = camera_dir / f"{seq_name}_camera.csv"
-    if not image_dir.is_dir() or not cam_csv.is_file():
-        return {"frames": 0, "matched_frames": 0, "persons": 0, "max_humans": 0}
+    if image_dir is None or not image_dir.is_dir():
+        return {"frames": 0, "matched_frames": 0, "persons": 0, "max_humans": 0, "missing_image": True}
+    if cam_csv is None or not cam_csv.is_file():
+        return {"frames": 0, "matched_frames": 0, "persons": 0, "max_humans": 0, "missing_camera": True}
 
     split = "Test" if scene in TEST_LIST else "Training"
     seq_out = outdir / split / f"{scene}_{seq_name}"
@@ -235,7 +279,7 @@ def process_sequence(
         if overwrite or not out_rgb.exists():
             shutil.copyfile(image_path, out_rgb)
         if overwrite or not out_depth.exists():
-            np.save(out_depth, load_depth(depth_root / seq_name / f"{frame_stem}_depth.exr"))
+            np.save(out_depth, load_depth(resolve_depth_path(depth_dir, frame_stem)))
         if overwrite or not out_cam.exists():
             intr = get_cam_int(float(cam_csv_data["focal_length"][cam_ind]), SENSOR_W, SENSOR_H, IMG_W / 2.0, IMG_H / 2.0)
             ext = get_frame_w2c(cam_csv_data, cam_ind)
@@ -244,7 +288,7 @@ def process_sequence(
             with out_smpl.open("wb") as file:
                 pickle.dump(persons, file, protocol=pickle.HIGHEST_PROTOCOL)
         if overwrite or not out_mask.exists():
-            write_mask(mask_root / seq_name / f"{frame_stem}_env.png", out_mask)
+            write_mask(resolve_mask_path(mask_dir, frame_stem), out_mask)
 
         stats["frames"] += 1
         if indices:
@@ -293,6 +337,38 @@ def build_persons(annot: Any, indices: list[int]) -> list[dict[str, Any]]:
             }
         )
     return persons
+
+
+def resolve_depth_path(depth_dir: Path | None, frame_stem: str) -> Path:
+    if depth_dir is None:
+        return Path(f"{frame_stem}_depth.exr")
+    candidates = [
+        depth_dir / f"{frame_stem}_depth.exr",
+        depth_dir / f"{frame_stem}.exr",
+    ]
+    for path in candidates:
+        if path.is_file():
+            return path
+    matches = sorted(depth_dir.rglob(f"{frame_stem}*_depth.exr"))
+    if matches:
+        return matches[0]
+    return candidates[0]
+
+
+def resolve_mask_path(mask_dir: Path | None, frame_stem: str) -> Path:
+    if mask_dir is None:
+        return Path(f"{frame_stem}_env.png")
+    candidates = [
+        mask_dir / f"{frame_stem}_env.png",
+        mask_dir / f"{frame_stem}.png",
+    ]
+    for path in candidates:
+        if path.is_file():
+            return path
+    matches = sorted(mask_dir.rglob(f"{frame_stem}*.png"))
+    if matches:
+        return matches[0]
+    return candidates[0]
 
 
 def load_depth(path: Path) -> np.ndarray:
