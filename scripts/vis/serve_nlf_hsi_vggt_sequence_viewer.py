@@ -463,7 +463,7 @@ def depth_to_world_points(
     x = (xs - cx) / fx * z
     y = (ys - cy) / fy * z
     points = torch.stack([x, y, z], dim=-1)
-    rgb_use = rgb
+    rgb_use = rgb.to(device=depth.device, dtype=torch.float32)
     if tuple(rgb_use.shape[-2:]) != (height, width):
         rgb_use = F.interpolate(rgb_use[None], size=(height, width), mode="bilinear", align_corners=False)[0]
     colors = (rgb_use[:, ys.long(), xs.long()].permute(1, 2, 0).clamp(0.0, 1.0) * 255.0).to(dtype=torch.uint8)
