@@ -73,6 +73,57 @@ CUDA_VISIBLE_DEVICES_VALUE=6 \
 bash scripts/vis/serve_nlf_hsi_vggt_sequence_viewer.sh
 ```
 
+## Wild Walking Frames
+
+For the Human3R walking frame folder:
+
+```text
+/home/zhw/lab_users/xyb/home/projects/Human3R-master/outputs/walking/color
+```
+
+use the project wrapper below. It forces `QUERY_SOURCE=nlf_detector`, so it does
+not require BEDLAM sidecars.
+
+Smoke first:
+
+```bash
+cd /home/zhw/lab_users/xyb/home/projects/vggt-human
+
+CUDA_VISIBLE_DEVICES_VALUE=6 \
+MAX_FRAMES=8 \
+bash scripts/smoke/check_nlf_hsi_vggt_wild_sequence_viewer.sh
+```
+
+Then serve the interactive viewer:
+
+```bash
+cd /home/zhw/lab_users/xyb/home/projects/vggt-human
+
+CUDA_VISIBLE_DEVICES_VALUE=6 \
+MAX_FRAMES=32 \
+PORT=8080 \
+bash scripts/vis/serve_nlf_hsi_vggt_wild_sequence_viewer.sh
+```
+
+To use another wild frame folder, override only `FRAMES_DIR`:
+
+```bash
+FRAMES_DIR=/path/to/another/color_frames \
+bash scripts/vis/serve_nlf_hsi_vggt_wild_sequence_viewer.sh
+```
+
+Useful controls for wild videos:
+
+```bash
+START_INDEX=0
+FRAME_STRIDE=1
+MAX_FRAMES=32
+CONF_THRESHOLD=0.05
+MAX_HUMANS=8
+DEPTH_POINT_STRIDE=4
+MAX_SCENE_DEPTH=30.0
+```
+
 The script defaults to the rank-1 checkpoint in
 `checkpoint_topk_index.json` under `STAGE2_DIR`.
 
