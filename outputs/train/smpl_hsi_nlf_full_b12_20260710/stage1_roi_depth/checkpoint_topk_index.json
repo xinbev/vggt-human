@@ -1,0 +1,27 @@
+{
+  "monitor": "loss_total",
+  "monitor_mode": "min",
+  "entries": [
+    {
+      "rank": 1,
+      "metric": 3.1323684841343455,
+      "epoch": 10,
+      "source": "train",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_full_b12_20260710/stage1_roi_depth/checkpoint_top_train_epoch_0010_loss_total_3.132368.pt"
+    },
+    {
+      "rank": 2,
+      "metric": 3.1748846748944506,
+      "epoch": 9,
+      "source": "train",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_full_b12_20260710/stage1_roi_depth/checkpoint_top_train_epoch_0009_loss_total_3.174885.pt"
+    },
+    {
+      "rank": 3,
+      "metric": 3.2424459952364595,
+      "epoch": 8,
+      "source": "train",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_full_b12_20260710/stage1_roi_depth/checkpoint_top_train_epoch_0008_loss_total_3.242446.pt"
+    }
+  ]
+}
