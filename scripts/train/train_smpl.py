@@ -1064,6 +1064,7 @@ def get_progress_log_keys(config: dict[str, Any]) -> list[str]:
         return [str(item) for item in raw]
     return [
         "loss_total",
+        "loss_hsi_smpl_scale_teacher",
         "loss_hsi_depth_teacher",
         "loss_hsi_teacher_scene_affine",
         "loss_hsi_transl_cam",
@@ -1080,6 +1081,9 @@ def get_progress_log_keys(config: dict[str, Any]) -> list[str]:
         "loss_hsi_scene_bias_temporal",
         "metric_hsi_scene_log_scale_delta",
         "metric_hsi_scene_bias_delta",
+        "metric_hsi_smpl_scale_teacher_valid_points",
+        "metric_hsi_smpl_scale_teacher_scale",
+        "metric_hsi_smpl_scale_teacher_pred_scale",
     ]
 
 
@@ -1087,6 +1091,7 @@ def compact_loss_name(key: str) -> str:
     mapping = {
         "loss_total": "total",
         "loss_hsi_depth_teacher": "depth",
+        "loss_hsi_smpl_scale_teacher": "smplScale",
         "loss_hsi_anchor_depth": "anchorD",
         "loss_hsi_teacher_scene_affine": "affineT",
         "loss_hsi_transl_cam": "transl",
@@ -1112,6 +1117,10 @@ def compact_loss_name(key: str) -> str:
         "loss_hsi_scene_bias_sequence": "biasSeq",
         "metric_hsi_scene_log_scale_delta": "dLogS",
         "metric_hsi_scene_bias_delta": "dBias",
+        "metric_hsi_smpl_scale_teacher_valid_points": "smplPts",
+        "metric_hsi_smpl_scale_teacher_scale": "scaleT",
+        "metric_hsi_smpl_scale_teacher_pred_scale": "scaleP",
+        "metric_hsi_smpl_scale_teacher_l1": "scaleL1",
         "loss_transl_refine_delta_reg": "tDeltaReg",
         "loss_local_joints3d": "localJ",
         "loss_local_vertices": "localV",

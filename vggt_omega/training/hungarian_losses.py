@@ -71,6 +71,17 @@ class HungarianSMPLLoss(nn.Module):
         hsi_depth_teacher_use_human_roi: bool = False,
         hsi_depth_teacher_roi_expand: float = 0.35,
         hsi_depth_teacher_min_valid_pixels: int = 256,
+        hsi_smpl_scale_teacher_weight: float = 0.0,
+        hsi_smpl_scale_teacher_source: str = "vertices",
+        hsi_smpl_scale_teacher_use_bias: bool = False,
+        hsi_smpl_scale_teacher_visibility_tolerance_m: float = 0.20,
+        hsi_smpl_scale_teacher_window: int = 3,
+        hsi_smpl_scale_teacher_max_points_per_person: int = 512,
+        hsi_smpl_scale_teacher_min_points_per_person: int = 32,
+        hsi_smpl_scale_teacher_min_visible_points: int = 128,
+        hsi_smpl_scale_teacher_mad_multiplier: float = 2.5,
+        hsi_smpl_scale_teacher_log_loss: bool = True,
+        hsi_smpl_scale_teacher_bias_reg_weight: float = 0.05,
         hsi_anchor_depth_weight: float = 0.0,
         hsi_anchor_scene_xyz_weight: float = 0.0,
         hsi_anchor_scene_window: int = 5,
@@ -179,6 +190,17 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_depth_teacher_use_human_roi = hsi_depth_teacher_use_human_roi
         self.hsi_depth_teacher_roi_expand = hsi_depth_teacher_roi_expand
         self.hsi_depth_teacher_min_valid_pixels = hsi_depth_teacher_min_valid_pixels
+        self.hsi_smpl_scale_teacher_weight = hsi_smpl_scale_teacher_weight
+        self.hsi_smpl_scale_teacher_source = str(hsi_smpl_scale_teacher_source or "vertices")
+        self.hsi_smpl_scale_teacher_use_bias = hsi_smpl_scale_teacher_use_bias
+        self.hsi_smpl_scale_teacher_visibility_tolerance_m = hsi_smpl_scale_teacher_visibility_tolerance_m
+        self.hsi_smpl_scale_teacher_window = hsi_smpl_scale_teacher_window
+        self.hsi_smpl_scale_teacher_max_points_per_person = hsi_smpl_scale_teacher_max_points_per_person
+        self.hsi_smpl_scale_teacher_min_points_per_person = hsi_smpl_scale_teacher_min_points_per_person
+        self.hsi_smpl_scale_teacher_min_visible_points = hsi_smpl_scale_teacher_min_visible_points
+        self.hsi_smpl_scale_teacher_mad_multiplier = hsi_smpl_scale_teacher_mad_multiplier
+        self.hsi_smpl_scale_teacher_log_loss = hsi_smpl_scale_teacher_log_loss
+        self.hsi_smpl_scale_teacher_bias_reg_weight = hsi_smpl_scale_teacher_bias_reg_weight
         self.hsi_anchor_depth_weight = hsi_anchor_depth_weight
         self.hsi_anchor_scene_xyz_weight = hsi_anchor_scene_xyz_weight
         self.hsi_anchor_scene_window = hsi_anchor_scene_window
@@ -237,6 +259,8 @@ class HungarianSMPLLoss(nn.Module):
             raise ValueError(f"Unsupported conf_target_type: {self.conf_target_type}")
         if self.projected_bbox_source not in {"joints", "vertices"}:
             raise ValueError(f"Unsupported projected_bbox_source: {self.projected_bbox_source}")
+        if self.hsi_smpl_scale_teacher_source not in {"vertices", "joints"}:
+            raise ValueError(f"Unsupported hsi_smpl_scale_teacher_source: {self.hsi_smpl_scale_teacher_source}")
         if self.projection_camera_source not in {"vggt", "gt", "auto"}:
             raise ValueError(f"Unsupported projection_camera_source: {self.projection_camera_source}")
         if self._uses_projected_bbox and not self.smpl_model_dir:
@@ -391,6 +415,7 @@ class HungarianSMPLLoss(nn.Module):
             + self.hsi_vertices_weight * losses["loss_hsi_vertices"]
             + self.hsi_projected_joints2d_weight * losses["loss_hsi_projected_joints2d"]
             + self.hsi_depth_teacher_weight * losses["loss_hsi_depth_teacher"]
+            + self.hsi_smpl_scale_teacher_weight * losses["loss_hsi_smpl_scale_teacher"]
             + self.hsi_anchor_depth_weight * losses["loss_hsi_anchor_depth"]
             + self.hsi_anchor_scene_xyz_weight * losses["loss_hsi_anchor_scene_xyz"]
             + self.hsi_delta_reg_weight * losses["loss_hsi_delta_reg"]
@@ -1031,6 +1056,7 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_vertices": zero,
             "loss_hsi_projected_joints2d": zero,
             "loss_hsi_depth_teacher": zero,
+            "loss_hsi_smpl_scale_teacher": zero,
             "loss_hsi_anchor_depth": zero,
             "loss_hsi_anchor_scene_xyz": zero,
             "loss_hsi_delta_reg": zero,
@@ -1096,6 +1122,12 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_depth_teacher_l1": zero.detach(),
             "metric_hsi_depth_teacher_valid_pixels": zero.detach(),
             "metric_hsi_depth_teacher_roi_used": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_l1": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_valid_points": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_scale": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_pred_scale": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_bias": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_pred_bias": zero.detach(),
             "metric_hsi_contact_pos_frac": zero.detach(),
         }
 
@@ -1610,6 +1642,7 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_depth_teacher": zero,
             "loss_hsi_anchor_depth": zero,
             "loss_hsi_anchor_scene_xyz": zero,
+            "loss_hsi_smpl_scale_teacher": zero,
             "loss_hsi_foot_contact": zero,
             "loss_hsi_foot_sole_contact": zero,
             "loss_hsi_support_plane_contact": zero,
@@ -1638,6 +1671,12 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_depth_teacher_l1": zero.detach(),
             "metric_hsi_depth_teacher_valid_pixels": zero.detach(),
             "metric_hsi_depth_teacher_roi_used": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_l1": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_valid_points": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_scale": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_pred_scale": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_bias": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_pred_bias": zero.detach(),
             "metric_hsi_contact_pos_frac": zero.detach(),
         }
         if "depth" not in predictions or "hsi_scene_scale" not in predictions or "hsi_scene_depth_bias" not in predictions:
@@ -1682,6 +1721,20 @@ class HungarianSMPLLoss(nn.Module):
             out["metric_hsi_depth_teacher_l1"] = abs_err.mean().detach()
             out["metric_hsi_depth_teacher_valid_pixels"] = depth.new_tensor(float(valid_depth.sum().detach().cpu())).detach()
             out["metric_hsi_depth_teacher_roi_used"] = depth.new_tensor(float(roi_used)).detach()
+
+        if self.hsi_smpl_scale_teacher_weight != 0.0:
+            out.update(
+                self._hsi_smpl_scale_teacher_losses(
+                    depth=depth,
+                    gt_depth=gt_depth,
+                    scale=scale,
+                    bias=bias,
+                    batch=batch,
+                    frame_idx=frame_idx,
+                    gt_joints_cam=gt_joints_cam,
+                    gt_vertices_cam=gt_vertices_cam,
+                )
+            )
 
         if "pose_enc" not in predictions:
             return out
@@ -1759,6 +1812,113 @@ class HungarianSMPLLoss(nn.Module):
                 contact_target[gt_valid].to(dtype=matched_logits.dtype),
             ) if gt_valid.any() else zero
             out["metric_hsi_contact_pos_frac"] = contact_target.to(dtype=matched_logits.dtype).mean().detach()
+        return out
+
+    def _hsi_smpl_scale_teacher_losses(
+        self,
+        *,
+        depth: torch.Tensor,
+        gt_depth: torch.Tensor,
+        scale: torch.Tensor,
+        bias: torch.Tensor,
+        batch: dict[str, torch.Tensor],
+        frame_idx: torch.Tensor,
+        gt_joints_cam: torch.Tensor,
+        gt_vertices_cam: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        zero = depth.sum() * 0.0
+        out = {
+            "loss_hsi_smpl_scale_teacher": zero,
+            "metric_hsi_smpl_scale_teacher_l1": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_valid_points": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_scale": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_pred_scale": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_bias": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_pred_bias": zero.detach(),
+        }
+        if "K_scal3r" not in batch or frame_idx.numel() == 0:
+            return out
+
+        flat_scale = _flatten_prediction(scale, unframed_ndim=2)
+        flat_bias = _flatten_prediction(bias, unframed_ndim=2)
+        if flat_scale is None or flat_bias is None:
+            return out
+
+        dataset_intrinsics = _flatten_batch_intrinsics(batch["K_scal3r"], device=depth.device, dtype=depth.dtype)
+        points_cam = gt_vertices_cam if self.hsi_smpl_scale_teacher_source == "vertices" else gt_joints_cam
+        points_cam = _subsample_points_per_person(points_cam, int(self.hsi_smpl_scale_teacher_max_points_per_person))
+        projected = _project_points(points_cam, dataset_intrinsics[frame_idx].to(dtype=points_cam.dtype))
+        projected = _scale_points_to_depth(projected, self._projection_image_hw(), depth.shape[-2], depth.shape[-1])
+        raw_sampled, gt_sampled, valid = _sample_depth_pair_nearest_to_point_z(
+            raw_depth=depth.reshape(-1, *depth.shape[-2:]),
+            gt_depth=gt_depth.reshape(-1, *gt_depth.shape[-2:]),
+            points_2d=projected,
+            points_z=points_cam[..., 2],
+            frame_idx=frame_idx,
+            window=int(self.hsi_smpl_scale_teacher_window),
+            tolerance_m=float(self.hsi_smpl_scale_teacher_visibility_tolerance_m),
+        )
+        point_z = points_cam[..., 2].to(dtype=depth.dtype)
+        valid = valid & torch.isfinite(raw_sampled) & torch.isfinite(gt_sampled) & (raw_sampled > 1e-6) & (point_z > 1e-6)
+        if int(self.hsi_smpl_scale_teacher_min_points_per_person) > 0:
+            per_person_valid = valid.sum(dim=-1) >= int(self.hsi_smpl_scale_teacher_min_points_per_person)
+            valid = valid & per_person_valid[:, None]
+        if not valid.any():
+            return out
+
+        frame_losses: list[torch.Tensor] = []
+        teacher_scales: list[torch.Tensor] = []
+        pred_scales: list[torch.Tensor] = []
+        teacher_biases: list[torch.Tensor] = []
+        pred_biases: list[torch.Tensor] = []
+        valid_counts: list[torch.Tensor] = []
+        scale_values = point_z / raw_sampled.clamp(min=1e-6)
+
+        for flat_frame_tensor in torch.unique(frame_idx):
+            flat_frame = int(flat_frame_tensor.detach().cpu())
+            frame_mask = frame_idx == flat_frame
+            frame_valid = valid[frame_mask]
+            if not frame_valid.any():
+                continue
+            raw_values = raw_sampled[frame_mask][frame_valid]
+            z_values = point_z[frame_mask][frame_valid]
+            scale_candidates = scale_values[frame_mask][frame_valid]
+            robust = _robust_median_filter(scale_candidates, float(self.hsi_smpl_scale_teacher_mad_multiplier))
+            if int(robust.sum().detach().cpu()) < int(self.hsi_smpl_scale_teacher_min_visible_points):
+                continue
+            raw_values = raw_values[robust]
+            z_values = z_values[robust]
+            scale_candidates = scale_candidates[robust]
+            teacher_scale = scale_candidates.median().detach().clamp(min=1e-6)
+            if self.hsi_smpl_scale_teacher_use_bias:
+                teacher_bias = (z_values - teacher_scale * raw_values).median().detach()
+            else:
+                teacher_bias = torch.zeros((), device=depth.device, dtype=depth.dtype)
+            pred_scale = flat_scale[flat_frame, 0].to(dtype=depth.dtype).clamp(min=1e-6)
+            pred_bias = flat_bias[flat_frame, 0].to(dtype=depth.dtype)
+            if self.hsi_smpl_scale_teacher_log_loss:
+                scale_loss = F.smooth_l1_loss(torch.log(pred_scale), torch.log(teacher_scale))
+            else:
+                scale_loss = F.smooth_l1_loss(pred_scale, teacher_scale)
+            bias_loss = F.smooth_l1_loss(pred_bias, teacher_bias)
+            frame_losses.append(scale_loss + float(self.hsi_smpl_scale_teacher_bias_reg_weight) * bias_loss)
+            teacher_scales.append(teacher_scale)
+            pred_scales.append(pred_scale.detach())
+            teacher_biases.append(teacher_bias)
+            pred_biases.append(pred_bias.detach())
+            valid_counts.append(depth.new_tensor(float(robust.sum().detach().cpu())))
+
+        if not frame_losses:
+            return out
+        out["loss_hsi_smpl_scale_teacher"] = torch.stack(frame_losses).mean()
+        out["metric_hsi_smpl_scale_teacher_l1"] = torch.stack(
+            [torch.abs(pred - teacher).detach() for pred, teacher in zip(pred_scales, teacher_scales)]
+        ).mean()
+        out["metric_hsi_smpl_scale_teacher_valid_points"] = torch.stack(valid_counts).mean().detach()
+        out["metric_hsi_smpl_scale_teacher_scale"] = torch.stack(teacher_scales).mean().detach()
+        out["metric_hsi_smpl_scale_teacher_pred_scale"] = torch.stack(pred_scales).mean().detach()
+        out["metric_hsi_smpl_scale_teacher_bias"] = torch.stack(teacher_biases).mean().detach()
+        out["metric_hsi_smpl_scale_teacher_pred_bias"] = torch.stack(pred_biases).mean().detach()
         return out
 
     def _hsi_foot_contact_losses(
@@ -2185,6 +2345,86 @@ def _human_roi_depth_mask(
 def _smooth_l1_abs(abs_err: torch.Tensor, beta: float = 1.0) -> torch.Tensor:
     beta = max(float(beta), 1e-6)
     return torch.where(abs_err < beta, 0.5 * abs_err.square() / beta, abs_err - 0.5 * beta)
+
+
+def _subsample_points_per_person(points: torch.Tensor, max_points: int) -> torch.Tensor:
+    max_points = int(max_points)
+    if max_points <= 0 or int(points.shape[-2]) <= max_points:
+        return points
+    indices = torch.linspace(0, int(points.shape[-2]) - 1, steps=max_points, device=points.device).round().long()
+    return points.index_select(dim=-2, index=indices)
+
+
+def _robust_median_filter(values: torch.Tensor, mad_multiplier: float) -> torch.Tensor:
+    finite = torch.isfinite(values) & (values > 1e-6)
+    if not finite.any():
+        return finite
+    valid_values = values[finite]
+    median = valid_values.median()
+    abs_dev = torch.abs(valid_values - median)
+    mad = abs_dev.median()
+    threshold = torch.clamp(mad * float(mad_multiplier), min=1e-6)
+    valid_filtered = abs_dev <= threshold
+    if not valid_filtered.any():
+        valid_filtered = torch.ones_like(valid_values, dtype=torch.bool)
+    out = torch.zeros_like(finite)
+    out[finite] = valid_filtered
+    return out
+
+
+def _sample_depth_pair_nearest_to_point_z(
+    raw_depth: torch.Tensor,
+    gt_depth: torch.Tensor,
+    points_2d: torch.Tensor,
+    points_z: torch.Tensor,
+    frame_idx: torch.Tensor,
+    window: int,
+    tolerance_m: float,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    height, width = gt_depth.shape[-2:]
+    window = max(int(window), 1)
+    if window % 2 == 0:
+        window += 1
+    radius = window // 2
+
+    center_x = points_2d[..., 0].round().long()
+    center_y = points_2d[..., 1].round().long()
+    point_valid = (
+        torch.isfinite(points_2d).all(dim=-1)
+        & torch.isfinite(points_z)
+        & (points_z > 1e-6)
+        & (center_x >= 0)
+        & (center_x < width)
+        & (center_y >= 0)
+        & (center_y < height)
+    )
+
+    offsets = torch.arange(-radius, radius + 1, device=points_2d.device)
+    oy, ox = torch.meshgrid(offsets, offsets, indexing="ij")
+    ox = ox.reshape(1, 1, -1)
+    oy = oy.reshape(1, 1, -1)
+    xs = center_x[..., None] + ox
+    ys = center_y[..., None] + oy
+    local_valid = (xs >= 0) & (xs < width) & (ys >= 0) & (ys < height)
+    xs = xs.clamp(0, width - 1)
+    ys = ys.clamp(0, height - 1)
+
+    sampled_gt = gt_depth[frame_idx[:, None, None], ys, xs]
+    sampled_raw = raw_depth[frame_idx[:, None, None], ys, xs]
+    local_valid = local_valid & torch.isfinite(sampled_gt) & torch.isfinite(sampled_raw) & (sampled_gt > 1e-6) & (sampled_raw > 1e-6)
+    z = points_z[..., None].to(dtype=sampled_gt.dtype)
+    abs_delta = torch.abs(sampled_gt - z)
+    inf = torch.full_like(abs_delta, float("inf"))
+    best_idx = torch.where(local_valid, abs_delta, inf).argmin(dim=-1)
+    best_gt = sampled_gt.gather(dim=-1, index=best_idx[..., None]).squeeze(-1)
+    best_raw = sampled_raw.gather(dim=-1, index=best_idx[..., None]).squeeze(-1)
+    best_delta = abs_delta.gather(dim=-1, index=best_idx[..., None]).squeeze(-1)
+    valid = point_valid & local_valid.any(dim=-1) & torch.isfinite(best_gt) & torch.isfinite(best_raw)
+    if float(tolerance_m) > 0.0:
+        valid = valid & (best_delta <= float(tolerance_m))
+    best_gt = torch.where(valid, best_gt, torch.zeros_like(best_gt))
+    best_raw = torch.where(valid, best_raw, torch.zeros_like(best_raw))
+    return best_raw, best_gt, valid
 
 
 def _infer_sequence_length(batch: dict[str, torch.Tensor], predictions: dict[str, torch.Tensor]) -> int:
