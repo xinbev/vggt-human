@@ -551,6 +551,29 @@ def save_frame_visuals(
             args,
         )
     )
+    for mode, filename in [
+        ("gt_dataset", "projection_gt_datasetK_only.png"),
+        ("gt_vggt", "projection_gt_vggtK_only.png"),
+        ("base", "projection_base_vggtK_only.png"),
+        ("hsi", "projection_hsi_vggtK_only.png"),
+    ]:
+        paths[f"projection_{mode}"] = str(
+            save_projection_overlay(
+                frame_dir / filename,
+                rgb.copy(),
+                image_hw,
+                gt_boxes,
+                boxes_mask,
+                k_dataset,
+                k_vggt,
+                base,
+                hsi,
+                gt,
+                confs,
+                args,
+                mode=mode,
+            )
+        )
     depth_bg = colorize_depth(gt_depth.detach().cpu().numpy(), valid.detach().cpu().numpy()).resize((image_hw[1], image_hw[0]), Image.BILINEAR).convert("RGB")
     paths["projection_gt_depth"] = str(
         save_projection_overlay(
@@ -568,6 +591,29 @@ def save_frame_visuals(
             args,
         )
     )
+    for mode, filename in [
+        ("gt_dataset", "projection_gt_depth_gt_datasetK_only.png"),
+        ("gt_vggt", "projection_gt_depth_gt_vggtK_only.png"),
+        ("base", "projection_gt_depth_base_vggtK_only.png"),
+        ("hsi", "projection_gt_depth_hsi_vggtK_only.png"),
+    ]:
+        paths[f"projection_gt_depth_{mode}"] = str(
+            save_projection_overlay(
+                frame_dir / filename,
+                depth_bg.copy(),
+                image_hw,
+                gt_boxes,
+                boxes_mask,
+                k_dataset,
+                k_vggt,
+                base,
+                hsi,
+                gt,
+                confs,
+                args,
+                mode=mode,
+            )
+        )
     return paths
 
 
@@ -651,11 +697,13 @@ def save_projection_overlay(
     gt: dict[str, torch.Tensor],
     confs: torch.Tensor,
     args: argparse.Namespace,
+    mode: str = "all",
 ) -> Path:
     draw = ImageDraw.Draw(image)
-    for idx in range(int(gt_boxes.shape[0])):
-        if bool(boxes_mask[idx]):
-            draw_box(draw, gt_boxes[idx], image_hw, fill=(255, 180, 0), text=f"box{idx}")
+    if mode in {"all", "gt_dataset", "gt_vggt"}:
+        for idx in range(int(gt_boxes.shape[0])):
+            if bool(boxes_mask[idx]):
+                draw_box(draw, gt_boxes[idx], image_hw, fill=(255, 180, 0), text=f"box{idx}")
 
     gt_idx = torch.nonzero(torch.isfinite(gt["transl"][:, 2]) & (gt["transl"][:, 2] > 1e-6), as_tuple=False).flatten()
     pred_idx = torch.nonzero(confs >= float(args.conf_threshold), as_tuple=False).flatten()
@@ -663,14 +711,25 @@ def save_projection_overlay(
     for pred_local, gt_local in matches:
         q = int(pred_idx[pred_local].item())
         g = int(gt_idx[gt_local].item())
-        draw_projected_points(draw, gt["joints"][g, :24], k_dataset, (50, 220, 50), image_hw, label=f"GT{g} datasetK")
-        draw_projected_points(draw, gt["joints"][g, :24], k_vggt, (255, 220, 0), image_hw, label=f"GT{g} vggtK")
-        draw_projected_points(draw, base["joints"][q, :24], k_vggt, (0, 210, 255), image_hw, label=f"base{q}")
-        draw_projected_points(draw, hsi["joints"][q, :24], k_vggt, (255, 50, 200), image_hw, label=f"hsi{q}")
-        vertices = gt["vertices"][g]
-        stride = max(int(math.ceil(vertices.shape[0] / max(int(args.overlay_max_vertices), 1))), 1)
-        draw_projected_points(draw, vertices[::stride], k_dataset, (20, 120, 20), image_hw, radius=1)
-    draw.text((8, 8), "green=GT datasetK yellow=GT VGGTK cyan=NLF/base magenta=HSI", fill=(255, 255, 255))
+        if mode in {"all", "gt_dataset"}:
+            draw_projected_points(draw, gt["joints"][g, :24], k_dataset, (50, 220, 50), image_hw, label=f"GT{g} datasetK")
+            vertices = gt["vertices"][g]
+            stride = max(int(math.ceil(vertices.shape[0] / max(int(args.overlay_max_vertices), 1))), 1)
+            draw_projected_points(draw, vertices[::stride], k_dataset, (20, 120, 20), image_hw, radius=1)
+        if mode in {"all", "gt_vggt"}:
+            draw_projected_points(draw, gt["joints"][g, :24], k_vggt, (255, 220, 0), image_hw, label=f"GT{g} vggtK")
+        if mode in {"all", "base"}:
+            draw_projected_points(draw, base["joints"][q, :24], k_vggt, (0, 210, 255), image_hw, label=f"base{q}")
+        if mode in {"all", "hsi"}:
+            draw_projected_points(draw, hsi["joints"][q, :24], k_vggt, (255, 50, 200), image_hw, label=f"hsi{q}")
+    label = {
+        "all": "green=GT datasetK yellow=GT VGGTK cyan=NLF/base magenta=HSI",
+        "gt_dataset": "GT SMPL projected with dataset K",
+        "gt_vggt": "GT SMPL projected with VGGT predicted K",
+        "base": "NLF/base SMPL projected with VGGT predicted K",
+        "hsi": "HSI refined SMPL projected with VGGT predicted K",
+    }.get(mode, mode)
+    draw.text((8, 8), label, fill=(255, 255, 255))
     image.save(path)
     return path
 
