@@ -1,0 +1,58 @@
+{
+  "frames_dir": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3_250_batch01hand_orbit_bigOffice_seq_000000/rgb",
+  "num_frames": 8,
+  "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_full_b12_20260710/stage2_anchor_transl/checkpoint_top_train_epoch_0005_loss_total_2.508845.pt",
+  "query_source": "bedlam_sidecar",
+  "image_shape": [
+    1,
+    8,
+    3,
+    384,
+    688
+  ],
+  "nlf_image_hw": [
+    384,
+    688
+  ],
+  "point_counts_hsi": [
+    16496,
+    16489,
+    16457,
+    16369,
+    16306,
+    16325,
+    16339,
+    16357
+  ],
+  "people_counts": [
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3
+  ],
+  "hsi_scene_scale": [
+    6.747401237487793,
+    6.813777446746826,
+    6.7717742919921875,
+    6.6833930015563965,
+    6.692890167236328,
+    6.695501327514648,
+    6.676331043243408,
+    6.623641014099121
+  ],
+  "hsi_scene_depth_bias": [
+    -0.03987317159771919,
+    -0.044818852096796036,
+    -0.060743529349565506,
+    -0.06792193651199341,
+    -0.046803638339042664,
+    -0.042597368359565735,
+    -0.04078451171517372,
+    -0.03210366144776344
+  ],
+  "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/nlf_hsi_vggt_sequence_viewer_smoke"
+}

@@ -4,24 +4,24 @@
   "entries": [
     {
       "rank": 1,
-      "metric": 2.508844683294531,
-      "epoch": 5,
+      "metric": 2.3916530593133825,
+      "epoch": 9,
       "source": "train",
-      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_full_b12_20260710/stage2_anchor_transl/checkpoint_top_train_epoch_0005_loss_total_2.508845.pt"
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_full_b12_20260710/stage2_anchor_transl/checkpoint_top_train_epoch_0009_loss_total_2.391653.pt"
     },
     {
       "rank": 2,
-      "metric": 2.5387801338678724,
-      "epoch": 4,
+      "metric": 2.42201420774963,
+      "epoch": 8,
       "source": "train",
-      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_full_b12_20260710/stage2_anchor_transl/checkpoint_top_train_epoch_0004_loss_total_2.538780.pt"
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_full_b12_20260710/stage2_anchor_transl/checkpoint_top_train_epoch_0008_loss_total_2.422014.pt"
     },
     {
       "rank": 3,
-      "metric": 2.576883837167032,
-      "epoch": 3,
+      "metric": 2.4435819622372783,
+      "epoch": 7,
       "source": "train",
-      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_full_b12_20260710/stage2_anchor_transl/checkpoint_top_train_epoch_0003_loss_total_2.576884.pt"
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_full_b12_20260710/stage2_anchor_transl/checkpoint_top_train_epoch_0007_loss_total_2.443582.pt"
     }
   ]
 }

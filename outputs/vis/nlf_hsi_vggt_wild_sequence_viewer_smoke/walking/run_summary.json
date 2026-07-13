@@ -1,0 +1,58 @@
+{
+  "frames_dir": "/home/zhw/lab_users/xyb/home/projects/Human3R-master/outputs/walking/color",
+  "num_frames": 8,
+  "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_full_b12_20260710/stage2_anchor_transl/checkpoint_top_train_epoch_0005_loss_total_2.508845.pt",
+  "query_source": "nlf_detector",
+  "image_shape": [
+    1,
+    8,
+    3,
+    448,
+    592
+  ],
+  "nlf_image_hw": [
+    448,
+    592
+  ],
+  "point_counts_hsi": [
+    16576,
+    16576,
+    16576,
+    16576,
+    16576,
+    16576,
+    16576,
+    16576
+  ],
+  "people_counts": [
+    5,
+    5,
+    5,
+    5,
+    5,
+    4,
+    5,
+    5
+  ],
+  "hsi_scene_scale": [
+    1.5266743898391724,
+    2.019127130508423,
+    2.13313889503479,
+    2.2984328269958496,
+    2.165776491165161,
+    1.6929677724838257,
+    2.3309550285339355,
+    2.4362616539001465
+  ],
+  "hsi_scene_depth_bias": [
+    11.030731201171875,
+    10.199492454528809,
+    9.755057334899902,
+    9.466123580932617,
+    9.9476957321167,
+    9.527521133422852,
+    9.529215812683105,
+    9.448237419128418
+  ],
+  "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/nlf_hsi_vggt_wild_sequence_viewer_smoke/walking"
+}
