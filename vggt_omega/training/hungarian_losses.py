@@ -82,6 +82,7 @@ class HungarianSMPLLoss(nn.Module):
         hsi_smpl_scale_teacher_mad_multiplier: float = 2.5,
         hsi_smpl_scale_teacher_log_loss: bool = True,
         hsi_smpl_scale_teacher_bias_reg_weight: float = 0.05,
+        hsi_smpl_scale_teacher_max_z_m: float = 0.0,
         hsi_anchor_depth_weight: float = 0.0,
         hsi_anchor_scene_xyz_weight: float = 0.0,
         hsi_anchor_scene_window: int = 5,
@@ -201,6 +202,7 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_smpl_scale_teacher_mad_multiplier = hsi_smpl_scale_teacher_mad_multiplier
         self.hsi_smpl_scale_teacher_log_loss = hsi_smpl_scale_teacher_log_loss
         self.hsi_smpl_scale_teacher_bias_reg_weight = hsi_smpl_scale_teacher_bias_reg_weight
+        self.hsi_smpl_scale_teacher_max_z_m = hsi_smpl_scale_teacher_max_z_m
         self.hsi_anchor_depth_weight = hsi_anchor_depth_weight
         self.hsi_anchor_scene_xyz_weight = hsi_anchor_scene_xyz_weight
         self.hsi_anchor_scene_window = hsi_anchor_scene_window
@@ -1126,6 +1128,8 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_smpl_scale_teacher_valid_points": zero.detach(),
             "metric_hsi_smpl_scale_teacher_scale": zero.detach(),
             "metric_hsi_smpl_scale_teacher_pred_scale": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_log_l1": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_rel_l1": zero.detach(),
             "metric_hsi_smpl_scale_teacher_bias": zero.detach(),
             "metric_hsi_smpl_scale_teacher_pred_bias": zero.detach(),
             "metric_hsi_contact_pos_frac": zero.detach(),
@@ -1675,6 +1679,8 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_smpl_scale_teacher_valid_points": zero.detach(),
             "metric_hsi_smpl_scale_teacher_scale": zero.detach(),
             "metric_hsi_smpl_scale_teacher_pred_scale": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_log_l1": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_rel_l1": zero.detach(),
             "metric_hsi_smpl_scale_teacher_bias": zero.detach(),
             "metric_hsi_smpl_scale_teacher_pred_bias": zero.detach(),
             "metric_hsi_contact_pos_frac": zero.detach(),
@@ -1833,6 +1839,8 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_smpl_scale_teacher_valid_points": zero.detach(),
             "metric_hsi_smpl_scale_teacher_scale": zero.detach(),
             "metric_hsi_smpl_scale_teacher_pred_scale": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_log_l1": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_rel_l1": zero.detach(),
             "metric_hsi_smpl_scale_teacher_bias": zero.detach(),
             "metric_hsi_smpl_scale_teacher_pred_bias": zero.detach(),
         }
@@ -1860,6 +1868,8 @@ class HungarianSMPLLoss(nn.Module):
         )
         point_z = points_cam[..., 2].to(dtype=depth.dtype)
         valid = valid & torch.isfinite(raw_sampled) & torch.isfinite(gt_sampled) & (raw_sampled > 1e-6) & (point_z > 1e-6)
+        if float(self.hsi_smpl_scale_teacher_max_z_m) > 0.0:
+            valid = valid & (point_z <= float(self.hsi_smpl_scale_teacher_max_z_m))
         if int(self.hsi_smpl_scale_teacher_min_points_per_person) > 0:
             per_person_valid = valid.sum(dim=-1) >= int(self.hsi_smpl_scale_teacher_min_points_per_person)
             valid = valid & per_person_valid[:, None]
@@ -1872,6 +1882,8 @@ class HungarianSMPLLoss(nn.Module):
         teacher_biases: list[torch.Tensor] = []
         pred_biases: list[torch.Tensor] = []
         valid_counts: list[torch.Tensor] = []
+        log_l1_values: list[torch.Tensor] = []
+        rel_l1_values: list[torch.Tensor] = []
         scale_values = point_z / raw_sampled.clamp(min=1e-6)
 
         for flat_frame_tensor in torch.unique(frame_idx):
@@ -1907,6 +1919,8 @@ class HungarianSMPLLoss(nn.Module):
             teacher_biases.append(teacher_bias)
             pred_biases.append(pred_bias.detach())
             valid_counts.append(depth.new_tensor(float(robust.sum().detach().cpu())))
+            log_l1_values.append(torch.abs(torch.log(pred_scale.detach()) - torch.log(teacher_scale.detach())))
+            rel_l1_values.append(torch.abs(pred_scale.detach() - teacher_scale.detach()) / teacher_scale.detach().clamp(min=1e-6))
 
         if not frame_losses:
             return out
@@ -1917,6 +1931,8 @@ class HungarianSMPLLoss(nn.Module):
         out["metric_hsi_smpl_scale_teacher_valid_points"] = torch.stack(valid_counts).mean().detach()
         out["metric_hsi_smpl_scale_teacher_scale"] = torch.stack(teacher_scales).mean().detach()
         out["metric_hsi_smpl_scale_teacher_pred_scale"] = torch.stack(pred_scales).mean().detach()
+        out["metric_hsi_smpl_scale_teacher_log_l1"] = torch.stack(log_l1_values).mean().detach()
+        out["metric_hsi_smpl_scale_teacher_rel_l1"] = torch.stack(rel_l1_values).mean().detach()
         out["metric_hsi_smpl_scale_teacher_bias"] = torch.stack(teacher_biases).mean().detach()
         out["metric_hsi_smpl_scale_teacher_pred_bias"] = torch.stack(pred_biases).mean().detach()
         return out

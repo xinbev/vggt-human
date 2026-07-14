@@ -88,6 +88,8 @@ class VGGTOmega(nn.Module):
         hsi_track_gap_max: int = 30,
         hsi_scene_affine_mode: str = "per_frame",
         hsi_scene_affine_ema_alpha: float = 0.25,
+        hsi_scene_log_scale_min: float = -5.0,
+        hsi_scene_log_scale_max: float = 5.0,
         smpl_model_dir: str = "",
         smpl_provider: str = "internal",
         nlf_model_path: str = "",
@@ -220,6 +222,8 @@ class VGGTOmega(nn.Module):
                 temporal_momentum_use_track_ids=hsi_temporal_momentum_use_track_ids,
                 track_quality_min=hsi_track_quality_min,
                 track_gap_max=hsi_track_gap_max,
+                scene_log_scale_min=hsi_scene_log_scale_min,
+                scene_log_scale_max=hsi_scene_log_scale_max,
                 smpl_model_dir=smpl_model_dir,
                 image_size=image_size,
             )

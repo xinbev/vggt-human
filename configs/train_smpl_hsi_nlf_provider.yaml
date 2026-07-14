@@ -54,6 +54,8 @@ model:
   hsi_num_heads: 8
   hsi_num_iters: 3
   hsi_scene_window: 3
+  hsi_scene_log_scale_min: -5.0
+  hsi_scene_log_scale_max: 5.0
   hsi_use_gt_depth_teacher: true
   id_embed_dim: 256
 
@@ -129,6 +131,8 @@ loss:
   hsi_depth_teacher_use_human_roi: true
   hsi_depth_teacher_roi_expand: 0.85
   hsi_depth_teacher_min_valid_pixels: 2048
+  hsi_smpl_scale_teacher_max_z_m: 20.0
+  hsi_smpl_scale_teacher_log_loss: false
   hsi_anchor_depth_weight: 0.05
   hsi_anchor_scene_xyz_weight: 0.0
   hsi_delta_reg_weight: 0.50

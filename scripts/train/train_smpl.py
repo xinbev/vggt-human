@@ -426,6 +426,8 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_track_gap_max=int(model_cfg.get("hsi_track_gap_max", 30)),
         hsi_scene_affine_mode=str(model_cfg.get("hsi_scene_affine_mode", "per_frame")),
         hsi_scene_affine_ema_alpha=float(model_cfg.get("hsi_scene_affine_ema_alpha", 0.25)),
+        hsi_scene_log_scale_min=float(model_cfg.get("hsi_scene_log_scale_min", -5.0)),
+        hsi_scene_log_scale_max=float(model_cfg.get("hsi_scene_log_scale_max", 5.0)),
         smpl_model_dir=str(config.get("assets", {}).get("smpl_model_dir", "")),
         smpl_provider=str(model_cfg.get("smpl_provider", "internal")),
         nlf_model_path=str(model_cfg.get("nlf_model_path", config.get("checkpoints", {}).get("nlf_smpl", ""))),
@@ -779,6 +781,7 @@ def train_one_epoch(
     log_interval = int(config["optim"].get("log_interval", 10))
     grad_clip_norm = float(config["optim"].get("grad_clip_norm", 0.0))
     log_style = str(config.get("optim", {}).get("log_style", "full")).lower()
+    max_steps_per_epoch = int(config["optim"].get("max_steps_per_epoch", 0) or 0)
     totals: dict[str, float] = {}
     count = 0
     for step, batch in enumerate(loader):
@@ -821,6 +824,9 @@ def train_one_epoch(
                     print(line, flush=True)
             else:
                 print(format_log("train", epoch, step, len(loader), global_step, losses), flush=True)
+        if max_steps_per_epoch > 0 and count >= max_steps_per_epoch:
+            print(f"[train] max_steps_per_epoch reached: {max_steps_per_epoch}", flush=True)
+            break
     if log_style == "progress":
         print("", flush=True)
     averaged = {key: value / max(count, 1) for key, value in totals.items()}
@@ -1084,6 +1090,8 @@ def get_progress_log_keys(config: dict[str, Any]) -> list[str]:
         "metric_hsi_smpl_scale_teacher_valid_points",
         "metric_hsi_smpl_scale_teacher_scale",
         "metric_hsi_smpl_scale_teacher_pred_scale",
+        "metric_hsi_smpl_scale_teacher_l1",
+        "metric_hsi_smpl_scale_teacher_rel_l1",
     ]
 
 
@@ -1121,6 +1129,8 @@ def compact_loss_name(key: str) -> str:
         "metric_hsi_smpl_scale_teacher_scale": "scaleT",
         "metric_hsi_smpl_scale_teacher_pred_scale": "scaleP",
         "metric_hsi_smpl_scale_teacher_l1": "scaleL1",
+        "metric_hsi_smpl_scale_teacher_log_l1": "scaleLog",
+        "metric_hsi_smpl_scale_teacher_rel_l1": "scaleRel",
         "loss_transl_refine_delta_reg": "tDeltaReg",
         "loss_local_joints3d": "localJ",
         "loss_local_vertices": "localV",

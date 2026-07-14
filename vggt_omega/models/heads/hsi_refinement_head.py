@@ -37,6 +37,8 @@ class HSIRefinementHead(nn.Module):
         temporal_momentum_use_track_ids: bool = True,
         track_quality_min: float = 0.25,
         track_gap_max: int = 30,
+        scene_log_scale_min: float = -5.0,
+        scene_log_scale_max: float = 5.0,
     ) -> None:
         super().__init__()
         if not smpl_model_dir:
@@ -58,6 +60,13 @@ class HSIRefinementHead(nn.Module):
         self.temporal_momentum_use_track_ids = bool(temporal_momentum_use_track_ids)
         self.track_quality_min = float(track_quality_min)
         self.track_gap_max = int(track_gap_max)
+        self.scene_log_scale_min = float(scene_log_scale_min)
+        self.scene_log_scale_max = float(scene_log_scale_max)
+        if self.scene_log_scale_max <= self.scene_log_scale_min:
+            raise ValueError(
+                "hsi scene log-scale range must be increasing, got "
+                f"[{self.scene_log_scale_min}, {self.scene_log_scale_max}]"
+            )
         if self.probe_mode not in {"projected", "local_nearest"}:
             raise ValueError(f"Unsupported hsi_probe_mode: {self.probe_mode}")
         if self.affine_probe_mode not in {"projected", "local_nearest"}:
@@ -228,7 +237,7 @@ class HSIRefinementHead(nn.Module):
         denom = weights.sum(dim=2, keepdim=True).clamp(min=1e-6)
         log_scale = (per_query_log_scale * weights).sum(dim=2) / denom.squeeze(2)
         depth_bias = (per_query_bias * weights).sum(dim=2) / denom.squeeze(2)
-        scene_scale = torch.exp(log_scale.clamp(min=-3.0, max=3.0))
+        scene_scale = torch.exp(log_scale.clamp(min=self.scene_log_scale_min, max=self.scene_log_scale_max))
         refined_poses = rot6d_to_axis_angle(refined_pose6d.reshape(-1, 24, 6)).reshape(batch_size, num_frames, num_queries, 72)
         return {
             "hsi_refined_pred_pose_6d": refined_pose6d,
@@ -357,7 +366,10 @@ class HSIRefinementHead(nn.Module):
                 per_query_bias = self.bias_delta(affine_pooled).reshape(batch_size, 1, num_queries, 1)
             scene_scale = torch.exp(
                 ((per_query_log_scale * confs[:, frame_idx : frame_idx + 1].float().clamp(min=0.0)).sum(dim=2)
-                 / confs[:, frame_idx : frame_idx + 1].float().clamp(min=0.0).sum(dim=2, keepdim=True).clamp(min=1e-6).squeeze(2)).clamp(min=-3.0, max=3.0)
+                 / confs[:, frame_idx : frame_idx + 1].float().clamp(min=0.0).sum(dim=2, keepdim=True).clamp(min=1e-6).squeeze(2)).clamp(
+                    min=self.scene_log_scale_min,
+                    max=self.scene_log_scale_max,
+                )
             )
             depth_bias = (
                 (per_query_bias * confs[:, frame_idx : frame_idx + 1].float().clamp(min=0.0)).sum(dim=2)

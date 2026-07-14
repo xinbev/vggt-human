@@ -15,11 +15,14 @@ export MAX_HUMANS="${MAX_HUMANS:-20}"
 export NUM_VIEWS="${NUM_VIEWS:-2}"
 export EPOCHS="${EPOCHS:-10}"
 export LR="${LR:-5e-6}"
+export MAX_STEPS_PER_EPOCH="${MAX_STEPS_PER_EPOCH:-0}"
 
 # Stage 1 trains only the HSI scene affine scale/bias branch.
 export TRAIN_HSI_SCENE_AFFINE_ONLY="${TRAIN_HSI_SCENE_AFFINE_ONLY:-true}"
 export FREEZE_HSI_SCENE_AFFINE="${FREEZE_HSI_SCENE_AFFINE:-false}"
 export HSI_SCENE_AFFINE_MODE="${HSI_SCENE_AFFINE_MODE:-per_frame}"
+export HSI_SCENE_LOG_SCALE_MIN="${HSI_SCENE_LOG_SCALE_MIN:--5.0}"
+export HSI_SCENE_LOG_SCALE_MAX="${HSI_SCENE_LOG_SCALE_MAX:-5.0}"
 
 # GT-visible-SMPL scale teacher. Teacher projection uses dataset K inside the loss.
 export HSI_SMPL_SCALE_TEACHER_WEIGHT="${HSI_SMPL_SCALE_TEACHER_WEIGHT:-1.0}"
@@ -31,8 +34,9 @@ export HSI_SMPL_SCALE_TEACHER_MAX_POINTS_PER_PERSON="${HSI_SMPL_SCALE_TEACHER_MA
 export HSI_SMPL_SCALE_TEACHER_MIN_POINTS_PER_PERSON="${HSI_SMPL_SCALE_TEACHER_MIN_POINTS_PER_PERSON:-32}"
 export HSI_SMPL_SCALE_TEACHER_MIN_VISIBLE_POINTS="${HSI_SMPL_SCALE_TEACHER_MIN_VISIBLE_POINTS:-128}"
 export HSI_SMPL_SCALE_TEACHER_MAD_MULT="${HSI_SMPL_SCALE_TEACHER_MAD_MULT:-2.5}"
-export HSI_SMPL_SCALE_TEACHER_LOG_LOSS="${HSI_SMPL_SCALE_TEACHER_LOG_LOSS:-true}"
+export HSI_SMPL_SCALE_TEACHER_LOG_LOSS="${HSI_SMPL_SCALE_TEACHER_LOG_LOSS:-false}"
 export HSI_SMPL_SCALE_TEACHER_BIAS_REG_WEIGHT="${HSI_SMPL_SCALE_TEACHER_BIAS_REG_WEIGHT:-0.05}"
+export HSI_SMPL_SCALE_TEACHER_MAX_Z_M="${HSI_SMPL_SCALE_TEACHER_MAX_Z_M:-20.0}"
 
 # Keep dense GT depth as an optional tiny auxiliary only; default is pure SMPL-scale teacher.
 export DEPTH_TEACHER_WEIGHT="${DEPTH_TEACHER_WEIGHT:-0.0}"
@@ -76,6 +80,6 @@ export SAVE_OPTIMIZER="${SAVE_OPTIMIZER:-false}"
 export MONITOR="${MONITOR:-loss_total}"
 export MONITOR_MODE="${MONITOR_MODE:-min}"
 
-export PROGRESS_LOG_KEYS="${PROGRESS_LOG_KEYS:-loss_total,loss_hsi_smpl_scale_teacher,metric_hsi_smpl_scale_teacher_valid_points,metric_hsi_smpl_scale_teacher_scale,metric_hsi_smpl_scale_teacher_pred_scale,metric_hsi_smpl_scale_teacher_l1,loss_hsi_depth_teacher,metric_hsi_depth_teacher_l1}"
+export PROGRESS_LOG_KEYS="${PROGRESS_LOG_KEYS:-loss_total,loss_hsi_smpl_scale_teacher,metric_hsi_smpl_scale_teacher_valid_points,metric_hsi_smpl_scale_teacher_scale,metric_hsi_smpl_scale_teacher_pred_scale,metric_hsi_smpl_scale_teacher_l1,metric_hsi_smpl_scale_teacher_rel_l1,metric_hsi_smpl_scale_teacher_log_l1,loss_hsi_depth_teacher,metric_hsi_depth_teacher_l1}"
 
 bash "${REPO_ROOT}/scripts/train/train_smpl_hsi_nlf_provider.sh"

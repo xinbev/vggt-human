@@ -134,6 +134,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-points-per-person", type=int, default=32)
     parser.add_argument("--min-visible-points", type=int, default=128)
     parser.add_argument("--mad-multiplier", type=float, default=2.5)
+    parser.add_argument("--max-z-m", type=float, default=20.0, help="Ignore GT SMPL points farther than this; <=0 disables")
     parser.add_argument("--overlay-max-points-per-person", type=int, default=260)
     parser.add_argument("--filtered-overlay-max-points", type=int, default=160)
     parser.add_argument("--scale-warn-low", type=float, default=1.0)
@@ -302,7 +303,10 @@ def validate_frame(
             window=int(args.window),
             tolerance_m=float(args.visibility_tolerance_m),
         )
-        visible = visible & torch.isfinite(sampled_raw) & torch.isfinite(sampled_gt) & (sampled_raw > 1e-6) & (points_cam[..., 2] > 1e-6)
+        point_z = points_cam[..., 2]
+        visible = visible & torch.isfinite(sampled_raw) & torch.isfinite(sampled_gt) & (sampled_raw > 1e-6) & (point_z > 1e-6)
+        if float(args.max_z_m) > 0.0:
+            visible = visible & (point_z <= float(args.max_z_m))
         robust = torch.zeros_like(visible)
         if visible.any():
             candidates = points_cam[..., 2].to(dtype=raw_depth.dtype) / sampled_raw.clamp(min=1e-6)
