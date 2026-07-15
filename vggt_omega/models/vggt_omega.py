@@ -11,7 +11,14 @@ import torch.nn as nn
 
 from vggt_omega.models.aggregator import Aggregator
 from vggt_omega.integrations import NLFSMPLProvider
-from vggt_omega.models.heads import AggregatorSMPLHead, CameraHead, DenseHead, HSIRefinementHead, TextAlignmentHead
+from vggt_omega.models.heads import (
+    AggregatorSMPLHead,
+    CameraHead,
+    DenseHead,
+    HSIHumanSceneAlignHead,
+    HSIRefinementHead,
+    TextAlignmentHead,
+)
 from vggt_omega.tracking.smpl_track_assigner import BaseSMPLTrackAssigner
 from vggt_omega.utils.hsi_affine import apply_hsi_scene_affine_mode
 
@@ -94,6 +101,14 @@ class VGGTOmega(nn.Module):
         hsi_transl_delta_mode: str = "xyz",
         hsi_use_affine_depth_for_transl: bool = False,
         hsi_affine_depth_detach: bool = True,
+        enable_hsi_human_scene_align: bool = False,
+        hsi_align_hidden_dim: int = 256,
+        hsi_align_num_sample_vertices: int = 96,
+        hsi_align_local_window: int = 7,
+        hsi_align_max_ray_delta_m: float = 0.35,
+        hsi_align_max_tangent_delta_m: float = 0.12,
+        hsi_align_use_delta_gate: bool = True,
+        hsi_align_overwrite_refined: bool = True,
         smpl_model_dir: str = "",
         smpl_provider: str = "internal",
         nlf_model_path: str = "",
@@ -238,13 +253,28 @@ class VGGTOmega(nn.Module):
             if enable_hsi_refine
             else None
         )
+        self.hsi_human_scene_align_head = (
+            HSIHumanSceneAlignHead(
+                smpl_model_dir=smpl_model_dir,
+                hidden_dim=hsi_align_hidden_dim,
+                num_sample_vertices=hsi_align_num_sample_vertices,
+                local_window=hsi_align_local_window,
+                max_ray_delta_m=hsi_align_max_ray_delta_m,
+                max_tangent_delta_m=hsi_align_max_tangent_delta_m,
+                use_delta_gate=hsi_align_use_delta_gate,
+                overwrite_refined=hsi_align_overwrite_refined,
+                image_size=image_size,
+            )
+            if enable_hsi_human_scene_align
+            else None
+        )
         has_runtime_smpl_provider = self.smpl_provider == "gt_perturbed"
-        if self.hsi_refinement_head is not None and (
+        if (self.hsi_refinement_head is not None or self.hsi_human_scene_align_head is not None) and (
             (self.smpl_head is None and self.nlf_smpl_provider is None and not has_runtime_smpl_provider)
             or self.dense_head is None
             or self.camera_head is None
         ):
-            raise ValueError("enable_hsi_refine=True requires a SMPL provider, enable_depth, and enable_camera")
+            raise ValueError("HSI refinement/alignment requires a SMPL provider, enable_depth, and enable_camera")
 
     def forward(
         self,
@@ -394,6 +424,18 @@ class VGGTOmega(nn.Module):
                     predictions,
                     mode=self.hsi_scene_affine_mode,
                     ema_alpha=self.hsi_scene_affine_ema_alpha,
+                )
+            if self.hsi_human_scene_align_head is not None:
+                if hsi_intrinsics_override is not None:
+                    predictions["hsi_intrinsics_override"] = hsi_intrinsics_override
+                predictions.update(
+                    self.hsi_human_scene_align_head(
+                        predictions=predictions,
+                        depth=predictions["depth"],
+                        pose_enc=predictions["pose_enc"],
+                        image_size_hw=image_size_hw,
+                        intrinsics_override=hsi_intrinsics_override,
+                    )
                 )
 
         if not self.training:

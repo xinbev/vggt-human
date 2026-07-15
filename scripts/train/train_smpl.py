@@ -433,6 +433,14 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_transl_delta_mode=str(model_cfg.get("hsi_transl_delta_mode", "xyz")),
         hsi_use_affine_depth_for_transl=bool(model_cfg.get("hsi_use_affine_depth_for_transl", False)),
         hsi_affine_depth_detach=bool(model_cfg.get("hsi_affine_depth_detach", True)),
+        enable_hsi_human_scene_align=bool(model_cfg.get("enable_hsi_human_scene_align", False)),
+        hsi_align_hidden_dim=int(model_cfg.get("hsi_align_hidden_dim", 256)),
+        hsi_align_num_sample_vertices=int(model_cfg.get("hsi_align_num_sample_vertices", 96)),
+        hsi_align_local_window=int(model_cfg.get("hsi_align_local_window", 7)),
+        hsi_align_max_ray_delta_m=float(model_cfg.get("hsi_align_max_ray_delta_m", 0.35)),
+        hsi_align_max_tangent_delta_m=float(model_cfg.get("hsi_align_max_tangent_delta_m", 0.12)),
+        hsi_align_use_delta_gate=bool(model_cfg.get("hsi_align_use_delta_gate", True)),
+        hsi_align_overwrite_refined=bool(model_cfg.get("hsi_align_overwrite_refined", True)),
         smpl_model_dir=str(config.get("assets", {}).get("smpl_model_dir", "")),
         smpl_provider=str(model_cfg.get("smpl_provider", "internal")),
         nlf_model_path=str(model_cfg.get("nlf_model_path", config.get("checkpoints", {}).get("nlf_smpl", ""))),
@@ -568,6 +576,23 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
                 module = getattr(hsi_head, name, None)
                 if module is not None:
                     freeze_module(module)
+    hsi_align_head = getattr(model, "hsi_human_scene_align_head", None)
+    if hsi_align_head is not None:
+        if bool(model_cfg.get("freeze_hsi_human_scene_align", False)):
+            freeze_module(hsi_align_head)
+        if bool(model_cfg.get("train_hsi_human_scene_align_only", False)):
+            for module_name in (
+                "aggregator",
+                "camera_head",
+                "dense_head",
+                "smpl_head",
+                "nlf_smpl_provider",
+                "hsi_refinement_head",
+            ):
+                module = getattr(model, module_name, None)
+                if module is not None:
+                    freeze_module(module)
+            unfreeze_module(hsi_align_head)
     if not bool(model_cfg.get("freeze_aggregator", False)):
         return
     aggregator = getattr(model, "aggregator", None)
@@ -1218,10 +1243,19 @@ def get_progress_log_keys(config: dict[str, Any]) -> list[str]:
         "metric_hsi_refined_transl_l1",
         "metric_hsi_transl_l1_delta",
         "loss_hsi_ray_delta",
+        "loss_hsi_align_point",
+        "loss_hsi_align_delta_reg",
+        "loss_hsi_align_no_worse",
         "metric_hsi_ray_delta_base_l1",
         "metric_hsi_ray_delta_refined_l1",
         "metric_hsi_ray_delta_l1_delta",
         "metric_hsi_ray_delta_sign_acc",
+        "metric_hsi_align_base_point_l1",
+        "metric_hsi_align_refined_point_l1",
+        "metric_hsi_align_point_l1_delta",
+        "metric_hsi_align_delta_l1",
+        "metric_hsi_align_gate_mean",
+        "metric_hsi_align_valid_ratio",
     ]
 
 
@@ -1272,6 +1306,15 @@ def compact_loss_name(key: str) -> str:
         "metric_hsi_ray_delta_expected_abs": "rayExp",
         "metric_hsi_ray_delta_pred_abs": "rayPred",
         "metric_hsi_ray_delta_sign_acc": "raySign",
+        "loss_hsi_align_point": "align",
+        "loss_hsi_align_delta_reg": "alignReg",
+        "loss_hsi_align_no_worse": "alignNoW",
+        "metric_hsi_align_base_point_l1": "alignBase",
+        "metric_hsi_align_refined_point_l1": "alignRef",
+        "metric_hsi_align_point_l1_delta": "alignDT",
+        "metric_hsi_align_delta_l1": "alignDelta",
+        "metric_hsi_align_gate_mean": "alignGate",
+        "metric_hsi_align_valid_ratio": "alignValid",
         "loss_transl_refine_delta_reg": "tDeltaReg",
         "loss_local_joints3d": "localJ",
         "loss_local_vertices": "localV",
