@@ -40,6 +40,7 @@ class HSIRefinementHead(nn.Module):
         scene_log_scale_min: float = -5.0,
         scene_log_scale_max: float = 5.0,
         transl_delta_scale: float = 0.05,
+        transl_delta_mode: str = "xyz",
         use_affine_depth_for_transl: bool = False,
         affine_depth_detach: bool = True,
     ) -> None:
@@ -62,6 +63,9 @@ class HSIRefinementHead(nn.Module):
         self.temporal_momentum_detach = bool(temporal_momentum_detach)
         self.temporal_momentum_use_track_ids = bool(temporal_momentum_use_track_ids)
         self.transl_delta_scale = float(transl_delta_scale)
+        self.transl_delta_mode = str(transl_delta_mode or "xyz").lower()
+        if self.transl_delta_mode not in {"xyz", "ray"}:
+            raise ValueError(f"Unsupported hsi transl_delta_mode: {self.transl_delta_mode}")
         self.use_affine_depth_for_transl = bool(use_affine_depth_for_transl)
         self.affine_depth_detach = bool(affine_depth_detach)
         self.track_quality_min = float(track_quality_min)
@@ -258,7 +262,11 @@ class HSIRefinementHead(nn.Module):
                 gate = torch.ones_like(gate)
             refined_pose6d = refined_pose6d + gate * 0.01 * self.pose_delta(pooled).reshape(batch_size, num_frames, num_queries, 144)
             refined_betas = refined_betas + gate * 0.01 * self.betas_delta(pooled).reshape(batch_size, num_frames, num_queries, 10)
-            refined_transl = refined_transl + gate * self.transl_delta_scale * self.transl_delta(pooled).reshape(batch_size, num_frames, num_queries, 3)
+            transl_update = self._translation_update(
+                self.transl_delta(pooled).reshape(batch_size, num_frames, num_queries, 3),
+                transl,
+            )
+            refined_transl = refined_transl + gate * self.transl_delta_scale * transl_update
             per_query_log_scale = self.scale_delta(pooled).reshape(batch_size, num_frames, num_queries, 1)
             per_query_bias = self.bias_delta(pooled).reshape(batch_size, num_frames, num_queries, 1)
             contact_logits = self.contact_head(tokens).reshape(batch_size, num_frames, num_queries, 24, 1)
@@ -359,6 +367,12 @@ class HSIRefinementHead(nn.Module):
         scene_scale = torch.exp(log_scale.clamp(min=self.scene_log_scale_min, max=self.scene_log_scale_max))
         affine_depth = depth_hw * scene_scale[..., None] + depth_bias[..., None]
         return affine_depth, scene_scale, depth_bias
+
+    def _translation_update(self, raw_delta: torch.Tensor, base_transl: torch.Tensor) -> torch.Tensor:
+        if self.transl_delta_mode == "xyz":
+            return raw_delta
+        ray = F.normalize(base_transl, dim=-1, eps=1e-6)
+        return ray * raw_delta[..., :1]
 
     def _forward_temporal(
         self,
@@ -492,7 +506,11 @@ class HSIRefinementHead(nn.Module):
                 gate = torch.ones_like(gate)
             refined_pose6d = frame_pose6d + gate * 0.01 * self.pose_delta(pooled).reshape(batch_size, 1, num_queries, 144)
             refined_betas = frame_betas + gate * 0.01 * self.betas_delta(pooled).reshape(batch_size, 1, num_queries, 10)
-            refined_transl = frame_transl + gate * self.transl_delta_scale * self.transl_delta(pooled).reshape(batch_size, 1, num_queries, 3)
+            transl_update = self._translation_update(
+                self.transl_delta(pooled).reshape(batch_size, 1, num_queries, 3),
+                frame_transl,
+            )
+            refined_transl = frame_transl + gate * self.transl_delta_scale * transl_update
             per_query_log_scale = self.scale_delta(pooled).reshape(batch_size, 1, num_queries, 1)
             per_query_bias = self.bias_delta(pooled).reshape(batch_size, 1, num_queries, 1)
             contact_logits = self.contact_head(tokens).reshape(batch_size, 1, num_queries, 24, 1)

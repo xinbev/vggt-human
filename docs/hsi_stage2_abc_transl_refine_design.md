@@ -88,6 +88,7 @@ Stage2 uses a larger translation residual scale than the baseline HSI default:
 ```text
 model.hsi_transl_delta_scale = 0.5   # Stage A/B
 model.hsi_transl_delta_scale = 0.25  # Stage C
+model.hsi_transl_delta_mode = ray
 ```
 
 The baseline default remains `0.05`. If `hsiBaseT` and `hsiRefT` stay nearly
@@ -107,6 +108,11 @@ residual branch. Without this, the translation branch sees unscaled VGGT depth
 while the target SMPL is metric, and `hsiDT` can move in the wrong direction.
 Stage2 freezes the HSI backbone by default so the Stage1 scale features do not
 drift while the residual heads are trained.
+
+The residual mode is `ray` because Stage A/B perturbations are constructed by
+scaling the full camera-space translation vector. A free XYZ residual has too
+many degrees of freedom for this gate and can move sideways or learn the wrong
+sign before it has learned the 1D depth correction.
 
 ## Diagnostics
 

@@ -75,6 +75,7 @@ FREEZE_HSI_BETAS_DELTA="${FREEZE_HSI_BETAS_DELTA:-false}"
 HSI_SCENE_LOG_SCALE_MIN="${HSI_SCENE_LOG_SCALE_MIN:--5.0}"
 HSI_SCENE_LOG_SCALE_MAX="${HSI_SCENE_LOG_SCALE_MAX:-5.0}"
 HSI_TRANSL_DELTA_SCALE="${HSI_TRANSL_DELTA_SCALE:-0.05}"
+HSI_TRANSL_DELTA_MODE="${HSI_TRANSL_DELTA_MODE:-xyz}"
 HSI_USE_AFFINE_DEPTH_FOR_TRANSL="${HSI_USE_AFFINE_DEPTH_FOR_TRANSL:-false}"
 HSI_AFFINE_DEPTH_DETACH="${HSI_AFFINE_DEPTH_DETACH:-true}"
 SMPL_PROVIDER="${SMPL_PROVIDER:-nlf}"
@@ -169,7 +170,7 @@ echo "Save scope   : ${SAVE_SCOPE}, top-k=${SAVE_TOP_K}, monitor=${MONITOR}/${MO
 echo "Depth ROI    : use=${DEPTH_USE_HUMAN_ROI}, expand=${DEPTH_ROI_EXPAND}, max_m=${DEPTH_MAX_M}, clip=${DEPTH_ERROR_CLIP_M}"
 echo "HSI weights  : depth=${DEPTH_TEACHER_WEIGHT}, anchorD=${ANCHOR_DEPTH_WEIGHT}, anchorXYZ=${ANCHOR_SCENE_XYZ_WEIGHT}, transl=${HSI_TRANSL_WEIGHT}"
 echo "HSI scale rng: log=[${HSI_SCENE_LOG_SCALE_MIN}, ${HSI_SCENE_LOG_SCALE_MAX}] scale=[exp(min), exp(max)]"
-echo "HSI transl   : delta_scale=${HSI_TRANSL_DELTA_SCALE}, affine_depth=${HSI_USE_AFFINE_DEPTH_FOR_TRANSL}, detach=${HSI_AFFINE_DEPTH_DETACH}"
+echo "HSI transl   : delta_scale=${HSI_TRANSL_DELTA_SCALE}, mode=${HSI_TRANSL_DELTA_MODE}, affine_depth=${HSI_USE_AFFINE_DEPTH_FOR_TRANSL}, detach=${HSI_AFFINE_DEPTH_DETACH}"
 echo "Provider     : smpl=${SMPL_PROVIDER}, hsi_camera=${HSI_CAMERA_SOURCE}, gt_override_prob=${SMPL_GT_OVERRIDE_PROB}"
 echo "Transl noise : schedule=${SMPL_TRANSL_RAY_NOISE_SCHEDULE}, clean_prob=${SMPL_TRANSL_RAY_NOISE_CLEAN_PROB}, mode=${SMPL_TRANSL_RAY_NOISE_MODE}"
 echo "SMPL scale T : weight=${HSI_SMPL_SCALE_TEACHER_WEIGHT}, source=${HSI_SMPL_SCALE_TEACHER_SOURCE}, window=${HSI_SMPL_SCALE_TEACHER_WINDOW}, vis_tol=${HSI_SMPL_SCALE_TEACHER_VIS_TOL_M}, max_z=${HSI_SMPL_SCALE_TEACHER_MAX_Z_M}, log_loss=${HSI_SMPL_SCALE_TEACHER_LOG_LOSS}"
@@ -233,6 +234,7 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_
   --override "model.hsi_scene_log_scale_min=${HSI_SCENE_LOG_SCALE_MIN}" \
   --override "model.hsi_scene_log_scale_max=${HSI_SCENE_LOG_SCALE_MAX}" \
   --override "model.hsi_transl_delta_scale=${HSI_TRANSL_DELTA_SCALE}" \
+  --override "model.hsi_transl_delta_mode=${HSI_TRANSL_DELTA_MODE}" \
   --override "model.hsi_use_affine_depth_for_transl=${HSI_USE_AFFINE_DEPTH_FOR_TRANSL}" \
   --override "model.hsi_affine_depth_detach=${HSI_AFFINE_DEPTH_DETACH}" \
   --override "loss.hsi_pose_weight=${HSI_POSE_WEIGHT}" \

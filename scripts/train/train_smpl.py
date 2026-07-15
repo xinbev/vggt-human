@@ -430,6 +430,7 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_scene_log_scale_min=float(model_cfg.get("hsi_scene_log_scale_min", -5.0)),
         hsi_scene_log_scale_max=float(model_cfg.get("hsi_scene_log_scale_max", 5.0)),
         hsi_transl_delta_scale=float(model_cfg.get("hsi_transl_delta_scale", 0.05)),
+        hsi_transl_delta_mode=str(model_cfg.get("hsi_transl_delta_mode", "xyz")),
         hsi_use_affine_depth_for_transl=bool(model_cfg.get("hsi_use_affine_depth_for_transl", False)),
         hsi_affine_depth_detach=bool(model_cfg.get("hsi_affine_depth_detach", True)),
         smpl_model_dir=str(config.get("assets", {}).get("smpl_model_dir", "")),
