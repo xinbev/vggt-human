@@ -43,7 +43,7 @@ echo "Loss weights: align=${HSI_ALIGN_POINT_WEIGHT} transl=${HSI_TRANSL_WEIGHT} 
 
 CMD=(
   python scripts/train/train_smpl.py
-  --config "${CONFIG_PATH}"
+  --train-config "${CONFIG_PATH}"
   --path-config "${PATH_CONFIG}"
   --override "experiment.output_dir=${OUTPUT_DIR}"
   --override "checkpoint.resume=${STAGE1_CKPT}"
