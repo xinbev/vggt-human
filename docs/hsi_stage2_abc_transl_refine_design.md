@@ -67,6 +67,10 @@ bash scripts/train/train_smpl_hsi_nlf_stage2_abc_transl_refine.sh
 The most important progress keys are:
 
 ```text
+rayBase  = metric_hsi_ray_delta_base_l1
+rayRef   = metric_hsi_ray_delta_refined_l1
+rayDT    = metric_hsi_ray_delta_l1_delta
+raySign  = metric_hsi_ray_delta_sign_acc
 hsiBaseT = metric_hsi_base_transl_l1
 hsiRefT  = metric_hsi_refined_transl_l1
 hsiDT    = metric_hsi_transl_l1_delta
@@ -75,6 +79,8 @@ hsiDT    = metric_hsi_transl_l1_delta
 Stage2 is working when:
 
 ```text
+rayRef < rayBase
+rayDT < 0
 hsiRefT < hsiBaseT
 hsiDT < 0
 metric_hsi_joint_error_delta < 0
@@ -113,6 +119,17 @@ The residual mode is `ray` because Stage A/B perturbations are constructed by
 scaling the full camera-space translation vector. A free XYZ residual has too
 many degrees of freedom for this gate and can move sideways or learn the wrong
 sign before it has learned the 1D depth correction.
+
+Stage A also uses direct ray-delta supervision:
+
+```text
+expected_ray_delta = dot(gt_transl_cam - base_transl_cam, normalize(base_transl_cam))
+predicted_ray_delta = dot(hsi_refined_transl_cam - base_transl_cam, normalize(base_transl_cam))
+loss_hsi_ray_delta = SmoothL1(predicted_ray_delta, expected_ray_delta)
+```
+
+This makes the gate explicit. If `rayDT` is not negative, the model has not even
+learned the 1D direction and a full ABC run should not be started.
 
 ## Diagnostics
 

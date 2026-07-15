@@ -41,6 +41,7 @@ ANCHOR_SCENE_XYZ_WEIGHT="${ANCHOR_SCENE_XYZ_WEIGHT:-0.0}"
 HSI_POSE_WEIGHT="${HSI_POSE_WEIGHT:-6.0}"
 HSI_BETAS_WEIGHT="${HSI_BETAS_WEIGHT:-0.8}"
 HSI_TRANSL_WEIGHT="${HSI_TRANSL_WEIGHT:-3.0}"
+HSI_RAY_DELTA_WEIGHT="${HSI_RAY_DELTA_WEIGHT:-0.0}"
 HSI_JOINTS3D_WEIGHT="${HSI_JOINTS3D_WEIGHT:-16.0}"
 HSI_VERTICES_WEIGHT="${HSI_VERTICES_WEIGHT:-4.0}"
 HSI_PROJECTED_J2D_WEIGHT="${HSI_PROJECTED_J2D_WEIGHT:-0.35}"
@@ -169,6 +170,7 @@ echo "Resume ckpt  : ${RESUME_CKPT:-<none>}"
 echo "Save scope   : ${SAVE_SCOPE}, top-k=${SAVE_TOP_K}, monitor=${MONITOR}/${MONITOR_MODE}"
 echo "Depth ROI    : use=${DEPTH_USE_HUMAN_ROI}, expand=${DEPTH_ROI_EXPAND}, max_m=${DEPTH_MAX_M}, clip=${DEPTH_ERROR_CLIP_M}"
 echo "HSI weights  : depth=${DEPTH_TEACHER_WEIGHT}, anchorD=${ANCHOR_DEPTH_WEIGHT}, anchorXYZ=${ANCHOR_SCENE_XYZ_WEIGHT}, transl=${HSI_TRANSL_WEIGHT}"
+echo "HSI ray loss : weight=${HSI_RAY_DELTA_WEIGHT}"
 echo "HSI scale rng: log=[${HSI_SCENE_LOG_SCALE_MIN}, ${HSI_SCENE_LOG_SCALE_MAX}] scale=[exp(min), exp(max)]"
 echo "HSI transl   : delta_scale=${HSI_TRANSL_DELTA_SCALE}, mode=${HSI_TRANSL_DELTA_MODE}, affine_depth=${HSI_USE_AFFINE_DEPTH_FOR_TRANSL}, detach=${HSI_AFFINE_DEPTH_DETACH}"
 echo "Provider     : smpl=${SMPL_PROVIDER}, hsi_camera=${HSI_CAMERA_SOURCE}, gt_override_prob=${SMPL_GT_OVERRIDE_PROB}"
@@ -240,6 +242,7 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_
   --override "loss.hsi_pose_weight=${HSI_POSE_WEIGHT}" \
   --override "loss.hsi_betas_weight=${HSI_BETAS_WEIGHT}" \
   --override "loss.hsi_transl_cam_weight=${HSI_TRANSL_WEIGHT}" \
+  --override "loss.hsi_ray_delta_weight=${HSI_RAY_DELTA_WEIGHT}" \
   --override "loss.hsi_joints3d_weight=${HSI_JOINTS3D_WEIGHT}" \
   --override "loss.hsi_vertices_weight=${HSI_VERTICES_WEIGHT}" \
   --override "loss.hsi_projected_joints2d_weight=${HSI_PROJECTED_J2D_WEIGHT}" \

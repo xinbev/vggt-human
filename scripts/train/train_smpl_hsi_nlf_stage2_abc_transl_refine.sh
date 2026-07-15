@@ -66,7 +66,7 @@ run_stage() {
   bash "${REPO_ROOT}/scripts/train/train_smpl_hsi_nlf_provider.sh"
 }
 
-COMMON_PROGRESS_KEYS="loss_total,loss_hsi_transl_cam,metric_hsi_base_transl_l1,metric_hsi_refined_transl_l1,metric_hsi_transl_l1_delta,loss_hsi_joints3d,loss_hsi_vertices,metric_hsi_joint_error_delta,metric_hsi_smpl_scale_teacher_pred_scale,metric_hsi_smpl_scale_teacher_l1"
+COMMON_PROGRESS_KEYS="loss_total,loss_hsi_ray_delta,metric_hsi_ray_delta_base_l1,metric_hsi_ray_delta_refined_l1,metric_hsi_ray_delta_l1_delta,metric_hsi_ray_delta_sign_acc,loss_hsi_transl_cam,metric_hsi_base_transl_l1,metric_hsi_refined_transl_l1,metric_hsi_transl_l1_delta"
 
 if contains_stage "A"; then
   export OUTPUT_DIR="${STAGE_A_DIR}"
@@ -93,11 +93,12 @@ if contains_stage "A"; then
   export HSI_TRANSL_DELTA_MODE="${HSI_TRANSL_DELTA_MODE_A}"
   export HSI_USE_AFFINE_DEPTH_FOR_TRANSL=true
   export HSI_AFFINE_DEPTH_DETACH=true
-  export HSI_TRANSL_WEIGHT=12.0
-  export HSI_JOINTS3D_WEIGHT=2.0
-  export HSI_VERTICES_WEIGHT=1.0
-  export HSI_NO_WORSE_WEIGHT=3.0
-  export HSI_DELTA_REG_WEIGHT=0.02
+  export HSI_RAY_DELTA_WEIGHT=20.0
+  export HSI_TRANSL_WEIGHT=2.0
+  export HSI_JOINTS3D_WEIGHT=0.5
+  export HSI_VERTICES_WEIGHT=0.25
+  export HSI_NO_WORSE_WEIGHT=1.0
+  export HSI_DELTA_REG_WEIGHT=0.005
   export HSI_POSE_WEIGHT=0.0
   export HSI_BETAS_WEIGHT=0.0
   export HSI_PROJECTED_J2D_WEIGHT=0.0
@@ -140,9 +141,10 @@ if contains_stage "B"; then
   export HSI_TRANSL_DELTA_MODE="${HSI_TRANSL_DELTA_MODE_B}"
   export HSI_USE_AFFINE_DEPTH_FOR_TRANSL=true
   export HSI_AFFINE_DEPTH_DETACH=true
-  export HSI_TRANSL_WEIGHT=10.0
-  export HSI_JOINTS3D_WEIGHT=2.0
-  export HSI_VERTICES_WEIGHT=1.0
+  export HSI_RAY_DELTA_WEIGHT=10.0
+  export HSI_TRANSL_WEIGHT=4.0
+  export HSI_JOINTS3D_WEIGHT=1.0
+  export HSI_VERTICES_WEIGHT=0.5
   export HSI_PROJECTED_J2D_WEIGHT=0.05
   export HSI_NO_WORSE_WEIGHT=5.0
   export HSI_DELTA_REG_WEIGHT=0.03
@@ -191,6 +193,7 @@ if contains_stage "C"; then
   export HSI_AFFINE_DEPTH_DETACH=true
   export SMPL_TRACK_ASSIGNMENT_MODE=gt
   export HSI_TRANSL_WEIGHT=8.0
+  export HSI_RAY_DELTA_WEIGHT=2.0
   export HSI_JOINTS3D_WEIGHT=2.0
   export HSI_VERTICES_WEIGHT=1.0
   export HSI_POSE_WEIGHT=0.2
@@ -207,7 +210,7 @@ if contains_stage "C"; then
   export HSI_CONTACT_WEIGHT=0.0
   export HSI_SMPL_SCALE_TEACHER_WEIGHT=0.0
   export SAVE_SCOPE=hsi SAVE_TOP_K=3 SAVE_OPTIMIZER=false SAVE_EPOCH_CHECKPOINT=false
-  export PROGRESS_LOG_KEYS="${PROGRESS_LOG_KEYS_C:-${USER_PROGRESS_LOG_KEYS:-loss_total,loss_hsi_transl_cam,metric_hsi_base_transl_l1,metric_hsi_refined_transl_l1,metric_hsi_transl_l1_delta,loss_hsi_pose,loss_hsi_betas,loss_hsi_transl_velocity,loss_hsi_joints_velocity,metric_hsi_joint_error_delta}}"
+  export PROGRESS_LOG_KEYS="${PROGRESS_LOG_KEYS_C:-${USER_PROGRESS_LOG_KEYS:-loss_total,loss_hsi_ray_delta,metric_hsi_ray_delta_l1_delta,loss_hsi_transl_cam,metric_hsi_base_transl_l1,metric_hsi_refined_transl_l1,metric_hsi_transl_l1_delta,loss_hsi_pose,loss_hsi_betas,loss_hsi_transl_velocity}}"
   run_stage "C / light pose-beta temporal refine"
 fi
 

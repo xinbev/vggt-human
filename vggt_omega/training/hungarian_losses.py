@@ -62,6 +62,7 @@ class HungarianSMPLLoss(nn.Module):
         hsi_pose_weight: float = 0.0,
         hsi_betas_weight: float = 0.0,
         hsi_transl_cam_weight: float = 0.0,
+        hsi_ray_delta_weight: float = 0.0,
         hsi_joints3d_weight: float = 0.0,
         hsi_vertices_weight: float = 0.0,
         hsi_projected_joints2d_weight: float = 0.0,
@@ -182,6 +183,7 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_pose_weight = hsi_pose_weight
         self.hsi_betas_weight = hsi_betas_weight
         self.hsi_transl_cam_weight = hsi_transl_cam_weight
+        self.hsi_ray_delta_weight = hsi_ray_delta_weight
         self.hsi_joints3d_weight = hsi_joints3d_weight
         self.hsi_vertices_weight = hsi_vertices_weight
         self.hsi_projected_joints2d_weight = hsi_projected_joints2d_weight
@@ -322,6 +324,7 @@ class HungarianSMPLLoss(nn.Module):
                     "loss_transl_temporal_no_worse": zero,
                     "loss_projected_bbox": zero,
                     "loss_projected_giou": zero,
+                    "loss_hsi_ray_delta": zero,
                     "metric_joints3d_l1": zero.detach(),
                     "metric_local_joints3d_l1": zero.detach(),
                     "metric_local_vertices_l1": zero.detach(),
@@ -347,6 +350,13 @@ class HungarianSMPLLoss(nn.Module):
                     "metric_base_transl_tangent_l1": zero.detach(),
                     "metric_refined_transl_tangent_l1": zero.detach(),
                     "metric_transl_tangent_l1_delta": zero.detach(),
+                    "metric_hsi_ray_delta_l1": zero.detach(),
+                    "metric_hsi_ray_delta_base_l1": zero.detach(),
+                    "metric_hsi_ray_delta_refined_l1": zero.detach(),
+                    "metric_hsi_ray_delta_l1_delta": zero.detach(),
+                    "metric_hsi_ray_delta_expected_abs": zero.detach(),
+                    "metric_hsi_ray_delta_pred_abs": zero.detach(),
+                    "metric_hsi_ray_delta_sign_acc": zero.detach(),
                     "metric_bbox_iou_mean": zero.detach(),
                     "metric_projected_bbox_iou_mean": zero.detach(),
                     "metric_conf_target_pos_mean": zero.detach(),
@@ -413,6 +423,7 @@ class HungarianSMPLLoss(nn.Module):
             + self.hsi_pose_weight * losses["loss_hsi_pose"]
             + self.hsi_betas_weight * losses["loss_hsi_betas"]
             + self.hsi_transl_cam_weight * losses["loss_hsi_transl_cam"]
+            + self.hsi_ray_delta_weight * losses["loss_hsi_ray_delta"]
             + self.hsi_joints3d_weight * losses["loss_hsi_joints3d"]
             + self.hsi_vertices_weight * losses["loss_hsi_vertices"]
             + self.hsi_projected_joints2d_weight * losses["loss_hsi_projected_joints2d"]
@@ -1054,6 +1065,7 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_pose": zero,
             "loss_hsi_betas": zero,
             "loss_hsi_transl_cam": zero,
+            "loss_hsi_ray_delta": zero,
             "loss_hsi_joints3d": zero,
             "loss_hsi_vertices": zero,
             "loss_hsi_projected_joints2d": zero,
@@ -1090,6 +1102,13 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_base_transl_l1": zero.detach(),
             "metric_hsi_refined_transl_l1": zero.detach(),
             "metric_hsi_transl_l1_delta": zero.detach(),
+            "metric_hsi_ray_delta_l1": zero.detach(),
+            "metric_hsi_ray_delta_base_l1": zero.detach(),
+            "metric_hsi_ray_delta_refined_l1": zero.detach(),
+            "metric_hsi_ray_delta_l1_delta": zero.detach(),
+            "metric_hsi_ray_delta_expected_abs": zero.detach(),
+            "metric_hsi_ray_delta_pred_abs": zero.detach(),
+            "metric_hsi_ray_delta_sign_acc": zero.detach(),
             "metric_hsi_no_worse_ratio": zero.detach(),
             "metric_hsi_joint_error_delta": zero.detach(),
             "metric_hsi_gate_mean": zero.detach(),
@@ -1199,6 +1218,25 @@ class HungarianSMPLLoss(nn.Module):
         losses["metric_hsi_base_transl_l1"] = base_transl_l1.detach()
         losses["metric_hsi_refined_transl_l1"] = refined_transl_l1.detach()
         losses["metric_hsi_transl_l1_delta"] = (refined_transl_l1 - base_transl_l1).detach()
+        ray = F.normalize(base_transl_matched, dim=-1, eps=1e-6)
+        expected_ray_delta = ((target_transl - base_transl_matched) * ray).sum(dim=-1, keepdim=True)
+        predicted_ray_delta = ((pred_transl - base_transl_matched) * ray).sum(dim=-1, keepdim=True)
+        ray_delta_err = (predicted_ray_delta - expected_ray_delta).abs()
+        ray_base_l1 = expected_ray_delta.abs().mean()
+        ray_refined_l1 = ray_delta_err.mean()
+        losses["loss_hsi_ray_delta"] = F.smooth_l1_loss(predicted_ray_delta, expected_ray_delta)
+        losses["metric_hsi_ray_delta_l1"] = ray_refined_l1.detach()
+        losses["metric_hsi_ray_delta_base_l1"] = ray_base_l1.detach()
+        losses["metric_hsi_ray_delta_refined_l1"] = ray_refined_l1.detach()
+        losses["metric_hsi_ray_delta_l1_delta"] = (ray_refined_l1 - ray_base_l1).detach()
+        losses["metric_hsi_ray_delta_expected_abs"] = ray_base_l1.detach()
+        losses["metric_hsi_ray_delta_pred_abs"] = predicted_ray_delta.abs().mean().detach()
+        sign_valid = expected_ray_delta.abs() > 1e-6
+        if sign_valid.any():
+            sign_match = torch.sign(predicted_ray_delta[sign_valid]) == torch.sign(expected_ray_delta[sign_valid])
+            losses["metric_hsi_ray_delta_sign_acc"] = sign_match.to(dtype=pred_transl.dtype).mean().detach()
+        else:
+            losses["metric_hsi_ray_delta_sign_acc"] = pred_transl.sum().detach() * 0.0
 
         hsi_joint_err = torch.linalg.norm(pred_joints_cam - gt_joints_cam, dim=-1).mean(dim=-1)
         base_joint_err = torch.linalg.norm(base_joints_cam - gt_joints_cam, dim=-1).mean(dim=-1).detach()

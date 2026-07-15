@@ -1217,6 +1217,11 @@ def get_progress_log_keys(config: dict[str, Any]) -> list[str]:
         "metric_hsi_base_transl_l1",
         "metric_hsi_refined_transl_l1",
         "metric_hsi_transl_l1_delta",
+        "loss_hsi_ray_delta",
+        "metric_hsi_ray_delta_base_l1",
+        "metric_hsi_ray_delta_refined_l1",
+        "metric_hsi_ray_delta_l1_delta",
+        "metric_hsi_ray_delta_sign_acc",
     ]
 
 
@@ -1259,6 +1264,14 @@ def compact_loss_name(key: str) -> str:
         "metric_hsi_base_transl_l1": "hsiBaseT",
         "metric_hsi_refined_transl_l1": "hsiRefT",
         "metric_hsi_transl_l1_delta": "hsiDT",
+        "loss_hsi_ray_delta": "ray",
+        "metric_hsi_ray_delta_l1": "rayL1",
+        "metric_hsi_ray_delta_base_l1": "rayBase",
+        "metric_hsi_ray_delta_refined_l1": "rayRef",
+        "metric_hsi_ray_delta_l1_delta": "rayDT",
+        "metric_hsi_ray_delta_expected_abs": "rayExp",
+        "metric_hsi_ray_delta_pred_abs": "rayPred",
+        "metric_hsi_ray_delta_sign_acc": "raySign",
         "loss_transl_refine_delta_reg": "tDeltaReg",
         "loss_local_joints3d": "localJ",
         "loss_local_vertices": "localV",
