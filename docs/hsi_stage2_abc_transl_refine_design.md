@@ -94,6 +94,20 @@ The baseline default remains `0.05`. If `hsiBaseT` and `hsiRefT` stay nearly
 identical during Stage A, the translation residual is not moving enough; first
 check `HSI_TRANSL_DELTA_SCALE_*` and `LR_*` before running a long job.
 
+Stage2 also enables affine-depth input for translation:
+
+```text
+model.hsi_use_affine_depth_for_transl = true
+model.hsi_affine_depth_detach = true
+```
+
+This makes HSI first estimate Stage1 scene affine from raw VGGT depth, then feed
+`raw_depth * hsi_scene_scale + hsi_scene_depth_bias` into the translation
+residual branch. Without this, the translation branch sees unscaled VGGT depth
+while the target SMPL is metric, and `hsiDT` can move in the wrong direction.
+Stage2 freezes the HSI backbone by default so the Stage1 scale features do not
+drift while the residual heads are trained.
+
 ## Diagnostics
 
 Interface smoke:

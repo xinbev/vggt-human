@@ -40,6 +40,8 @@ class HSIRefinementHead(nn.Module):
         scene_log_scale_min: float = -5.0,
         scene_log_scale_max: float = 5.0,
         transl_delta_scale: float = 0.05,
+        use_affine_depth_for_transl: bool = False,
+        affine_depth_detach: bool = True,
     ) -> None:
         super().__init__()
         if not smpl_model_dir:
@@ -60,6 +62,8 @@ class HSIRefinementHead(nn.Module):
         self.temporal_momentum_detach = bool(temporal_momentum_detach)
         self.temporal_momentum_use_track_ids = bool(temporal_momentum_use_track_ids)
         self.transl_delta_scale = float(transl_delta_scale)
+        self.use_affine_depth_for_transl = bool(use_affine_depth_for_transl)
+        self.affine_depth_detach = bool(affine_depth_detach)
         self.track_quality_min = float(track_quality_min)
         self.track_gap_max = int(track_gap_max)
         self.scene_log_scale_min = float(scene_log_scale_min)
@@ -178,12 +182,46 @@ class HSIRefinementHead(nn.Module):
         )
 
         scene_features = self._build_scene_features(aggregated_tokens_list, token_layout)
+        affine_depth_hw = depth_hw
+        pre_scene_scale = None
+        pre_depth_bias = None
+        if self.use_affine_depth_for_transl:
+            if self.affine_depth_detach:
+                with torch.no_grad():
+                    affine_depth_hw, pre_scene_scale, pre_depth_bias = self._predict_affine_depth(
+                        scene_features,
+                        pose6d,
+                        betas,
+                        transl,
+                        confs,
+                        depth_hw,
+                        intrinsics,
+                        height,
+                        width,
+                        image_size_hw,
+                    )
+                affine_depth_hw = affine_depth_hw.detach()
+                pre_scene_scale = pre_scene_scale.detach()
+                pre_depth_bias = pre_depth_bias.detach()
+            else:
+                affine_depth_hw, pre_scene_scale, pre_depth_bias = self._predict_affine_depth(
+                    scene_features,
+                    pose6d,
+                    betas,
+                    transl,
+                    confs,
+                    depth_hw,
+                    intrinsics,
+                    height,
+                    width,
+                    image_size_hw,
+                )
         local_scene_tokens = self._gather_local_scene_tokens(
             scene_features,
             pose6d,
             betas,
             transl,
-            depth_hw,
+            affine_depth_hw,
             intrinsics,
             height,
             width,
@@ -193,7 +231,7 @@ class HSIRefinementHead(nn.Module):
             pose6d,
             betas,
             transl,
-            depth_hw,
+            affine_depth_hw,
             intrinsics,
             height,
             width,
@@ -230,7 +268,7 @@ class HSIRefinementHead(nn.Module):
                 pose6d,
                 betas,
                 transl,
-                depth_hw,
+                affine_depth_hw,
                 intrinsics,
                 height,
                 width,
@@ -250,6 +288,9 @@ class HSIRefinementHead(nn.Module):
         log_scale = (per_query_log_scale * weights).sum(dim=2) / denom.squeeze(2)
         depth_bias = (per_query_bias * weights).sum(dim=2) / denom.squeeze(2)
         scene_scale = torch.exp(log_scale.clamp(min=self.scene_log_scale_min, max=self.scene_log_scale_max))
+        if pre_scene_scale is not None and pre_depth_bias is not None:
+            scene_scale = pre_scene_scale.to(device=pose6d.device, dtype=pose6d.dtype)
+            depth_bias = pre_depth_bias.to(device=pose6d.device, dtype=pose6d.dtype)
         refined_poses = rot6d_to_axis_angle(refined_pose6d.reshape(-1, 24, 6)).reshape(batch_size, num_frames, num_queries, 72)
         return {
             "hsi_refined_pred_pose_6d": refined_pose6d,
@@ -258,12 +299,66 @@ class HSIRefinementHead(nn.Module):
             "hsi_refined_pred_transl_cam": refined_transl,
             "hsi_scene_scale": scene_scale,
             "hsi_scene_depth_bias": depth_bias,
+            "hsi_translation_depth": affine_depth_hw,
             "hsi_contact_logits": contact_logits,
             "hsi_anchor_depth_residual": token_aux["depth_residual"],
             "hsi_per_query_scene_log_scale": per_query_log_scale,
             "hsi_per_query_scene_depth_bias": per_query_bias,
             "hsi_refine_gate": gate,
         }
+
+    def _predict_affine_depth(
+        self,
+        scene_features: torch.Tensor,
+        pose6d: torch.Tensor,
+        betas: torch.Tensor,
+        transl: torch.Tensor,
+        confs: torch.Tensor,
+        depth_hw: torch.Tensor,
+        intrinsics: torch.Tensor,
+        height: int,
+        width: int,
+        image_size_hw: tuple[int, int],
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        batch_size, num_frames, num_queries, _ = pose6d.shape
+        flat_frames = batch_size * num_frames
+        local_scene_tokens = self._gather_local_scene_tokens(
+            scene_features,
+            pose6d,
+            betas,
+            transl,
+            depth_hw,
+            intrinsics,
+            height,
+            width,
+            image_size_hw=image_size_hw,
+        )
+        affine_tokens, _ = self._tokenize(
+            pose6d,
+            betas,
+            transl,
+            depth_hw,
+            intrinsics,
+            height,
+            width,
+            image_size_hw=image_size_hw,
+            probe_mode=self.affine_probe_mode,
+        )
+        tokens = affine_tokens.reshape(flat_frames * num_queries, 24, self.hidden_dim)
+        flat_scene = local_scene_tokens.reshape(flat_frames * num_queries, 24, self.scene_window * self.scene_window, self.hidden_dim)
+        for _ in range(max(self.num_iters, 1)):
+            for block in self.blocks:
+                tokens = block(tokens, flat_scene)
+        pooled = tokens.mean(dim=1).reshape(flat_frames, num_queries, self.hidden_dim)
+        per_query_log_scale = self.scale_delta(pooled).reshape(batch_size, num_frames, num_queries, 1)
+        per_query_bias = self.bias_delta(pooled).reshape(batch_size, num_frames, num_queries, 1)
+        weights = confs.float().clamp(min=0.0)
+        denom = weights.sum(dim=2, keepdim=True).clamp(min=1e-6)
+        log_scale = (per_query_log_scale * weights).sum(dim=2) / denom.squeeze(2)
+        depth_bias = (per_query_bias * weights).sum(dim=2) / denom.squeeze(2)
+        scene_scale = torch.exp(log_scale.clamp(min=self.scene_log_scale_min, max=self.scene_log_scale_max))
+        affine_depth = depth_hw * scene_scale[..., None] + depth_bias[..., None]
+        return affine_depth, scene_scale, depth_bias
 
     def _forward_temporal(
         self,
@@ -298,6 +393,41 @@ class HSIRefinementHead(nn.Module):
             intrinsics_override=intrinsics_override,
         )
         scene_features = self._build_scene_features(aggregated_tokens_list, token_layout)
+        affine_depth_hw = depth_hw
+        pre_scene_scale = None
+        pre_depth_bias = None
+        if self.use_affine_depth_for_transl:
+            height, width = depth_hw.shape[-2:]
+            if self.affine_depth_detach:
+                with torch.no_grad():
+                    affine_depth_hw, pre_scene_scale, pre_depth_bias = self._predict_affine_depth(
+                        scene_features,
+                        pose6d,
+                        betas,
+                        transl,
+                        confs,
+                        depth_hw,
+                        intrinsics,
+                        height,
+                        width,
+                        image_size_hw,
+                    )
+                affine_depth_hw = affine_depth_hw.detach()
+                pre_scene_scale = pre_scene_scale.detach()
+                pre_depth_bias = pre_depth_bias.detach()
+            else:
+                affine_depth_hw, pre_scene_scale, pre_depth_bias = self._predict_affine_depth(
+                    scene_features,
+                    pose6d,
+                    betas,
+                    transl,
+                    confs,
+                    depth_hw,
+                    intrinsics,
+                    height,
+                    width,
+                    image_size_hw,
+                )
         num_patches = int(scene_features.shape[1])
         scene_features = scene_features.reshape(batch_size, num_frames, num_patches, -1)
 
@@ -318,7 +448,7 @@ class HSIRefinementHead(nn.Module):
             frame_pose6d = pose6d[:, frame_idx : frame_idx + 1]
             frame_betas = betas[:, frame_idx : frame_idx + 1]
             frame_transl = transl[:, frame_idx : frame_idx + 1]
-            frame_depth = depth_hw[:, frame_idx : frame_idx + 1]
+            frame_depth = affine_depth_hw[:, frame_idx : frame_idx + 1]
             frame_intrinsics = intrinsics.reshape(batch_size, num_frames, 3, 3)[:, frame_idx]
             frame_scene_features = scene_features[:, frame_idx]
             frame_tokens, token_aux = self._tokenize(
@@ -426,6 +556,9 @@ class HSIRefinementHead(nn.Module):
         refined_transl = torch.cat(refined_transl_frames, dim=1)
         scene_scale = torch.cat(scene_scale_frames, dim=1)
         depth_bias = torch.cat(scene_bias_frames, dim=1)
+        if pre_scene_scale is not None and pre_depth_bias is not None:
+            scene_scale = pre_scene_scale.to(device=pose6d.device, dtype=pose6d.dtype)
+            depth_bias = pre_depth_bias.to(device=pose6d.device, dtype=pose6d.dtype)
         contact_logits = torch.cat(contact_frames, dim=1)
         anchor_depth_residual = torch.cat(anchor_depth_residual_frames, dim=1)
         per_query_log_scale = torch.cat(per_query_log_scale_frames, dim=1)
@@ -438,6 +571,7 @@ class HSIRefinementHead(nn.Module):
             "hsi_refined_pred_transl_cam": refined_transl,
             "hsi_scene_scale": scene_scale,
             "hsi_scene_depth_bias": depth_bias,
+            "hsi_translation_depth": affine_depth_hw,
             "hsi_contact_logits": contact_logits,
             "hsi_anchor_depth_residual": anchor_depth_residual,
             "hsi_per_query_scene_log_scale": per_query_log_scale,

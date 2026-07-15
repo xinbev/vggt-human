@@ -91,6 +91,8 @@ class VGGTOmega(nn.Module):
         hsi_scene_log_scale_min: float = -5.0,
         hsi_scene_log_scale_max: float = 5.0,
         hsi_transl_delta_scale: float = 0.05,
+        hsi_use_affine_depth_for_transl: bool = False,
+        hsi_affine_depth_detach: bool = True,
         smpl_model_dir: str = "",
         smpl_provider: str = "internal",
         nlf_model_path: str = "",
@@ -226,6 +228,8 @@ class VGGTOmega(nn.Module):
                 scene_log_scale_min=hsi_scene_log_scale_min,
                 scene_log_scale_max=hsi_scene_log_scale_max,
                 transl_delta_scale=hsi_transl_delta_scale,
+                use_affine_depth_for_transl=hsi_use_affine_depth_for_transl,
+                affine_depth_detach=hsi_affine_depth_detach,
                 smpl_model_dir=smpl_model_dir,
                 image_size=image_size,
             )
