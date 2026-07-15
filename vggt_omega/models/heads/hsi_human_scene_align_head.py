@@ -114,7 +114,7 @@ class HSIHumanSceneAlignHead(nn.Module):
             image_size_hw=image_size_hw,
             local_window=self.local_window,
         )
-        valid = valid & (confs[..., :1] > 0.0)
+        valid = valid & (confs[..., :1].unsqueeze(-2) > 0.0)
         residual = scene_points - sample_points
         valid_f = valid.to(dtype=base_transl.dtype)
         denom = valid_f.sum(dim=-2).clamp(min=1.0)
