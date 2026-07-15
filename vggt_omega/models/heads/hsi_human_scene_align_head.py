@@ -131,7 +131,10 @@ class HSIHumanSceneAlignHead(nn.Module):
         bias = predictions.get("hsi_scene_depth_bias")
         scale_feat = _broadcast_affine_feature(scale, base_transl, default=1.0)
         bias_feat = _broadcast_affine_feature(bias, base_transl, default=0.0)
-        projected_center = _project_points(base_transl.reshape(-1, 1, 3), intrinsics).reshape(batch_size, num_frames, num_queries, 2)
+        projected_center = _project_points(
+            base_transl.reshape(-1, 1, 3),
+            intrinsics.repeat_interleave(num_queries, dim=0),
+        ).reshape(batch_size, num_frames, num_queries, 2)
         proj_norm = torch.stack(
             [
                 projected_center[..., 0] / max(float(image_size_hw[1] - 1), 1.0),
