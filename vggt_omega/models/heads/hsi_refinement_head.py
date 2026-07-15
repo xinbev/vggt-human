@@ -39,6 +39,7 @@ class HSIRefinementHead(nn.Module):
         track_gap_max: int = 30,
         scene_log_scale_min: float = -5.0,
         scene_log_scale_max: float = 5.0,
+        transl_delta_scale: float = 0.05,
     ) -> None:
         super().__init__()
         if not smpl_model_dir:
@@ -58,6 +59,7 @@ class HSIRefinementHead(nn.Module):
         self.temporal_momentum_decay = float(temporal_momentum_decay)
         self.temporal_momentum_detach = bool(temporal_momentum_detach)
         self.temporal_momentum_use_track_ids = bool(temporal_momentum_use_track_ids)
+        self.transl_delta_scale = float(transl_delta_scale)
         self.track_quality_min = float(track_quality_min)
         self.track_gap_max = int(track_gap_max)
         self.scene_log_scale_min = float(scene_log_scale_min)
@@ -218,7 +220,7 @@ class HSIRefinementHead(nn.Module):
                 gate = torch.ones_like(gate)
             refined_pose6d = refined_pose6d + gate * 0.01 * self.pose_delta(pooled).reshape(batch_size, num_frames, num_queries, 144)
             refined_betas = refined_betas + gate * 0.01 * self.betas_delta(pooled).reshape(batch_size, num_frames, num_queries, 10)
-            refined_transl = refined_transl + gate * 0.05 * self.transl_delta(pooled).reshape(batch_size, num_frames, num_queries, 3)
+            refined_transl = refined_transl + gate * self.transl_delta_scale * self.transl_delta(pooled).reshape(batch_size, num_frames, num_queries, 3)
             per_query_log_scale = self.scale_delta(pooled).reshape(batch_size, num_frames, num_queries, 1)
             per_query_bias = self.bias_delta(pooled).reshape(batch_size, num_frames, num_queries, 1)
             contact_logits = self.contact_head(tokens).reshape(batch_size, num_frames, num_queries, 24, 1)
@@ -360,7 +362,7 @@ class HSIRefinementHead(nn.Module):
                 gate = torch.ones_like(gate)
             refined_pose6d = frame_pose6d + gate * 0.01 * self.pose_delta(pooled).reshape(batch_size, 1, num_queries, 144)
             refined_betas = frame_betas + gate * 0.01 * self.betas_delta(pooled).reshape(batch_size, 1, num_queries, 10)
-            refined_transl = frame_transl + gate * 0.05 * self.transl_delta(pooled).reshape(batch_size, 1, num_queries, 3)
+            refined_transl = frame_transl + gate * self.transl_delta_scale * self.transl_delta(pooled).reshape(batch_size, 1, num_queries, 3)
             per_query_log_scale = self.scale_delta(pooled).reshape(batch_size, 1, num_queries, 1)
             per_query_bias = self.bias_delta(pooled).reshape(batch_size, 1, num_queries, 1)
             contact_logits = self.contact_head(tokens).reshape(batch_size, 1, num_queries, 24, 1)

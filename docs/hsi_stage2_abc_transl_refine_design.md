@@ -83,6 +83,17 @@ metric_hsi_joint_error_delta < 0
 If Stage A cannot make `hsiDT` negative in a 200-step smoke, do not run the full
 ABC schedule. Use the visualization script first.
 
+Stage2 uses a larger translation residual scale than the baseline HSI default:
+
+```text
+model.hsi_transl_delta_scale = 0.5   # Stage A/B
+model.hsi_transl_delta_scale = 0.25  # Stage C
+```
+
+The baseline default remains `0.05`. If `hsiBaseT` and `hsiRefT` stay nearly
+identical during Stage A, the translation residual is not moving enough; first
+check `HSI_TRANSL_DELTA_SCALE_*` and `LR_*` before running a long job.
+
 ## Diagnostics
 
 Interface smoke:

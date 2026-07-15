@@ -429,6 +429,7 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_scene_affine_ema_alpha=float(model_cfg.get("hsi_scene_affine_ema_alpha", 0.25)),
         hsi_scene_log_scale_min=float(model_cfg.get("hsi_scene_log_scale_min", -5.0)),
         hsi_scene_log_scale_max=float(model_cfg.get("hsi_scene_log_scale_max", 5.0)),
+        hsi_transl_delta_scale=float(model_cfg.get("hsi_transl_delta_scale", 0.05)),
         smpl_model_dir=str(config.get("assets", {}).get("smpl_model_dir", "")),
         smpl_provider=str(model_cfg.get("smpl_provider", "internal")),
         nlf_model_path=str(model_cfg.get("nlf_model_path", config.get("checkpoints", {}).get("nlf_smpl", ""))),
