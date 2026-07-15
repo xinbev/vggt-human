@@ -75,7 +75,7 @@ checkpoint:
   strict: false
   resume_strict: false
   resume_optimizer: false
-  reset_resume_counters: true
+  reset_epoch: true
   save_scope: hsi
   save_prefixes:
     - hsi_refinement_head.

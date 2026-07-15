@@ -47,6 +47,7 @@ CMD=(
   --path-config "${PATH_CONFIG}"
   --override "experiment.output_dir=${OUTPUT_DIR}"
   --override "checkpoint.resume=${STAGE1_CKPT}"
+  --override "checkpoint.reset_epoch=true"
   --override "optim.batch_size=${BATCH_SIZE}"
   --override "optim.epochs=${EPOCHS}"
   --override "optim.lr=${LR}"
