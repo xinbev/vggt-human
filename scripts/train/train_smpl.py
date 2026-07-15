@@ -46,6 +46,7 @@ from vggt_omega.data.geometry import resolve_image_size_config
 from vggt_omega.models import VGGTOmega
 from vggt_omega.training import HungarianSMPLLoss, HungarianSMPLMatcher, SMPLSlotLoss
 from vggt_omega.training.config import deep_update, load_yaml_config, require_path
+from vggt_omega.utils.rotation import rot6d_to_axis_angle
 
 
 def main() -> None:
@@ -787,7 +788,7 @@ def train_one_epoch(
     for step, batch in enumerate(loader):
         batch = move_to_device(batch, device)
         optimizer.zero_grad(set_to_none=True)
-        predictions = forward_model(model, batch, config)
+        predictions = forward_model(model, batch, config, epoch=epoch)
         if teacher_model is not None:
             attach_teacher_predictions(predictions, forward_teacher_model(teacher_model, batch, config))
         losses = criterion(predictions, batch)
@@ -850,7 +851,7 @@ def validate(
     count = 0
     for batch in loader:
         batch = move_to_device(batch, device)
-        predictions = forward_model(model, batch, config)
+        predictions = forward_model(model, batch, config, epoch=epoch)
         if teacher_model is not None:
             attach_teacher_predictions(predictions, forward_teacher_model(teacher_model, batch, config))
         losses = criterion(predictions, batch)
@@ -866,9 +867,15 @@ def move_to_device(batch: dict[str, torch.Tensor], device: torch.device) -> dict
     return {key: value.to(device, non_blocking=True) for key, value in batch.items()}
 
 
-def forward_model(model: torch.nn.Module, batch: dict[str, torch.Tensor], config: dict[str, Any]) -> dict[str, torch.Tensor]:
+def forward_model(
+    model: torch.nn.Module,
+    batch: dict[str, torch.Tensor],
+    config: dict[str, Any],
+    epoch: int = 0,
+) -> dict[str, torch.Tensor]:
     model_cfg = config.get("model", {})
-    needs_query_inputs = bool(model_cfg.get("smpl_query_box_prior", False)) or str(model_cfg.get("smpl_provider", "internal")).lower() == "nlf"
+    provider = str(model_cfg.get("smpl_provider", "internal")).lower()
+    needs_query_inputs = bool(model_cfg.get("smpl_query_box_prior", False)) or provider in {"nlf", "gt_perturbed"}
     if not needs_query_inputs:
         return model(batch["images"])
     boxes = batch.get("smpl_query_boxes", batch.get("gt_boxes"))
@@ -883,7 +890,9 @@ def forward_model(model: torch.nn.Module, batch: dict[str, torch.Tensor], config
                 size_noise=float(prior_cfg.get("size_noise", 0.0)),
                 drop_prob=float(prior_cfg.get("drop_prob", 0.0)),
             )
-    return model(
+    smpl_override_outputs = build_smpl_override_outputs(batch, config, epoch=epoch) if should_use_gt_smpl_override(model, config) else None
+    hsi_intrinsics_override = resolve_hsi_intrinsics_override(batch, config, using_gt_override=smpl_override_outputs is not None)
+    predictions = model(
         batch["images"],
         smpl_query_boxes=boxes,
         smpl_query_boxes_mask=mask,
@@ -893,7 +902,12 @@ def forward_model(model: torch.nn.Module, batch: dict[str, torch.Tensor], config
         external_track_ids=batch.get("external_track_ids"),
         external_track_mask=batch.get("external_track_mask"),
         external_track_confidence=batch.get("external_track_confidence"),
+        smpl_override_outputs=smpl_override_outputs,
+        hsi_intrinsics_override=hsi_intrinsics_override,
     )
+    if smpl_override_outputs is not None:
+        predictions["stage2_gt_override_active"] = torch.ones((), device=batch["images"].device)
+    return predictions
 
 
 @torch.no_grad()
@@ -941,6 +955,110 @@ def make_noisy_box_prior(
         keep = torch.rand(prior_mask.shape, device=prior_mask.device) >= drop_prob
         prior_mask = prior_mask & keep
     return noisy.clamp(0.0, 1.0), prior_mask
+
+
+def should_use_gt_smpl_override(model: torch.nn.Module, config: dict[str, Any]) -> bool:
+    model_provider = str(config.get("model", {}).get("smpl_provider", "internal")).lower()
+    if model_provider == "gt_perturbed":
+        return True
+    prior_cfg = config.get("training_prior", {})
+    prob = float(prior_cfg.get("smpl_gt_override_prob", 0.0) or 0.0)
+    if prob <= 0.0:
+        return False
+    if not model.training:
+        return False
+    return random.random() < min(max(prob, 0.0), 1.0)
+
+
+def resolve_hsi_intrinsics_override(
+    batch: dict[str, torch.Tensor],
+    config: dict[str, Any],
+    using_gt_override: bool,
+) -> torch.Tensor | None:
+    source = str(config.get("model", {}).get("hsi_camera_source", "vggt") or "vggt").lower()
+    if source == "gt":
+        return batch.get("K_scal3r")
+    if source == "mixed":
+        return batch.get("K_scal3r") if using_gt_override else None
+    if source in {"vggt", "pred", "predicted", ""}:
+        return None
+    raise ValueError(f"Unsupported model.hsi_camera_source: {source!r}")
+
+
+def build_smpl_override_outputs(
+    batch: dict[str, torch.Tensor],
+    config: dict[str, Any],
+    epoch: int = 0,
+) -> dict[str, torch.Tensor]:
+    pose6d = batch["gt_pose_6d"].float()
+    betas = batch["gt_betas"].float()
+    clean_transl = batch.get("gt_transl_cam", batch["gt_cam_trans"]).float()
+    valid = batch.get("smpl_mask")
+    if valid is None:
+        valid = torch.ones(clean_transl.shape[:-1], dtype=torch.bool, device=clean_transl.device)
+    else:
+        valid = valid.bool()
+    boxes_mask = batch.get("boxes_mask")
+    if boxes_mask is not None:
+        valid = valid & boxes_mask.bool()
+    noisy_transl, noise_ratio = apply_smpl_transl_ray_noise(clean_transl, valid, config, epoch=epoch)
+    poses = rot6d_to_axis_angle(pose6d.reshape(-1, 24, 6)).reshape(*pose6d.shape[:-1], 72)
+    conf = valid.to(dtype=pose6d.dtype).unsqueeze(-1)
+    boxes = batch.get("smpl_query_boxes", batch.get("gt_boxes"))
+    outputs = {
+        "pred_pose_6d": pose6d,
+        "pred_poses": poses,
+        "pred_betas": betas,
+        "pred_transl_cam": noisy_transl,
+        "pred_confs": conf,
+        "pred_cam": noisy_transl,
+        "base_pred_transl_cam": noisy_transl,
+        "base_clean_pred_transl_cam": clean_transl,
+        "perturbed_pred_transl_cam": noisy_transl,
+        "transl_noise_ratio": noise_ratio,
+        "gt_smpl_provider_mask": valid,
+    }
+    if boxes is not None:
+        outputs["pred_boxes"] = boxes.to(device=pose6d.device, dtype=pose6d.dtype)
+    return outputs
+
+
+def apply_smpl_transl_ray_noise(
+    transl: torch.Tensor,
+    valid: torch.Tensor,
+    config: dict[str, Any],
+    epoch: int = 0,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    prior_cfg = config.get("training_prior", {})
+    schedule = parse_float_schedule(prior_cfg.get("smpl_transl_ray_noise_schedule", "0.0"))
+    ratio = schedule[min(max(int(epoch), 0), len(schedule) - 1)] if schedule else 0.0
+    clean_prob = min(max(float(prior_cfg.get("smpl_transl_ray_noise_clean_prob", 0.0) or 0.0), 0.0), 1.0)
+    mode = str(prior_cfg.get("smpl_transl_ray_noise_mode", "uniform") or "uniform").lower()
+    if ratio <= 0.0:
+        return transl.clone(), torch.ones(*transl.shape[:-1], 1, dtype=transl.dtype, device=transl.device)
+    if mode == "uniform":
+        eps = transl.new_empty(*transl.shape[:-1], 1).uniform_(-float(ratio), float(ratio))
+    elif mode in {"normal", "gaussian"}:
+        eps = transl.new_empty(*transl.shape[:-1], 1).normal_(mean=0.0, std=float(ratio) / 2.0).clamp(-float(ratio), float(ratio))
+    else:
+        raise ValueError(f"Unsupported training_prior.smpl_transl_ray_noise_mode: {mode!r}")
+    if clean_prob > 0.0:
+        noisy_slot = torch.rand(*transl.shape[:-1], 1, device=transl.device) >= clean_prob
+        eps = torch.where(noisy_slot, eps, torch.zeros_like(eps))
+    eps = eps * valid.unsqueeze(-1).to(dtype=eps.dtype)
+    scale = 1.0 + eps
+    return transl * scale, scale
+
+
+def parse_float_schedule(value: Any) -> list[float]:
+    if isinstance(value, (list, tuple)):
+        return [float(item) for item in value]
+    if isinstance(value, (int, float)):
+        return [float(value)]
+    text = str(value or "0.0").strip()
+    if not text:
+        return [0.0]
+    return [float(part.strip()) for part in text.split(",") if part.strip()]
 
 
 def apply_overrides(config: dict[str, Any], overrides: list[str]) -> dict[str, Any]:
@@ -1092,6 +1210,9 @@ def get_progress_log_keys(config: dict[str, Any]) -> list[str]:
         "metric_hsi_smpl_scale_teacher_pred_scale",
         "metric_hsi_smpl_scale_teacher_l1",
         "metric_hsi_smpl_scale_teacher_rel_l1",
+        "metric_hsi_base_transl_l1",
+        "metric_hsi_refined_transl_l1",
+        "metric_hsi_transl_l1_delta",
     ]
 
 
@@ -1131,6 +1252,9 @@ def compact_loss_name(key: str) -> str:
         "metric_hsi_smpl_scale_teacher_l1": "scaleL1",
         "metric_hsi_smpl_scale_teacher_log_l1": "scaleLog",
         "metric_hsi_smpl_scale_teacher_rel_l1": "scaleRel",
+        "metric_hsi_base_transl_l1": "hsiBaseT",
+        "metric_hsi_refined_transl_l1": "hsiRefT",
+        "metric_hsi_transl_l1_delta": "hsiDT",
         "loss_transl_refine_delta_reg": "tDeltaReg",
         "loss_local_joints3d": "localJ",
         "loss_local_vertices": "localV",

@@ -112,7 +112,7 @@ class VGGTOmega(nn.Module):
         if smpl_enable_translation_refine and not enable_camera:
             raise ValueError("smpl_enable_translation_refine=True requires enable_camera=True")
         self.smpl_provider = str(smpl_provider or "internal").lower()
-        if self.smpl_provider not in {"internal", "nlf"}:
+        if self.smpl_provider not in {"internal", "nlf", "gt_perturbed"}:
             raise ValueError(f"Unsupported smpl_provider: {self.smpl_provider}")
         if self.smpl_provider == "nlf" and enable_smpl and not enable_camera:
             raise ValueError("smpl_provider='nlf' requires enable_camera=True")
@@ -230,8 +230,11 @@ class VGGTOmega(nn.Module):
             if enable_hsi_refine
             else None
         )
+        has_runtime_smpl_provider = self.smpl_provider == "gt_perturbed"
         if self.hsi_refinement_head is not None and (
-            (self.smpl_head is None and self.nlf_smpl_provider is None) or self.dense_head is None or self.camera_head is None
+            (self.smpl_head is None and self.nlf_smpl_provider is None and not has_runtime_smpl_provider)
+            or self.dense_head is None
+            or self.camera_head is None
         ):
             raise ValueError("enable_hsi_refine=True requires a SMPL provider, enable_depth, and enable_camera")
 
@@ -246,6 +249,8 @@ class VGGTOmega(nn.Module):
         external_track_ids: torch.Tensor | None = None,
         external_track_mask: torch.Tensor | None = None,
         external_track_confidence: torch.Tensor | None = None,
+        smpl_override_outputs: dict[str, torch.Tensor] | None = None,
+        hsi_intrinsics_override: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor]:
         if len(images.shape) == 4:
             images = images.unsqueeze(0)
@@ -301,7 +306,9 @@ class VGGTOmega(nn.Module):
                     )
                 )
 
-            if self.smpl_head is not None:
+            if smpl_override_outputs is not None:
+                predictions.update(smpl_override_outputs)
+            elif self.smpl_head is not None:
                 predictions.update(
                     self.smpl_head(
                         aggregated_tokens_list,
@@ -325,7 +332,9 @@ class VGGTOmega(nn.Module):
                         max_humans=token_layout.num_smpl_queries,
                     )
                 )
-            if self.smpl_head is not None or self.nlf_smpl_provider is not None:
+            elif self.smpl_provider == "gt_perturbed":
+                raise ValueError("smpl_provider='gt_perturbed' requires smpl_override_outputs")
+            if self.smpl_head is not None or self.nlf_smpl_provider is not None or smpl_override_outputs is not None:
                 assigned = self._assign_smpl_tracks(
                     predictions=predictions,
                     reference_boxes=smpl_reference_boxes,
@@ -356,6 +365,8 @@ class VGGTOmega(nn.Module):
                         predictions["base_pred_transl_cam_before_track_temporal"] = base_transl
                         predictions["track_refined_pred_transl_cam"] = refined_transl
             if self.hsi_refinement_head is not None:
+                if hsi_intrinsics_override is not None:
+                    predictions["hsi_intrinsics_override"] = hsi_intrinsics_override
                 predictions.update(
                     self.hsi_refinement_head(
                         aggregated_tokens_list,
@@ -368,6 +379,7 @@ class VGGTOmega(nn.Module):
                         track_mask=predictions.get("assigned_track_mask"),
                         track_quality=predictions.get("assigned_track_quality"),
                         track_gap=predictions.get("assigned_track_gap"),
+                        intrinsics_override=hsi_intrinsics_override,
                     )
                 )
                 apply_hsi_scene_affine_mode(

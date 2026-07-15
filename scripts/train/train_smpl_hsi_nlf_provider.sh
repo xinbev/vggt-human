@@ -67,9 +67,15 @@ HSI_ENABLE_TEMPORAL_MOMENTUM="${HSI_ENABLE_TEMPORAL_MOMENTUM:-false}"
 HSI_TEMPORAL_MOMENTUM_USE_TRACK_IDS="${HSI_TEMPORAL_MOMENTUM_USE_TRACK_IDS:-true}"
 HSI_SCENE_AFFINE_MODE="${HSI_SCENE_AFFINE_MODE:-per_frame}"
 TRAIN_HSI_SCENE_AFFINE_ONLY="${TRAIN_HSI_SCENE_AFFINE_ONLY:-false}"
+TRAIN_HSI_TRANSL_ONLY="${TRAIN_HSI_TRANSL_ONLY:-false}"
+TRAIN_HSI_SMPL_DELTA_ONLY="${TRAIN_HSI_SMPL_DELTA_ONLY:-false}"
+FREEZE_HSI_BACKBONE="${FREEZE_HSI_BACKBONE:-false}"
 FREEZE_HSI_SCENE_AFFINE="${FREEZE_HSI_SCENE_AFFINE:-false}"
+FREEZE_HSI_BETAS_DELTA="${FREEZE_HSI_BETAS_DELTA:-false}"
 HSI_SCENE_LOG_SCALE_MIN="${HSI_SCENE_LOG_SCALE_MIN:--5.0}"
 HSI_SCENE_LOG_SCALE_MAX="${HSI_SCENE_LOG_SCALE_MAX:-5.0}"
+SMPL_PROVIDER="${SMPL_PROVIDER:-nlf}"
+HSI_CAMERA_SOURCE="${HSI_CAMERA_SOURCE:-vggt}"
 SMPL_TRACK_ASSIGNMENT_MODE="${SMPL_TRACK_ASSIGNMENT_MODE:-gt}"
 SMPL_USE_EXTERNAL_TRACK_PRIOR="${SMPL_USE_EXTERNAL_TRACK_PRIOR:-false}"
 PREDICT_ID_EMBED="${PREDICT_ID_EMBED:-false}"
@@ -86,6 +92,10 @@ HSI_SMPL_SCALE_TEACHER_MAD_MULT="${HSI_SMPL_SCALE_TEACHER_MAD_MULT:-2.5}"
 HSI_SMPL_SCALE_TEACHER_LOG_LOSS="${HSI_SMPL_SCALE_TEACHER_LOG_LOSS:-true}"
 HSI_SMPL_SCALE_TEACHER_BIAS_REG_WEIGHT="${HSI_SMPL_SCALE_TEACHER_BIAS_REG_WEIGHT:-0.05}"
 HSI_SMPL_SCALE_TEACHER_MAX_Z_M="${HSI_SMPL_SCALE_TEACHER_MAX_Z_M:-0.0}"
+SMPL_TRANSL_RAY_NOISE_SCHEDULE="${SMPL_TRANSL_RAY_NOISE_SCHEDULE:-0.0}"
+SMPL_TRANSL_RAY_NOISE_CLEAN_PROB="${SMPL_TRANSL_RAY_NOISE_CLEAN_PROB:-0.0}"
+SMPL_TRANSL_RAY_NOISE_MODE="${SMPL_TRANSL_RAY_NOISE_MODE:-uniform}"
+SMPL_GT_OVERRIDE_PROB="${SMPL_GT_OVERRIDE_PROB:-0.0}"
 PROGRESS_LOG_KEYS="${PROGRESS_LOG_KEYS:-}"
 
 cd "${REPO_ROOT}"
@@ -156,6 +166,8 @@ echo "Save scope   : ${SAVE_SCOPE}, top-k=${SAVE_TOP_K}, monitor=${MONITOR}/${MO
 echo "Depth ROI    : use=${DEPTH_USE_HUMAN_ROI}, expand=${DEPTH_ROI_EXPAND}, max_m=${DEPTH_MAX_M}, clip=${DEPTH_ERROR_CLIP_M}"
 echo "HSI weights  : depth=${DEPTH_TEACHER_WEIGHT}, anchorD=${ANCHOR_DEPTH_WEIGHT}, anchorXYZ=${ANCHOR_SCENE_XYZ_WEIGHT}, transl=${HSI_TRANSL_WEIGHT}"
 echo "HSI scale rng: log=[${HSI_SCENE_LOG_SCALE_MIN}, ${HSI_SCENE_LOG_SCALE_MAX}] scale=[exp(min), exp(max)]"
+echo "Provider     : smpl=${SMPL_PROVIDER}, hsi_camera=${HSI_CAMERA_SOURCE}, gt_override_prob=${SMPL_GT_OVERRIDE_PROB}"
+echo "Transl noise : schedule=${SMPL_TRANSL_RAY_NOISE_SCHEDULE}, clean_prob=${SMPL_TRANSL_RAY_NOISE_CLEAN_PROB}, mode=${SMPL_TRANSL_RAY_NOISE_MODE}"
 echo "SMPL scale T : weight=${HSI_SMPL_SCALE_TEACHER_WEIGHT}, source=${HSI_SMPL_SCALE_TEACHER_SOURCE}, window=${HSI_SMPL_SCALE_TEACHER_WINDOW}, vis_tol=${HSI_SMPL_SCALE_TEACHER_VIS_TOL_M}, max_z=${HSI_SMPL_SCALE_TEACHER_MAX_Z_M}, log_loss=${HSI_SMPL_SCALE_TEACHER_LOG_LOSS}"
 echo "Contact      : foot=${HSI_FOOT_CONTACT_WEIGHT}, sole=${HSI_FOOT_SOLE_CONTACT_WEIGHT}, plane=${HSI_SUPPORT_PLANE_CONTACT_WEIGHT}"
 echo "Temporal     : views=${NUM_VIEWS}, momentum=${HSI_ENABLE_TEMPORAL_MOMENTUM}, track_mode=${SMPL_TRACK_ASSIGNMENT_MODE}"
@@ -187,7 +199,7 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_
   --override "data.pin_memory=${PIN_MEMORY}" \
   --override "data.require_boxes=true" \
   --override "data.require_depth=true" \
-  --override "model.smpl_provider=nlf" \
+  --override "model.smpl_provider=${SMPL_PROVIDER}" \
   --override "model.nlf_use_detector=false" \
   --override "model.nlf_require_boxes=true" \
   --override "model.nlf_internal_batch_size=${NLF_INTERNAL_BATCH_SIZE}" \
@@ -206,9 +218,14 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_
   --override "model.predict_id_embed=${PREDICT_ID_EMBED}" \
   --override "model.hsi_enable_temporal_momentum=${HSI_ENABLE_TEMPORAL_MOMENTUM}" \
   --override "model.hsi_temporal_momentum_use_track_ids=${HSI_TEMPORAL_MOMENTUM_USE_TRACK_IDS}" \
+  --override "model.hsi_camera_source=${HSI_CAMERA_SOURCE}" \
   --override "model.hsi_scene_affine_mode=${HSI_SCENE_AFFINE_MODE}" \
   --override "model.train_hsi_scene_affine_only=${TRAIN_HSI_SCENE_AFFINE_ONLY}" \
+  --override "model.train_hsi_transl_only=${TRAIN_HSI_TRANSL_ONLY}" \
+  --override "model.train_hsi_smpl_delta_only=${TRAIN_HSI_SMPL_DELTA_ONLY}" \
+  --override "model.freeze_hsi_backbone=${FREEZE_HSI_BACKBONE}" \
   --override "model.freeze_hsi_scene_affine=${FREEZE_HSI_SCENE_AFFINE}" \
+  --override "model.freeze_hsi_betas_delta=${FREEZE_HSI_BETAS_DELTA}" \
   --override "model.hsi_scene_log_scale_min=${HSI_SCENE_LOG_SCALE_MIN}" \
   --override "model.hsi_scene_log_scale_max=${HSI_SCENE_LOG_SCALE_MAX}" \
   --override "loss.hsi_pose_weight=${HSI_POSE_WEIGHT}" \
@@ -257,6 +274,10 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_
   --override "loss.hsi_scene_scale_temporal_weight=${HSI_SCENE_SCALE_TEMPORAL_WEIGHT}" \
   --override "loss.hsi_scene_bias_temporal_weight=${HSI_SCENE_BIAS_TEMPORAL_WEIGHT}" \
   --override "loss.id_weight=${ID_WEIGHT}" \
+  --override "training_prior.smpl_transl_ray_noise_schedule=${SMPL_TRANSL_RAY_NOISE_SCHEDULE}" \
+  --override "training_prior.smpl_transl_ray_noise_clean_prob=${SMPL_TRANSL_RAY_NOISE_CLEAN_PROB}" \
+  --override "training_prior.smpl_transl_ray_noise_mode=${SMPL_TRANSL_RAY_NOISE_MODE}" \
+  --override "training_prior.smpl_gt_override_prob=${SMPL_GT_OVERRIDE_PROB}" \
   --override "optim.epochs=${EPOCHS}" \
   --override "optim.lr=${LR}" \
   --override "optim.max_steps_per_epoch=${MAX_STEPS_PER_EPOCH}" \

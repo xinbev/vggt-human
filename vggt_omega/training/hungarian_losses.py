@@ -1087,6 +1087,9 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_contact": zero,
             "metric_hsi_joints3d_l1": zero.detach(),
             "metric_hsi_vertices_l1": zero.detach(),
+            "metric_hsi_base_transl_l1": zero.detach(),
+            "metric_hsi_refined_transl_l1": zero.detach(),
+            "metric_hsi_transl_l1_delta": zero.detach(),
             "metric_hsi_no_worse_ratio": zero.detach(),
             "metric_hsi_joint_error_delta": zero.detach(),
             "metric_hsi_gate_mean": zero.detach(),
@@ -1191,6 +1194,11 @@ class HungarianSMPLLoss(nn.Module):
         losses["metric_hsi_joints3d_l1"] = losses["loss_hsi_joints3d"].detach()
         losses["loss_hsi_vertices"] = F.l1_loss(pred_vertices_cam, gt_vertices_cam)
         losses["metric_hsi_vertices_l1"] = losses["loss_hsi_vertices"].detach()
+        base_transl_l1 = F.l1_loss(base_transl_matched, target_transl)
+        refined_transl_l1 = F.l1_loss(pred_transl, target_transl)
+        losses["metric_hsi_base_transl_l1"] = base_transl_l1.detach()
+        losses["metric_hsi_refined_transl_l1"] = refined_transl_l1.detach()
+        losses["metric_hsi_transl_l1_delta"] = (refined_transl_l1 - base_transl_l1).detach()
 
         hsi_joint_err = torch.linalg.norm(pred_joints_cam - gt_joints_cam, dim=-1).mean(dim=-1)
         base_joint_err = torch.linalg.norm(base_joints_cam - gt_joints_cam, dim=-1).mean(dim=-1).detach()
@@ -1211,8 +1219,15 @@ class HungarianSMPLLoss(nn.Module):
             losses["loss_hsi_gate_reg"] = pred_transl.sum() * 0.0
             losses["metric_hsi_gate_mean"] = losses["loss_hsi_gate_reg"].detach()
 
-        if "pose_enc" in predictions:
-            intrinsics = _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), self._projection_image_hw())
+        if "hsi_intrinsics_override" in predictions or "pose_enc" in predictions:
+            if "hsi_intrinsics_override" in predictions:
+                intrinsics = _flatten_batch_intrinsics(
+                    _require_prediction(predictions, "hsi_intrinsics_override"),
+                    device=pred_joints_cam.device,
+                    dtype=pred_joints_cam.dtype,
+                )
+            else:
+                intrinsics = _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), self._projection_image_hw())
             pred_2d = _normalize_points_2d(_project_points(pred_joints_cam, intrinsics[frame_idx].to(dtype=pred_joints_cam.dtype)), self._projection_image_hw())
             gt_2d = _normalize_points_2d(_project_points(gt_joints_cam, intrinsics[frame_idx].to(dtype=gt_joints_cam.dtype)), self._projection_image_hw())
             valid = (pred_joints_cam[..., 2] > 1e-4) & (gt_joints_cam[..., 2] > 1e-4)

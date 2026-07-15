@@ -128,6 +128,7 @@ class HSIRefinementHead(nn.Module):
         track_quality: torch.Tensor | None = None,
         track_gap: torch.Tensor | None = None,
         image_size_hw: tuple[int, int] | None = None,
+        intrinsics_override: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor]:
         required = ("pred_pose_6d", "pred_poses", "pred_betas", "pred_transl_cam", "pred_confs")
         for key in required:
@@ -149,6 +150,7 @@ class HSIRefinementHead(nn.Module):
                 track_quality=track_quality,
                 track_gap=track_gap,
                 image_size_hw=image_size_hw,
+                intrinsics_override=intrinsics_override,
             )
 
         pose6d = smpl_outputs["pred_pose_6d"].float()
@@ -163,7 +165,15 @@ class HSIRefinementHead(nn.Module):
         if depth_hw.shape[:2] != (batch_size, num_frames):
             raise ValueError(f"Expected depth shape [B,S,H,W], got {tuple(depth_hw.shape)}")
         image_size_hw = _resolve_image_size_hw(image_size_hw, self.image_size)
-        intrinsics = _flatten_intrinsics(pose_enc, image_size_hw=image_size_hw).to(device=pose6d.device, dtype=pose6d.dtype)
+        intrinsics = _resolve_intrinsics(
+            pose_enc,
+            image_size_hw=image_size_hw,
+            batch_size=batch_size,
+            num_frames=num_frames,
+            device=pose6d.device,
+            dtype=pose6d.dtype,
+            intrinsics_override=intrinsics_override,
+        )
 
         scene_features = self._build_scene_features(aggregated_tokens_list, token_layout)
         local_scene_tokens = self._gather_local_scene_tokens(
@@ -265,6 +275,7 @@ class HSIRefinementHead(nn.Module):
         track_quality: torch.Tensor | None = None,
         track_gap: torch.Tensor | None = None,
         image_size_hw: tuple[int, int] | None = None,
+        intrinsics_override: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor]:
         pose6d = smpl_outputs["pred_pose_6d"].float()
         betas = smpl_outputs["pred_betas"].float()
@@ -275,7 +286,15 @@ class HSIRefinementHead(nn.Module):
         if depth_hw.shape[:2] != (batch_size, num_frames):
             raise ValueError(f"Expected depth shape [B,S,H,W], got {tuple(depth_hw.shape)}")
         image_size_hw = _resolve_image_size_hw(image_size_hw, self.image_size)
-        intrinsics = _flatten_intrinsics(pose_enc, image_size_hw=image_size_hw).to(device=pose6d.device, dtype=pose6d.dtype)
+        intrinsics = _resolve_intrinsics(
+            pose_enc,
+            image_size_hw=image_size_hw,
+            batch_size=batch_size,
+            num_frames=num_frames,
+            device=pose6d.device,
+            dtype=pose6d.dtype,
+            intrinsics_override=intrinsics_override,
+        )
         scene_features = self._build_scene_features(aggregated_tokens_list, token_layout)
         num_patches = int(scene_features.shape[1])
         scene_features = scene_features.reshape(batch_size, num_frames, num_patches, -1)
@@ -722,6 +741,35 @@ def _resolve_image_size_hw(image_size_hw: tuple[int, int] | None, fallback_image
 def _flatten_intrinsics(pose_enc: torch.Tensor, image_size_hw: tuple[int, int]) -> torch.Tensor:
     _, intrinsics = encoding_to_camera(pose_enc, image_size_hw=image_size_hw, build_intrinsics=True)
     return intrinsics.reshape(-1, 3, 3)
+
+
+def _resolve_intrinsics(
+    pose_enc: torch.Tensor,
+    image_size_hw: tuple[int, int],
+    batch_size: int,
+    num_frames: int,
+    device: torch.device,
+    dtype: torch.dtype,
+    intrinsics_override: torch.Tensor | None = None,
+) -> torch.Tensor:
+    if intrinsics_override is None:
+        return _flatten_intrinsics(pose_enc, image_size_hw=image_size_hw).to(device=device, dtype=dtype)
+    intrinsics = intrinsics_override.to(device=device, dtype=dtype)
+    if intrinsics.ndim == 4:
+        if tuple(intrinsics.shape[:2]) != (batch_size, num_frames) or tuple(intrinsics.shape[-2:]) != (3, 3):
+            raise ValueError(
+                "HSI intrinsics_override must have shape [B,S,3,3], "
+                f"got {tuple(intrinsics.shape)} expected B={batch_size}, S={num_frames}"
+            )
+        return intrinsics.reshape(-1, 3, 3)
+    if intrinsics.ndim == 3:
+        if tuple(intrinsics.shape[-2:]) != (3, 3):
+            raise ValueError(f"HSI intrinsics_override must end with [3,3], got {tuple(intrinsics.shape)}")
+        if int(intrinsics.shape[0]) == batch_size * num_frames:
+            return intrinsics.reshape(-1, 3, 3)
+        if int(intrinsics.shape[0]) == num_frames and batch_size == 1:
+            return intrinsics.reshape(-1, 3, 3)
+    raise ValueError(f"Unsupported HSI intrinsics_override shape: {tuple(intrinsics.shape)}")
 
 
 def _project_points(points_cam: torch.Tensor, intrinsics: torch.Tensor) -> torch.Tensor:
