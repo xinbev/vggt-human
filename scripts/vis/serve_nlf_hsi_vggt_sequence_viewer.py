@@ -139,6 +139,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-scene-depth", type=float, default=30.0)
     parser.add_argument("--point-size", type=float, default=0.012)
     parser.add_argument("--camera-frustum-scale", type=float, default=0.20)
+    parser.add_argument("--alignment-vertex-stride", type=int, default=16)
     parser.add_argument("--smpl-model-dir", default="")
     parser.add_argument("--baseline-checkpoint", default="")
     parser.add_argument("--smoke-only", action="store_true", help="Run inference, validation, and summary export, then exit without serving Viser.")
@@ -403,6 +404,7 @@ def build_scene_data(
     people = decode_people(predictions, smpl, args, device)
     faces = np.asarray(smpl.faces, dtype=np.int64).reshape(-1, 3)
     track_palette: dict[int, int] = {}
+    alignment = compute_depth_alignment(predictions, people, raw_depth, hsi_depth, intrinsics, args)
     frames = []
     for idx, image_path in enumerate(frame_paths):
         extrinsic = extrinsics[0, idx].detach().float().cpu().numpy()
@@ -424,6 +426,7 @@ def build_scene_data(
                 "camera": camera_pose_from_extrinsic(extrinsic, intrinsic),
                 "hsi_scene_scale": prediction_scalar(predictions, "hsi_scene_scale", idx),
                 "hsi_scene_depth_bias": prediction_scalar(predictions, "hsi_scene_depth_bias", idx),
+                "depth_alignment": alignment[idx],
             }
         )
     return {"frames": frames, "image_hw": list(image_hw), "track_palette": track_palette}
@@ -503,6 +506,128 @@ def decode_people(
         vertices = vertices.reshape(*shape, vertices.shape[-2], 3).to(device=device, dtype=transl.dtype) + transl[..., None, :]
         out[f"{prefix}_vertices_cam"] = vertices.detach()
     return out
+
+
+def compute_depth_alignment(
+    predictions: dict[str, torch.Tensor],
+    decoded: dict[str, torch.Tensor],
+    raw_depth: torch.Tensor,
+    hsi_depth: torch.Tensor,
+    intrinsics: torch.Tensor,
+    args: argparse.Namespace,
+) -> list[dict[str, Any]]:
+    base_vertices = decoded.get("base_vertices_cam")
+    hsi_vertices = decoded.get("hsi_vertices_cam", base_vertices)
+    confs = predictions["pred_confs"].detach().float()
+    frame_count = int(raw_depth.shape[1])
+    summaries: list[dict[str, Any]] = []
+    for frame_idx in range(frame_count):
+        frame_summary: dict[str, Any] = {"base_raw": [], "base_hsi": [], "hsi_hsi": []}
+        if base_vertices is not None:
+            frame_summary["base_raw"] = frame_alignment_entries(
+                base_vertices[0, frame_idx],
+                confs[0, frame_idx, :, 0],
+                raw_depth[0, frame_idx],
+                intrinsics[0, frame_idx],
+                args,
+            )
+            frame_summary["base_hsi"] = frame_alignment_entries(
+                base_vertices[0, frame_idx],
+                confs[0, frame_idx, :, 0],
+                hsi_depth[0, frame_idx],
+                intrinsics[0, frame_idx],
+                args,
+            )
+        if hsi_vertices is not None:
+            frame_summary["hsi_hsi"] = frame_alignment_entries(
+                hsi_vertices[0, frame_idx],
+                confs[0, frame_idx, :, 0],
+                hsi_depth[0, frame_idx],
+                intrinsics[0, frame_idx],
+                args,
+            )
+        summaries.append(frame_summary)
+    return summaries
+
+
+def frame_alignment_entries(
+    vertices_by_query: torch.Tensor,
+    confs: torch.Tensor,
+    depth: torch.Tensor,
+    intrinsic: torch.Tensor,
+    args: argparse.Namespace,
+) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    order = torch.argsort(confs.detach().float(), descending=True).tolist()
+    for query_idx in order:
+        conf = float(confs[query_idx].detach().cpu().item())
+        if conf < float(args.conf_threshold):
+            continue
+        stats = vertex_depth_alignment(vertices_by_query[query_idx], depth, intrinsic, args)
+        if stats["valid_points"] <= 0:
+            continue
+        stats["query_index"] = int(query_idx)
+        stats["confidence"] = conf
+        entries.append(stats)
+    return entries
+
+
+def vertex_depth_alignment(
+    vertices_cam: torch.Tensor,
+    depth: torch.Tensor,
+    intrinsic: torch.Tensor,
+    args: argparse.Namespace,
+) -> dict[str, Any]:
+    vertices = vertices_cam.detach().float()
+    stride = max(1, int(getattr(args, "alignment_vertex_stride", 16)))
+    vertices = vertices[::stride]
+    z = vertices[:, 2]
+    valid = torch.isfinite(vertices).all(dim=-1) & (z > 1e-6)
+    if float(args.max_scene_depth) > 0:
+        valid = valid & (z <= float(args.max_scene_depth))
+    vertices = vertices[valid]
+    if vertices.numel() == 0:
+        return empty_alignment_stats()
+    height, width = int(depth.shape[-2]), int(depth.shape[-1])
+    fx = intrinsic[0, 0].clamp(min=1e-6)
+    fy = intrinsic[1, 1].clamp(min=1e-6)
+    cx = intrinsic[0, 2]
+    cy = intrinsic[1, 2]
+    u = vertices[:, 0] / vertices[:, 2] * fx + cx
+    v = vertices[:, 1] / vertices[:, 2] * fy + cy
+    xi = torch.round(u).long()
+    yi = torch.round(v).long()
+    in_frame = (xi >= 0) & (xi < width) & (yi >= 0) & (yi < height)
+    if not bool(in_frame.any()):
+        return empty_alignment_stats()
+    xi = xi[in_frame]
+    yi = yi[in_frame]
+    z = vertices[in_frame, 2]
+    sampled = depth[yi, xi].detach().float()
+    valid_depth = torch.isfinite(sampled) & (sampled > 1e-6)
+    if float(args.max_scene_depth) > 0:
+        valid_depth = valid_depth & (sampled <= float(args.max_scene_depth))
+    if not bool(valid_depth.any()):
+        return empty_alignment_stats()
+    delta = z[valid_depth] - sampled[valid_depth]
+    abs_delta = delta.abs()
+    return {
+        "valid_points": int(delta.numel()),
+        "median_signed_m": float(delta.median().detach().cpu().item()),
+        "median_abs_m": float(abs_delta.median().detach().cpu().item()),
+        "mean_abs_m": float(abs_delta.mean().detach().cpu().item()),
+        "p90_abs_m": float(torch.quantile(abs_delta, 0.90).detach().cpu().item()) if delta.numel() > 1 else float(abs_delta[0].detach().cpu().item()),
+    }
+
+
+def empty_alignment_stats() -> dict[str, Any]:
+    return {
+        "valid_points": 0,
+        "median_signed_m": None,
+        "median_abs_m": None,
+        "mean_abs_m": None,
+        "p90_abs_m": None,
+    }
 
 
 def select_frame_people(
@@ -611,8 +736,37 @@ def build_summary(
         "people_counts": [int(len(frame["people"])) for frame in scene["frames"]],
         "hsi_scene_scale": [frame["hsi_scene_scale"] for frame in scene["frames"]],
         "hsi_scene_depth_bias": [frame["hsi_scene_depth_bias"] for frame in scene["frames"]],
+        "depth_alignment_note": "Depth alignment is computed by projecting SMPL vertices with VGGT K and sampling VGGT raw/HSI depth in the processed image plane; median_signed_m = z_smpl - z_depth.",
+        "depth_alignment_overall": summarize_depth_alignment(scene),
+        "depth_alignment_by_frame": [frame["depth_alignment"] for frame in scene["frames"]],
         "output_dir": str(output_dir),
     }
+
+
+def summarize_depth_alignment(scene: dict[str, Any]) -> dict[str, Any]:
+    summary: dict[str, Any] = {}
+    for key in ("base_raw", "base_hsi", "hsi_hsi"):
+        med_abs: list[float] = []
+        med_signed: list[float] = []
+        valid_points = 0
+        people = 0
+        for frame in scene["frames"]:
+            for entry in frame.get("depth_alignment", {}).get(key, []):
+                if entry.get("median_abs_m") is None:
+                    continue
+                people += 1
+                valid_points += int(entry.get("valid_points", 0) or 0)
+                med_abs.append(float(entry["median_abs_m"]))
+                med_signed.append(float(entry["median_signed_m"]))
+        summary[key] = {
+            "people": int(people),
+            "valid_points": int(valid_points),
+            "median_abs_m_mean": float(np.mean(med_abs)) if med_abs else None,
+            "median_abs_m_median": float(np.median(med_abs)) if med_abs else None,
+            "median_signed_m_mean": float(np.mean(med_signed)) if med_signed else None,
+            "median_signed_m_median": float(np.median(med_signed)) if med_signed else None,
+        }
+    return summary
 
 
 class SequenceViewer:

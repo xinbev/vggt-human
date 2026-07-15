@@ -7,10 +7,10 @@ DATA_ROOT="${DATA_ROOT:-/home/zhw/xyb_space}"
 PREPROCESSED_ROOT="${PREPROCESSED_ROOT:-${REPO_ROOT}/outputs/preprocess/bedlam_boxes}"
 PATH_CONFIG="${PATH_CONFIG:-${REPO_ROOT}/configs/path.yaml}"
 TRAIN_CONFIG="${TRAIN_CONFIG:-${REPO_ROOT}/configs/train_smpl_hsi_nlf_provider.yaml}"
-CUDA_VISIBLE_DEVICES_VALUE="${CUDA_VISIBLE_DEVICES_VALUE:-6}"
+CUDA_VISIBLE_DEVICES_VALUE="${CUDA_VISIBLE_DEVICES_VALUE:-7}"
 
 PIPELINE_OUTPUT_ROOT="${PIPELINE_OUTPUT_ROOT:-${REPO_ROOT}/outputs/train/smpl_hsi_nlf}"
-STAGE1_DIR="${STAGE1_DIR:-${PIPELINE_OUTPUT_ROOT}/stage1_roi_depth}"
+STAGE1_DIR="${STAGE1_DIR:-${PIPELINE_OUTPUT_ROOT}/stage1_gt_smpl_scale}"
 STAGE2_DIR="${STAGE2_DIR:-${PIPELINE_OUTPUT_ROOT}/stage2_anchor_transl}"
 STAGE3_DIR="${STAGE3_DIR:-${PIPELINE_OUTPUT_ROOT}/stage3_contact_detail}"
 STAGE4_DIR="${STAGE4_DIR:-${PIPELINE_OUTPUT_ROOT}/stage4_temporal_tracks}"
@@ -30,20 +30,20 @@ STAGE2_LR="${STAGE2_LR:-3e-6}"
 STAGE3_LR="${STAGE3_LR:-2e-6}"
 STAGE4_LR="${STAGE4_LR:-1e-6}"
 
-STAGE1_BATCH_SIZE="${STAGE1_BATCH_SIZE:-4}"
-STAGE2_BATCH_SIZE="${STAGE2_BATCH_SIZE:-4}"
-STAGE3_BATCH_SIZE="${STAGE3_BATCH_SIZE:-4}"
-STAGE4_BATCH_SIZE="${STAGE4_BATCH_SIZE:-2}"
+STAGE1_BATCH_SIZE="${STAGE1_BATCH_SIZE:-20}"
+STAGE2_BATCH_SIZE="${STAGE2_BATCH_SIZE:-16}"
+STAGE3_BATCH_SIZE="${STAGE3_BATCH_SIZE:-12}"
+STAGE4_BATCH_SIZE="${STAGE4_BATCH_SIZE:-8}"
 
 STAGE1_NUM_VIEWS="${STAGE1_NUM_VIEWS:-2}"
 STAGE2_NUM_VIEWS="${STAGE2_NUM_VIEWS:-2}"
 STAGE3_NUM_VIEWS="${STAGE3_NUM_VIEWS:-2}"
 STAGE4_NUM_VIEWS="${STAGE4_NUM_VIEWS:-4}"
 
-NUM_WORKERS="${NUM_WORKERS:-8}"
+NUM_WORKERS="${NUM_WORKERS:-16}"
 PIN_MEMORY="${PIN_MEMORY:-true}"
 MAX_HUMANS="${MAX_HUMANS:-20}"
-NLF_INTERNAL_BATCH_SIZE="${NLF_INTERNAL_BATCH_SIZE:-64}"
+NLF_INTERNAL_BATCH_SIZE="${NLF_INTERNAL_BATCH_SIZE:-192}"
 SAVE_TOP_K="${SAVE_TOP_K:-3}"
 
 export REPO_ROOT BEDLAM_ROOT DATA_ROOT PREPROCESSED_ROOT PATH_CONFIG TRAIN_CONFIG CUDA_VISIBLE_DEVICES_VALUE
@@ -61,7 +61,7 @@ require_checkpoint() {
 }
 
 run_stage1() {
-  echo "========== NLF-HSI four-stage pipeline: Stage 1 ROI depth =========="
+  echo "========== NLF-HSI four-stage pipeline: Stage 1 GT-SMPL scale teacher =========="
   OUTPUT_DIR="${STAGE1_DIR}" \
   EPOCHS="${STAGE1_EPOCHS}" \
   LR="${STAGE1_LR}" \
@@ -69,7 +69,7 @@ run_stage1() {
   NUM_VIEWS="${STAGE1_NUM_VIEWS}" \
   RESET_EPOCH=false \
   RESUME_CKPT="" \
-  bash "${REPO_ROOT}/scripts/train/train_smpl_hsi_nlf_stage1_roi_depth.sh"
+  bash "${REPO_ROOT}/scripts/train/train_smpl_hsi_nlf_stage1_gt_smpl_scale.sh"
   require_checkpoint "Stage1" "$(stage_checkpoint "${STAGE1_DIR}")"
 }
 

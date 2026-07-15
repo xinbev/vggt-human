@@ -4,16 +4,17 @@ set -euo pipefail
 REPO_ROOT="${REPO_ROOT:-/home/zhw/lab_users/xyb/home/projects/vggt-human}"
 export REPO_ROOT
 
-export OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/outputs/train/smpl_hsi_nlf_gt_smpl_scale_stage1_b12}"
+export OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/outputs/train/smpl_hsi_nlf_gt_smpl_scale_stage1_b20_gpu7}"
 
-# Speed / capacity knobs. These are intentionally exposed for 80G GPUs.
-export CUDA_VISIBLE_DEVICES_VALUE="${CUDA_VISIBLE_DEVICES_VALUE:-6}"
-export BATCH_SIZE="${BATCH_SIZE:-12}"
-export NUM_WORKERS="${NUM_WORKERS:-12}"
-export NLF_INTERNAL_BATCH_SIZE="${NLF_INTERNAL_BATCH_SIZE:-128}"
+# Speed / capacity knobs. Defaults target a single 80G GPU and can still be
+# overridden from the shell for quick OOM probes or longer runs.
+export CUDA_VISIBLE_DEVICES_VALUE="${CUDA_VISIBLE_DEVICES_VALUE:-7}"
+export BATCH_SIZE="${BATCH_SIZE:-20}"
+export NUM_WORKERS="${NUM_WORKERS:-16}"
+export NLF_INTERNAL_BATCH_SIZE="${NLF_INTERNAL_BATCH_SIZE:-192}"
 export MAX_HUMANS="${MAX_HUMANS:-20}"
 export NUM_VIEWS="${NUM_VIEWS:-2}"
-export EPOCHS="${EPOCHS:-10}"
+export EPOCHS="${EPOCHS:-3}"
 export LR="${LR:-5e-6}"
 export MAX_STEPS_PER_EPOCH="${MAX_STEPS_PER_EPOCH:-0}"
 
@@ -42,7 +43,7 @@ export HSI_SMPL_SCALE_TEACHER_MAX_Z_M="${HSI_SMPL_SCALE_TEACHER_MAX_Z_M:-20.0}"
 export DEPTH_TEACHER_WEIGHT="${DEPTH_TEACHER_WEIGHT:-0.0}"
 export DEPTH_USE_HUMAN_ROI="${DEPTH_USE_HUMAN_ROI:-true}"
 export DEPTH_ROI_EXPAND="${DEPTH_ROI_EXPAND:-0.85}"
-export DEPTH_MAX_M="${DEPTH_MAX_M:-30.0}"
+export DEPTH_MAX_M="${DEPTH_MAX_M:-20.0}"
 export DEPTH_ERROR_CLIP_M="${DEPTH_ERROR_CLIP_M:-2.0}"
 export DEPTH_MIN_VALID_PIXELS="${DEPTH_MIN_VALID_PIXELS:-2048}"
 
