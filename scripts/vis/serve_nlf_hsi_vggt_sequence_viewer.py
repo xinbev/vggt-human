@@ -411,10 +411,13 @@ def build_scene_data(
     for idx, image_path in enumerate(frame_paths):
         extrinsic = extrinsics[0, idx].detach().float().cpu().numpy()
         intrinsic = intrinsics[0, idx].detach().float().cpu().numpy()
+        hsi_scale = prediction_scalar(predictions, "hsi_scene_scale", idx)
+        hsi_bias = prediction_scalar(predictions, "hsi_scene_depth_bias", idx)
+        hsi_extrinsic = scale_w2c_extrinsic_translation(extrinsic, float(hsi_scale if hsi_scale is not None else 1.0))
         rgb = images[0, idx].detach().float().cpu()
         raw_points, raw_colors = depth_to_world_points(raw_depth[0, idx], rgb, intrinsic, extrinsic, args)
-        hsi_points, hsi_colors = depth_to_world_points(hsi_depth[0, idx], rgb, intrinsic, extrinsic, args)
-        frame_people = select_frame_people(predictions, people, priors, idx, extrinsic, faces, track_palette, args)
+        hsi_points, hsi_colors = depth_to_world_points(hsi_depth[0, idx], rgb, intrinsic, hsi_extrinsic, args)
+        frame_people = select_frame_people(predictions, people, priors, idx, hsi_extrinsic, faces, track_palette, args)
         frames.append(
             {
                 "frame_index": int(idx),
@@ -425,13 +428,24 @@ def build_scene_data(
                 "hsi_points": hsi_points,
                 "hsi_colors": hsi_colors,
                 "people": frame_people,
-                "camera": camera_pose_from_extrinsic(extrinsic, intrinsic),
-                "hsi_scene_scale": prediction_scalar(predictions, "hsi_scene_scale", idx),
-                "hsi_scene_depth_bias": prediction_scalar(predictions, "hsi_scene_depth_bias", idx),
+                "camera": camera_pose_from_extrinsic(hsi_extrinsic, intrinsic),
+                "raw_camera": camera_pose_from_extrinsic(extrinsic, intrinsic),
+                "hsi_camera": camera_pose_from_extrinsic(hsi_extrinsic, intrinsic),
+                "hsi_scene_scale": hsi_scale,
+                "hsi_scene_depth_bias": hsi_bias,
                 "depth_alignment": alignment[idx],
             }
         )
-    return {"frames": frames, "image_hw": list(image_hw), "track_palette": track_palette}
+    raw_camera_trajectory = np.stack([frame["raw_camera"]["position"] for frame in frames], axis=0).astype(np.float32) if frames else np.zeros((0, 3), dtype=np.float32)
+    hsi_camera_trajectory = np.stack([frame["hsi_camera"]["position"] for frame in frames], axis=0).astype(np.float32) if frames else np.zeros((0, 3), dtype=np.float32)
+    return {
+        "frames": frames,
+        "image_hw": list(image_hw),
+        "track_palette": track_palette,
+        "camera_trajectory": hsi_camera_trajectory,
+        "camera_trajectory_raw": raw_camera_trajectory,
+        "camera_trajectory_hsi": hsi_camera_trajectory,
+    }
 
 
 def canonical_depth(tensor: torch.Tensor) -> torch.Tensor:
@@ -484,6 +498,12 @@ def camera_points_to_world_np(points: np.ndarray, extrinsic: np.ndarray) -> np.n
     rotation = np.asarray(extrinsic[:3, :3], dtype=np.float32)
     translation = np.asarray(extrinsic[:3, 3], dtype=np.float32)
     return ((np.asarray(points, dtype=np.float32) - translation[None, :]) @ rotation).astype(np.float32)
+
+
+def scale_w2c_extrinsic_translation(extrinsic: np.ndarray, scale: float) -> np.ndarray:
+    scaled = np.asarray(extrinsic, dtype=np.float32).copy()
+    scaled[:3, 3] *= float(scale)
+    return scaled
 
 
 def decode_people(
@@ -738,10 +758,41 @@ def build_summary(
         "people_counts": [int(len(frame["people"])) for frame in scene["frames"]],
         "hsi_scene_scale": [frame["hsi_scene_scale"] for frame in scene["frames"]],
         "hsi_scene_depth_bias": [frame["hsi_scene_depth_bias"] for frame in scene["frames"]],
+        "camera_motion": {
+            "raw_vggt": summarize_camera_motion(scene, "camera_trajectory_raw"),
+            "hsi_scaled": summarize_camera_motion(scene, "camera_trajectory_hsi"),
+        },
         "depth_alignment_note": "Depth alignment is computed by projecting SMPL vertices with VGGT K and sampling VGGT raw/HSI depth in the processed image plane; median_signed_m = z_smpl - z_depth.",
         "depth_alignment_overall": summarize_depth_alignment(scene),
         "depth_alignment_by_frame": [frame["depth_alignment"] for frame in scene["frames"]],
         "output_dir": str(output_dir),
+    }
+
+
+def summarize_camera_motion(scene: dict[str, Any], key: str = "camera_trajectory") -> dict[str, Any]:
+    trajectory = np.asarray(scene.get(key, np.zeros((0, 3), dtype=np.float32)), dtype=np.float32)
+    if trajectory.shape[0] <= 0:
+        return {
+            "num_cameras": 0,
+            "positions_world": [],
+            "step_distances": [],
+            "total_path_m_vggt_units": 0.0,
+            "start_end_m_vggt_units": 0.0,
+            "axis_range_xyz_vggt_units": [0.0, 0.0, 0.0],
+        }
+    if trajectory.shape[0] > 1:
+        step_distances = np.linalg.norm(np.diff(trajectory, axis=0), axis=1)
+    else:
+        step_distances = np.zeros((0,), dtype=np.float32)
+    return {
+        "num_cameras": int(trajectory.shape[0]),
+        "positions_world": trajectory.tolist(),
+        "step_distances": step_distances.astype(np.float32).tolist(),
+        "total_path_m_vggt_units": float(step_distances.sum()),
+        "start_end_m_vggt_units": float(np.linalg.norm(trajectory[-1] - trajectory[0])) if trajectory.shape[0] > 1 else 0.0,
+        "axis_range_xyz_vggt_units": (trajectory.max(axis=0) - trajectory.min(axis=0)).astype(np.float32).tolist(),
+        "mean_step_m_vggt_units": float(step_distances.mean()) if step_distances.size else 0.0,
+        "max_step_m_vggt_units": float(step_distances.max()) if step_distances.size else 0.0,
     }
 
 
@@ -783,6 +834,7 @@ class SequenceViewer:
         self.point_size_value = float(args.point_size)
         self.camera_scale_value = float(args.camera_frustum_scale)
         self.smpl_opacity_value = 1.0
+        self.global_handles: dict[str, list[Any]] = {}
         self._build_scene()
         self._build_gui()
         self._register_clients()
@@ -804,7 +856,14 @@ class SequenceViewer:
     def _build_scene(self) -> None:
         for frame in self.scene["frames"]:
             idx = int(frame["frame_index"])
-            frame_handles: dict[str, Any] = {"raw": [], "hsi": [], "base_humans": [], "hsi_humans": [], "cameras": []}
+            frame_handles: dict[str, Any] = {
+                "raw": [],
+                "hsi": [],
+                "base_humans": [],
+                "hsi_humans": [],
+                "cameras_raw": [],
+                "cameras_hsi": [],
+            }
             frame_handles["raw"].append(
                 add_point_cloud(self.server, f"/frames/{idx:04d}/points_raw_depth", frame["raw_points"], frame["raw_colors"], self.point_size_value)
             )
@@ -823,12 +882,24 @@ class SequenceViewer:
                     frame_handles["hsi_humans"].append(
                         add_mesh(self.server, f"/frames/{idx:04d}/human_hsi_t{track_id}_q{query_idx}", person["hsi_vertices"], person["faces"], color, self.smpl_opacity_value)
                     )
-            frame_handles["cameras"].append(add_camera(self.server, self.transforms, f"/frames/{idx:04d}/camera", frame["camera"], self.camera_scale_value))
+            frame_handles["cameras_raw"].append(add_camera(self.server, self.transforms, f"/frames/{idx:04d}/camera_raw_vggt", frame["raw_camera"], self.camera_scale_value, (255, 255, 255)))
+            frame_handles["cameras_hsi"].append(add_camera(self.server, self.transforms, f"/frames/{idx:04d}/camera_hsi_scaled", frame["hsi_camera"], self.camera_scale_value, (255, 176, 0)))
             self.handles.append(frame_handles)
+        raw_trajectory = np.asarray(self.scene.get("camera_trajectory_raw", np.zeros((0, 3), dtype=np.float32)), dtype=np.float32)
+        hsi_trajectory = np.asarray(self.scene.get("camera_trajectory_hsi", np.zeros((0, 3), dtype=np.float32)), dtype=np.float32)
+        if raw_trajectory.shape[0] > 0:
+            self.global_handles["camera_trajectory_raw"] = [
+                add_point_cloud(self.server, "/camera_trajectory/raw_vggt_centers", raw_trajectory, camera_trajectory_colors(raw_trajectory.shape[0]), max(self.point_size_value * 2.5, 0.01))
+            ]
+        if hsi_trajectory.shape[0] > 0:
+            self.global_handles["camera_trajectory_hsi"] = [
+                add_point_cloud(self.server, "/camera_trajectory/hsi_scaled_centers", hsi_trajectory, camera_trajectory_colors(hsi_trajectory.shape[0]), max(self.point_size_value * 3.5, 0.012))
+            ]
 
     def _build_gui(self) -> None:
         self.frame_info = add_text(self.server, "Frame Info", "")
         self.alignment_info = add_text(self.server, "Depth Align", "")
+        self.camera_motion_info = add_text(self.server, "Camera Motion", format_camera_motion_short(self.scene))
         self.timestep = add_slider(self.server, "Timestep", 0, len(self.scene["frames"]) - 1, 1, 0)
         self.prev_button = add_button(self.server, "Prev Frame")
         self.next_button = add_button(self.server, "Next Frame")
@@ -844,6 +915,8 @@ class SequenceViewer:
         self.smpl_opacity = add_slider(self.server, "SMPL Opacity", 0.05, 1.00, 0.05, self.smpl_opacity_value)
         self.smpl_downsample = add_slider(self.server, "SMPL Downsample", 1, max(1, len(self.scene["frames"])), 1, 1)
         self.show_cameras = add_checkbox(self.server, "Show Cameras", True)
+        self.camera_source = add_dropdown(self.server, "Camera Source", ["auto", "hsi_scaled", "raw_vggt", "both"], "auto")
+        self.show_camera_trajectory = add_checkbox(self.server, "Show Camera Trajectory", True)
         self.camera_downsample = add_slider(self.server, "Camera Downsample", 1, max(1, len(self.scene["frames"])), 1, 1)
         self.follow_camera = add_checkbox(self.server, "Follow Pred Camera", False)
         for handle in [
@@ -854,6 +927,8 @@ class SequenceViewer:
             self.show_base,
             self.smpl_downsample,
             self.show_cameras,
+            self.camera_source,
+            self.show_camera_trajectory,
             self.camera_downsample,
             self.follow_camera,
         ]:
@@ -897,7 +972,7 @@ class SequenceViewer:
 
     def _on_camera_size_update(self, _: Any = None) -> None:
         self.camera_scale_value = float(self.camera_size.value)
-        self._set_handle_attr(["cameras"], "scale", self.camera_scale_value)
+        self._set_handle_attr(["cameras_raw", "cameras_hsi"], "scale", self.camera_scale_value)
 
     def _on_smpl_opacity_update(self, _: Any = None) -> None:
         self.smpl_opacity_value = float(self.smpl_opacity.value)
@@ -922,22 +997,42 @@ class SequenceViewer:
             show_decimated_smpl = idx == current or (idx % smpl_stride == 0)
             show_decimated_camera = idx == current or (idx % camera_stride == 0)
             show_camera_frame = (idx <= current if mode != "4D current frame" else idx == current)
+            show_raw_camera, show_hsi_camera = self._camera_visibility_for_depth(depth_source)
             set_group_visible(frame_handles["raw"], show_points and depth_source in {"raw_depth", "both"})
             set_group_visible(frame_handles["hsi"], show_points and depth_source in {"hsi_depth", "both"})
             set_group_visible(frame_handles["base_humans"], show_humans and show_decimated_smpl and bool(self.show_base.value))
             set_group_visible(frame_handles["hsi_humans"], show_humans and show_decimated_smpl and bool(self.show_hsi.value))
-            set_group_visible(frame_handles["cameras"], bool(self.show_cameras.value) and show_camera_frame and show_decimated_camera)
+            set_group_visible(frame_handles["cameras_raw"], bool(self.show_cameras.value) and show_raw_camera and show_camera_frame and show_decimated_camera)
+            set_group_visible(frame_handles["cameras_hsi"], bool(self.show_cameras.value) and show_hsi_camera and show_camera_frame and show_decimated_camera)
         self._update_info_text(current)
+
+    def _camera_visibility_for_depth(self, depth_source: str) -> tuple[bool, bool]:
+        camera_source = str(self.camera_source.value)
+        if camera_source == "raw_vggt":
+            return True, False
+        if camera_source == "hsi_scaled":
+            return False, True
+        if camera_source == "both":
+            return True, True
+        if depth_source == "raw_depth":
+            return True, False
+        if depth_source == "both":
+            return True, True
+        return False, True
 
     def _update_info_text(self, frame_index: int) -> None:
         frame = self.scene["frames"][int(frame_index)]
+        raw_cam_pos = np.asarray(frame["raw_camera"]["position"], dtype=np.float32)
+        hsi_cam_pos = np.asarray(frame["hsi_camera"]["position"], dtype=np.float32)
         set_text_value(
             self.frame_info,
             (
                 f"{int(frame_index) + 1}/{len(self.scene['frames'])} "
                 f"{frame['frame_id']} | raw_pts={int(frame['raw_points'].shape[0])} "
                 f"hsi_pts={int(frame['hsi_points'].shape[0])} people={len(frame['people'])} "
-                f"scale={frame['hsi_scene_scale']:.4g} bias={frame['hsi_scene_depth_bias']:.4g}"
+                f"scale={frame['hsi_scene_scale']:.4g} bias={frame['hsi_scene_depth_bias']:.4g} "
+                f"rawCam=({raw_cam_pos[0]:.3f},{raw_cam_pos[1]:.3f},{raw_cam_pos[2]:.3f}) "
+                f"hsiCam=({hsi_cam_pos[0]:.3f},{hsi_cam_pos[1]:.3f},{hsi_cam_pos[2]:.3f})"
             ),
         )
         align = frame.get("depth_alignment", {})
@@ -949,6 +1044,9 @@ class SequenceViewer:
                 f"hsi/hsi {format_alignment_short(align.get('hsi_hsi', []))}"
             ),
         )
+        show_raw_camera, show_hsi_camera = self._camera_visibility_for_depth(str(self.depth_source.value))
+        set_group_visible(self.global_handles.get("camera_trajectory_raw", []), bool(self.show_camera_trajectory.value) and show_raw_camera)
+        set_group_visible(self.global_handles.get("camera_trajectory_hsi", []), bool(self.show_camera_trajectory.value) and show_hsi_camera)
 
     def _set_handle_attr(self, groups: list[str], attr: str, value: float) -> None:
         for frame_handles in self.handles:
@@ -960,7 +1058,9 @@ class SequenceViewer:
                         pass
 
     def _follow_pred_camera(self, step: int) -> None:
-        camera = self.scene["frames"][int(step)]["camera"]
+        show_raw_camera, show_hsi_camera = self._camera_visibility_for_depth(str(self.depth_source.value))
+        camera_key = "raw_camera" if show_raw_camera and not show_hsi_camera else "hsi_camera"
+        camera = self.scene["frames"][int(step)][camera_key]
         rotation = camera["rotation_c2w"]
         position = camera["position"]
         wxyz = self.transforms.SO3.from_matrix(rotation).wxyz
@@ -1009,7 +1109,7 @@ def add_mesh(server: Any, name: str, vertices: np.ndarray, faces: np.ndarray, co
         return handle
 
 
-def add_camera(server: Any, transforms: Any, name: str, camera: dict[str, Any], scale: float) -> Any:
+def add_camera(server: Any, transforms: Any, name: str, camera: dict[str, Any], scale: float, color: tuple[int, int, int] = (255, 255, 255)) -> Any:
     api = scene_api(server)
     wxyz = transforms.SO3.from_matrix(camera["rotation_c2w"]).wxyz
     try:
@@ -1020,7 +1120,7 @@ def add_camera(server: Any, transforms: Any, name: str, camera: dict[str, Any], 
             scale=float(scale),
             wxyz=wxyz,
             position=camera["position"],
-            color=(255, 255, 255),
+            color=color,
         )
     except TypeError:
         return api.add_camera_frustum(name, float(camera["fov"]), float(camera["aspect"]), float(scale), wxyz, camera["position"])
@@ -1102,6 +1202,28 @@ def set_group_visible(handles: list[Any], visible: bool) -> None:
             handle.visible = bool(visible)
         except Exception:
             pass
+
+
+def camera_trajectory_colors(count: int) -> np.ndarray:
+    if count <= 0:
+        return np.zeros((0, 3), dtype=np.uint8)
+    t = np.linspace(0.0, 1.0, count, dtype=np.float32)
+    colors = np.zeros((count, 3), dtype=np.uint8)
+    colors[:, 0] = np.asarray(255.0 * t, dtype=np.uint8)
+    colors[:, 1] = np.asarray(210.0 * (1.0 - np.abs(t - 0.5) * 2.0), dtype=np.uint8)
+    colors[:, 2] = np.asarray(255.0 * (1.0 - t), dtype=np.uint8)
+    return colors
+
+
+def format_camera_motion_short(scene: dict[str, Any]) -> str:
+    raw = summarize_camera_motion(scene, "camera_trajectory_raw")
+    hsi = summarize_camera_motion(scene, "camera_trajectory_hsi")
+    return (
+        f"raw path={raw['total_path_m_vggt_units']:.4g} end={raw['start_end_m_vggt_units']:.4g} "
+        f"range={tuple(round(float(v), 4) for v in raw['axis_range_xyz_vggt_units'])} | "
+        f"hsi path={hsi['total_path_m_vggt_units']:.4g} end={hsi['start_end_m_vggt_units']:.4g} "
+        f"range={tuple(round(float(v), 4) for v in hsi['axis_range_xyz_vggt_units'])}"
+    )
 
 
 def format_alignment_short(entries: list[dict[str, Any]]) -> str:

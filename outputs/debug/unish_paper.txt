@@ -1,0 +1,1375 @@
+UniSH: Unifying Scene and Human Reconstruction in a Feed-Forward Pass
+Mengfei Li1 Peng Li1 Zheng Zhang2 Jiahao Lu1 Chengfeng Zhao1
+Qifeng Liu1 Sida Peng3 Wenxiao Zhang1 Wenhan Luo1 Yuan Liu1†
+
+Wei Xue1
+Yike Guo1†
+
+1
+
+2
+
+The Hong Kong University of Science and Technology
+Beijing University of Posts and Telecommunications 3 Zhejiang University
+
+arXiv:2601.01222v1 [cs.CV] 3 Jan 2026
+
+mliek@connect.ust.hk, {yuanly, yikeguo}@ust.hk
+
+Scene Recon.
+
+Coherent Human Mesh
+
+Human Motion
+
+Figure 1. Given a monocular video as input, our UniSH is capable of jointly reconstructing scene and human in a single forward pass,
+enabling effective estimation of scene geometry, camera parameters and SMPL parameters.
+
+Abstract
+
+and (2) a two-stage supervision scheme, which first learns
+coarse localization on synthetic data, then fine-tunes on
+real data by directly optimizing the geometric correspondence between the SMPL mesh and the human point cloud.
+This approach enables our feed-forward model to jointly
+recover high-fidelity scene geometry, human point clouds,
+camera parameters, and coherent, metric-scale SMPL bodies, all in a single forward pass. Extensive experiments
+demonstrate that our model achieves state-of-the-art performance on human-centric scene reconstruction and delivers highly competitive results on global human motion
+estimation, comparing favorably against both optimizationbased frameworks and HMR-only methods. Project page:
+https://murphylmf.github.io/UniSH/
+
+We present UniSH, a unified, feed-forward framework
+for joint metric-scale 3D scene and human reconstruction. A key challenge in this domain is the scarcity of
+large-scale, annotated real-world data, forcing a reliance
+on synthetic datasets. This reliance introduces a significant sim-to-real domain gap, leading to poor generalization, low-fidelity human geometry, and poor alignment on
+in-the-wild videos. To address this, we propose an innovative training paradigm that effectively leverages unlabeled in-the-wild data. Our framework bridges strong,
+disparate priors from scene reconstruction and HMR, and
+is trained with two core components: (1) a robust distillation strategy to refine human surface details by distilling high-frequency details from an expert depth model,
+† Corresponding authors.
+
+1
+
+1. Introduction
+
+general-purpose scene reconstruction. Second, training on
+such data introduces a significant sim-to-real domain gap.
+Consequently, models trained on this synthetic data generalize poorly when applied to in-the-wild videos, manifesting
+as degraded scene reconstruction quality and poor SMPLscene alignment. Furthermore, due to this overall lack of
+suitable training data, existing reconstruction models have
+not been adequately optimized for human-centric scenes,
+resulting in low-fidelity human surface geometry. Therefore, a fundamental challenge is to develop a framework
+that can effectively leverage abundant, unlabeled real-world
+data.
+To this end, we introduce UniSH, a unified, feed-forward
+framework for joint metric-scale scene and human reconstruction. Our UniSH leverages the strong priors from
+state-of-the-art reconstruction (π 3 [57]) and HMR (CameraHMR [31]) models. By building upon these powerful
+pre-trained foundations, our framework is designed to learn
+the complex joint reconstruction task even with unlabeled
+in-the-wild videos and synthetic data. To effectively bridge
+these distinct priors, we introduce a lightweight module,
+termed AlignNet, which learns to align the predictions from
+both models into a single, coherent output.
+We also propose a novel training paradigm that effectively utilizes unlabeled, in-the-wild human-centric data.
+This framework is specifically designed to refine the fidelity of reconstructed human surfaces and to enforce robust
+SMPL-scene alignment, bridging the gap where syntheticonly supervision fails. To enhance human surface fidelity,
+we utilize an expert depth model (MoGe-2 [53]) to generate
+pseudo-labels for our unlabeled data and propose a robust
+supervision strategy to distill high-frequency geometric details. To achieve robust SMPL-scene alignment, we introduce a coarse-to-fine supervision scheme. The model is first
+coarsely localized using synthetic data. This initialization
+stabilizes the next alignment stage where visible SMPL is
+needed. Then, the model is fine-tuned on unlabeled real data
+by directly optimizing the geometric correspondence between the reconstructed human point cloud and the SMPL
+mesh, significantly improving real-world generalization.
+Extensive experiments validate our approach. The results demonstrate that UniSH, by integrating powerful
+reconstruction and HMR priors with our novel training
+paradigm, successfully achieves robust, joint reconstruction. Our method effectively leverages unlabeled in-thewild data to bridge the sim-to-real domain gap , delivering
+high-fidelity human surface details and coherent, metricscale SMPL bodies accurately aligned to the 3D scene.
+Our main contributions are summarized as follows:
+• A unified, feed-forward architecture that, from a single forward pass, jointly reconstructs high-fidelity scene
+point clouds, camera parameters, and coherent, metricscale human meshes.
+
+A fundamental goal of computer vision is to enable machines to perceive and understand our complex 3D world.
+A critical component of this world is human-centric environments, which are defined by the dynamic interplay
+between static scene geometry and articulated human action. Holistically understanding this interplay, which involves jointly reasoning about the surrounding scene and
+the people within it, is foundational for the next generation
+of interactive systems, from augmented and virtual reality
+to collaborative robotics and embodied AI. These practical
+demands highlight the need for the joint reconstruction of
+scene and human.
+Most previous works have treated static scene reconstruction [21, 51, 52, 54, 57, 74] or Human Mesh Recovery (HMR) [2, 6, 11, 13, 20, 22, 37, 44, 49, 56, 65, 67] in
+isolation, a practice that overlooks the essential relationship
+between human motion and the surrounding 3D environment. More recent research [28, 36] has explored mitigating this gap by incorporating multi-view observations and
+human-centric semantics; however, this line of work primarily focuses on static scenes. Methods such as [25, 73]
+are designed for dynamic scenarios but suffer from timeconsuming per-scene optimization, limiting their practical
+applicability. With the advance of the 3R paradigm, exemplified by models like Dust3R [54] and Must3R [5] which
+predict a unified 3D signal (camera and scene geometry)
+in a feed-forward manner, JOSH3R [25] builds on this approach by augmenting the framework with a dedicated human tracking head, enabling both human trajectory prediction and scene reconstruction. Despite this remarkable
+progress, this approach suffers from limitations, including
+computationally expensive data annotations, global incoherence, and cumulative errors introduced by its two-frame
+inference paradigm, which degrade the overall humanscene 4D reconstruction performance.
+To perform effective and high quality human-scene 4D
+reconstruction, we propose UniSH, a feed-forward 4D reconstruction model. UniSH consists of two core branches:
+a reconstruction branch to recover scene geometry and camera parameters, and a human body branch to estimate human pose and shape. Our framework then fuses features
+from both branches to regress the absolute metric scale of
+the scene and the human’s global position within it. This entire architecture operates in a single forward pass, yielding
+a globally-aligned and metric-scale joint reconstruction.
+The primary obstacle to training such a model is the
+profound scarcity of large-scale, annotated real-world data
+that includes joint 3D scene, human motion, and camera
+parameters. This forces a reliance on synthetic datasets
+like BEDLAM [3]. While synthetic data has proven viable for HMR, it presents critical limitations. First, its
+limited scene diversity and scale is insufficient for training
+2
+
+• A human surface refinement method that addresses the
+universal fidelity gap by distilling high-frequency geometric details from a pre-trained expert depth model [53]
+with unlabeled data.
+• A coarse-to-fine supervision scheme that bridges the
+sim-to-real domain gap. This strategy first learns coarse
+localization from synthetic data, then enables fine-grained
+alignment on unlabeled real-world data by directly optimizing the geometric correspondence between the SMPL
+mesh and the reconstructed human point cloud.
+• Extensive experiments show our method achieves stateof-the-art human-centric scene reconstruction. On global
+motion estimation benchmarks, it significantly outperforms prior feed-forward joint reconstruction baselines
+and remains highly competitive with specialized HMRonly methods and optimization-based joint approaches.
+
+exploiting powerful vision-transformer backbones [10] for
+single-person mesh recovery [6, 13, 31, 55, 61, 66]. Beyond parametric forms, another line of research reconstructs
+high-fidelity non-parametric human surfaces [7, 16, 23, 59,
+60, 63, 71, 72], typically aiming to recover complete meshes
+including non-visible regions within a camera-centric coordinate system. Although our work also refines human geometry, its focus fundamentally differs: we refine only the
+visible human surface and prioritize accurate absolute localization and alignment within the global 3D scene.
+Joint Scene-Human Reconstruction. Early work on
+joint reconstruction [34], such as HSfM [28], employed
+optimization-based pipelines for static, multi-view environments. HAMSt3R [36] advanced this direction but remained limited to static scenes and required a separate
+SMPL fitting stage. The critical limitation of these methods is their failure to generalize to dynamic, monocular input. To address this, subsequent optimization-based methods [25, 62, 73] tackled dynamic scenes. SyncHMR [73]
+leverages SMPL priors for metric-scale SLAM, while
+JOSH [25] uses scene geometry to physically ground human motion. A principal limitation of these approaches,
+however, is their reliance on time-consuming per-scene optimization. To overcome this, JOSH3R [25] introduced a
+feed-forward approach by augmenting a scene backbone
+with a human tracking head. While a significant advance, its
+two-frame paradigm can introduce global incoherence and
+cumulative errors. Concurrent work, Human3R [8], also
+moves toward a unified system by building upon an online
+4D model, CUT3R [52], for direct motion regression.
+
+2. Related Work
+3D Scene Reconstruction. Traditional Structure-fromMotion (SfM) pipelines [1, 14, 42, 43], such as the widely
+adopted COLMAP system [38, 39], follow an incremental
+paradigm that yields highly accurate sparse geometry but
+often suffers from high computational cost and failure cases
+in texture-poor regions or wide-baseline scenarios. In contrast, recent learning-based approaches reconceptualize 3D
+reconstruction as an end-to-end prediction problem, with
+DUSt3R [54] pioneering dense, pixel-aligned point-map regression and MASt3R [21] improving accuracy through an
+additional dense descriptor head. Building on this foundation, a growing body of work explores online, streaming, and large-scale extensions [5, 9, 27, 50, 52, 58, 64,
+69, 74], broadening applicability in dynamic or memoryconstrained settings. More recent feed-forward formulations [51, 70], like VGGT, leverage transformer architectures to infer point maps for all images in a single pass,
+eliminating iterative optimization. π 3 [57] further improves
+the model’s precision and generalization by introducing the
+permutation-equivariant setting.
+
+3. Method
+UniSH takes a sequence of N images I = {Ii }N
+i=1 as input. In a single forward pass, it predicts the per-frame
+metric-scale point map P = {Pi }N
+i=1 of both human and
+scene, along with corresponding camera poses E = {Ei =
+N
+[Ri |Ti ]}N
+i=1 and intrinsics K = {Ki }i=1 . For humans in
+the scene, our model regresses camera-frame SMPL pose
+θi , and position ti , as well as a shared body shape β across
+frames.
+
+3D Human Reconstruction. Parallel to scene reconstruction, 3D human reconstruction has evolved from early
+camera-centric mesh estimation toward recovering fullbody pose and shape within a global, world-grounded
+frame. Modern Human Mesh Recovery (HMR) is built
+on parametric body models such as SMPL [26] and
+SMPL-X [33], which encode human geometry using lowdimensional pose and shape parameters; methods like SMPLify [4] estimate these parameters by optimizing reprojection consistency with 2D joints. Enabled by large-scale
+datasets [3, 11, 12, 17, 32], learning-based approaches [11,
+18, 24, 29, 68] directly regress parametric model parameters
+in a single forward pass, while recent Transformer-based architectures [48] further improve robustness and accuracy by
+
+3.1. Model Architecture
+As detailed in Fig. 2, UniSH includes a scene reconstruction
+branch, a human body regression branch, and an AlignNet
+for human-scene alignment.
+Scene Reconstruction. The scene reconstruction branch
+builds upon π 3 [57], a feed-forward and permutationequivariant 3D reconstruction model. Given an image sequence I = {Ii }N
+i=1 , an image encoder and a cross-frame
+encoder are first employed to extract a unified geometric
+feature Fgeo , which is then processed by three decoders to
+3
+
+Reconstruction Branch
+
+Vit Encoder
+
+…
+
+Cross-frame
+Transformer
+
+Scale Token
+
+Extrinsic
+Head
+
+E
+
+Confidence
+Head
+
+C
+
+Pointmap
+Head
+
+P
+
+Q
+K, V
+
+K
+
+Q
+
+Align
+Net
+
+…
+
+β
+SMPL
+Encoder
+
+Input video
+
+SMPL
+Decoder
+
+Human Body Branch
+
+s
+𝒕1
+𝒕2
+𝒕3
+
+𝜃1
+
+𝜃2
+𝜃3
+
+Figure 2. The network architecture of UniSH. UniSH takes a monocular video as input. The video frames are processed by the
+Reconstruction Branch to predict per-frame camera extrinsics E, confidence maps C, and pointmaps P . Camera intrinsics K are derived
+from the pointmaps. Human crops from the video are fed into the Human Body Branch along with K to estimate global SMPL shape
+parameters β and per-frame pose parameters θi . Features from both branches are processed by AlignNet to predict the global scene scale
+s and per-frame SMPL translations ti for coherent scene and human alignment. The subscript i denotes the frame index.
+
+predict per-frame camera poses E, point maps P, and associated confidence maps C, respectively. The intrinsics K can
+be subsequently derived from the predicted point maps. We
+utilize a similar architecture to leverage the strong structural
+priors of π 3 .
+
+designed to predict a global scene scale s and the per-frame
+SMPL translations T , which jointly align the human mesh
+to the metric-scale scene. We formulate AlignNet as a transformer architecture and take the geometric features Fgeo
+from the scene reconstruction branch as key-value pairs,
+while the query is formed by concatenating a learnable scale
+token Ts with the sequence of per-frame HMR tokens Fhmr .
+Formally,
+
+Human Mesh Reconstruction. We adopt CameraHMR [31] as the human body branch, owing to its strong
+generalization capabilities for single-frame pose and shape
+estimation. For each frame, a human bounding box bi is
+first extracted using an off-the-shelf detector [40]. The
+bounding box, together with the focal length (derived from
+Ki ) and the input image, are provided to the human body
+branch to extract per-frame body features Fhmr and output
+the per-frame pose parameters θi and the shared shape β.
+
+(s, T ) = AlignNet(Fgeo , [Ts |Fhmr ])
+where T = {ti }N
+i=1 represents the set of per-frame translations, and [·|·] denotes concatenation.
+
+3.2. Human Surface Refinement
+A primary challenge in general-purpose scene reconstruction is the resulting low-fidelity human surface geometry.
+A straightforward approach to enhance this is to fine-tune
+the reconstruction branch on synthetic data (e.g., BEDLAM [3]) using its original training objective. However, we
+find this strategy is detrimental. Due to the significant simto-real domain gap, this fine-tuning degrades performance
+on real-world inputs, damaging the model’s powerful pretrained structural priors.
+To address this, we adopt an inherently scalable approach, curating a new large-scale video dataset of unlabeled, in-the-wild human-centric motion (see Supp. Mat.).
+
+Scale Prediction and SMPL Placement. A naive approach to transitioning the reconstruction branch from an
+unknown-scale to a metric-scale predictor is to supervise
+the reconstruction branch with synthetic data to directly predict metric-scale geometry and SMPL placement. However,
+this strategy is ineffective (Fig. 5a), as it severely degrades
+the powerful structural priors of the pre-trained model and
+exhibits poor generalization to in-the-wild data due to the
+sim-to-real domain gap. To address these issues, we introduce AlignNet, a lightweight two-layer transformer decoder
+4
+
+We further employ MoGe-2 [53], a state-of-the-art monocular depth estimator, to produce pseudo ground-truth depth
+maps. However, direct supervision using these predictions
+is non-trivial. The per-frame depth estimates lack temporal
+consistency, exhibiting inconsistent global scales, and are
+affected by noise, particularly around background regions
+and human boundaries.
+
+alignment stage first learns a robust initial SMPL placement. This initialization is essential, as it enables the subsequent fine-grained alignment stage which relies on SMPL
+projection.
+Coarse-grained Alignment. In this stage, we use synthetic data BEDLAM [3] to learn an initial localization.
+We supervise the model’s predicted translation ti against
+the ground-truth tgt
+i using a globally optimal scale sopt (estimated with an ROE Solver [53]). The per-frame coarse
+alignment loss, Lsmpl,i , is defined as:
+
+Confidence-Aware Local Human Loss. Inspired by the
+local geometry enhancement strategy in MoGe-2 [53], we
+propose a novel confidence-aware, human-centric local loss
+to robustly distill high-frequency surface details from the
+pseudo-depth labels. Specifically, for an input frame, we
+sample K anchor pixels located on the foreground human
+mask Mi obtained via SAM2 [35]. Xk is the corresponding
+3D coordinate projected from the pseudo-depth label. For
+each anchor point Xk , we define a local patch of neighboring points Nk by a threshold τ :
+
+gt
+gt
+Lsmpl,i =λv ∥Vsmpl,i − Vsmpl,i
+∥1 + λj3d ∥J3d,i − J3d,i
+∥1
+gt
++ λj2d ∥J2d,i − J2d,i
+∥1 + λpose ∥θi − θigt ∥22
+
+This loss combines standard supervision signals for HMR,
+including losses on vertices (Vsmpl,i ), 3D keypoints (J3d,i ),
+2D projected keypoints (J2d,i ), and the SMPL parameters
+(θi , β, ti ). The 2D keypoints J2d,i are obtained by projecting J3d,i using the predicted intrinsics Ki : J2d,i =
+Π(Ki , J3d,i ).
+In this stage, we freeze the weights of the fine-tuned reconstruction branch and train both the human body branch
+and AlignNet. The total loss Lstage2 combines the per-frame
+loss Lsmpl,i (Eq. 2) with direct supervision on the predicted
+global scale s against sopt :
+
+Nk = {Xkj | ∥Xkj − Xk ∥2 ≤ τ }
+Let {D̂kj } and {Ckj } be our model’s predicted depths and
+confidences for the j th points Xkj ∈ Nk , and let {Dkj }
+be their corresponding pseudo-depth labels. To resolve
+the local scale and shift ambiguity inherent in monocular depth estimation, we employ an ROE Solver [53] for
+each patch. This solver estimates an optimal scale sk and
+shift tk that best align our model’s predictions {D̂kj } to the
+pseudo-depth labels {Dkj } within the patch Nk . For a given
+frame Ii , the local human loss Lh,i is then formulated as a
+confidence-weighted L1 distance:
+
+
+|Nk |
+K
+1 X 1 X j
+C · |(sk · D̂kj + tk ) − Dkj |
+Lh,i =
+K
+|Nk | j=1 k
+
+Lstage2 =
+
+To prevent catastrophic forgetting, we also apply a regularization loss Lpreg that penalizes the deviation from the
+original pre-trained model’s output point map Piorig . The
+final objective for Stage 1 can be formulated as:
+N
+
+
+1 X
+λh Lh,i + λpreg ∥Pi − Piorig ∥1
+N i=1
+
+N
+λsmpl X
+Lsmpl,i + λscale ∥s − sopt ∥1
+N i=1
+
+(3)
+
+Fine-grained Alignment. In fine-grained alignment
+stage, we address the generalization gap by fine-tuning
+the model on unlabeled in-the-wild data. This is achieved
+by introducing new objectives that directly minimize the
+geometric error between the predicted SMPL mesh and
+the reconstructed human point cloud for each frame. This
+fine-grained alignment relies on a geometric alignment loss
+and a depth-ordering regularization term.
+We first obtain the predicted SMPL mesh then use a differentiable renderer to acquire a visibility mask Mvis,i for
+this mesh. The source point cloud Vsrc,i is then defined as
+the set of visible vertices Vsmpl,i [Mvis,i ]. The target point
+cloud Vtgt,i is derived from the reconstructed human geometry. It is obtained by scaling the per-frame point map Pi by
+the predicted scale s and filtering it with human mask Mi
+from SAM2 [35]: Vtgt,i = (s · Pi )[Mi ].
+The primary alignment loss is the one-way Chamfer distance from the visible SMPL vertices to the target point
+cloud:
+X
+Lalign,i =
+min ∥vsrc − vtgt ∥22
+(4)
+
+k=1
+
+Lstage1 =
+
+(2)
+
+2
++ λshape ∥β − β gt ∥22 + λtrans ∥sopt · ti − tgt
+i ∥2
+
+(1)
+
+We train the point map decoder while keeping the rest
+parameters frozen.
+
+3.3. Human-Scene Alignment
+A straightforward approach to this alignment task is to train
+the model to predict scale and SMPL translation using only
+synthetic data. However, due to the aforementioned simto-real domain gap, models trained in this way generalize
+poorly to in-the-wild scenarios (Fig. 5b). We therefore design a coarse-to-fine supervision scheme, where a coarse
+
+vsrc ∈Vsrc,i
+
+5
+
+vtgt ∈Vtgt,i
+
+Additionally, we introduce a depth-ordering regularization term. We define d¯src,i and d¯tgt,i as the mean depths (Zvalues) of the source and target points, respectively. This
+loss enforces the physical prior that the reconstructed human point cloud (which should be closer to the camera)
+should not be occluded by the underlying SMPL mesh:
+Ldreg,i = ReLU(d¯tgt,i − d¯src,i )
+
+Method
+DUSt3R [50]
+MASt3R [21]
+MonST3R [69]
+Fast3R [64]
+MVDUSt3R [46]
+CUT3R [52]
+Aether [47]
+FLARE [70]
+VGGT [51]
+π 3 [57]
+UniSH(Ours)
+
+(5)
+
+Finally, in this third stage, we fine-tune AlignNet only
+with our unlabeled real-world data. The total loss Lstage3
+combines the fine-grained alignment loss Lalign,i (Eq. 4),
+the depth-ordering regularization Ldreg,i (Eq. 5), and a 2D
+keypoint reprojection loss Lj2d,i . This 2D loss is supervised using pseudo-annotations from a pre-trained CameraHMR [31].
+
+δ < 1.25 ↑
+
+0.151
+0.188
+0.072
+0.194
+0.426
+0.078
+0.273
+0.152
+0.057
+0.049
+0.035
+
+0.839
+0.765
+0.957
+0.772
+0.357
+0.937
+0.594
+0.790
+0.966
+0.975
+0.980
+
+Table 1. Quantitative results of human-centric video depth estimation on the Bonn [30] dataset. Our approach, UniSH, significantly outperforms all prior reconstruction-focused baselines.
+
+N
+
+Lstage3 =
+
+Abs Rel ↓
+
+
+1 X
+λalign Lalign,i + λdepth Ldreg,i + λj2d Lj2d,i
+N i=1
+(6)
+
+datasets. Following prior protocols [41, 56], we divide
+each sequence into 100-frame segments and evaluate 3D
+joint errors (mm) using three key metrics. World-aligned
+MPJPE (WA-MPJPE) performs a single Procrustes alignment over the entire segment to assess motion shape consistency. World MPJPE (W-MPJPE) aligns only the first two
+frames, evaluating drift. We also report Root Translation
+Error (RTE, %), the error after rigid alignment, to quantify
+long-term trajectory accuracy.
+We present quantitative results in Table 2. While
+HMR specialized methods achieve superior numerical accuracy, UniSH offers a distinct set of advantages. Methods like JOSH [25] are optimization-based and computationally expensive. In contrast, specialized feedforward methods like GVHMR [40] are trained on extensive ground-truth data and, crucially, do not reconstruct
+the 3D scene. Our approach is deliberately designed as
+a feed-forward, joint-reconstruction framework that relies
+primarily on weaker supervision from unlabeled in-thewild data. This trade-off is an expected outcome. Given
+this, our model achieves highly competitive results, significantly outperforming JOSH3R [25], the other feed-forward,
+joint-reconstruction baseline. Crucially, UniSH is the only
+method presented that is simultaneously feed-forward, and
+jointly reconstructs the 3D scene. This joint approach provides a key qualitative advantage, shown in Fig. 4; by
+leveraging strong structural priors from π 3 for robust camera pose recovery, our method achieves competitive results
+against WHAM and TRAM, particularly in ill-posed scenarios.
+
+4. Experiments
+In this section, we present the empirical validation for our
+proposed methodology. Our evaluation protocol is designed
+to assess two primary capabilities. We first benchmark our
+approach against leading methods in general 3D reconstruction, specifically on a human-centric depth estimation task.
+We then analyze the model’s accuracy in estimating global
+human motion within a world-coordinate system. Finally, a
+detailed ablation study is provided to elucidate the specific
+contributions of our framework’s key components.
+
+4.1. Human-centric Scene Reconstruction
+We first evaluate our framework’s reconstruction performance on human-centric video depth estimation, a task demanding high per-frame accuracy and temporal consistency.
+Following prior protocols [57], we evaluate on the Bonn
+dataset [30] using two standard metrics: Absolute Relative
+Error (Abs Rel ↓) and thresholded accuracy (δ < 1.25 ↑).
+As shown in Table 1, our method quantitatively outperforms all leading baselines. UniSH achieves an Abs
+Rel of 0.035 and a δ < 1.25 accuracy of 0.980, significantly surpassing strong methods like π 3 [57] (0.049/0.975)
+and VGGT [51] (0.057/0.966). This quantitative leap is
+supported by qualitative results from in-the-wild videos
+(Fig. 3). These comparisons demonstrate that our method
+reconstructs human surfaces with richer details and more
+plausible geometry than prior reconstruction-focused approaches, validating the synergistic benefits of our humancentric training.
+
+4.3. Ablation Study
+
+4.2. Global Human Motion Estimation
+
+Surface Refinement. We validate our human surface refinement strategy in Table 3. Compared to the π 3 baseline
+(’No Refinement’), naively fine-tuning on synthetic BED-
+
+We next evaluate the model’s accuracy in estimating global
+human motion on the EMDB-2 [19] and RICH [15]
+6
+
+Input
+
+VGGT
+
+CUT3R
+
+Ours
+
+𝜋3
+
+Figure 3. Qualitative comparisons of human point cloud. With in-the-wild input, we compare the reconstructed human point cloud
+with strong reconstruction model baselines. Benefit from our surface refinement strategy, our UniSH generates consistently better human
+surface point cloud than all baseline methods.
+
+GT
+
+TRAM
+
+WHAM
+
+Ours
+
+Figure 4. Qualitative results of global human motion estimation. We compare our method with well known HMR methods WHAM [41]
+and TRAM [56] on EMDB-2. Our method shows competitive results to these methods that specially designed and optimized for global
+human motion estimation task.
+
+LAM data significantly degrades performance, confirming
+the sim-to-real domain gap. While a mixed ’BEDLAM +
+Real’ training still underperforms the baseline, our ’Real
+
+(Ours)’ approach achieves the best performance by a substantial margin. This validates that our distillation strategy,
+using only unlabeled in-the-wild data, is crucial for bridg-
+
+7
+
+Opt.
+Free
+
+Scene
+
+SLAHMR [65]
+TRAM [56]
+JOSH [25]
+
+✗
+✗
+✗
+
+TRACE [45]
+WHAM [41]
+GVHMR [40]
+JOSH3R [25]
+UniSH(Ours)
+
+Method
+
+EMDB-2 [19]
+
+RICH [15]
+
+WA-MPJPE ↓
+
+W-MPJPE ↓
+
+RTE(%) ↓
+
+WA-MPJPE ↓
+
+W-MPJPE ↓
+
+RTE(%) ↓
+
+✗
+✗
+✓
+
+326.9
+76.4
+68.9
+
+776.1
+222.4
+174.7
+
+10.2
+1.4
+1.3
+
+132.2
+127.8
+89.0
+
+237.1
+238.0
+132.5
+
+6.4
+6.0
+3.0
+
+✓
+✓
+✓
+
+✗
+✗
+✗
+
+429.0
+135.6
+111.0
+
+1702.3
+334.8
+276.5
+
+17.7
+6.0
+2.0
+
+238.1
+108.4
+78.8
+
+925.4
+190.1
+126.3
+
+101.4
+4.5
+2.4
+
+✓
+✓
+
+✓
+✓
+
+220.0
+118.5
+
+661.7
+270.1
+
+13.1
+5.8
+
+118.1
+
+183.2
+
+4.8
+
+Table 2. Evaluation of global human motion estimation on EMDB-2 and RICH datasets. We categorize methods by their properties:
+Opt. Free(✓) indicates whether the method is feed-forward; Scene(✓) indicates the method jointly reconstructs 3D scene geometry.
+Input
+
+(b) w/o Fine Alignment
+
+(a) w/o Scale Prediction
+
+(c) Full Model
+
+Figure 5. Ablation study of our key design. (a) A variant where the scene branch is directly supervised for metric scale, and the Align
+Net only predicts SMPL translation. (b) Our model trained with only the coarse (synthetic) alignment stage, omitting the fine-grained
+alignment. (c) Our full model, which incorporates both coarse (synthetic) and fine-grained (real-world) alignment stages.
+
+Table 3. Ablation study of our human surface refinement on
+the Bonn [30] dataset. ’BEDLAM’ denotes fine-tuning using
+only ground-truth (GT) supervision from the synthetic BEDLAM
+dataset. ’Real’ means using only real-world data and our proposed
+surface refinement loss.
+
+ing the domain gap and successfully refining high-fidelity
+human geometry.
+Pipeline Design. We qualitatively ablate our pipeline design in Figure 5 by comparing three variants. (a) Directly
+supervising the scene branch with BEDLAM’s GT metric scale (bypassing scale prediction is detrimental, as it
+severely damages the powerful π 3 prior, degrades reconstruction quality, and fails to recover metric scale on realworld data. (b) Training with only the coarse (synthetic)
+alignment stage leads to poor generalization; due to the
+sim-to-real domain gap, the SMPL mesh and scene remain
+poorly aligned on in-the-wild videos. (c) Our full model resolves this issue, as the fine-grained alignment stage leverages unlabeled real-world data to optimize geometric correspondence, achieving robust human-scene alignment and
+validating our full two-stage, coarse-to-fine scheme.
+
+Training Data
+No Refinement
+BEDLAM
+BEDLAM + Real
+Real(Ours)
+
+Abs Rel ↓
+
+δ < 1.25 ↑
+
+0.049
+0.062
+0.051
+0.035
+
+0.975
+0.960
+0.968
+0.980
+
+aging unlabeled, in-the-wild data. By distilling geometric cues from expert models and fine-tuning with a coarseto-fine alignment strategy, UniSH successfully integrates
+strong, disparate priors from scene reconstruction and Human Mesh Recovery. As a result, our method produces
+coherent scene geometry, accurate camera parameters, and
+globally-aligned SMPL bodies in a single pass.
+While UniSH achieves robust human-scene alignment, the resulting non-parametric human geometry
+can still exhibit artifacts, such as floaters. This limitation suggests a clear direction for future work:
+
+5. Conclusion
+We have proposed UniSH, a unified feed-forward framework for joint, metric-scale scene and human reconstruction. Our core contribution is a novel training paradigm
+that addresses the critical sim-to-real domain gap by lever8
+
+investigating how the aligned SMPL bodies, provided
+by our model, can be used as a strong geometric
+prior to regularize and refine the final human surface.
+
+of the IEEE/CVF conference on computer vision and pattern
+recognition, pages 1323–1333, 2024. 2, 3
+[12] Yao Feng, Jing Lin, Sai Kumar Dwivedi, Yu Sun, Priyanka
+Patel, and Michael J Black. Chatpose: Chatting about 3d
+human pose. In Proceedings of the IEEE/CVF conference on
+computer vision and pattern recognition, pages 2093–2103,
+2024. 3
+[13] Shubham Goel, Georgios Pavlakos, Jathushan Rajasegaran,
+Angjoo Kanazawa, and Jitendra Malik. Humans in 4d: Reconstructing and tracking humans with transformers. In
+Proceedings of the IEEE/CVF International Conference on
+Computer Vision, pages 14783–14794, 2023. 2, 3
+[14] Richard Hartley and Andrew Zisserman. Multiple view geometry in computer vision. Cambridge university press,
+2003. 3
+[15] Mohamed Hassan, Vasileios Choutas, Dimitrios Tzionas,
+and Michael J. Black. Resolving 3d human pose ambiguities
+with 3d scene constraints. In Proceedings of the IEEE/CVF
+International Conference on Computer Vision (ICCV), 2019.
+6, 8
+[16] Hsuan-I Ho, Jie Song, and Otmar Hilliges. Sith: Single-view
+textured human reconstruction with image-conditioned diffusion. In Proceedings of the IEEE Conference on Computer
+Vision and Pattern Recognition (CVPR), 2024. 3
+[17] Hanbyul Joo, Natalia Neverova, and Andrea Vedaldi. Exemplar fine-tuning for 3d human model fitting towards inthe-wild 3d human pose estimation. In 2021 International
+Conference on 3D Vision (3DV), pages 42–52. IEEE, 2021.
+3
+[18] Angjoo Kanazawa, Michael J Black, David W Jacobs, and
+Jitendra Malik. End-to-end recovery of human shape and
+pose. In Proceedings of the IEEE conference on computer
+vision and pattern recognition, pages 7122–7131, 2018. 3
+[19] Manuel Kaufmann, Jie Song, Chen Guo, Kaiyue Shen, Tianjian Jiang, Chengcheng Tang, Juan José Zárate, and Otmar
+Hilliges. EMDB: The Electromagnetic Database of Global
+3D Human Pose and Shape in the Wild. In International
+Conference on Computer Vision (ICCV), 2023. 6, 8
+[20] Muhammed Kocabas, Ye Yuan, Pavlo Molchanov, Yunrong
+Guo, Michael J Black, Otmar Hilliges, Jan Kautz, and Umar
+Iqbal. Pace: Human and camera motion estimation from inthe-wild videos. In 2024 International Conference on 3D
+Vision (3DV), pages 397–408. IEEE, 2024. 2
+[21] Vincent Leroy, Yohann Cabon, and Jérôme Revaud. Grounding image matching in 3d with mast3r. In European Conference on Computer Vision, pages 71–91. Springer, 2024. 2, 3,
+6
+[22] Jiefeng Li, Ye Yuan, Davis Rempe, Haotian Zhang, Pavlo
+Molchanov, Cewu Lu, Jan Kautz, and Umar Iqbal. Coin:
+Control-inpainting diffusion prior for human and camera
+motion estimation. In European Conference on Computer
+Vision, pages 426–446. Springer, 2024. 2
+[23] Peng Li, Wangguandong Zheng, Yuan Liu, Tao Yu, Yangguang Li, Xingqun Qi, Mengfei Li, Xiaowei Chi, Siyu Xia,
+Wei Xue, et al. Pshuman: Photorealistic single-view human
+reconstruction using cross-scale diffusion. arXiv preprint
+arXiv:2409.10141, 2024. 3
+
+References
+[1] Sameer Agarwal, Yasutaka Furukawa, Noah Snavely, Ian Simon, Brian Curless, Steven M Seitz, and Richard Szeliski.
+Building rome in a day. Communications of the ACM, 54
+(10):105–112, 2011. 3
+[2] Fabien Baradel, Matthieu Armando, Salma Galaaoui, Romain Brégier, Philippe Weinzaepfel, Grégory Rogez, and
+Thomas Lucas. Multi-hmr: Multi-person whole-body human
+mesh recovery in a single shot. In European Conference on
+Computer Vision, pages 202–218. Springer, 2024. 2
+[3] Michael J Black, Priyanka Patel, Joachim Tesch, and Jinlong Yang. Bedlam: A synthetic dataset of bodies exhibiting detailed lifelike animated motion. In Proceedings of
+the IEEE/CVF Conference on Computer Vision and Pattern
+Recognition, pages 8726–8737, 2023. 2, 3, 4, 5
+[4] Federica Bogo, Angjoo Kanazawa, Christoph Lassner, Peter
+Gehler, Javier Romero, and Michael J Black. Keep it smpl:
+Automatic estimation of 3d human pose and shape from a
+single image. In European conference on computer vision,
+pages 561–578. Springer, 2016. 3
+[5] Yohann Cabon, Lucas Stoffl, Leonid Antsfeld, Gabriela
+Csurka, Boris Chidlovskii, Jerome Revaud, and Vincent
+Leroy. Must3r: Multi-view network for stereo 3d reconstruction. In Proceedings of the Computer Vision and Pattern
+Recognition Conference, pages 1050–1060, 2025. 2, 3
+[6] Zhongang Cai, Wanqi Yin, Ailing Zeng, Chen Wei, Qingping Sun, Wang Yanjun, Hui En Pang, Haiyi Mei, Mingyuan
+Zhang, Lei Zhang, et al. Smpler-x: Scaling up expressive
+human pose and shape estimation. Advances in Neural Information Processing Systems, 36:11454–11468, 2023. 2,
+3
+[7] Wenyue Chen, Peng Li, Wangguandong Zheng, Chengfeng
+Zhao, Mengfei Li, Yaolong Zhu, Zhiyang Dou, Ronggang
+Wang, and Yuan Liu. Synchuman: Synchronizing 2d and
+3d diffusion models for single-view human reconstruction.
+arXiv preprint arXiv:2510.07723, 2025. 3
+[8] Yue Chen, Xingyu Chen, Yuxuan Xue, Anpei Chen, Yuliang
+Xiu, and Gerard Pons-Moll. Human3r: Everyone everywhere all at once. arXiv preprint arXiv:2510.06219, 2025.
+3
+[9] Zhuoguang Chen, Minghui Qin, Tianyuan Yuan, Zhe Liu,
+and Hang Zhao. Long3r: Long sequence streaming 3d reconstruction. arXiv preprint arXiv:2507.18255, 2025. 3
+[10] Alexey Dosovitskiy, Lucas Beyer, Alexander Kolesnikov,
+Dirk Weissenborn, Xiaohua Zhai, Thomas Unterthiner,
+Mostafa Dehghani, Matthias Minderer, Georg Heigold, Sylvain Gelly, et al. An image is worth 16x16 words: Transformers for image recognition at scale. arXiv preprint
+arXiv:2010.11929, 2020. 3, 1
+[11] Sai Kumar Dwivedi, Yu Sun, Priyanka Patel, Yao Feng, and
+Michael J Black. Tokenhmr: Advancing human mesh recovery with a tokenized pose representation. In Proceedings
+
+9
+
+ing Pan, Kalyan Vasudev Alwala, Nicolas Carion, ChaoYuan Wu, Ross Girshick, Piotr Dollár, and Christoph Feichtenhofer. Sam 2: Segment anything in images and videos.
+arXiv preprint arXiv:2408.00714, 2024. 5
+[36] Sara Rojas, Matthieu Armando, Bernard Ghamen, Philippe
+Weinzaepfel, Vincent Leroy, and Gregory Rogez. Hamst3r:
+Human-aware multi-view stereo 3d reconstruction. arXiv
+preprint arXiv:2508.16433, 2025. 2, 3
+[37] István Sárándi and Gerard Pons-Moll. Neural localizer fields
+for continuous 3d human pose and shape estimation. In
+Advances in Neural Information Processing Systems, pages
+140032–140065. Curran Associates, Inc., 2024. 2
+[38] Johannes L Schonberger and Jan-Michael Frahm. Structurefrom-motion revisited. In Proceedings of the IEEE conference on computer vision and pattern recognition, pages
+4104–4113, 2016. 3
+[39] Johannes L Schönberger, Enliang Zheng, Jan-Michael
+Frahm, and Marc Pollefeys. Pixelwise view selection for
+unstructured multi-view stereo. In European conference on
+computer vision, pages 501–518. Springer, 2016. 3
+[40] Zehong Shen, Huaijin Pi, Yan Xia, Zhi Cen, Sida Peng,
+Zechen Hu, Hujun Bao, Ruizhen Hu, and Xiaowei Zhou.
+World-grounded human motion recovery via gravity-view
+coordinates. In SIGGRAPH Asia 2024 Conference Papers,
+New York, NY, USA, 2024. Association for Computing Machinery. 4, 6, 8, 1
+[41] Soyong Shin, Juyong Kim, Eni Halilaj, and Michael J. Black.
+Wham: Reconstructing world-grounded humans with accurate 3d motion. In Proceedings of the IEEE/CVF Conference
+on Computer Vision and Pattern Recognition (CVPR), pages
+2070–2080, 2024. 6, 7, 8
+[42] Noah Snavely, Steven M Seitz, and Richard Szeliski. Photo
+tourism: exploring photo collections in 3d. In ACM siggraph
+2006 papers, pages 835–846. 2006. 3
+[43] Noah Snavely, Steven M Seitz, and Richard Szeliski. Modeling the world from internet photo collections. International
+journal of computer vision, 80(2):189–210, 2008. 3
+[44] Yu Sun, Wu Liu, Qian Bao, Yili Fu, Tao Mei, and Michael J.
+Black. Putting people in their place: Monocular regression of
+3d people in depth. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR),
+pages 13243–13252, 2022. 2
+[45] Yu Sun, Qian Bao, Wu Liu, Tao Mei, and Michael J. Black.
+Trace: 5d temporal regression of avatars with dynamic cameras in 3d environments. In Proceedings of the IEEE/CVF
+Conference on Computer Vision and Pattern Recognition
+(CVPR), pages 8856–8866, 2023. 8
+[46] Zhenggang Tang, Yuchen Fan, Dilin Wang, Hongyu Xu,
+Rakesh Ranjan, Alexander Schwing, and Zhicheng Yan.
+Mv-dust3r+: Single-stage scene reconstruction from sparse
+views in 2 seconds. In Proceedings of the Computer Vision and Pattern Recognition Conference, pages 5283–5293,
+2025. 6
+[47] Aether Team, Haoyi Zhu, Yifan Wang, Jianjun Zhou, Wenzheng Chang, Yang Zhou, Zizun Li, Junyi Chen, Chunhua Shen, Jiangmiao Pang, et al. Aether: Geometric-aware
+unified world modeling. arXiv preprint arXiv:2503.18945,
+2025. 6
+
+[24] Zhihao Li, Jianzhuang Liu, Zhensong Zhang, Songcen Xu,
+and Youliang Yan. Cliff: Carrying location information
+in full frames into human pose and shape estimation. In
+European Conference on Computer Vision, pages 590–606.
+Springer, 2022. 3
+[25] Zhizheng Liu, Joe Lin, Wayne Wu, and Bolei Zhou. Joint
+optimization for 4d human-scene reconstruction in the wild.
+arXiv preprint arXiv:2501.02158, 2025. 2, 3, 6, 8
+[26] Matthew Loper, Naureen Mahmood, Javier Romero, Gerard
+Pons-Moll, and Michael J Black. Smpl: A skinned multiperson linear model. In Seminal Graphics Papers: Pushing
+the Boundaries, Volume 2, pages 851–866. 2023. 3
+[27] Jiahao Lu, Tianyu Huang, Peng Li, Zhiyang Dou, Cheng Lin,
+Zhiming Cui, Zhen Dong, Sai-Kit Yeung, Wenping Wang,
+and Yuan Liu. Align3r: Aligned monocular depth estimation
+for dynamic videos. In Proceedings of the Computer Vision
+and Pattern Recognition Conference, pages 22820–22830,
+2025. 3
+[28] Lea Müller, Hongsuk Choi, Anthony Zhang, Brent Yi, Jitendra Malik, and Angjoo Kanazawa. Reconstructing people,
+places, and cameras. In Proceedings of the Computer Vision
+and Pattern Recognition Conference, pages 21948–21958,
+2025. 2, 3
+[29] Mohamed Omran, Christoph Lassner, Gerard Pons-Moll, Peter Gehler, and Bernt Schiele. Neural body fitting: Unifying deep learning and model based human pose and shape
+estimation. In 2018 international conference on 3D vision
+(3DV), pages 484–494. IEEE, 2018. 3
+[30] Emanuele Palazzolo, Jens Behley, Philipp Lottes, Philippe
+Giguere, and Cyrill Stachniss. Refusion: 3d reconstruction
+in dynamic environments for rgb-d cameras exploiting residuals. In 2019 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS), pages 7855–7862. IEEE,
+2019. 6, 8
+[31] Priyanka Patel and Michael J Black. Camerahmr: Aligning
+people with perspective. In 2025 International Conference
+on 3D Vision (3DV), pages 1562–1571. IEEE, 2025. 2, 3, 4,
+6, 1
+[32] Priyanka Patel, Chun-Hao P Huang, Joachim Tesch, David T
+Hoffmann, Shashank Tripathi, and Michael J Black. Agora:
+Avatars in geography optimized for regression analysis. In
+Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pages 13468–13478, 2021. 3
+[33] Georgios Pavlakos, Vasileios Choutas, Nima Ghorbani,
+Timo Bolkart, Ahmed AA Osman, Dimitrios Tzionas, and
+Michael J Black. Expressive body capture: 3d hands,
+face, and body from a single image. In Proceedings of
+the IEEE/CVF conference on computer vision and pattern
+recognition, pages 10975–10985, 2019. 3
+[34] Georgios Pavlakos, Ethan Weber, Matthew Tancik, and
+Angjoo Kanazawa. The one where they reconstructed 3d
+humans and environments in tv shows. In European Conference on Computer Vision, pages 732–749. Springer, 2022.
+3
+[35] Nikhila Ravi, Valentin Gabeur, Yuan-Ting Hu, Ronghang
+Hu, Chaitanya Ryali, Tengyu Ma, Haitham Khedr, Roman
+Rädle, Chloe Rolland, Laura Gustafson, Eric Mintun, Junt-
+
+10
+
+[61] Xiangyu Xu, Lijuan Liu, and Shuicheng Yan. Smpler: Taming transformers for monocular 3d human shape and pose
+estimation. IEEE Transactions on Pattern Analysis and Machine Intelligence, 46(5):3275–3289, 2023. 3
+[62] Lixin Xue, Chen Guo, Chengwei Zheng, Fangjinghua Wang,
+Tianjian Jiang, Hsuan-I Ho, Manuel Kaufmann, Jie Song,
+and Otmar Hilliges. Hsr: holistic 3d human-scene reconstruction from monocular videos. In European Conference
+on Computer Vision, pages 429–448. Springer, 2024. 3
+[63] Yuxuan Xue, Xianghui Xie, Riccardo Marin, and Gerard.
+Pons-Moll. Human 3Diffusion: Realistic Avatar Creation
+via Explicit 3D Consistent Diffusion Models. 2024. 3
+[64] Jianing Yang, Alexander Sax, Kevin J Liang, Mikael Henaff,
+Hao Tang, Ang Cao, Joyce Chai, Franziska Meier, and Matt
+Feiszli. Fast3r: Towards 3d reconstruction of 1000+ images
+in one forward pass. In Proceedings of the Computer Vision
+and Pattern Recognition Conference, pages 21924–21935,
+2025. 3, 6
+[65] Vickie Ye, Georgios Pavlakos, Jitendra Malik, and Angjoo
+Kanazawa. Decoupling human and camera motion from
+videos in the wild. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR),
+pages 21222–21232, 2023. 2, 8
+[66] Wanqi Yin, Zhongang Cai, Ruisi Wang, Ailing Zeng, Chen
+Wei, Qingping Sun, Haiyi Mei, Yanjun Wang, Hui En Pang,
+Mingyuan Zhang, et al. Smplest-x: Ultimate scaling for expressive human pose and shape estimation. arXiv preprint
+arXiv:2501.09782, 2025. 3
+[67] Ye Yuan, Umar Iqbal, Pavlo Molchanov, Kris Kitani, and Jan
+Kautz. Glamr: Global occlusion-aware human mesh recovery with dynamic cameras. In Proceedings of the IEEE/CVF
+Conference on Computer Vision and Pattern Recognition
+(CVPR), pages 11038–11049, 2022. 2
+[68] Hongwen Zhang, Yating Tian, Xinchi Zhou, Wanli Ouyang,
+Yebin Liu, Limin Wang, and Zhenan Sun. Pymaf: 3d human
+pose and shape regression with pyramidal mesh alignment
+feedback loop. In Proceedings of the IEEE/CVF international conference on computer vision, pages 11446–11456,
+2021. 3
+[69] Junyi Zhang, Charles Herrmann, Junhwa Hur, Varun Jampani, Trevor Darrell, Forrester Cole, Deqing Sun, and MingHsuan Yang. Monst3r: A simple approach for estimating geometry in the presence of motion. arXiv preprint
+arxiv:2410.03825, 2024. 3, 6
+[70] Shangzhan Zhang, Jianyuan Wang, Yinghao Xu, Nan Xue,
+Christian Rupprecht, Xiaowei Zhou, Yujun Shen, and Gordon Wetzstein. Flare: Feed-forward geometry, appearance
+and camera estimation from uncalibrated sparse views. In
+Proceedings of the Computer Vision and Pattern Recognition
+Conference, pages 21936–21947, 2025. 3, 6
+[71] Zechuan Zhang, Li Sun, Zongxin Yang, Ling Chen, and
+Yi Yang. Global-correlated 3d-decoupling transformer for
+clothed avatar reconstruction. In Advances in Neural Information Processing Systems (NeurIPS), 2023. 3
+[72] Zechuan Zhang, Zongxin Yang, and Yi Yang.
+Sifu:
+Side-view conditioned implicit function for real-world usable clothed human reconstruction. In Proceedings of the
+
+[48] Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez, Łukasz Kaiser, and Illia
+Polosukhin. Attention is all you need. Advances in neural
+information processing systems, 30, 2017. 3
+[49] Timo von Marcard, Roberto Henschel, Michael J. Black,
+Bodo Rosenhahn, and Gerard Pons-Moll. Recovering accurate 3d human pose in the wild using imus and a moving camera. In Proceedings of the European Conference on
+Computer Vision (ECCV), 2018. 2
+[50] Hengyi Wang and Lourdes Agapito. 3d reconstruction with
+spatial memory. arXiv preprint arXiv:2408.16061, 2024. 3,
+6
+[51] Jianyuan Wang, Minghao Chen, Nikita Karaev, Andrea
+Vedaldi, Christian Rupprecht, and David Novotny. Vggt: Visual geometry grounded transformer. In Proceedings of the
+Computer Vision and Pattern Recognition Conference, pages
+5294–5306, 2025. 2, 3, 6
+[52] Qianqian Wang, Yifei Zhang, Aleksander Holynski,
+Alexei A Efros, and Angjoo Kanazawa. Continuous 3d perception model with persistent state. In Proceedings of the
+Computer Vision and Pattern Recognition Conference, pages
+10510–10522, 2025. 2, 3, 6
+[53] Ruicheng Wang, Sicheng Xu, Yue Dong, Yu Deng, Jianfeng
+Xiang, Zelong Lv, Guangzhong Sun, Xin Tong, and Jiaolong
+Yang. Moge-2: Accurate monocular geometry with metric
+scale and sharp details, 2025. 2, 3, 5
+[54] Shuzhe Wang, Vincent Leroy, Yohann Cabon, Boris
+Chidlovskii, and Jerome Revaud. Dust3r: Geometric 3d vision made easy. In Proceedings of the IEEE/CVF Conference
+on Computer Vision and Pattern Recognition, pages 20697–
+20709, 2024. 2, 3
+[55] Yufu Wang and Kostas Daniilidis. Refit: Recurrent fitting network for 3d human recovery. In Proceedings of the
+IEEE/CVF International Conference on Computer Vision,
+pages 14644–14654, 2023. 3
+[56] Yufu Wang, Ziyun Wang, Lingjie Liu, and Kostas Daniilidis.
+Tram: Global trajectory and motion of 3d humans from inthe-wild videos. In Computer Vision – ECCV 2024, pages
+467–487, Cham, 2025. Springer Nature Switzerland. 2, 6, 7,
+8
+[57] Yifan Wang, Jianjun Zhou, Haoyi Zhu, Wenzheng Chang,
+Yang Zhou, Zizun Li, Junyi Chen, Jiangmiao Pang, Chunhua
+Shen, and Tong He. pi3 : Scalable permutation-equivariant
+visual geometry learning. arXiv preprint arXiv:2507.13347,
+2025. 2, 3, 6, 1
+[58] Yuqi Wu, Wenzhao Zheng, Jie Zhou, and Jiwen Lu. Point3r:
+Streaming 3d reconstruction with explicit spatial pointer
+memory. arXiv preprint arXiv:2507.02863, 2025. 3
+[59] Yuliang Xiu, Jinlong Yang, Dimitrios Tzionas, and
+Michael J. Black. ICON: Implicit Clothed humans Obtained
+from Normals. In Proceedings of the IEEE/CVF Conference
+on Computer Vision and Pattern Recognition (CVPR), pages
+13296–13306, 2022. 3
+[60] Yuliang Xiu, Jinlong Yang, Xu Cao, Dimitrios Tzionas,
+and Michael J. Black. ECON: Explicit Clothed humans
+Optimized via Normal integration. In Proceedings of the
+IEEE/CVF Conference on Computer Vision and Pattern
+Recognition (CVPR), 2023. 3
+
+11
+
+IEEE/CVF Conference on Computer Vision and Pattern
+Recognition (CVPR), pages 9936–9947, 2024. 3
+[73] Yizhou Zhao, Tuanfeng Yang Wang, Bhiksha Raj, Min Xu,
+Jimei Yang, and Chun-Hao Paul Huang. Synergistic globalspace camera and human reconstruction from videos. In Proceedings of the IEEE/CVF Conference on Computer Vision
+and Pattern Recognition, pages 1216–1226, 2024. 2, 3
+[74] Dong Zhuo, Wenzhao Zheng, Jiahe Guo, Yuqi Wu, Jie Zhou,
+and Jiwen Lu. Streaming 4d visual geometry transformer.
+arXiv preprint arXiv:2507.11539, 2025. 2, 3
+
+12
+
+UniSH: Unifying Scene and Human Reconstruction in a Feed-Forward Pass
+Supplementary Material
+5.1. Dataset Curation
+
+academic research. To safeguard subject privacy, we enforce a policy against the retention of any personally identifiable metadata.
+Furthermore, we uphold the right to be forgotten through
+a passive distribution mechanism. Rather than distributing
+raw video data, we release only Video IDs and corresponding timestamps. This ensures that any content removed
+by the creator from the hosting platform automatically becomes inaccessible within our dataset. This mechanism effectively preserves the creator’s ultimate control over their
+content dissemination.
+
+Scalability and Data Requirements. A core advantage
+of UniSH is the ability to learn from unlabeled in-thewild videos with minimal geometric assumptions. For the
+dataset curated in this work, we specifically target dance
+videos to capture high-quality, complex human motion
+where the subject remains the primary focus. However,
+this domain choice serves primarily as a proof-of-concept.
+Unlike prior work that necessitates laboratory settings or
+motion capture, our framework imposes no such restrictions. We only require monocular videos with a visible human subject. Consequently, our method can be effortlessly
+scaled up to significantly more diverse, general-purpose
+video sources available on the public internet.
+
+Bias and Limitations. We acknowledge potential biases
+in the data source. Online dance communities may skew towards specific demographics or body types. Users should
+be aware of these distribution shifts during deployment.
+However, our core contribution is the methodology for
+leveraging abundant in-the-wild videos. Since our framework requires no manual labels, this specific bias is not a
+limitation of the method itself. It can be readily mitigated
+by simply scaling the data collection to include more diverse sources.
+
+Automated Filtering Pipeline. We curated a large-scale
+dataset from public platforms, employing a rigorous, multistage automated pipeline to ensure geometric and temporal
+consistency. First, to mitigate the impact of scene transitions and montages common in raw internet videos, we enforce strict temporal continuity. We employ the standard
+PySceneDetect library to identify shot boundaries based
+on content changes. Sequences exhibiting such discontinuities are automatically discarded, ensuring that the input
+to our temporal attention modules represents a continuous,
+unedited motion sequence.
+Following temporal filtering, we employ the object detector adopted by [40] to isolate single-subject sequences.
+We retain only those clips where a unique person class is
+consistently detected, thereby eliminating crowd ambiguity.
+To guarantee sufficient resolution for surface refinement, we
+enforce a spatial prominence constraint, requiring the subject’s average bounding box height to exceed 40% of the
+image height.
+Finally, visibility is enforced by discarding sequences
+with bounding box truncation at image borders. Crucially,
+to ensure an unobstructed view, we filter out any sequence
+where the subject overlaps with other detected bounding
+boxes, effectively removing environmental occlusions. The
+resulting dataset comprises 1,354 unique sequences, totaling approximately 1.2 million frames.
+
+6. Model Architecture Details
+This section details the unified architecture of the UniSH
+framework. Our model integrates three specialized components. These modules collaborate to achieve joint metricscale scene and human reconstruction in a single forward
+pass.
+
+6.1. Scene Reconstruction Branch
+This branch adapts the permutation-equivariant architecture
+of π 3 [57]. The goal is permutation-equivariant geometry
+estimation. A ViT-Large encoder [10] is adopted as the
+backbone. The core feature aggregation employs a CrossFrame Transformer. This Transformer uses 36 layers. The
+hidden dimension is D = 1024. It is configured with 16
+attention heads. Feature tokens alternate between spatial
+and global self-attention. The architecture omits frame index positional embeddings. Three parallel heads process
+the geometric features Fgeo . These heads predict the extrinsic camera poses E, the per-frame point map P , and the
+confidence map C.
+
+Ethical Compliance. Our data collection protocol strictly
+aligns with the conference ethical guidelines. Acknowledging the impracticability of obtaining individual consent
+given the dataset scale, we restricted our acquisition exclusively to content publicly broadcast by original creators. We
+operate strictly within the scope of the fair use doctrine for
+
+6.2. Human Body Branch
+We adopt the CameraHMR [31] framework for human pose
+and shape estimation, utilizing a ViTPose-Base backbone to
+1
+
+extract image features. The architecture employs a Transformer Decoder that processes the input human crop. To
+condition the reconstruction on scene-specific geometry, we
+inject bounding box and focal length information as done
+in [31]. Crucially, the focal length f is not estimated latently
+but is derived directly from the intrinsics predicted by our
+Scene Reconstruction Branch, explicitly coupling the two
+branches.
+The SMPL Decoder outputs the per-frame pose parameters θi and the body shape parameters β ∈ R10 . To ensure
+temporal consistency across the sequence, we compute the
+final body shape by averaging the per-frame β predictions
+over the entire video. In addition to the parametric outputs,
+the decoder extracts high-level human feature tokens Fhmr ,
+which serve as the query input for the subsequent AlignNet
+module.
+
+sine decay learning rate policy. The initial learning rate is
+5 × 10−5 for all three training stages. Training runs for a
+total of 100 epochs per stage. We utilize a linear warm-up
+phase for the first 3 epochs, followed by the cosine decay
+schedule, decaying the learning rate to zero. We use a distributed training setup. The per-GPU batch size is configured to 2. We use gradient accumulation over 4 steps. This
+yields an effective total batch size of 64 with 8 GPUs. The
+weight decay parameter for regularization is fixed at 0.05.
+In each iteration, we sample a video clip spanning 5 seconds. This clip is temporally sampled to 30 frames at 6 FPS
+for training. The input image resolution is 518 × 294 pixels. Gradient Clipping is enabled with a maximum gradient
+norm of 1.0.
+
+7.2. Weights of Losses
+Stage 1: Human Surface Refinement This stage is designed to distill high-frequency geometric details from an
+expert depth model using unlabeled, in-the-wild videos.
+The training objective for this stage is given by:
+
+6.3. AlignNet
+The AlignNet is our novel lightweight fusion network. Its
+primary function is aligning the human and scene predictions into a single metric-scale coordinate system.
+The AlignNet is implemented as a two-layer transformer
+decoder with a default hidden dimension of Dhidden = 512.
+It operates with dedicated adapter layers. These layers map
+the input geometric features Fgeo and human features Fhmr
+to the uniform hidden dimension Dhidden .
+The query sequence Q is explicitly constructed. Q is
+formed by concatenating a learned scale token with the sequence of adapted Human Body features Fhmr . The key K
+and value V sequences are derived from the consolidated
+Scene Geometry features Fgeo .
+The prediction layers consist of a stack of two CrossView Transformer Decoder layers. These layers utilize rotary position embeddings to encode the temporal sequence
+information.
+The decoder output is used by two prediction heads. The
+dedicated Scale Head processes the Scale Token output.
+The predicted global scale s is obtained by applying the
+softplus activation function to the logits, ensuring positivity. The Translation Head predicts the camera translation ti .
+The final translation vector ti is constructed by scaling the
+raw (x, y) components by the final depth component zf inal ,
+then concatenating with zf inal .
+
+N
+
+1 X
+(λh Lh,i + λpreg ||Pi − Piorig ||1 )
+Lstage1 =
+N i=1
+The primary weight for the confidence-aware local human
+loss is λh = 1. The regularization weight penalizing deviation from the original pre-trained point map is λpreg = 0.1.
+The local patch radius τ for computing Lh,i is set to 0.2.
+Stage 2: Coarse-grained Alignment This stage establishes initial metric-scale consistency using synthetic data.
+The coarse alignment loss, Lstage2 , combines HMR supervision with a global scale loss:
+N
+
+Lstage2 =
+
+λsmpl X
+Lsmpl,i + λscale ||s − sopt ||1
+N i=1
+
+The weights are λsmpl = 1 and λscale = 0.1. The
+component loss weights are set as λv = 0.1, λj3d = 0.1,
+λj2d = 10, λpose = 0.1, λshape = 0.1, and λtrans = 1.
+Stage 3: Fine-grained Alignment This final stage addresses the generalization gap by fine-tuning on unlabeled
+real-world data. The objective directly minimizes the geometric error between the reconstructed human point cloud
+and the predicted SMPL mesh. The total loss is:
+
+7. Implementation Details
+This section outlines the specific numerical configurations
+and optimization routines used to train UniSH. We detail
+the general setup and the critical weighting parameters for
+each training stage.
+
+N
+
+Lstage3 =
+
+7.1. General Optimization and Training Setup
+
+1 X
+(λalign Lalign,i +λdepth Ldreg,i +λj2d Lj2d,i )
+N i=1
+
+We set the alignment weight λalign = 1, the depth ordering
+regularization weight λdepth = 1, and the 2D reprojection
+loss weight λj2d = 10.
+
+The entire framework is trained using the AdamW optimizer with β1 = 0.9 and β2 = 0.95. We employ a co2
+
+8. Impact of Human Surface Refinement
+
+rate metric scale and translation while maintaining correct
+depth ordering. The SMPL mesh is placed coherently to
+align with the reconstructed human surface.
+
+Our surface refinement strategy is designed to overcome
+the inherent trade-off between geometric fidelity and multiview consistency. The baseline π 3 model [57], shown on the
+left, provides strong cross-frame consistency for the scene
+and coarse human structure. However, the resulting human
+point cloud often exhibits poor geometric fidelity. It fails
+to accurately conform to the detailed shape of the human
+body.
+Conversely, a specialized monocular depth estimator,
+such as the expert MoGe-2 model [53] (center), can predict
+exceptionally high-fidelity human surface details on a perframe basis. This approach, however, fundamentally suffers from poor temporal consistency and global scene alignment.
+Our method successfully integrates these dual requirements (Fig. 6). By employing confidence-aware distillation
+from the MoGe-2 expert, UniSH effectively injects highfrequency geometric information into the robust π 3 framework. The result is a system that maintains the global
+coherence and cross-frame consistency inherited from the
+π 3 backbone, while simultaneously achieving significantly
+higher fidelity and detail in the reconstructed human surface. This qualitative synthesis validates the necessity and
+efficacy of our specialized two-stage human surface refinement approach.
+
+10. More Visualization Results
+This section presents additional qualitative results demonstrating the robustness of UniSH across diverse, challenging scenes and complex human motions. In Fig. 8, the temporal sequence is explicitly encoded by the color gradient,
+ranging from light blue (earlier frames) to dark blue (later
+frames), which is consistently applied to the reconstructed
+cameras and the SMPL meshes.
+The upper sequence showcases reconstruction of an extreme, highly articulated human pose (rock climbing). Our
+framework accurately aligns the SMPL body model to the
+reconstructed scene geometry (the climbing wall), confirming stability even under non-standard articulation. The
+lower sequence illustrates coherent, long-term tracking of
+human motion within a large, in-the-wild urban environment. The color-coded trajectory clearly shows the consistent movement of both the predicted SMPL meshes and
+their corresponding camera poses over time. The framework successfully reconstructs the complex irregular wall
+structure and maintains stable metric-scale alignment of the
+human trajectory over multiple frames. These visualizations confirm the generalization capability and metric stability of the joint scene and human reconstruction provided
+by UniSH.
+
+9. Impact of Fine-grained Alignment
+
+11. 4D Visualizations
+
+Our framework employs a coarse-to-fine strategy to align
+the reconstructed human mesh with the scene. We first emphasize the necessity of this curriculum. The initial coarse
+alignment stage is a strict prerequisite for convergence. Attempting to optimize the geometric fine-tuning objectives
+directly from random initialization results in training collapse.
+Once initialized by the coarse stage, the fine-grained
+alignment handles the critical sim-to-real adaptation. We
+visually ablate the components of this stage in Figure 7. The
+second column shows the performance without the geometric alignment loss (Lalign ). It fails to generalize to in-thewild inputs due to the domain gap. This results in incorrect
+global scale predictions and erroneous SMPL translations
+that drift from the visual evidence.
+The third column demonstrates the model trained without the depth-ordering regularization (Ldreg ). The alignment loss successfully pulls the SMPL mesh near the human point cloud. However, the lack of physical depth constraints causes the SMPL body to be placed incorrectly. It
+often floats in front of the reconstructed surface. This violates the physical principle that the camera-visible surface
+should occlude the internal body volume. Our full model
+successfully integrates both objectives. It achieves accu-
+
+We provide a supplementary video file to further illustrate
+our method. This video focuses on two primary aspects of
+our performance. First, we demonstrate the temporal consistency of the UniSH framework. We show the dynamic
+evolution of the reconstructed scene and human mesh on
+continuous video sequences. This highlights the stability of
+our method in maintaining geometric coherence over time.
+Second, we include dynamic visualizations of our ablation study. We compare our full model against the ablated
+variants discussed in Section 9. This video comparison provides a clearer perspective on how our alignment strategies
+function in dynamic scenarios compared to static image figures. Please refer to the attached file demo video.mp4.
+
+3
+
+w/o Surface Refinement (𝜋 3)
+
+Cross-frame Consistency ✓
+High-fidelity
+✗
+
+w/ Surface Refinement(Ours)
+
+Expert Model (MoGe-2)
+
+Cross-frame Consistency ✗
+High-fidelity
+✓
+
+Cross-frame Consistency ✓
+
+High-fidelity
+
+✓
+
+Figure 6. Qualitative Impact of Human Surface Refinement. Comparison illustrating the effectiveness of our specialized surface
+refinement strategy. The π 3 baseline (Left) provides good cross-frame consistency but the reconstructed human geometry is coarse and
+does not conform well to the body shape. The Expert Monocular Model (MoGe-2) (Center) achieves high fidelity but lacks multi-view
+consistency. Our full method (Right) successfully distills the high-frequency surface details into the multi-view reconstruction framework,
+achieving both high fidelity and strong cross-frame consistency.
+
+Input
+
+w/o Align Loss
+
+w/o Depth Regularization
+
+Full Fine Alignment (Ours)
+
+Figure 7. Visual ablation of the Fine-grained Alignment stage. We validate the necessity of our unsupervised geometric losses on inthe-wild data. w/o Align Loss: Without explicit geometric alignment (Lalign ), the model fails to predict the correct scene scale and SMPL
+placement due to the domain gap. w/o Depth Regularization: Removing the depth constraint (Ldreg ) results in physical inconsistencies,
+where the SMPL mesh is not correctly positioned to align with the visible human point cloud. Full Fine Alignment (Ours): Our complete
+method achieves accurate global alignment and correct depth ordering. Note: We omit the visualization for “w/o Coarse Alignment” as
+removing the initial coarse stage leads to training non-convergence.
+
+4
+
+Figure 8. Qualitative Visualization of Joint Scene and Human Reconstruction. The examples demonstrate the robustness and metric
+consistency of our framework. The color gradient (light blue to dark blue) consistently encodes the temporal sequence across both the
+reconstructed camera poses and the SMPL meshes. The upper example illustrates robustness in reconstructing highly articulated poses
+(rock climbing) and accurately aligning the SMPL mesh with the scene geometry. The lower example demonstrates coherent, long-term
+tracking of human motion in a complex urban environment, verifying the metric stability and generalization of our joint reconstruction
+framework.
+
+5
+
+
