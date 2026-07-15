@@ -112,6 +112,8 @@ def main() -> None:
         return
 
     server = viser.ViserServer(port=int(args.port))
+    if hasattr(server, "set_up_direction"):
+        server.set_up_direction("-y")
     viewer = SequenceViewer(server=server, transforms=vtf, scene=scene, args=args)
     viewer.run()
 
@@ -778,6 +780,9 @@ class SequenceViewer:
         self.handles: list[dict[str, Any]] = []
         self.current_step = 0
         self.clients: dict[int, Any] = {}
+        self.point_size_value = float(args.point_size)
+        self.camera_scale_value = float(args.camera_frustum_scale)
+        self.smpl_opacity_value = 1.0
         self._build_scene()
         self._build_gui()
         self._register_clients()
@@ -801,10 +806,10 @@ class SequenceViewer:
             idx = int(frame["frame_index"])
             frame_handles: dict[str, Any] = {"raw": [], "hsi": [], "base_humans": [], "hsi_humans": [], "cameras": []}
             frame_handles["raw"].append(
-                add_point_cloud(self.server, f"/frames/{idx:04d}/points_raw_depth", frame["raw_points"], frame["raw_colors"], float(self.args.point_size))
+                add_point_cloud(self.server, f"/frames/{idx:04d}/points_raw_depth", frame["raw_points"], frame["raw_colors"], self.point_size_value)
             )
             frame_handles["hsi"].append(
-                add_point_cloud(self.server, f"/frames/{idx:04d}/points_hsi_depth", frame["hsi_points"], frame["hsi_colors"], float(self.args.point_size))
+                add_point_cloud(self.server, f"/frames/{idx:04d}/points_hsi_depth", frame["hsi_points"], frame["hsi_colors"], self.point_size_value)
             )
             for person in frame["people"]:
                 color = tuple(int(v) for v in person["color"])
@@ -812,27 +817,53 @@ class SequenceViewer:
                 query_idx = int(person["query_index"])
                 if "base_vertices" in person:
                     frame_handles["base_humans"].append(
-                        add_mesh(self.server, f"/frames/{idx:04d}/human_base_t{track_id}_q{query_idx}", person["base_vertices"], person["faces"], color)
+                        add_mesh(self.server, f"/frames/{idx:04d}/human_base_t{track_id}_q{query_idx}", person["base_vertices"], person["faces"], color, self.smpl_opacity_value)
                     )
                 if "hsi_vertices" in person:
                     frame_handles["hsi_humans"].append(
-                        add_mesh(self.server, f"/frames/{idx:04d}/human_hsi_t{track_id}_q{query_idx}", person["hsi_vertices"], person["faces"], color)
+                        add_mesh(self.server, f"/frames/{idx:04d}/human_hsi_t{track_id}_q{query_idx}", person["hsi_vertices"], person["faces"], color, self.smpl_opacity_value)
                     )
-            frame_handles["cameras"].append(add_camera(self.server, self.transforms, f"/frames/{idx:04d}/camera", frame["camera"], self.args))
+            frame_handles["cameras"].append(add_camera(self.server, self.transforms, f"/frames/{idx:04d}/camera", frame["camera"], self.camera_scale_value))
             self.handles.append(frame_handles)
 
     def _build_gui(self) -> None:
+        self.frame_info = add_text(self.server, "Frame Info", "")
+        self.alignment_info = add_text(self.server, "Depth Align", "")
         self.timestep = add_slider(self.server, "Timestep", 0, len(self.scene["frames"]) - 1, 1, 0)
+        self.prev_button = add_button(self.server, "Prev Frame")
+        self.next_button = add_button(self.server, "Next Frame")
         self.play = add_checkbox(self.server, "Playing", False)
         self.fps = add_slider(self.server, "FPS", 1, 30, 1, 6)
+        self.fps_buttons = add_button_group(self.server, "FPS Preset", ("5", "10", "20", "30"))
         self.mode = add_dropdown(self.server, "Mode", ["4D current frame", "3D accumulate", "Hybrid"], "4D current frame")
-        self.depth_source = add_dropdown(self.server, "Depth Source", ["hsi_depth", "raw_depth"], "hsi_depth")
+        self.depth_source = add_dropdown(self.server, "Depth Source", ["hsi_depth", "raw_depth", "both"], "hsi_depth")
+        self.point_size = add_slider(self.server, "Point Size", 0.0005, 0.08, 0.0005, self.point_size_value)
+        self.camera_size = add_slider(self.server, "Camera Size", 0.01, 1.00, 0.01, self.camera_scale_value)
         self.show_hsi = add_checkbox(self.server, "Show HSI SMPL", True)
         self.show_base = add_checkbox(self.server, "Show Base SMPL", False)
+        self.smpl_opacity = add_slider(self.server, "SMPL Opacity", 0.05, 1.00, 0.05, self.smpl_opacity_value)
+        self.smpl_downsample = add_slider(self.server, "SMPL Downsample", 1, max(1, len(self.scene["frames"])), 1, 1)
         self.show_cameras = add_checkbox(self.server, "Show Cameras", True)
+        self.camera_downsample = add_slider(self.server, "Camera Downsample", 1, max(1, len(self.scene["frames"])), 1, 1)
         self.follow_camera = add_checkbox(self.server, "Follow Pred Camera", False)
-        for handle in [self.timestep, self.mode, self.depth_source, self.show_hsi, self.show_base, self.show_cameras, self.follow_camera]:
+        for handle in [
+            self.timestep,
+            self.mode,
+            self.depth_source,
+            self.show_hsi,
+            self.show_base,
+            self.smpl_downsample,
+            self.show_cameras,
+            self.camera_downsample,
+            self.follow_camera,
+        ]:
             bind_update(handle, self._on_gui_update)
+        bind_update(self.point_size, self._on_point_size_update)
+        bind_update(self.camera_size, self._on_camera_size_update)
+        bind_update(self.smpl_opacity, self._on_smpl_opacity_update)
+        bind_click(self.prev_button, self._prev_frame)
+        bind_click(self.next_button, self._next_frame)
+        bind_click(self.fps_buttons, self._set_fps_preset)
 
     def _register_clients(self) -> None:
         if hasattr(self.server, "on_client_connect"):
@@ -846,10 +877,38 @@ class SequenceViewer:
         if bool(self.follow_camera.value):
             self._follow_pred_camera(self.current_step)
 
+    def _prev_frame(self, _: Any = None) -> None:
+        self.timestep.value = (int(self.timestep.value) - 1) % len(self.scene["frames"])
+        self._on_gui_update()
+
+    def _next_frame(self, _: Any = None) -> None:
+        self.timestep.value = (int(self.timestep.value) + 1) % len(self.scene["frames"])
+        self._on_gui_update()
+
+    def _set_fps_preset(self, _: Any = None) -> None:
+        try:
+            self.fps.value = int(str(self.fps_buttons.value))
+        except Exception:
+            pass
+
+    def _on_point_size_update(self, _: Any = None) -> None:
+        self.point_size_value = float(self.point_size.value)
+        self._set_handle_attr(["raw", "hsi"], "point_size", self.point_size_value)
+
+    def _on_camera_size_update(self, _: Any = None) -> None:
+        self.camera_scale_value = float(self.camera_size.value)
+        self._set_handle_attr(["cameras"], "scale", self.camera_scale_value)
+
+    def _on_smpl_opacity_update(self, _: Any = None) -> None:
+        self.smpl_opacity_value = float(self.smpl_opacity.value)
+        self._set_handle_attr(["base_humans", "hsi_humans"], "opacity", self.smpl_opacity_value)
+
     def _update_visibility(self) -> None:
         current = int(self.timestep.value)
         mode = str(self.mode.value)
         depth_source = str(self.depth_source.value)
+        smpl_stride = max(1, int(self.smpl_downsample.value))
+        camera_stride = max(1, int(self.camera_downsample.value))
         for idx, frame_handles in enumerate(self.handles):
             if mode == "3D accumulate":
                 show_points = idx <= current
@@ -860,11 +919,45 @@ class SequenceViewer:
             else:
                 show_points = idx == current
                 show_humans = idx == current
-            set_group_visible(frame_handles["raw"], show_points and depth_source == "raw_depth")
-            set_group_visible(frame_handles["hsi"], show_points and depth_source == "hsi_depth")
-            set_group_visible(frame_handles["base_humans"], show_humans and bool(self.show_base.value))
-            set_group_visible(frame_handles["hsi_humans"], show_humans and bool(self.show_hsi.value))
-            set_group_visible(frame_handles["cameras"], bool(self.show_cameras.value) and (idx <= current if mode != "4D current frame" else idx == current))
+            show_decimated_smpl = idx == current or (idx % smpl_stride == 0)
+            show_decimated_camera = idx == current or (idx % camera_stride == 0)
+            show_camera_frame = (idx <= current if mode != "4D current frame" else idx == current)
+            set_group_visible(frame_handles["raw"], show_points and depth_source in {"raw_depth", "both"})
+            set_group_visible(frame_handles["hsi"], show_points and depth_source in {"hsi_depth", "both"})
+            set_group_visible(frame_handles["base_humans"], show_humans and show_decimated_smpl and bool(self.show_base.value))
+            set_group_visible(frame_handles["hsi_humans"], show_humans and show_decimated_smpl and bool(self.show_hsi.value))
+            set_group_visible(frame_handles["cameras"], bool(self.show_cameras.value) and show_camera_frame and show_decimated_camera)
+        self._update_info_text(current)
+
+    def _update_info_text(self, frame_index: int) -> None:
+        frame = self.scene["frames"][int(frame_index)]
+        set_text_value(
+            self.frame_info,
+            (
+                f"{int(frame_index) + 1}/{len(self.scene['frames'])} "
+                f"{frame['frame_id']} | raw_pts={int(frame['raw_points'].shape[0])} "
+                f"hsi_pts={int(frame['hsi_points'].shape[0])} people={len(frame['people'])} "
+                f"scale={frame['hsi_scene_scale']:.4g} bias={frame['hsi_scene_depth_bias']:.4g}"
+            ),
+        )
+        align = frame.get("depth_alignment", {})
+        set_text_value(
+            self.alignment_info,
+            (
+                f"base/raw {format_alignment_short(align.get('base_raw', []))} | "
+                f"base/hsi {format_alignment_short(align.get('base_hsi', []))} | "
+                f"hsi/hsi {format_alignment_short(align.get('hsi_hsi', []))}"
+            ),
+        )
+
+    def _set_handle_attr(self, groups: list[str], attr: str, value: float) -> None:
+        for frame_handles in self.handles:
+            for group in groups:
+                for handle in frame_handles.get(group, []):
+                    try:
+                        setattr(handle, attr, value)
+                    except Exception:
+                        pass
 
     def _follow_pred_camera(self, step: int) -> None:
         camera = self.scene["frames"][int(step)]["camera"]
@@ -902,16 +995,21 @@ def add_point_cloud(server: Any, name: str, points: np.ndarray, colors: np.ndarr
         return api.add_point_cloud(name, points, colors, point_size=point_size)
 
 
-def add_mesh(server: Any, name: str, vertices: np.ndarray, faces: np.ndarray, color: tuple[int, int, int]) -> Any:
+def add_mesh(server: Any, name: str, vertices: np.ndarray, faces: np.ndarray, color: tuple[int, int, int], opacity: float = 1.0) -> Any:
     api = scene_api(server)
     color_float = tuple(float(v) / 255.0 for v in color)
     try:
-        return api.add_mesh_simple(name=name, vertices=vertices, faces=faces, color=color_float)
+        return api.add_mesh_simple(name=name, vertices=vertices, faces=faces, color=color_float, opacity=float(opacity))
     except TypeError:
-        return api.add_mesh_simple(name, vertices, faces, color=color_float)
+        handle = api.add_mesh_simple(name, vertices, faces, color=color_float)
+        try:
+            handle.opacity = float(opacity)
+        except Exception:
+            pass
+        return handle
 
 
-def add_camera(server: Any, transforms: Any, name: str, camera: dict[str, Any], args: argparse.Namespace) -> Any:
+def add_camera(server: Any, transforms: Any, name: str, camera: dict[str, Any], scale: float) -> Any:
     api = scene_api(server)
     wxyz = transforms.SO3.from_matrix(camera["rotation_c2w"]).wxyz
     try:
@@ -919,16 +1017,16 @@ def add_camera(server: Any, transforms: Any, name: str, camera: dict[str, Any], 
             name=name,
             fov=float(camera["fov"]),
             aspect=float(camera["aspect"]),
-            scale=float(args.camera_frustum_scale),
+            scale=float(scale),
             wxyz=wxyz,
             position=camera["position"],
             color=(255, 255, 255),
         )
     except TypeError:
-        return api.add_camera_frustum(name, float(camera["fov"]), float(camera["aspect"]), float(args.camera_frustum_scale), wxyz, camera["position"])
+        return api.add_camera_frustum(name, float(camera["fov"]), float(camera["aspect"]), float(scale), wxyz, camera["position"])
 
 
-def add_slider(server: Any, name: str, min_value: int, max_value: int, step: int, initial: int) -> Any:
+def add_slider(server: Any, name: str, min_value: float, max_value: float, step: float, initial: float) -> Any:
     api = gui_api(server)
     try:
         return api.add_slider(name, min=min_value, max=max_value, step=step, initial_value=initial)
@@ -952,9 +1050,50 @@ def add_dropdown(server: Any, name: str, options: list[str], initial: str) -> An
         return server.add_gui_dropdown(name, options, initial)
 
 
+def add_button(server: Any, name: str) -> Any:
+    api = gui_api(server)
+    try:
+        return api.add_button(name)
+    except AttributeError:
+        return server.add_gui_button(name)
+
+
+def add_button_group(server: Any, name: str, options: tuple[str, ...]) -> Any:
+    api = gui_api(server)
+    try:
+        return api.add_button_group(name, options)
+    except AttributeError:
+        return server.add_gui_button_group(name, options)
+
+
+def add_text(server: Any, name: str, initial: str) -> Any:
+    api = gui_api(server)
+    try:
+        return api.add_text(name, initial_value=initial)
+    except AttributeError:
+        try:
+            return server.add_gui_text(name, initial)
+        except AttributeError:
+            return None
+
+
 def bind_update(handle: Any, callback: Any) -> None:
     if hasattr(handle, "on_update"):
         handle.on_update(callback)
+
+
+def bind_click(handle: Any, callback: Any) -> None:
+    if hasattr(handle, "on_click"):
+        handle.on_click(callback)
+
+
+def set_text_value(handle: Any, value: str) -> None:
+    if handle is None:
+        return
+    try:
+        handle.value = value
+    except Exception:
+        pass
 
 
 def set_group_visible(handles: list[Any], visible: bool) -> None:
@@ -963,6 +1102,14 @@ def set_group_visible(handles: list[Any], visible: bool) -> None:
             handle.visible = bool(visible)
         except Exception:
             pass
+
+
+def format_alignment_short(entries: list[dict[str, Any]]) -> str:
+    values = [float(item["median_abs_m"]) for item in entries if item.get("median_abs_m") is not None]
+    points = sum(int(item.get("valid_points", 0) or 0) for item in entries)
+    if not values:
+        return "n/a"
+    return f"medAbs={float(np.median(values)):.3f}m pts={points}"
 
 
 if __name__ == "__main__":
