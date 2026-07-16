@@ -1,0 +1,13 @@
+{
+  "monitor": "loss_total",
+  "monitor_mode": "min",
+  "entries": [
+    {
+      "rank": 1,
+      "metric": 0.48735117174685,
+      "epoch": 1,
+      "source": "train",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/stage1_scale_linear_warmup_debug/checkpoint_top_train_epoch_0001_loss_total_0.487351.pt"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "monitor": "loss_total",
+  "monitor_mode": "min",
+  "entries": [
+    {
+      "rank": 1,
+      "metric": 0.02123485913281183,
+      "epoch": 2,
+      "source": "train",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_gt_smpl_scale_stage1_b12/checkpoint_top_train_epoch_0002_loss_total_0.021235.pt"
+    },
+    {
+      "rank": 2,
+      "metric": 0.05390144070852579,
+      "epoch": 1,
+      "source": "train",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_gt_smpl_scale_stage1_b12/checkpoint_top_train_epoch_0001_loss_total_0.053901.pt"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "monitor": "loss_total",
+  "monitor_mode": "min",
+  "entries": [
+    {
+      "rank": 1,
+      "metric": 0.17174028407831332,
+      "epoch": 3,
+      "source": "train",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/stage1_scale_linear_b20_gpu7/checkpoint_top_train_epoch_0003_loss_total_0.171740.pt"
+    },
+    {
+      "rank": 2,
+      "metric": 0.20005247391368214,
+      "epoch": 2,
+      "source": "train",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/stage1_scale_linear_b20_gpu7/checkpoint_top_train_epoch_0002_loss_total_0.200052.pt"
+    },
+    {
+      "rank": 3,
+      "metric": 0.25020284842552715,
+      "epoch": 1,
+      "source": "train",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/stage1_scale_linear_b20_gpu7/checkpoint_top_train_epoch_0001_loss_total_0.250203.pt"
+    }
+  ]
+}

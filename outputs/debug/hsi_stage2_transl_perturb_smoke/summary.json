@@ -1,0 +1,21 @@
+{
+  "status": "ok",
+  "valid_slots": 6,
+  "projection_delta_px_max": 0.0,
+  "noise_ratio_min": 0.9397606253623962,
+  "noise_ratio_max": 1.0313780307769775,
+  "keys": [
+    "base_clean_pred_transl_cam",
+    "base_pred_transl_cam",
+    "gt_smpl_provider_mask",
+    "perturbed_pred_transl_cam",
+    "pred_betas",
+    "pred_boxes",
+    "pred_cam",
+    "pred_confs",
+    "pred_pose_6d",
+    "pred_poses",
+    "pred_transl_cam",
+    "transl_noise_ratio"
+  ]
+}
