@@ -1,9 +1,22 @@
+import inspect
+from collections import namedtuple
 from pathlib import Path
 
 import torch
 import torch.nn as nn
-#================================
 import numpy as np
+
+
+if not hasattr(inspect, "getargspec"):
+    _ArgSpec = namedtuple("ArgSpec", "args varargs keywords defaults")
+
+    def _getargspec(func):
+        spec = inspect.getfullargspec(func)
+        return _ArgSpec(spec.args, spec.varargs, spec.varkw, spec.defaults)
+
+    inspect.getargspec = _getargspec  # type: ignore[attr-defined]
+
+
 _LEGACY_NUMPY_ALIASES = {
     "bool": bool,
     "int": int,
@@ -15,11 +28,10 @@ _LEGACY_NUMPY_ALIASES = {
 }
 
 for name, value in _LEGACY_NUMPY_ALIASES.items():
-    try:
-        getattr(np, name)
-    except AttributeError:
+    if name not in np.__dict__:
         setattr(np, name, value)
-#================================
+
+
 class SMPLLayer(nn.Module):
     """Project-local SMPL wrapper for visualization and geometry checks.
 
