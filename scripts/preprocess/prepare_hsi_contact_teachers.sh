@@ -6,12 +6,16 @@ BEDLAM_ROOT="${BEDLAM_ROOT:-/home/zhw/xyb_space/bedlam/processed_bedlam}"
 BOXES_ROOT="${BOXES_ROOT:-${REPO_ROOT}/outputs/preprocess/bedlam_boxes}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-${REPO_ROOT}/outputs/preprocess/hsi_contact_teachers_v2}"
 SEQUENCE_MANIFEST="${SEQUENCE_MANIFEST:-}"
-SMPL_MODEL_DIR="${SMPL_MODEL_DIR:-${REPO_ROOT}/checkpoints/body_models/smpl/smpl}"
+SMPL_MODEL_DIR="${SMPL_MODEL_DIR:-${REPO_ROOT}/checkpoints/body_models/smpl}"
 CUDA_VISIBLE_DEVICES_VALUE="${CUDA_VISIBLE_DEVICES_VALUE:-7}"
 MAX_HUMANS="${MAX_HUMANS:-20}"
 OVERWRITE="${OVERWRITE:-false}"
 
 cd "${REPO_ROOT}"
+[[ -f "${SMPL_MODEL_DIR}/smpl/SMPL_NEUTRAL.pkl" ]] || {
+  echo "[ERROR] Missing SMPL model: ${SMPL_MODEL_DIR}/smpl/SMPL_NEUTRAL.pkl" >&2
+  exit 1
+}
 ARGS=(
   --bedlam-root "${BEDLAM_ROOT}"
   --boxes-root "${BOXES_ROOT}"
