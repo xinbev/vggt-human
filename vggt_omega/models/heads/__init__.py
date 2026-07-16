@@ -7,6 +7,7 @@
 from .camera_head import CameraHead
 from .dense_head import DenseHead
 from .hsi_human_scene_align_head import HSIHumanSceneAlignHead
+from .hsi_contact_refine_head import HSIContactRefineHead
 from .hsi_refinement_head import HSIRefinementHead
 from .smpl_head import AggregatorSMPLHead, CameraRayTranslationRefiner, SMPLRegressionHead
 from .text_alignment_head import TextAlignmentHead
@@ -17,6 +18,7 @@ __all__ = [
     "CameraRayTranslationRefiner",
     "DenseHead",
     "HSIHumanSceneAlignHead",
+    "HSIContactRefineHead",
     "HSIRefinementHead",
     "SMPLRegressionHead",
     "TextAlignmentHead",

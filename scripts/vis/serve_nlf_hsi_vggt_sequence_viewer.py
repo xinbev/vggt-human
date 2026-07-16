@@ -137,8 +137,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-frames", type=int, default=32)
     parser.add_argument("--max-humans", type=int, default=20)
     parser.add_argument("--conf-threshold", type=float, default=0.10)
-    parser.add_argument("--depth-point-stride", type=int, default=4)
-    parser.add_argument("--max-scene-depth", type=float, default=30.0)
+    parser.add_argument("--depth-point-stride", type=int, default=4, help="Initial Viser point-cloud sampling stride. This can be changed live in the GUI.")
+    parser.add_argument("--max-scene-depth", type=float, default=30.0, help="Initial far-depth clipping in meters. Set 0 to disable; this can be changed live in the GUI.")
     parser.add_argument("--point-size", type=float, default=0.012)
     parser.add_argument("--camera-frustum-scale", type=float, default=0.20)
     parser.add_argument("--alignment-vertex-stride", type=int, default=16)
@@ -427,6 +427,14 @@ def build_scene_data(
                 "raw_colors": raw_colors,
                 "hsi_points": hsi_points,
                 "hsi_colors": hsi_colors,
+                "raw_depth_map": raw_depth[0, idx].detach().float().cpu().numpy().astype(np.float32, copy=False),
+                "hsi_depth_map": hsi_depth[0, idx].detach().float().cpu().numpy().astype(np.float32, copy=False),
+                "rgb_chw": rgb.detach().float().cpu().numpy().astype(np.float32, copy=False),
+                "intrinsic": intrinsic.astype(np.float32, copy=False),
+                "raw_extrinsic": extrinsic.astype(np.float32, copy=False),
+                "hsi_extrinsic": hsi_extrinsic.astype(np.float32, copy=False),
+                "depth_point_stride": int(args.depth_point_stride),
+                "max_scene_depth": float(args.max_scene_depth),
                 "people": frame_people,
                 "camera": camera_pose_from_extrinsic(hsi_extrinsic, intrinsic),
                 "raw_camera": camera_pose_from_extrinsic(extrinsic, intrinsic),
@@ -466,9 +474,27 @@ def depth_to_world_points(
     extrinsic: np.ndarray,
     args: argparse.Namespace,
 ) -> tuple[np.ndarray, np.ndarray]:
+    return depth_to_world_points_with_limits(
+        depth=depth,
+        rgb=rgb,
+        intrinsic=intrinsic,
+        extrinsic=extrinsic,
+        depth_point_stride=int(args.depth_point_stride),
+        max_scene_depth=float(args.max_scene_depth),
+    )
+
+
+def depth_to_world_points_with_limits(
+    depth: torch.Tensor,
+    rgb: torch.Tensor,
+    intrinsic: np.ndarray,
+    extrinsic: np.ndarray,
+    depth_point_stride: int,
+    max_scene_depth: float,
+) -> tuple[np.ndarray, np.ndarray]:
     depth = depth.detach().float()
     height, width = int(depth.shape[-2]), int(depth.shape[-1])
-    step = max(1, int(args.depth_point_stride))
+    step = max(1, int(depth_point_stride))
     ys, xs = torch.meshgrid(
         torch.arange(0, height, step, device=depth.device, dtype=torch.float32),
         torch.arange(0, width, step, device=depth.device, dtype=torch.float32),
@@ -487,8 +513,8 @@ def depth_to_world_points(
         rgb_use = F.interpolate(rgb_use[None], size=(height, width), mode="bilinear", align_corners=False)[0]
     colors = (rgb_use[:, ys.long(), xs.long()].permute(1, 2, 0).clamp(0.0, 1.0) * 255.0).to(dtype=torch.uint8)
     mask = torch.isfinite(points).all(dim=-1) & (z > 1e-6)
-    if float(args.max_scene_depth) > 0:
-        mask = mask & (z <= float(args.max_scene_depth))
+    if float(max_scene_depth) > 0:
+        mask = mask & (z <= float(max_scene_depth))
     points_np = points[mask].detach().cpu().numpy().astype(np.float32, copy=False)
     colors_np = colors[mask].detach().cpu().numpy().astype(np.uint8, copy=False)
     return camera_points_to_world_np(points_np, extrinsic), colors_np
@@ -834,6 +860,9 @@ class SequenceViewer:
         self.point_size_value = float(args.point_size)
         self.camera_scale_value = float(args.camera_frustum_scale)
         self.smpl_opacity_value = 1.0
+        self.depth_point_stride_value = max(1, int(args.depth_point_stride))
+        self.max_scene_depth_value = float(args.max_scene_depth)
+        self._rebuilding_points = False
         self.global_handles: dict[str, list[Any]] = {}
         self._build_scene()
         self._build_gui()
@@ -909,6 +938,9 @@ class SequenceViewer:
         self.mode = add_dropdown(self.server, "Mode", ["4D current frame", "3D accumulate", "Hybrid"], "4D current frame")
         self.depth_source = add_dropdown(self.server, "Depth Source", ["hsi_depth", "raw_depth", "both"], "hsi_depth")
         self.point_size = add_slider(self.server, "Point Size", 0.0005, 0.08, 0.0005, self.point_size_value)
+        self.density_preset = add_dropdown(self.server, "Point Density Preset", ["custom", "dense stride 1", "balanced stride 2", "fast stride 4", "full sequence stride 6"], "custom")
+        self.depth_point_stride = add_slider(self.server, "Depth Point Stride", 1, 64, 1, self.depth_point_stride_value)
+        self.max_scene_depth = add_slider(self.server, "Max Scene Depth", 0.0, 200.0, 1.0, max(0.0, self.max_scene_depth_value))
         self.camera_size = add_slider(self.server, "Camera Size", 0.01, 1.00, 0.01, self.camera_scale_value)
         self.show_hsi = add_checkbox(self.server, "Show HSI SMPL", True)
         self.show_base = add_checkbox(self.server, "Show Base SMPL", False)
@@ -934,6 +966,9 @@ class SequenceViewer:
         ]:
             bind_update(handle, self._on_gui_update)
         bind_update(self.point_size, self._on_point_size_update)
+        bind_update(self.density_preset, self._on_density_preset_update)
+        bind_update(self.depth_point_stride, self._on_depth_sampling_update)
+        bind_update(self.max_scene_depth, self._on_depth_sampling_update)
         bind_update(self.camera_size, self._on_camera_size_update)
         bind_update(self.smpl_opacity, self._on_smpl_opacity_update)
         bind_click(self.prev_button, self._prev_frame)
@@ -969,6 +1004,63 @@ class SequenceViewer:
     def _on_point_size_update(self, _: Any = None) -> None:
         self.point_size_value = float(self.point_size.value)
         self._set_handle_attr(["raw", "hsi"], "point_size", self.point_size_value)
+
+    def _on_density_preset_update(self, _: Any = None) -> None:
+        preset_to_stride = {
+            "dense stride 1": 1,
+            "balanced stride 2": 2,
+            "fast stride 4": 4,
+            "full sequence stride 6": 6,
+        }
+        preset = str(self.density_preset.value)
+        if preset in preset_to_stride:
+            self.depth_point_stride.value = preset_to_stride[preset]
+        self._on_depth_sampling_update()
+
+    def _on_depth_sampling_update(self, _: Any = None) -> None:
+        if self._rebuilding_points:
+            return
+        self.depth_point_stride_value = max(1, int(self.depth_point_stride.value))
+        self.max_scene_depth_value = float(self.max_scene_depth.value)
+        self._rebuild_depth_point_clouds()
+
+    def _rebuild_depth_point_clouds(self) -> None:
+        self._rebuilding_points = True
+        try:
+            for frame, frame_handles in zip(self.scene["frames"], self.handles, strict=True):
+                idx = int(frame["frame_index"])
+                for handle in frame_handles.get("raw", []) + frame_handles.get("hsi", []):
+                    remove_handle(handle)
+
+                raw_points, raw_colors = rebuild_depth_points_for_frame(
+                    frame,
+                    depth_key="raw_depth_map",
+                    extrinsic_key="raw_extrinsic",
+                    depth_point_stride=self.depth_point_stride_value,
+                    max_scene_depth=self.max_scene_depth_value,
+                )
+                hsi_points, hsi_colors = rebuild_depth_points_for_frame(
+                    frame,
+                    depth_key="hsi_depth_map",
+                    extrinsic_key="hsi_extrinsic",
+                    depth_point_stride=self.depth_point_stride_value,
+                    max_scene_depth=self.max_scene_depth_value,
+                )
+                frame["raw_points"] = raw_points
+                frame["raw_colors"] = raw_colors
+                frame["hsi_points"] = hsi_points
+                frame["hsi_colors"] = hsi_colors
+                frame["depth_point_stride"] = int(self.depth_point_stride_value)
+                frame["max_scene_depth"] = float(self.max_scene_depth_value)
+                frame_handles["raw"] = [
+                    add_point_cloud(self.server, f"/frames/{idx:04d}/points_raw_depth", raw_points, raw_colors, self.point_size_value)
+                ]
+                frame_handles["hsi"] = [
+                    add_point_cloud(self.server, f"/frames/{idx:04d}/points_hsi_depth", hsi_points, hsi_colors, self.point_size_value)
+                ]
+        finally:
+            self._rebuilding_points = False
+        self._update_visibility()
 
     def _on_camera_size_update(self, _: Any = None) -> None:
         self.camera_scale_value = float(self.camera_size.value)
@@ -1030,6 +1122,8 @@ class SequenceViewer:
                 f"{int(frame_index) + 1}/{len(self.scene['frames'])} "
                 f"{frame['frame_id']} | raw_pts={int(frame['raw_points'].shape[0])} "
                 f"hsi_pts={int(frame['hsi_points'].shape[0])} people={len(frame['people'])} "
+                f"stride={int(frame.get('depth_point_stride', self.depth_point_stride_value))} "
+                f"maxD={float(frame.get('max_scene_depth', self.max_scene_depth_value)):.1f} "
                 f"scale={frame['hsi_scene_scale']:.4g} bias={frame['hsi_scene_depth_bias']:.4g} "
                 f"rawCam=({raw_cam_pos[0]:.3f},{raw_cam_pos[1]:.3f},{raw_cam_pos[2]:.3f}) "
                 f"hsiCam=({hsi_cam_pos[0]:.3f},{hsi_cam_pos[1]:.3f},{hsi_cam_pos[2]:.3f})"
@@ -1093,6 +1187,37 @@ def add_point_cloud(server: Any, name: str, points: np.ndarray, colors: np.ndarr
         return api.add_point_cloud(name=name, points=points, colors=colors, point_size=point_size)
     except TypeError:
         return api.add_point_cloud(name, points, colors, point_size=point_size)
+
+
+def rebuild_depth_points_for_frame(
+    frame: dict[str, Any],
+    depth_key: str,
+    extrinsic_key: str,
+    depth_point_stride: int,
+    max_scene_depth: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    depth = torch.from_numpy(np.asarray(frame[depth_key], dtype=np.float32))
+    rgb = torch.from_numpy(np.asarray(frame["rgb_chw"], dtype=np.float32))
+    intrinsic = np.asarray(frame["intrinsic"], dtype=np.float32)
+    extrinsic = np.asarray(frame[extrinsic_key], dtype=np.float32)
+    return depth_to_world_points_with_limits(
+        depth=depth,
+        rgb=rgb,
+        intrinsic=intrinsic,
+        extrinsic=extrinsic,
+        depth_point_stride=int(depth_point_stride),
+        max_scene_depth=float(max_scene_depth),
+    )
+
+
+def remove_handle(handle: Any) -> None:
+    try:
+        handle.remove()
+    except Exception:
+        try:
+            handle.visible = False
+        except Exception:
+            pass
 
 
 def add_mesh(server: Any, name: str, vertices: np.ndarray, faces: np.ndarray, color: tuple[int, int, int], opacity: float = 1.0) -> Any:

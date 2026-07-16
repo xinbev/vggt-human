@@ -16,6 +16,7 @@ from vggt_omega.models.heads import (
     CameraHead,
     DenseHead,
     HSIHumanSceneAlignHead,
+    HSIContactRefineHead,
     HSIRefinementHead,
     TextAlignmentHead,
 )
@@ -109,6 +110,24 @@ class VGGTOmega(nn.Module):
         hsi_align_max_tangent_delta_m: float = 0.12,
         hsi_align_use_delta_gate: bool = True,
         hsi_align_overwrite_refined: bool = True,
+        hsi_align_base_source: str = "hsi_refined",
+        hsi_align_max_correspondence_distance_m: float = 0.35,
+        hsi_align_gt_max_correspondence_distance_m: float = 3.5,
+        hsi_align_min_depth_confidence: float = 0.0,
+        hsi_align_residual_mad_multiplier: float = 3.0,
+        hsi_align_max_depth_m: float = 20.0,
+        enable_hsi_contact_refine: bool = False,
+        hsi_contact_hidden_dim: int = 256,
+        hsi_contact_sole_vertices_per_foot: int = 48,
+        hsi_contact_support_window: int = 21,
+        hsi_contact_support_min_points: int = 24,
+        hsi_contact_support_max_rmse_m: float = 0.05,
+        hsi_contact_support_max_depth_m: float = 20.0,
+        hsi_contact_max_root_normal_delta_m: float = 0.12,
+        hsi_contact_max_hip_delta_deg: float = 4.0,
+        hsi_contact_max_knee_delta_deg: float = 8.0,
+        hsi_contact_max_ankle_delta_deg: float = 10.0,
+        hsi_contact_overwrite_refined: bool = True,
         smpl_model_dir: str = "",
         smpl_provider: str = "internal",
         nlf_model_path: str = "",
@@ -263,13 +282,42 @@ class VGGTOmega(nn.Module):
                 max_tangent_delta_m=hsi_align_max_tangent_delta_m,
                 use_delta_gate=hsi_align_use_delta_gate,
                 overwrite_refined=hsi_align_overwrite_refined,
+                base_source=hsi_align_base_source,
+                max_correspondence_distance_m=hsi_align_max_correspondence_distance_m,
+                gt_max_correspondence_distance_m=hsi_align_gt_max_correspondence_distance_m,
+                min_depth_confidence=hsi_align_min_depth_confidence,
+                residual_mad_multiplier=hsi_align_residual_mad_multiplier,
+                max_depth_m=hsi_align_max_depth_m,
                 image_size=image_size,
             )
             if enable_hsi_human_scene_align
             else None
         )
+        self.hsi_contact_refine_head = (
+            HSIContactRefineHead(
+                smpl_model_dir=smpl_model_dir,
+                hidden_dim=hsi_contact_hidden_dim,
+                sole_vertices_per_foot=hsi_contact_sole_vertices_per_foot,
+                support_window=hsi_contact_support_window,
+                support_min_points=hsi_contact_support_min_points,
+                support_max_rmse_m=hsi_contact_support_max_rmse_m,
+                support_max_depth_m=hsi_contact_support_max_depth_m,
+                max_root_normal_delta_m=hsi_contact_max_root_normal_delta_m,
+                max_hip_delta_deg=hsi_contact_max_hip_delta_deg,
+                max_knee_delta_deg=hsi_contact_max_knee_delta_deg,
+                max_ankle_delta_deg=hsi_contact_max_ankle_delta_deg,
+                overwrite_refined=hsi_contact_overwrite_refined,
+                image_size=image_size,
+            )
+            if enable_hsi_contact_refine
+            else None
+        )
         has_runtime_smpl_provider = self.smpl_provider == "gt_perturbed"
-        if (self.hsi_refinement_head is not None or self.hsi_human_scene_align_head is not None) and (
+        if (
+            self.hsi_refinement_head is not None
+            or self.hsi_human_scene_align_head is not None
+            or self.hsi_contact_refine_head is not None
+        ) and (
             (self.smpl_head is None and self.nlf_smpl_provider is None and not has_runtime_smpl_provider)
             or self.dense_head is None
             or self.camera_head is None
@@ -289,6 +337,9 @@ class VGGTOmega(nn.Module):
         external_track_confidence: torch.Tensor | None = None,
         smpl_override_outputs: dict[str, torch.Tensor] | None = None,
         hsi_intrinsics_override: torch.Tensor | None = None,
+        hsi_depth_override: torch.Tensor | None = None,
+        hsi_depth_is_metric: bool = False,
+        hsi_geometry_mode: str = "real_inference",
     ) -> dict[str, torch.Tensor]:
         if len(images.shape) == 4:
             images = images.unsqueeze(0)
@@ -431,10 +482,28 @@ class VGGTOmega(nn.Module):
                 predictions.update(
                     self.hsi_human_scene_align_head(
                         predictions=predictions,
-                        depth=predictions["depth"],
+                        depth=hsi_depth_override if hsi_depth_override is not None else predictions["depth"],
                         pose_enc=predictions["pose_enc"],
                         image_size_hw=image_size_hw,
                         intrinsics_override=hsi_intrinsics_override,
+                        depth_is_metric=bool(hsi_depth_is_metric),
+                        person_boxes=smpl_reference_boxes,
+                        depth_confidence=None if hsi_depth_override is not None else predictions.get("depth_conf"),
+                    )
+                )
+                predictions["hsi_geometry_is_metric"] = predictions["pred_transl_cam"].new_tensor(float(hsi_depth_is_metric))
+                predictions["hsi_geometry_mode_id"] = predictions["pred_transl_cam"].new_tensor(
+                    1.0 if str(hsi_geometry_mode) == "gt_metric" else 0.0
+                )
+            if self.hsi_contact_refine_head is not None:
+                predictions.update(
+                    self.hsi_contact_refine_head(
+                        predictions=predictions,
+                        depth=hsi_depth_override if hsi_depth_override is not None else predictions["depth"],
+                        pose_enc=predictions["pose_enc"],
+                        image_size_hw=image_size_hw,
+                        intrinsics_override=hsi_intrinsics_override,
+                        depth_is_metric=bool(hsi_depth_is_metric),
                     )
                 )
 

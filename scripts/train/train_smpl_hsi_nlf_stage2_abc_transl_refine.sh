@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ "${ALLOW_LEGACY_HSI_STAGE2_ABC:-false}" != "true" ]]; then
+  echo "[ERROR] Legacy Stage2 ABC is disabled because its GT/VGGT geometry contract is superseded." >&2
+  echo "Use: RUN_STAGES=2A,2B bash scripts/train/train_smpl_hsi_scale_trans_contact_curriculum.sh" >&2
+  exit 2
+fi
+
 # Stage2 ABC translation refinement:
 # A) GT SMPL + GT K + ray-depth translation perturbation.
 # B) Mixed GT-perturbed / NLF base bridge.

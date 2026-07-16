@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import copy
 import csv
 import json
@@ -44,9 +45,14 @@ if str(ROOT) not in sys.path:
 from vggt_omega.data import BedlamDataset, HFBedlamDataset, ThreeDPWDataset, bedlam_collate_fn, hf_bedlam_collate_fn, threedpw_collate_fn
 from vggt_omega.data.geometry import resolve_image_size_config
 from vggt_omega.models import VGGTOmega
+from vggt_omega.models.smpl_layer import SMPLLayer
 from vggt_omega.training import HungarianSMPLLoss, HungarianSMPLMatcher, SMPLSlotLoss
 from vggt_omega.training.config import deep_update, load_yaml_config, require_path
-from vggt_omega.utils.rotation import rot6d_to_axis_angle
+from vggt_omega.utils.contact_geometry import build_sole_vertex_indices
+from vggt_omega.utils.rotation import axis_angle_to_rotmat, rot6d_to_axis_angle, rot6d_to_rotmat
+
+
+_SMPL_NOISE_CACHE: dict[tuple[str, str], SMPLLayer] = {}
 
 
 def main() -> None:
@@ -63,11 +69,11 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     save_json(config, output_dir / "resolved_config.json")
 
-    train_loader = build_loader(config, split=config["data"]["train_split"], shuffle=True)
+    train_loader = build_loader(config, split=config["data"]["train_split"], shuffle=True, role="train")
     val_loader = None
     if config["data"].get("val_split"):
         try:
-            val_loader = build_loader(config, split=config["data"]["val_split"], shuffle=False)
+            val_loader = build_loader(config, split=config["data"]["val_split"], shuffle=False, role="val")
         except FileNotFoundError as exc:
             print(f"[warn] validation split skipped: {exc}")
     topk_state = init_topk_state(output_dir, config)
@@ -96,6 +102,7 @@ def main() -> None:
             start_epoch = 0
             global_step = 0
             print("[ckpt] reset resume epoch/global_step to 0")
+    frozen_hashes = hash_model_prefixes(model, normalize_string_list(config.get("checkpoint", {}).get("frozen_hash_prefixes", [])))
 
     epochs = int(config["optim"]["epochs"])
     train_started_at = time.monotonic()
@@ -125,7 +132,9 @@ def main() -> None:
             progress_done_offset=(epoch - start_epoch) * len(train_loader),
             total_epochs=epochs,
         )
+        assert_model_prefix_hashes(model, frozen_hashes)
         monitor_losses = train_losses
+        val_losses: dict[str, float] | None = None
         if val_loader is not None and (epoch + 1) % int(config["optim"].get("val_interval", 1)) == 0:
             val_losses = validate(model, criterion, val_loader, device, epoch, config, teacher_model=teacher_model)
             monitor_losses = val_losses
@@ -152,6 +161,15 @@ def main() -> None:
                 monitor_losses,
                 source="train",
             )
+        metrics_payload = {
+            "epoch": epoch + 1,
+            "global_step": global_step,
+            "train": {key: float(value) for key, value in train_losses.items()},
+            "val": ({key: float(value) for key, value in val_losses.items()} if val_losses is not None else None),
+            "frozen_hashes": frozen_hashes,
+        }
+        save_json(metrics_payload, output_dir / f"metrics_epoch_{epoch + 1:04d}.json")
+        save_json(metrics_payload, output_dir / "metrics_latest.json")
         if should_save_checkpoint(config, epoch + 1, epochs):
             checkpoint_cfg = config.get("checkpoint", {})
             if bool(checkpoint_cfg.get("save_epoch_checkpoint", True)):
@@ -171,7 +189,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def build_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoader:
+def build_loader(config: dict[str, Any], split: str, shuffle: bool, role: str = "train") -> DataLoader:
     data_cfg = config["data"]
     dataset_name = str(data_cfg.get("dataset", "bedlam")).lower()
     if dataset_name in {"3dpw", "threedpw"}:
@@ -185,6 +203,14 @@ def build_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoade
     boxes_root = None
     if data_cfg.get("boxes_root_key"):
         boxes_root = require_path(config, data_cfg["boxes_root_key"], allow_empty=not bool(data_cfg.get("require_boxes", False)))
+    manifest = str(data_cfg.get(f"{role}_sequence_manifest", "") or "").strip()
+    contact_teacher_root = str(data_cfg.get("contact_teacher_root", "") or "").strip()
+    if not contact_teacher_root and data_cfg.get("contact_teacher_root_key"):
+        contact_teacher_root = require_path(
+            config,
+            data_cfg["contact_teacher_root_key"],
+            allow_empty=not bool(data_cfg.get("require_contact_teacher", False)),
+        )
     dataset = BedlamDataset(
         root=root,
         split=split,
@@ -202,8 +228,12 @@ def build_loader(config: dict[str, Any], split: str, shuffle: bool) -> DataLoade
         patch_size=int(config.get("model", {}).get("patch_size", 16)),
         mask_patch_threshold=float(data_cfg.get("mask_patch_threshold", 0.10)),
         min_mask_patches=int(data_cfg.get("min_mask_patches", 4)),
+        sequence_manifest=manifest or None,
+        contact_teacher_root=contact_teacher_root or None,
+        require_contact_teacher=bool(data_cfg.get("require_contact_teacher", False)),
+        contact_only_windows=bool(data_cfg.get(f"{role}_contact_only", False)),
     )
-    dataset = maybe_subset_dataset(dataset, data_cfg, split)
+    dataset = maybe_subset_dataset(dataset, data_cfg, split, role=role)
     return DataLoader(
         dataset,
         batch_size=int(config["optim"]["batch_size"]),
@@ -306,9 +336,10 @@ def build_dataloader_runtime_kwargs(data_cfg: dict[str, Any]) -> dict[str, Any]:
     return kwargs
 
 
-def maybe_subset_dataset(dataset: Any, data_cfg: dict[str, Any], split: str) -> Any | Subset:
+def maybe_subset_dataset(dataset: Any, data_cfg: dict[str, Any], split: str, role: str | None = None) -> Any | Subset:
     train_split = str(data_cfg.get("train_split", split))
-    if split != train_split and not bool(data_cfg.get("subset_apply_to_val", False)):
+    resolved_role = role or ("train" if split == train_split else "val")
+    if resolved_role == "val" and not bool(data_cfg.get("subset_apply_to_val", False)):
         return dataset
     subset_csv = str(data_cfg.get("subset_indices_csv", "") or "").strip()
     if not subset_csv:
@@ -441,6 +472,24 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_align_max_tangent_delta_m=float(model_cfg.get("hsi_align_max_tangent_delta_m", 0.12)),
         hsi_align_use_delta_gate=bool(model_cfg.get("hsi_align_use_delta_gate", True)),
         hsi_align_overwrite_refined=bool(model_cfg.get("hsi_align_overwrite_refined", True)),
+        hsi_align_base_source=str(model_cfg.get("hsi_align_base_source", "hsi_refined")),
+        hsi_align_max_correspondence_distance_m=float(model_cfg.get("hsi_align_max_correspondence_distance_m", 0.35)),
+        hsi_align_gt_max_correspondence_distance_m=float(model_cfg.get("hsi_align_gt_max_correspondence_distance_m", 3.5)),
+        hsi_align_min_depth_confidence=float(model_cfg.get("hsi_align_min_depth_confidence", 0.0)),
+        hsi_align_residual_mad_multiplier=float(model_cfg.get("hsi_align_residual_mad_multiplier", 3.0)),
+        hsi_align_max_depth_m=float(model_cfg.get("hsi_align_max_depth_m", 20.0)),
+        enable_hsi_contact_refine=bool(model_cfg.get("enable_hsi_contact_refine", False)),
+        hsi_contact_hidden_dim=int(model_cfg.get("hsi_contact_hidden_dim", 256)),
+        hsi_contact_sole_vertices_per_foot=int(model_cfg.get("hsi_contact_sole_vertices_per_foot", 48)),
+        hsi_contact_support_window=int(model_cfg.get("hsi_contact_support_window", 21)),
+        hsi_contact_support_min_points=int(model_cfg.get("hsi_contact_support_min_points", 24)),
+        hsi_contact_support_max_rmse_m=float(model_cfg.get("hsi_contact_support_max_rmse_m", 0.05)),
+        hsi_contact_support_max_depth_m=float(model_cfg.get("hsi_contact_support_max_depth_m", 20.0)),
+        hsi_contact_max_root_normal_delta_m=float(model_cfg.get("hsi_contact_max_root_normal_delta_m", 0.12)),
+        hsi_contact_max_hip_delta_deg=float(model_cfg.get("hsi_contact_max_hip_delta_deg", 4.0)),
+        hsi_contact_max_knee_delta_deg=float(model_cfg.get("hsi_contact_max_knee_delta_deg", 8.0)),
+        hsi_contact_max_ankle_delta_deg=float(model_cfg.get("hsi_contact_max_ankle_delta_deg", 10.0)),
+        hsi_contact_overwrite_refined=bool(model_cfg.get("hsi_contact_overwrite_refined", True)),
         smpl_model_dir=str(config.get("assets", {}).get("smpl_model_dir", "")),
         smpl_provider=str(model_cfg.get("smpl_provider", "internal")),
         nlf_model_path=str(model_cfg.get("nlf_model_path", config.get("checkpoints", {}).get("nlf_smpl", ""))),
@@ -593,6 +642,28 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
                 if module is not None:
                     freeze_module(module)
             unfreeze_module(hsi_align_head)
+    hsi_contact_head = getattr(model, "hsi_contact_refine_head", None)
+    if hsi_contact_head is not None:
+        if bool(model_cfg.get("freeze_hsi_contact_refine", False)):
+            freeze_module(hsi_contact_head)
+        if bool(model_cfg.get("train_hsi_contact_refine_only", False)):
+            for module_name in (
+                "aggregator",
+                "camera_head",
+                "dense_head",
+                "smpl_head",
+                "nlf_smpl_provider",
+                "hsi_refinement_head",
+                "hsi_human_scene_align_head",
+            ):
+                module = getattr(model, module_name, None)
+                if module is not None:
+                    freeze_module(module)
+            unfreeze_module(hsi_contact_head)
+        if bool(model_cfg.get("freeze_hsi_contact_pose_branch", False)):
+            freeze_module(hsi_contact_head.lower_pose_head)
+        if bool(model_cfg.get("freeze_hsi_contact_root_branch", False)):
+            freeze_module(hsi_contact_head.root_normal_head)
     if not bool(model_cfg.get("freeze_aggregator", False)):
         return
     aggregator = getattr(model, "aggregator", None)
@@ -700,6 +771,12 @@ def resume_training_checkpoint(
         )
     else:
         shape_report = {"adapted": [], "skipped": []}
+    validate_required_checkpoint_prefixes(
+        checkpoint_path,
+        state_dict,
+        model.state_dict(),
+        normalize_string_list(ckpt_cfg.get("resume_required_prefixes", [])),
+    )
     missing, unexpected = model.load_state_dict(state_dict, strict=strict)
     if bool(ckpt_cfg.get("resume_optimizer", True)):
         if "optimizer" not in checkpoint:
@@ -720,6 +797,57 @@ def resume_training_checkpoint(
         if len(shape_report["skipped"]) > 20:
             print(f"  ... {len(shape_report['skipped']) - 20} more")
     return int(checkpoint.get("epoch", 0)), int(checkpoint.get("global_step", 0))
+
+
+def validate_required_checkpoint_prefixes(
+    checkpoint_path: str,
+    checkpoint_state: dict[str, torch.Tensor],
+    model_state: dict[str, torch.Tensor],
+    prefixes: list[str],
+) -> None:
+    for prefix in prefixes:
+        expected = {key: value for key, value in model_state.items() if key.startswith(prefix)}
+        if not expected:
+            raise ValueError(f"Required checkpoint prefix does not exist in current model: {prefix!r}")
+        missing = [
+            key
+            for key, target in expected.items()
+            if key not in checkpoint_state or tuple(checkpoint_state[key].shape) != tuple(target.shape)
+        ]
+        if missing:
+            preview = "\n".join(f"  - {key}" for key in missing[:20])
+            raise RuntimeError(
+                f"Checkpoint {checkpoint_path} is incomplete for required prefix {prefix!r}: "
+                f"missing_or_mismatched={len(missing)}\n{preview}"
+            )
+        print(f"[ckpt] required prefix loaded: {prefix} tensors={len(expected)}")
+
+
+def hash_model_prefixes(model: torch.nn.Module, prefixes: list[str]) -> dict[str, str]:
+    hashes: dict[str, str] = {}
+    state = model.state_dict()
+    for prefix in prefixes:
+        digest = hashlib.sha256()
+        keys = sorted(key for key in state if key.startswith(prefix))
+        if not keys:
+            raise ValueError(f"Frozen hash prefix does not exist in model: {prefix!r}")
+        for key in keys:
+            tensor = state[key].detach().cpu().contiguous()
+            digest.update(key.encode("utf-8"))
+            digest.update(str(tuple(tensor.shape)).encode("ascii"))
+            digest.update(tensor.view(torch.uint8).numpy().tobytes())
+        hashes[prefix] = digest.hexdigest()
+        print(f"[freeze-hash] {prefix}={hashes[prefix]}")
+    return hashes
+
+
+def assert_model_prefix_hashes(model: torch.nn.Module, expected: dict[str, str]) -> None:
+    if not expected:
+        return
+    current = hash_model_prefixes(model, list(expected))
+    changed = [prefix for prefix, digest in expected.items() if current[prefix] != digest]
+    if changed:
+        raise RuntimeError(f"Frozen model prefixes changed during training: {changed}")
 
 
 def normalize_string_list(value: Any) -> list[str]:
@@ -878,7 +1006,12 @@ def validate(
     model.eval()
     totals: dict[str, float] = {}
     count = 0
-    for batch in loader:
+    worst_rows: list[dict[str, Any]] = []
+    max_val_steps = int(config.get("optim", {}).get("max_val_steps", 0) or 0)
+    for batch_idx, batch in enumerate(loader):
+        if max_val_steps > 0 and batch_idx >= max_val_steps:
+            print(f"[val] max_val_steps reached: {max_val_steps}")
+            break
         batch = move_to_device(batch, device)
         predictions = forward_model(model, batch, config, epoch=epoch)
         if teacher_model is not None:
@@ -886,10 +1019,45 @@ def validate(
         losses = criterion(predictions, batch)
         for key, value in losses.items():
             totals[key] = totals.get(key, 0.0) + float(value.detach().cpu())
+        configured_monitor = str(config.get("checkpoint", {}).get("monitor", ""))
+        selection_key = configured_monitor if configured_monitor in losses else "metric_stage2_selection"
+        selection = losses.get(selection_key)
+        dataset_indices = batch.get("dataset_index")
+        if isinstance(selection, torch.Tensor) and isinstance(dataset_indices, torch.Tensor):
+            score = float(selection.detach().cpu())
+            for dataset_index in dataset_indices.detach().cpu().reshape(-1).tolist():
+                worst_rows.append(
+                    {
+                        "selection_metric": selection_key,
+                        "selection_value": score,
+                        "dataset_index": int(dataset_index),
+                        "sample_path": resolve_dataset_sample_path(loader.dataset, int(dataset_index)),
+                    }
+                )
         count += 1
     averaged = {key: value / max(count, 1) for key, value in totals.items()}
     print(format_log("val", epoch, 0, len(loader), 0, averaged))
+    worst_rows.sort(key=lambda row: float(row["selection_value"]), reverse=True)
+    save_json(
+        {"epoch": epoch + 1, "worst_samples": worst_rows[:50]},
+        Path(config["experiment"]["output_dir"]) / f"val_worst_samples_epoch_{epoch + 1:04d}.json",
+    )
     return averaged
+
+
+def resolve_dataset_sample_path(dataset: Any, dataset_index: int) -> str:
+    base = dataset
+    resolved_index = int(dataset_index)
+    if isinstance(dataset, Subset):
+        base = dataset.dataset
+    sequences = getattr(base, "_sequences", None)
+    index = getattr(base, "_index", None)
+    split = getattr(base, "split", "")
+    if not isinstance(sequences, list) or not isinstance(index, list) or not (0 <= resolved_index < len(index)):
+        return f"dataset_index={dataset_index}"
+    seq_idx, start_idx = index[resolved_index]
+    seq_dir, frame_ids = sequences[seq_idx]
+    return f"{split}/{Path(seq_dir).name}/rgb/{frame_ids[start_idx]}.png"
 
 
 def move_to_device(batch: dict[str, torch.Tensor], device: torch.device) -> dict[str, torch.Tensor]:
@@ -919,8 +1087,16 @@ def forward_model(
                 size_noise=float(prior_cfg.get("size_noise", 0.0)),
                 drop_prob=float(prior_cfg.get("drop_prob", 0.0)),
             )
-    smpl_override_outputs = build_smpl_override_outputs(batch, config, epoch=epoch) if should_use_gt_smpl_override(model, config) else None
-    hsi_intrinsics_override = resolve_hsi_intrinsics_override(batch, config, using_gt_override=smpl_override_outputs is not None)
+    smpl_override_outputs = (
+        build_smpl_override_outputs(batch, config, epoch=epoch)
+        if should_use_gt_smpl_override(model, config, epoch=epoch)
+        else None
+    )
+    geometry = resolve_hsi_geometry_inputs(
+        batch,
+        config,
+        using_gt_override=smpl_override_outputs is not None,
+    )
     predictions = model(
         batch["images"],
         smpl_query_boxes=boxes,
@@ -932,7 +1108,10 @@ def forward_model(
         external_track_mask=batch.get("external_track_mask"),
         external_track_confidence=batch.get("external_track_confidence"),
         smpl_override_outputs=smpl_override_outputs,
-        hsi_intrinsics_override=hsi_intrinsics_override,
+        hsi_intrinsics_override=geometry["intrinsics"],
+        hsi_depth_override=geometry["depth"],
+        hsi_depth_is_metric=geometry["depth_is_metric"],
+        hsi_geometry_mode=geometry["mode"],
     )
     if smpl_override_outputs is not None:
         predictions["stage2_gt_override_active"] = torch.ones((), device=batch["images"].device)
@@ -986,12 +1165,15 @@ def make_noisy_box_prior(
     return noisy.clamp(0.0, 1.0), prior_mask
 
 
-def should_use_gt_smpl_override(model: torch.nn.Module, config: dict[str, Any]) -> bool:
+def should_use_gt_smpl_override(model: torch.nn.Module, config: dict[str, Any], epoch: int = 0) -> bool:
     model_provider = str(config.get("model", {}).get("smpl_provider", "internal")).lower()
     if model_provider == "gt_perturbed":
         return True
     prior_cfg = config.get("training_prior", {})
-    prob = float(prior_cfg.get("smpl_gt_override_prob", 0.0) or 0.0)
+    schedule = parse_float_schedule(
+        prior_cfg.get("smpl_gt_override_prob_schedule", prior_cfg.get("smpl_gt_override_prob", 0.0))
+    )
+    prob = schedule[min(max(int(epoch), 0), len(schedule) - 1)] if schedule else 0.0
     if prob <= 0.0:
         return False
     if not model.training:
@@ -999,19 +1181,45 @@ def should_use_gt_smpl_override(model: torch.nn.Module, config: dict[str, Any]) 
     return random.random() < min(max(prob, 0.0), 1.0)
 
 
-def resolve_hsi_intrinsics_override(
+def resolve_hsi_geometry_inputs(
     batch: dict[str, torch.Tensor],
     config: dict[str, Any],
     using_gt_override: bool,
-) -> torch.Tensor | None:
-    source = str(config.get("model", {}).get("hsi_camera_source", "vggt") or "vggt").lower()
-    if source == "gt":
-        return batch.get("K_scal3r")
-    if source == "mixed":
-        return batch.get("K_scal3r") if using_gt_override else None
-    if source in {"vggt", "pred", "predicted", ""}:
-        return None
-    raise ValueError(f"Unsupported model.hsi_camera_source: {source!r}")
+) -> dict[str, Any]:
+    model_cfg = config.get("model", {})
+    mode = str(model_cfg.get("hsi_geometry_mode", "") or "").lower()
+    if not mode:
+        legacy_source = str(model_cfg.get("hsi_camera_source", "vggt") or "vggt").lower()
+        if legacy_source == "gt":
+            return {
+                "mode": "legacy_gt_camera",
+                "depth": None,
+                "intrinsics": batch.get("K_scal3r"),
+                "depth_is_metric": False,
+            }
+        if legacy_source == "mixed":
+            return {
+                "mode": "legacy_gt_camera" if using_gt_override else "real_inference",
+                "depth": None,
+                "intrinsics": batch.get("K_scal3r") if using_gt_override else None,
+                "depth_is_metric": False,
+            }
+        mode = "real_inference"
+    if mode == "mixed":
+        mode = "gt_metric" if using_gt_override else "real_inference"
+    if mode == "gt_metric":
+        if not using_gt_override:
+            raise ValueError("hsi_geometry_mode='gt_metric' requires a GT SMPL override in the same batch")
+        depth = batch.get("gt_depth")
+        intrinsics = batch.get("K_scal3r")
+        if depth is None or intrinsics is None:
+            raise ValueError("gt_metric geometry requires batch['gt_depth'] and batch['K_scal3r']")
+        return {"mode": mode, "depth": depth, "intrinsics": intrinsics, "depth_is_metric": True}
+    if mode == "real_inference":
+        if using_gt_override:
+            raise ValueError("GT SMPL override cannot be paired with real_inference geometry")
+        return {"mode": mode, "depth": None, "intrinsics": None, "depth_is_metric": False}
+    raise ValueError(f"Unsupported model.hsi_geometry_mode: {mode!r}")
 
 
 def build_smpl_override_outputs(
@@ -1030,12 +1238,35 @@ def build_smpl_override_outputs(
     boxes_mask = batch.get("boxes_mask")
     if boxes_mask is not None:
         valid = valid & boxes_mask.bool()
-    noisy_transl, noise_ratio = apply_smpl_transl_ray_noise(clean_transl, valid, config, epoch=epoch)
-    poses = rot6d_to_axis_angle(pose6d.reshape(-1, 24, 6)).reshape(*pose6d.shape[:-1], 72)
+    perturb_mode = str(config.get("training_prior", {}).get("smpl_perturb_mode", "translation") or "translation").lower()
+    if perturb_mode == "translation":
+        noisy_transl, noise_ratio, tangent_noise, clean_mask = apply_smpl_translation_noise(
+            clean_transl,
+            valid,
+            config,
+            epoch=epoch,
+        )
+        noisy_pose6d = pose6d
+        contact_noise_signed = clean_transl.new_zeros(*clean_transl.shape[:-1], 1)
+    elif perturb_mode in {"contact_root", "contact_pose"}:
+        noisy_pose6d, noisy_transl, contact_noise_signed, clean_mask = apply_smpl_contact_noise(
+            pose6d,
+            betas,
+            clean_transl,
+            valid,
+            batch,
+            config,
+            mode=perturb_mode,
+        )
+        noise_ratio = clean_transl.new_ones(*clean_transl.shape[:-1], 1)
+        tangent_noise = clean_transl.new_zeros(*clean_transl.shape[:-1], 2)
+    else:
+        raise ValueError(f"Unsupported training_prior.smpl_perturb_mode: {perturb_mode!r}")
+    poses = rot6d_to_axis_angle(noisy_pose6d.reshape(-1, 24, 6)).reshape(*pose6d.shape[:-1], 72)
     conf = valid.to(dtype=pose6d.dtype).unsqueeze(-1)
     boxes = batch.get("smpl_query_boxes", batch.get("gt_boxes"))
     outputs = {
-        "pred_pose_6d": pose6d,
+        "pred_pose_6d": noisy_pose6d,
         "pred_poses": poses,
         "pred_betas": betas,
         "pred_transl_cam": noisy_transl,
@@ -1045,6 +1276,10 @@ def build_smpl_override_outputs(
         "base_clean_pred_transl_cam": clean_transl,
         "perturbed_pred_transl_cam": noisy_transl,
         "transl_noise_ratio": noise_ratio,
+        "transl_noise_tangent_m": tangent_noise,
+        "transl_noise_is_clean": clean_mask,
+        "contact_noise_signed_m": contact_noise_signed,
+        "base_clean_pred_pose_6d": pose6d,
         "gt_smpl_provider_mask": valid,
     }
     if boxes is not None:
@@ -1052,31 +1287,204 @@ def build_smpl_override_outputs(
     return outputs
 
 
-def apply_smpl_transl_ray_noise(
+def apply_smpl_translation_noise(
     transl: torch.Tensor,
     valid: torch.Tensor,
     config: dict[str, Any],
     epoch: int = 0,
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     prior_cfg = config.get("training_prior", {})
     schedule = parse_float_schedule(prior_cfg.get("smpl_transl_ray_noise_schedule", "0.0"))
     ratio = schedule[min(max(int(epoch), 0), len(schedule) - 1)] if schedule else 0.0
     clean_prob = min(max(float(prior_cfg.get("smpl_transl_ray_noise_clean_prob", 0.0) or 0.0), 0.0), 1.0)
     mode = str(prior_cfg.get("smpl_transl_ray_noise_mode", "uniform") or "uniform").lower()
     if ratio <= 0.0:
-        return transl.clone(), torch.ones(*transl.shape[:-1], 1, dtype=transl.dtype, device=transl.device)
-    if mode == "uniform":
-        eps = transl.new_empty(*transl.shape[:-1], 1).uniform_(-float(ratio), float(ratio))
+        ray_scale = torch.ones(*transl.shape[:-1], 1, dtype=transl.dtype, device=transl.device)
+    elif mode == "uniform":
+        clip_shape = (transl.shape[0], 1, transl.shape[2], 1) if transl.ndim == 4 else (*transl.shape[:-1], 1)
+        eps = transl.new_empty(*clip_shape).uniform_(-float(ratio), float(ratio))
+        ray_scale = 1.0 + eps.expand(*transl.shape[:-1], 1)
     elif mode in {"normal", "gaussian"}:
-        eps = transl.new_empty(*transl.shape[:-1], 1).normal_(mean=0.0, std=float(ratio) / 2.0).clamp(-float(ratio), float(ratio))
+        clip_shape = (transl.shape[0], 1, transl.shape[2], 1) if transl.ndim == 4 else (*transl.shape[:-1], 1)
+        eps = transl.new_empty(*clip_shape).normal_(mean=0.0, std=float(ratio) / 2.0).clamp(-float(ratio), float(ratio))
+        ray_scale = 1.0 + eps.expand(*transl.shape[:-1], 1)
     else:
         raise ValueError(f"Unsupported training_prior.smpl_transl_ray_noise_mode: {mode!r}")
+    tangent_schedule = parse_float_schedule(prior_cfg.get("smpl_transl_tangent_noise_schedule_m", "0.0"))
+    tangent_max = tangent_schedule[min(max(int(epoch), 0), len(tangent_schedule) - 1)] if tangent_schedule else 0.0
+    clip_shape_2 = (transl.shape[0], 1, transl.shape[2], 2) if transl.ndim == 4 else (*transl.shape[:-1], 2)
+    tangent_coeff = transl.new_empty(*clip_shape_2).uniform_(-float(tangent_max), float(tangent_max))
+    tangent_coeff = tangent_coeff.expand(*transl.shape[:-1], 2)
     if clean_prob > 0.0:
-        noisy_slot = torch.rand(*transl.shape[:-1], 1, device=transl.device) >= clean_prob
-        eps = torch.where(noisy_slot, eps, torch.zeros_like(eps))
-    eps = eps * valid.unsqueeze(-1).to(dtype=eps.dtype)
-    scale = 1.0 + eps
-    return transl * scale, scale
+        clean_shape = (transl.shape[0], 1, transl.shape[2], 1) if transl.ndim == 4 else (*transl.shape[:-1], 1)
+        noisy_slot = (torch.rand(*clean_shape, device=transl.device) >= clean_prob).expand(*transl.shape[:-1], 1)
+    else:
+        noisy_slot = torch.ones(*transl.shape[:-1], 1, dtype=torch.bool, device=transl.device)
+    valid_f = valid.unsqueeze(-1).to(dtype=transl.dtype)
+    ray_scale = 1.0 + (ray_scale - 1.0) * noisy_slot.to(dtype=transl.dtype) * valid_f
+    tangent_coeff = tangent_coeff * noisy_slot.to(dtype=transl.dtype) * valid_f
+    ray, tangent_x, tangent_y = _translation_camera_basis(transl)
+    del ray
+    tangent_delta = tangent_coeff[..., :1] * tangent_x + tangent_coeff[..., 1:] * tangent_y
+    noisy = transl * ray_scale + tangent_delta
+    clean_mask = (~noisy_slot | ~valid.unsqueeze(-1)).to(dtype=transl.dtype)
+    return noisy, ray_scale, tangent_coeff, clean_mask
+
+
+def _translation_camera_basis(transl: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ray = torch.nn.functional.normalize(transl, dim=-1, eps=1e-6)
+    x_axis = torch.zeros_like(ray)
+    x_axis[..., 0] = 1.0
+    y_axis = torch.zeros_like(ray)
+    y_axis[..., 1] = 1.0
+    tangent_x = x_axis - (x_axis * ray).sum(dim=-1, keepdim=True) * ray
+    fallback = y_axis - (y_axis * ray).sum(dim=-1, keepdim=True) * ray
+    tangent_x = torch.where(torch.linalg.norm(tangent_x, dim=-1, keepdim=True) > 1e-4, tangent_x, fallback)
+    tangent_x = torch.nn.functional.normalize(tangent_x, dim=-1, eps=1e-6)
+    tangent_y = torch.nn.functional.normalize(torch.cross(ray, tangent_x, dim=-1), dim=-1, eps=1e-6)
+    return ray, tangent_x, tangent_y
+
+
+def apply_smpl_contact_noise(
+    pose6d: torch.Tensor,
+    betas: torch.Tensor,
+    transl: torch.Tensor,
+    valid: torch.Tensor,
+    batch: dict[str, torch.Tensor],
+    config: dict[str, Any],
+    mode: str,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    prior_cfg = config.get("training_prior", {})
+    teacher_valid = batch.get("contact_teacher_valid")
+    contact_label = batch.get("contact_label")
+    plane_normal = batch.get("contact_plane_normal_cam")
+    if teacher_valid is None or contact_label is None or plane_normal is None:
+        raise ValueError(f"{mode} perturbation requires contact teacher sidecars in the batch")
+    active_foot = teacher_valid.bool() & contact_label.bool()
+    active_person = active_foot.any(dim=-1) & valid
+    normal_weights = active_foot.to(dtype=transl.dtype)
+    support_normal = (plane_normal.to(dtype=transl.dtype) * normal_weights[..., None]).sum(dim=-2)
+    support_normal = support_normal / normal_weights.sum(dim=-1, keepdim=True).clamp(min=1.0)
+    support_normal = torch.nn.functional.normalize(support_normal, dim=-1, eps=1e-6)
+
+    clean_prob = min(max(float(prior_cfg.get("smpl_contact_noise_clean_prob", 0.20)), 0.0), 1.0)
+    clip_shape = (transl.shape[0], 1, transl.shape[2], 1)
+    noisy_slot = (torch.rand(*clip_shape, device=transl.device) >= clean_prob).expand(*transl.shape[:-1], 1)
+    noisy_slot = noisy_slot & active_person.unsqueeze(-1)
+    requested_noisy_slot = noisy_slot.clone()
+    noisy_pose = pose6d.clone()
+    noisy_transl = transl.clone()
+    signed_noise = transl.new_zeros(*transl.shape[:-1], 1)
+
+    use_root = mode == "contact_root" or bool(prior_cfg.get("smpl_contact_pose_include_root_noise", True))
+    if use_root:
+        float_levels = parse_float_schedule(prior_cfg.get("smpl_contact_float_levels_m", "0.02,0.05,0.08,0.12"))
+        penetration_levels = parse_float_schedule(prior_cfg.get("smpl_contact_penetration_levels_m", "0.01,0.02,0.04,0.06"))
+        levels = transl.new_tensor(float_levels + [-value for value in penetration_levels])
+        selection = torch.randint(0, int(levels.numel()), clip_shape[:-1], device=transl.device)
+        offset = levels[selection].unsqueeze(-1).expand(*transl.shape[:-1], 1)
+        offset = offset * noisy_slot.to(dtype=transl.dtype)
+        noisy_transl = noisy_transl + support_normal * offset
+        signed_noise = offset
+
+    if mode == "contact_pose":
+        noisy_pose, pose_changed = _sample_contact_pose_noise(
+            pose6d,
+            betas,
+            noisy_transl,
+            transl,
+            active_person & noisy_slot[..., 0],
+            batch,
+            config,
+        )
+        if not use_root:
+            noisy_slot = noisy_slot & pose_changed.unsqueeze(-1)
+        else:
+            noisy_slot = requested_noisy_slot
+    clean_mask = (~noisy_slot | ~valid.unsqueeze(-1)).to(dtype=transl.dtype)
+    return noisy_pose, noisy_transl, signed_noise, clean_mask
+
+
+def _sample_contact_pose_noise(
+    clean_pose6d: torch.Tensor,
+    betas: torch.Tensor,
+    noisy_transl: torch.Tensor,
+    clean_transl: torch.Tensor,
+    active_person: torch.Tensor,
+    batch: dict[str, torch.Tensor],
+    config: dict[str, Any],
+) -> tuple[torch.Tensor, torch.Tensor]:
+    prior_cfg = config.get("training_prior", {})
+    max_deg = clean_pose6d.new_tensor(
+        [
+            float(prior_cfg.get("smpl_contact_hip_noise_deg", 4.0)),
+            float(prior_cfg.get("smpl_contact_hip_noise_deg", 4.0)),
+            float(prior_cfg.get("smpl_contact_knee_noise_deg", 8.0)),
+            float(prior_cfg.get("smpl_contact_knee_noise_deg", 8.0)),
+            float(prior_cfg.get("smpl_contact_ankle_noise_deg", 10.0)),
+            float(prior_cfg.get("smpl_contact_ankle_noise_deg", 10.0)),
+        ]
+    ) * (math.pi / 180.0)
+    lower = torch.tensor([1, 2, 4, 5, 7, 8], device=clean_pose6d.device, dtype=torch.long)
+    output = clean_pose6d.clone()
+    accepted = torch.zeros_like(active_person)
+    attempts = max(int(prior_cfg.get("smpl_contact_pose_rejection_attempts", 4)), 1)
+    min_delta = float(prior_cfg.get("smpl_contact_pose_min_effect_m", 0.01))
+    max_delta = float(prior_cfg.get("smpl_contact_pose_max_effect_m", 0.10))
+    clean_foot = _decode_sole_centers(clean_pose6d, betas, clean_transl, config, person_mask=active_person)
+    plane_normal = batch["contact_plane_normal_cam"].to(dtype=clean_pose6d.dtype)
+    contact_active = batch["contact_teacher_valid"].bool() & batch["contact_label"].bool()
+    for _ in range(attempts):
+        base_rot = rot6d_to_rotmat(clean_pose6d.reshape(-1, 24, 6)).reshape(*clean_pose6d.shape[:-1], 24, 3, 3)
+        clip_noise = clean_pose6d.new_empty(clean_pose6d.shape[0], 1, clean_pose6d.shape[2], 6, 3).uniform_(-1.0, 1.0)
+        clip_noise = clip_noise * max_deg.reshape(1, 1, 1, 6, 1)
+        delta_rot = axis_angle_to_rotmat(clip_noise.expand(*clean_pose6d.shape[:3], 6, 3))
+        candidate_rot = base_rot.clone()
+        candidate_rot[..., lower, :, :] = delta_rot @ base_rot[..., lower, :, :]
+        candidate = candidate_rot[..., :2, :].reshape_as(clean_pose6d)
+        unresolved = active_person & ~accepted
+        candidate_foot = _decode_sole_centers(candidate, betas, noisy_transl, config, person_mask=unresolved)
+        displacement = ((candidate_foot - clean_foot) * plane_normal).sum(dim=-1).abs()
+        effect = torch.where(contact_active, displacement, torch.zeros_like(displacement)).amax(dim=-1)
+        take = active_person & ~accepted & (effect >= min_delta) & (effect <= max_delta)
+        output = torch.where(take[..., None], candidate, output)
+        accepted = accepted | take
+    return output, accepted
+
+
+def _decode_sole_centers(
+    pose6d: torch.Tensor,
+    betas: torch.Tensor,
+    transl: torch.Tensor,
+    config: dict[str, Any],
+    person_mask: torch.Tensor | None = None,
+) -> torch.Tensor:
+    model_dir = str(config.get("assets", {}).get("smpl_model_dir", ""))
+    key = (model_dir, str(pose6d.device))
+    smpl = _SMPL_NOISE_CACHE.get(key)
+    if smpl is None:
+        smpl = SMPLLayer(model_dir).to(pose6d.device).eval()
+        for parameter in smpl.parameters():
+            parameter.requires_grad = False
+        _SMPL_NOISE_CACHE[key] = smpl
+    flat_pose = pose6d.reshape(-1, 144)
+    flat_betas = betas.reshape(-1, betas.shape[-1])
+    flat_transl = transl.reshape(-1, 3)
+    select = (
+        person_mask.reshape(-1).bool()
+        if person_mask is not None
+        else torch.ones(flat_pose.shape[0], dtype=torch.bool, device=pose6d.device)
+    )
+    output = pose6d.new_zeros(flat_pose.shape[0], 2, 3)
+    if not select.any():
+        return output.reshape(*pose6d.shape[:3], 2, 3)
+    aa = rot6d_to_axis_angle(flat_pose[select].reshape(-1, 24, 6)).reshape(-1, 72)
+    with torch.no_grad():
+        vertices, _ = smpl(aa.float(), flat_betas[select].float())
+    sole_idx = build_sole_vertex_indices(smpl.layer.v_template.detach(), 48).to(pose6d.device)
+    centers = vertices[:, sole_idx].mean(dim=-2).to(dtype=pose6d.dtype) + flat_transl[select, None, :]
+    output[select] = centers
+    return output.reshape(*pose6d.shape[:3], 2, 3)
 
 
 def parse_float_schedule(value: Any) -> list[float]:

@@ -71,6 +71,10 @@ class BedlamDataset(Dataset):
         patch_size: int = 16,
         mask_patch_threshold: float = 0.10,
         min_mask_patches: int = 4,
+        sequence_manifest: str | Path | None = None,
+        contact_teacher_root: str | Path | None = None,
+        require_contact_teacher: bool = False,
+        contact_only_windows: bool = False,
     ) -> None:
         super().__init__()
         self.root = Path(root).expanduser()
@@ -89,6 +93,15 @@ class BedlamDataset(Dataset):
         self.patch_size = int(patch_size)
         self.mask_patch_threshold = float(mask_patch_threshold)
         self.min_mask_patches = int(min_mask_patches)
+        self.sequence_manifest = Path(sequence_manifest).expanduser() if sequence_manifest else None
+        self.contact_teacher_root = Path(contact_teacher_root).expanduser() if contact_teacher_root else None
+        self.require_contact_teacher = bool(require_contact_teacher)
+        self.contact_only_windows = bool(contact_only_windows)
+        self._contact_frame_keys: set[str] | None = None
+        if self.contact_only_windows and self.contact_teacher_root is not None:
+            contact_index = self.contact_teacher_root / "contact_frames.txt"
+            if contact_index.is_file():
+                self._contact_frame_keys = _load_sequence_manifest(contact_index)
         if self.query_source not in {"persons", "detections"}:
             raise ValueError(f"Unsupported BEDLAM query_source: {self.query_source!r}")
         if self.sequence_length <= 0:
@@ -96,12 +109,17 @@ class BedlamDataset(Dataset):
         if self.stride <= 0:
             raise ValueError(f"stride must be positive, got {stride}")
 
-        self._sequences = _build_sequence_index(self.root, split)
+        sequence_names = _load_sequence_manifest(self.sequence_manifest) if self.sequence_manifest else None
+        self._sequences = _build_sequence_index(self.root, split, sequence_names=sequence_names)
         self._index: list[tuple[int, int]] = []
         for seq_idx, (_, frame_ids) in enumerate(self._sequences):
             max_start = len(frame_ids) - (self.sequence_length - 1) * self.stride
             for frame_idx in range(max_start):
                 self._index.append((seq_idx, frame_idx))
+        if self.contact_only_windows:
+            if self.contact_teacher_root is None:
+                raise ValueError("contact_only_windows requires contact_teacher_root")
+            self._index = [item for item in self._index if self._window_has_contact(*item)]
         if not self._index:
             raise RuntimeError(
                 f"No trainable frame windows found for split={split!r}, "
@@ -122,6 +140,7 @@ class BedlamDataset(Dataset):
         persons_per_frame = []
         boxes_per_frame = []
         box_frames = []
+        contact_teacher_frames = []
         geometries = []
         for frame_id in selected:
             rgb_path = seq_dir / "rgb" / f"{frame_id}.png"
@@ -141,10 +160,22 @@ class BedlamDataset(Dataset):
             box_persons = _frame_persons(box_frame, geometry)
             boxes_per_frame.append(box_persons)
             persons_per_frame.append(_filter_persons_by_sidecar(raw_persons, box_persons))
+            contact_teacher_frames.append(
+                _load_contact_teacher(
+                    self._contact_teacher_path(seq_dir, frame_id),
+                    max_humans=self.max_humans,
+                    required=self.require_contact_teacher,
+                )
+                if self.contact_teacher_root is not None
+                else None
+            )
 
         smpl = _build_smpl_targets(persons_per_frame, self.max_humans)
         boxes = _build_box_targets(boxes_per_frame, persons_per_frame, geometries, self.max_humans, self.require_boxes)
         sample = {
+            "dataset_index": torch.tensor(idx, dtype=torch.long),
+            "sequence_index": torch.tensor(seq_idx, dtype=torch.long),
+            "window_start_index": torch.tensor(start_idx, dtype=torch.long),
             "images": torch.stack(images, dim=0),
             "gt_depth": torch.stack(depths, dim=0),
             "K_scal3r": torch.stack(intrinsics, dim=0),
@@ -162,6 +193,8 @@ class BedlamDataset(Dataset):
             "gt_track_source": boxes["gt_track_source"],
             "gt_track_quality": boxes["gt_track_quality"],
         }
+        if self.contact_teacher_root is not None:
+            sample.update(_stack_contact_teacher_frames(contact_teacher_frames, self.max_humans))
         if self.query_source == "detections":
             query = _build_detection_query_targets(
                 box_frames=box_frames,
@@ -186,18 +219,45 @@ class BedlamDataset(Dataset):
         sequence_name = seq_dir.relative_to(self.root / self.split)
         return self.boxes_root / self.split / sequence_name / "smpl_boxes" / f"{frame_id}.pkl"
 
+    def _contact_teacher_path(self, seq_dir: Path, frame_id: str) -> Path:
+        sequence_name = seq_dir.relative_to(self.root / self.split)
+        return self.contact_teacher_root / self.split / sequence_name / "contact_teacher" / f"{frame_id}.npz"
+
+    def _window_has_contact(self, seq_idx: int, start_idx: int) -> bool:
+        seq_dir, frame_ids = self._sequences[seq_idx]
+        center_offset = (self.sequence_length - 1) // 2
+        frame_id = frame_ids[start_idx + center_offset * self.stride]
+        path = self._contact_teacher_path(seq_dir, frame_id)
+        sequence_name = seq_dir.relative_to(self.root / self.split).as_posix()
+        key = f"{self.split}/{sequence_name}/{frame_id}"
+        if self._contact_frame_keys is not None:
+            return key in self._contact_frame_keys
+        if not path.is_file():
+            if self.require_contact_teacher:
+                raise FileNotFoundError(f"Contact teacher sidecar not found while filtering windows: {path}")
+            return False
+        data = np.load(path)
+        return "contact_label" in data and bool(np.asarray(data["contact_label"]).any())
+
 
 def bedlam_collate_fn(batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
     patch_size = int(batch[0].get("patch_size", torch.tensor(16)).reshape(-1)[0].item())
     return collate_smpl_geometry_batch(batch, patch_size=patch_size)
 
 
-def _build_sequence_index(root: Path, split: str) -> list[tuple[Path, list[str]]]:
+def _build_sequence_index(
+    root: Path,
+    split: str,
+    sequence_names: set[str] | None = None,
+) -> list[tuple[Path, list[str]]]:
     split_dir = root / split
     if not split_dir.is_dir():
         raise FileNotFoundError(f"BEDLAM split directory not found: {split_dir}")
     sequences = []
     for seq_dir in sorted(path for path in split_dir.iterdir() if path.is_dir()):
+        rel_name = seq_dir.relative_to(split_dir).as_posix()
+        if sequence_names is not None and rel_name not in sequence_names and seq_dir.name not in sequence_names:
+            continue
         rgb_dir = seq_dir / "rgb"
         if not rgb_dir.is_dir():
             continue
@@ -207,6 +267,67 @@ def _build_sequence_index(root: Path, split: str) -> list[tuple[Path, list[str]]
     if not sequences:
         raise RuntimeError(f"No valid BEDLAM sequences found under {split_dir}")
     return sequences
+
+
+def _load_sequence_manifest(path: Path) -> set[str]:
+    if not path.is_file():
+        raise FileNotFoundError(f"BEDLAM sequence manifest not found: {path}")
+    names = {
+        line.strip().replace("\\", "/")
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    }
+    if not names:
+        raise ValueError(f"BEDLAM sequence manifest is empty: {path}")
+    return names
+
+
+def _load_contact_teacher(path: Path, max_humans: int, required: bool) -> dict[str, torch.Tensor] | None:
+    if not path.is_file():
+        if required:
+            raise FileNotFoundError(f"Contact teacher sidecar not found: {path}")
+        return None
+    data = np.load(path)
+    shapes = {
+        "contact_plane_center_cam": (max_humans, 2, 3),
+        "contact_plane_normal_cam": (max_humans, 2, 3),
+        "contact_plane_rmse_m": (max_humans, 2),
+        "contact_signed_distance_m": (max_humans, 2),
+        "contact_foot_velocity_m": (max_humans, 2),
+        "contact_label": (max_humans, 2),
+        "contact_teacher_valid": (max_humans, 2),
+    }
+    out: dict[str, torch.Tensor] = {}
+    for key, shape in shapes.items():
+        if key not in data:
+            raise ValueError(f"Contact teacher sidecar missing {key!r}: {path}")
+        value = np.asarray(data[key])
+        if value.shape != shape:
+            raise ValueError(f"Contact teacher {key} shape {value.shape} != {shape}: {path}")
+        if key in {"contact_label", "contact_teacher_valid"}:
+            out[key] = torch.from_numpy(value.astype(np.bool_, copy=False).copy())
+        else:
+            out[key] = torch.from_numpy(value.astype(np.float32, copy=False).copy())
+    return out
+
+
+def _stack_contact_teacher_frames(
+    frames: list[dict[str, torch.Tensor] | None],
+    max_humans: int,
+) -> dict[str, torch.Tensor]:
+    defaults = {
+        "contact_plane_center_cam": torch.zeros(max_humans, 2, 3),
+        "contact_plane_normal_cam": torch.zeros(max_humans, 2, 3),
+        "contact_plane_rmse_m": torch.zeros(max_humans, 2),
+        "contact_signed_distance_m": torch.zeros(max_humans, 2),
+        "contact_foot_velocity_m": torch.zeros(max_humans, 2),
+        "contact_label": torch.zeros(max_humans, 2, dtype=torch.bool),
+        "contact_teacher_valid": torch.zeros(max_humans, 2, dtype=torch.bool),
+    }
+    return {
+        key: torch.stack([(frame[key] if frame is not None else default.clone()) for frame in frames], dim=0)
+        for key, default in defaults.items()
+    }
 
 
 def _load_rgb_tensor(path: Path, image_resolution: int, patch_size: int, resize_mode: str) -> tuple[torch.Tensor, tuple[int, int], ResizeGeometry]:

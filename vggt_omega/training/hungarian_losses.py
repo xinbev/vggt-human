@@ -8,6 +8,7 @@ from vggt_omega.models.smpl_layer import SMPLLayer
 from vggt_omega.training.smpl_matcher import HungarianSMPLMatcher, cxcywh_to_xyxy, generalized_box_iou
 from vggt_omega.utils.pose_enc import encoding_to_camera
 from vggt_omega.utils.rotation import rot6d_to_axis_angle
+from vggt_omega.utils.contact_geometry import build_sole_vertex_indices
 
 
 class HungarianSMPLLoss(nn.Module):
@@ -63,6 +64,7 @@ class HungarianSMPLLoss(nn.Module):
         hsi_betas_weight: float = 0.0,
         hsi_transl_cam_weight: float = 0.0,
         hsi_ray_delta_weight: float = 0.0,
+        hsi_tangent_delta_weight: float = 0.0,
         hsi_align_point_weight: float = 0.0,
         hsi_align_delta_reg_weight: float = 0.0,
         hsi_align_no_worse_weight: float = 0.0,
@@ -136,6 +138,11 @@ class HungarianSMPLLoss(nn.Module):
         hsi_scene_bias_sequence_weight: float = 0.0,
         hsi_contact_weight: float = 0.0,
         hsi_contact_threshold: float = 0.08,
+        hsi_contact_teacher_camera_source: str = "prediction",
+        hsi_contact_refine_plane_weight: float = 0.0,
+        hsi_contact_refine_pose_weight: float = 0.0,
+        hsi_contact_refine_class_weight: float = 0.0,
+        hsi_contact_refine_no_worse_weight: float = 0.0,
     ) -> None:
         super().__init__()
         self.matcher = matcher
@@ -187,6 +194,7 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_betas_weight = hsi_betas_weight
         self.hsi_transl_cam_weight = hsi_transl_cam_weight
         self.hsi_ray_delta_weight = hsi_ray_delta_weight
+        self.hsi_tangent_delta_weight = hsi_tangent_delta_weight
         self.hsi_align_point_weight = hsi_align_point_weight
         self.hsi_align_delta_reg_weight = hsi_align_delta_reg_weight
         self.hsi_align_no_worse_weight = hsi_align_no_worse_weight
@@ -260,6 +268,11 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_scene_bias_sequence_weight = hsi_scene_bias_sequence_weight
         self.hsi_contact_weight = hsi_contact_weight
         self.hsi_contact_threshold = hsi_contact_threshold
+        self.hsi_contact_teacher_camera_source = str(hsi_contact_teacher_camera_source or "prediction").lower()
+        self.hsi_contact_refine_plane_weight = float(hsi_contact_refine_plane_weight)
+        self.hsi_contact_refine_pose_weight = float(hsi_contact_refine_pose_weight)
+        self.hsi_contact_refine_class_weight = float(hsi_contact_refine_class_weight)
+        self.hsi_contact_refine_no_worse_weight = float(hsi_contact_refine_no_worse_weight)
         self._smpl_layer: SMPLLayer | None = None
         self._foot_sole_indices: torch.Tensor | None = None
         self._foot_sole_indices_by_count: dict[int, torch.Tensor] = {}
@@ -331,9 +344,14 @@ class HungarianSMPLLoss(nn.Module):
                     "loss_projected_bbox": zero,
                     "loss_projected_giou": zero,
                     "loss_hsi_ray_delta": zero,
+                    "loss_hsi_tangent_delta": zero,
                     "loss_hsi_align_point": zero,
                     "loss_hsi_align_delta_reg": zero,
                     "loss_hsi_align_no_worse": zero,
+                    "loss_hsi_contact_refine_plane": zero,
+                    "loss_hsi_contact_refine_pose": zero,
+                    "loss_hsi_contact_refine_class": zero,
+                    "loss_hsi_contact_refine_no_worse": zero,
                     "metric_joints3d_l1": zero.detach(),
                     "metric_local_joints3d_l1": zero.detach(),
                     "metric_local_vertices_l1": zero.detach(),
@@ -439,6 +457,7 @@ class HungarianSMPLLoss(nn.Module):
             + self.hsi_betas_weight * losses["loss_hsi_betas"]
             + self.hsi_transl_cam_weight * losses["loss_hsi_transl_cam"]
             + self.hsi_ray_delta_weight * losses["loss_hsi_ray_delta"]
+            + self.hsi_tangent_delta_weight * losses["loss_hsi_tangent_delta"]
             + self.hsi_align_point_weight * losses["loss_hsi_align_point"]
             + self.hsi_align_delta_reg_weight * losses["loss_hsi_align_delta_reg"]
             + self.hsi_align_no_worse_weight * losses["loss_hsi_align_no_worse"]
@@ -473,6 +492,10 @@ class HungarianSMPLLoss(nn.Module):
             + self.hsi_scene_bias_temporal_weight * losses["loss_hsi_scene_bias_temporal"]
             + self.hsi_scene_bias_sequence_weight * losses["loss_hsi_scene_bias_sequence"]
             + self.hsi_contact_weight * losses["loss_hsi_contact"]
+            + self.hsi_contact_refine_plane_weight * losses["loss_hsi_contact_refine_plane"]
+            + self.hsi_contact_refine_pose_weight * losses["loss_hsi_contact_refine_pose"]
+            + self.hsi_contact_refine_class_weight * losses["loss_hsi_contact_refine_class"]
+            + self.hsi_contact_refine_no_worse_weight * losses["loss_hsi_contact_refine_no_worse"]
         )
         return losses
 
@@ -496,6 +519,29 @@ class HungarianSMPLLoss(nn.Module):
         if "pose_enc" not in predictions:
             raise ValueError("VGGT projection camera requires model output pose_enc; set model.enable_camera=true")
         return _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), self._projection_image_hw()).to(device=device, dtype=dtype)
+
+    def _contact_teacher_intrinsics(
+        self,
+        predictions: dict[str, torch.Tensor],
+        batch: dict[str, torch.Tensor],
+        fallback_intrinsics: torch.Tensor,
+        device: torch.device,
+        dtype: torch.dtype,
+    ) -> torch.Tensor:
+        source = self.hsi_contact_teacher_camera_source
+        if source in {"prediction", "pred", "vggt", ""}:
+            return fallback_intrinsics.to(device=device, dtype=dtype)
+        if source == "gt":
+            batch_intrinsics = batch.get("gt_intrinsics", batch.get("K_scal3r"))
+            if batch_intrinsics is None:
+                raise ValueError("hsi_contact_teacher_camera_source='gt' requires batch['gt_intrinsics'] or batch['K_scal3r']")
+            return _flatten_batch_intrinsics(batch_intrinsics, device=device, dtype=dtype)
+        if source == "auto":
+            batch_intrinsics = batch.get("gt_intrinsics", batch.get("K_scal3r"))
+            if batch_intrinsics is not None:
+                return _flatten_batch_intrinsics(batch_intrinsics, device=device, dtype=dtype)
+            return fallback_intrinsics.to(device=device, dtype=dtype)
+        raise ValueError(f"Unsupported hsi_contact_teacher_camera_source: {source!r}")
 
     def _projection_image_hw(self) -> tuple[int, int]:
         return getattr(self, "_active_projection_image_hw", (int(self.projection_image_size), int(self.projection_image_size)))
@@ -1084,9 +1130,14 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_betas": zero,
             "loss_hsi_transl_cam": zero,
             "loss_hsi_ray_delta": zero,
+            "loss_hsi_tangent_delta": zero,
             "loss_hsi_align_point": zero,
             "loss_hsi_align_delta_reg": zero,
             "loss_hsi_align_no_worse": zero,
+            "loss_hsi_contact_refine_plane": zero,
+            "loss_hsi_contact_refine_pose": zero,
+            "loss_hsi_contact_refine_class": zero,
+            "loss_hsi_contact_refine_no_worse": zero,
             "loss_hsi_joints3d": zero,
             "loss_hsi_vertices": zero,
             "loss_hsi_projected_joints2d": zero,
@@ -1130,12 +1181,26 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_ray_delta_expected_abs": zero.detach(),
             "metric_hsi_ray_delta_pred_abs": zero.detach(),
             "metric_hsi_ray_delta_sign_acc": zero.detach(),
+            "metric_hsi_tangent_delta_base_l1": zero.detach(),
+            "metric_hsi_tangent_delta_refined_l1": zero.detach(),
+            "metric_hsi_tangent_delta_l1_delta": zero.detach(),
             "metric_hsi_align_base_point_l1": zero.detach(),
             "metric_hsi_align_refined_point_l1": zero.detach(),
             "metric_hsi_align_point_l1_delta": zero.detach(),
             "metric_hsi_align_delta_l1": zero.detach(),
             "metric_hsi_align_gate_mean": zero.detach(),
             "metric_hsi_align_valid_ratio": zero.detach(),
+            "metric_hsi_transl_l2_median": zero.detach(),
+            "metric_hsi_base_transl_l2_median": zero.detach(),
+            "metric_hsi_transl_l2_p90": zero.detach(),
+            "metric_hsi_transl_improvement_rate": zero.detach(),
+            "metric_hsi_contact_float_p95_m": zero.detach(),
+            "metric_hsi_contact_penetration_p95_m": zero.detach(),
+            "metric_hsi_contact_false_pull_rate": zero.detach(),
+            "metric_hsi_contact_base_abs_p95_m": zero.detach(),
+            "metric_hsi_contact_refined_abs_p95_m": zero.detach(),
+            "metric_stage2_selection": zero.detach(),
+            "metric_stage3_selection": zero.detach(),
             "metric_hsi_no_worse_ratio": zero.detach(),
             "metric_hsi_joint_error_delta": zero.detach(),
             "metric_hsi_gate_mean": zero.detach(),
@@ -1211,9 +1276,11 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_betas": F.l1_loss(pred_betas, target_betas),
             "loss_hsi_transl_cam": F.l1_loss(pred_transl, target_transl),
         }
-        base_pose6d = _flatten_prediction(_require_prediction(predictions, "pred_pose_6d"), unframed_ndim=3)
+        base_pose_value = predictions.get("hsi_contact_base_pred_pose_6d", predictions.get("pred_pose_6d"))
+        base_transl_value = predictions.get("hsi_contact_base_pred_transl_cam", predictions.get("pred_transl_cam"))
+        base_pose6d = _flatten_prediction(base_pose_value, unframed_ndim=3)
         base_betas = _flatten_prediction(_require_prediction(predictions, "pred_betas"), unframed_ndim=3)
-        base_transl = _flatten_prediction(_require_prediction(predictions, "pred_transl_cam"), unframed_ndim=3)
+        base_transl = _flatten_prediction(base_transl_value, unframed_ndim=3)
         delta_reg = (
             F.smooth_l1_loss(pred_transl, base_transl[frame_idx, src_idx].detach())
             + 0.01 * F.smooth_l1_loss(pred_pose, base_pose6d[frame_idx, src_idx].detach())
@@ -1245,6 +1312,14 @@ class HungarianSMPLLoss(nn.Module):
         losses["metric_hsi_base_transl_l1"] = base_transl_l1.detach()
         losses["metric_hsi_refined_transl_l1"] = refined_transl_l1.detach()
         losses["metric_hsi_transl_l1_delta"] = (refined_transl_l1 - base_transl_l1).detach()
+        base_transl_l2_items = torch.linalg.norm(base_transl_matched - target_transl, dim=-1)
+        refined_transl_l2_items = torch.linalg.norm(pred_transl - target_transl, dim=-1)
+        losses["metric_hsi_transl_l2_median"] = refined_transl_l2_items.median().detach()
+        losses["metric_hsi_base_transl_l2_median"] = base_transl_l2_items.median().detach()
+        losses["metric_hsi_transl_l2_p90"] = torch.quantile(refined_transl_l2_items.float(), 0.90).to(dtype=pred_transl.dtype).detach()
+        losses["metric_hsi_transl_improvement_rate"] = (
+            refined_transl_l2_items < base_transl_l2_items
+        ).to(dtype=pred_transl.dtype).mean().detach()
         ray = F.normalize(base_transl_matched, dim=-1, eps=1e-6)
         expected_ray_delta = ((target_transl - base_transl_matched) * ray).sum(dim=-1, keepdim=True)
         predicted_ray_delta = ((pred_transl - base_transl_matched) * ray).sum(dim=-1, keepdim=True)
@@ -1264,6 +1339,20 @@ class HungarianSMPLLoss(nn.Module):
             losses["metric_hsi_ray_delta_sign_acc"] = sign_match.to(dtype=pred_transl.dtype).mean().detach()
         else:
             losses["metric_hsi_ray_delta_sign_acc"] = pred_transl.sum().detach() * 0.0
+
+        expected_delta = target_transl - base_transl_matched
+        predicted_delta = pred_transl - base_transl_matched
+        expected_tangent = expected_delta - (expected_delta * ray).sum(dim=-1, keepdim=True) * ray
+        predicted_tangent = predicted_delta - (predicted_delta * ray).sum(dim=-1, keepdim=True) * ray
+        tangent_error = predicted_tangent - expected_tangent
+        losses["loss_hsi_tangent_delta"] = F.smooth_l1_loss(
+            predicted_tangent, expected_tangent, beta=0.01
+        )
+        tangent_base_l1 = expected_tangent.abs().mean()
+        tangent_refined_l1 = tangent_error.abs().mean()
+        losses["metric_hsi_tangent_delta_base_l1"] = tangent_base_l1.detach()
+        losses["metric_hsi_tangent_delta_refined_l1"] = tangent_refined_l1.detach()
+        losses["metric_hsi_tangent_delta_l1_delta"] = (tangent_refined_l1 - tangent_base_l1).detach()
 
         losses["loss_hsi_align_point"] = _optional_prediction_loss(predictions, "loss_hsi_align_point", pred_transl)
         losses["loss_hsi_align_delta_reg"] = _optional_prediction_loss(predictions, "loss_hsi_align_delta_reg", pred_transl)
@@ -1298,10 +1387,31 @@ class HungarianSMPLLoss(nn.Module):
         hsi_vert_err = torch.linalg.norm(pred_vertices_cam - gt_vertices_cam, dim=-1).mean(dim=-1)
         base_vert_err = torch.linalg.norm(base_vertices_cam - gt_vertices_cam, dim=-1).mean(dim=-1).detach()
         margin = float(self.hsi_no_worse_margin_m)
-        no_worse = F.relu(hsi_joint_err - base_joint_err + margin) + 0.5 * F.relu(hsi_vert_err - base_vert_err + margin)
+        no_worse = F.relu(hsi_joint_err - base_joint_err - margin) + 0.5 * F.relu(hsi_vert_err - base_vert_err - margin)
         losses["loss_hsi_no_worse"] = no_worse.mean()
         losses["metric_hsi_no_worse_ratio"] = (hsi_joint_err > (base_joint_err + margin)).to(dtype=pred_betas.dtype).mean().detach()
         losses["metric_hsi_joint_error_delta"] = (hsi_joint_err - base_joint_err).mean().detach()
+        losses["metric_stage2_selection"] = (
+            losses["metric_hsi_transl_l2_median"]
+            + 0.25 * losses["metric_hsi_transl_l2_p90"]
+            + 2.0 * F.relu(losses["metric_hsi_joint_error_delta"])
+        ).detach()
+        contact_losses = self._hsi_contact_refine_losses(
+            predictions=predictions,
+            frame_idx=frame_idx,
+            src_idx=src_idx,
+            matched=matched,
+            pred_pose=pred_pose,
+            target_pose=target_pose,
+            pred_vertices_cam=pred_vertices_cam,
+            base_vertices_cam=base_vertices_cam,
+        )
+        losses.update(contact_losses)
+        losses["metric_stage3_selection"] = (
+            losses["metric_stage3_selection"]
+            + 2.0 * F.relu(losses["metric_hsi_joint_error_delta"])
+            + 2.0 * F.relu(losses["metric_hsi_transl_l1_delta"])
+        ).detach()
         gate = predictions.get("hsi_refine_gate")
         if gate is not None:
             flat_gate = _flatten_prediction(gate, unframed_ndim=3)
@@ -1371,6 +1481,88 @@ class HungarianSMPLLoss(nn.Module):
             )
         )
         return losses
+
+    def _hsi_contact_refine_losses(
+        self,
+        predictions: dict[str, torch.Tensor],
+        frame_idx: torch.Tensor,
+        src_idx: torch.Tensor,
+        matched: dict[str, torch.Tensor],
+        pred_pose: torch.Tensor,
+        target_pose: torch.Tensor,
+        pred_vertices_cam: torch.Tensor,
+        base_vertices_cam: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        zero = pred_vertices_cam.sum() * 0.0
+        out = {
+            "loss_hsi_contact_refine_plane": zero,
+            "loss_hsi_contact_refine_pose": zero,
+            "loss_hsi_contact_refine_class": zero,
+            "loss_hsi_contact_refine_no_worse": zero,
+            "metric_hsi_contact_float_p95_m": zero.detach(),
+            "metric_hsi_contact_penetration_p95_m": zero.detach(),
+            "metric_hsi_contact_false_pull_rate": zero.detach(),
+            "metric_hsi_contact_base_abs_p95_m": zero.detach(),
+            "metric_hsi_contact_refined_abs_p95_m": zero.detach(),
+            "metric_stage3_selection": zero.detach(),
+        }
+        if "contact_teacher_valid" not in matched:
+            return out
+        teacher_valid = matched["contact_teacher_valid"].bool()
+        contact_label = matched["contact_label"].bool()
+        plane_center = matched["contact_plane_center_cam"].to(device=pred_vertices_cam.device, dtype=pred_vertices_cam.dtype)
+        plane_normal = matched["contact_plane_normal_cam"].to(device=pred_vertices_cam.device, dtype=pred_vertices_cam.dtype)
+        target_signed = matched["contact_signed_distance_m"].to(device=pred_vertices_cam.device, dtype=pred_vertices_cam.dtype)
+        sole_lr = self._get_foot_sole_indices_lr(pred_vertices_cam.device, count_per_foot=48)
+        pred_foot = pred_vertices_cam[:, sole_lr].mean(dim=-2)
+        base_foot = base_vertices_cam[:, sole_lr].mean(dim=-2)
+        pred_signed = ((pred_foot - plane_center) * plane_normal).sum(dim=-1)
+        base_signed = ((base_foot - plane_center) * plane_normal).sum(dim=-1)
+        contact_valid = teacher_valid & contact_label & torch.isfinite(pred_signed)
+        if contact_valid.any():
+            pred_error = pred_signed - target_signed
+            base_error = base_signed.detach() - target_signed
+            out["loss_hsi_contact_refine_plane"] = F.smooth_l1_loss(
+                pred_error[contact_valid], torch.zeros_like(pred_error[contact_valid]), beta=0.01
+            )
+            out["loss_hsi_contact_refine_no_worse"] = F.relu(
+                pred_error[contact_valid].abs() - base_error[contact_valid].abs() - 0.002
+            ).mean()
+            float_amount = F.relu(pred_error[contact_valid])
+            penetration_amount = F.relu(-pred_error[contact_valid])
+            out["metric_hsi_contact_float_p95_m"] = torch.quantile(float_amount.float(), 0.95).to(dtype=pred_error.dtype).detach()
+            out["metric_hsi_contact_penetration_p95_m"] = torch.quantile(
+                penetration_amount.float(), 0.95
+            ).to(dtype=pred_error.dtype).detach()
+            out["metric_hsi_contact_base_abs_p95_m"] = torch.quantile(
+                base_error[contact_valid].abs().float(), 0.95
+            ).to(dtype=pred_error.dtype).detach()
+            out["metric_hsi_contact_refined_abs_p95_m"] = torch.quantile(
+                pred_error[contact_valid].abs().float(), 0.95
+            ).to(dtype=pred_error.dtype).detach()
+        lower = torch.tensor([1, 2, 4, 5, 7, 8], device=pred_pose.device, dtype=torch.long)
+        pred_lower = pred_pose.reshape(-1, 24, 6)[:, lower]
+        target_lower = target_pose.reshape(-1, 24, 6)[:, lower]
+        out["loss_hsi_contact_refine_pose"] = F.smooth_l1_loss(pred_lower, target_lower, beta=0.02)
+        logits = predictions.get("hsi_contact_foot_logits")
+        if isinstance(logits, torch.Tensor):
+            flat_logits = _flatten_prediction(logits, unframed_ndim=3)[frame_idx, src_idx]
+            if teacher_valid.any():
+                out["loss_hsi_contact_refine_class"] = F.binary_cross_entropy_with_logits(
+                    flat_logits[teacher_valid], contact_label[teacher_valid].to(dtype=flat_logits.dtype)
+                )
+        swing_valid = teacher_valid & ~contact_label
+        if swing_valid.any():
+            swing_displacement = torch.linalg.norm(pred_foot - base_foot.detach(), dim=-1)
+            out["metric_hsi_contact_false_pull_rate"] = (
+                swing_displacement[swing_valid] > 0.02
+            ).to(dtype=pred_vertices_cam.dtype).mean().detach()
+        out["metric_stage3_selection"] = (
+            out["metric_hsi_contact_float_p95_m"]
+            + 2.0 * out["metric_hsi_contact_penetration_p95_m"]
+            + 0.5 * out["metric_hsi_contact_false_pull_rate"]
+        ).detach()
+        return out
 
     def _hsi_temporal_losses(
         self,
@@ -1613,9 +1805,16 @@ class HungarianSMPLLoss(nn.Module):
                     align_corners=False,
                 ).reshape(*gt_depth.shape[:2], *pred_depth_hw.shape[-2:])
         intrinsics = _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), self._projection_image_hw())
+        teacher_intrinsics = self._contact_teacher_intrinsics(
+            predictions,
+            batch,
+            fallback_intrinsics=intrinsics,
+            device=gt_joints_cam.device,
+            dtype=gt_joints_cam.dtype,
+        )
         foot_idx = torch.tensor([7, 8, 10, 11], dtype=torch.long, device=gt_joints_cam.device)
         gt_foot = gt_joints_cam[:, foot_idx]
-        gt_projected = _project_points(gt_foot, intrinsics[frame_idx].to(dtype=gt_foot.dtype))
+        gt_projected = _project_points(gt_foot, teacher_intrinsics[frame_idx].to(dtype=gt_foot.dtype))
         gt_projected = _scale_points_to_depth(gt_projected, self._projection_image_hw(), gt_depth.shape[-2], gt_depth.shape[-1])
         sampled_gt, gt_valid = _sample_depth_at_points(gt_depth.reshape(-1, *gt_depth.shape[-2:]), gt_projected, frame_idx)
         return (torch.abs(sampled_gt - gt_foot[..., 2].to(dtype=sampled_gt.dtype)) < float(self.hsi_foot_sliding_contact_threshold_m)) & gt_valid
@@ -1853,6 +2052,13 @@ class HungarianSMPLLoss(nn.Module):
         if "pose_enc" not in predictions:
             return out
         intrinsics = _flatten_intrinsics(_require_prediction(predictions, "pose_enc"), self._projection_image_hw())
+        contact_teacher_intrinsics = self._contact_teacher_intrinsics(
+            predictions,
+            batch,
+            fallback_intrinsics=intrinsics,
+            device=pred_joints_cam.device,
+            dtype=pred_joints_cam.dtype,
+        )
         projected = _project_points(pred_joints_cam, intrinsics[frame_idx].to(dtype=pred_joints_cam.dtype))
         projected = _scale_points_to_depth(projected, self._projection_image_hw(), aligned_depth.shape[-2], aligned_depth.shape[-1])
         sampled_aligned, valid = _sample_depth_at_points(aligned_depth.reshape(-1, *aligned_depth.shape[-2:]), projected, frame_idx)
@@ -1866,6 +2072,7 @@ class HungarianSMPLLoss(nn.Module):
                 aligned_depth=aligned_depth,
                 gt_depth=gt_depth,
                 intrinsics=intrinsics,
+                teacher_intrinsics=contact_teacher_intrinsics,
                 frame_idx=frame_idx,
                 pred_joints_cam=pred_joints_cam,
                 gt_joints_cam=gt_joints_cam,
@@ -1877,6 +2084,7 @@ class HungarianSMPLLoss(nn.Module):
                 aligned_depth=aligned_depth,
                 gt_depth=gt_depth,
                 intrinsics=intrinsics,
+                teacher_intrinsics=contact_teacher_intrinsics,
                 frame_idx=frame_idx,
                 pred_vertices_cam=pred_vertices_cam,
                 gt_vertices_cam=gt_vertices_cam,
@@ -1888,6 +2096,7 @@ class HungarianSMPLLoss(nn.Module):
                 aligned_depth=aligned_depth,
                 gt_depth=gt_depth,
                 intrinsics=intrinsics,
+                teacher_intrinsics=contact_teacher_intrinsics,
                 frame_idx=frame_idx,
                 pred_vertices_cam=pred_vertices_cam,
                 gt_vertices_cam=gt_vertices_cam,
@@ -1901,7 +2110,7 @@ class HungarianSMPLLoss(nn.Module):
         if flat_logits is None:
             return out
         matched_logits = flat_logits[frame_idx, src_idx, :, 0]
-        gt_projected = _project_points(gt_joints_cam, intrinsics[frame_idx].to(dtype=gt_joints_cam.dtype))
+        gt_projected = _project_points(gt_joints_cam, contact_teacher_intrinsics[frame_idx].to(dtype=gt_joints_cam.dtype))
         gt_projected = _scale_points_to_depth(gt_projected, self._projection_image_hw(), gt_depth.shape[-2], gt_depth.shape[-1])
         sampled_gt, gt_valid = _sample_depth_at_points(gt_depth.reshape(-1, *gt_depth.shape[-2:]), gt_projected, frame_idx)
         contact_target = (torch.abs(sampled_gt - gt_joints_cam[..., 2].to(dtype=sampled_gt.dtype)) < self.hsi_contact_threshold) & gt_valid
@@ -2050,6 +2259,7 @@ class HungarianSMPLLoss(nn.Module):
         aligned_depth: torch.Tensor,
         gt_depth: torch.Tensor,
         intrinsics: torch.Tensor,
+        teacher_intrinsics: torch.Tensor,
         frame_idx: torch.Tensor,
         pred_joints_cam: torch.Tensor,
         gt_joints_cam: torch.Tensor,
@@ -2068,7 +2278,7 @@ class HungarianSMPLLoss(nn.Module):
         pred_projected = _scale_points_to_depth(pred_projected, self._projection_image_hw(), aligned_depth.shape[-2], aligned_depth.shape[-1])
         sampled_aligned, pred_valid = _sample_depth_at_points(aligned_depth.reshape(-1, *aligned_depth.shape[-2:]), pred_projected, frame_idx)
 
-        gt_projected = _project_points(gt_foot, intrinsics[frame_idx].to(dtype=gt_foot.dtype))
+        gt_projected = _project_points(gt_foot, teacher_intrinsics[frame_idx].to(dtype=gt_foot.dtype))
         gt_projected = _scale_points_to_depth(gt_projected, self._projection_image_hw(), gt_depth.shape[-2], gt_depth.shape[-1])
         sampled_gt, gt_valid = _sample_depth_at_points(gt_depth.reshape(-1, *gt_depth.shape[-2:]), gt_projected, frame_idx)
         contact_target = (torch.abs(sampled_gt - gt_foot[..., 2].to(dtype=sampled_gt.dtype)) < float(self.hsi_foot_contact_threshold_m)) & gt_valid
@@ -2091,6 +2301,7 @@ class HungarianSMPLLoss(nn.Module):
         aligned_depth: torch.Tensor,
         gt_depth: torch.Tensor,
         intrinsics: torch.Tensor,
+        teacher_intrinsics: torch.Tensor,
         frame_idx: torch.Tensor,
         pred_vertices_cam: torch.Tensor,
         gt_vertices_cam: torch.Tensor,
@@ -2106,7 +2317,7 @@ class HungarianSMPLLoss(nn.Module):
         pred_sole = pred_vertices_cam[:, foot_idx]
         gt_sole = gt_vertices_cam[:, foot_idx]
 
-        gt_projected = _project_points(gt_sole, intrinsics[frame_idx].to(dtype=gt_sole.dtype))
+        gt_projected = _project_points(gt_sole, teacher_intrinsics[frame_idx].to(dtype=gt_sole.dtype))
         gt_projected = _scale_points_to_depth(gt_projected, self._projection_image_hw(), gt_depth.shape[-2], gt_depth.shape[-1])
         sampled_gt, gt_valid = _sample_depth_at_points(gt_depth.reshape(-1, *gt_depth.shape[-2:]), gt_projected, frame_idx)
         contact_target = (torch.abs(sampled_gt - gt_sole[..., 2].to(dtype=sampled_gt.dtype)) < float(self.hsi_foot_sole_contact_threshold_m)) & gt_valid
@@ -2136,6 +2347,7 @@ class HungarianSMPLLoss(nn.Module):
         aligned_depth: torch.Tensor,
         gt_depth: torch.Tensor,
         intrinsics: torch.Tensor,
+        teacher_intrinsics: torch.Tensor,
         frame_idx: torch.Tensor,
         pred_vertices_cam: torch.Tensor,
         gt_vertices_cam: torch.Tensor,
@@ -2152,7 +2364,7 @@ class HungarianSMPLLoss(nn.Module):
         pred_sole = pred_vertices_cam[:, foot_idx]
         gt_sole = gt_vertices_cam[:, foot_idx]
 
-        gt_projected = _project_points(gt_sole, intrinsics[frame_idx].to(dtype=gt_sole.dtype))
+        gt_projected = _project_points(gt_sole, teacher_intrinsics[frame_idx].to(dtype=gt_sole.dtype))
         gt_projected = _scale_points_to_depth(gt_projected, self._projection_image_hw(), gt_depth.shape[-2], gt_depth.shape[-1])
         sampled_gt, gt_valid = _sample_depth_at_points(gt_depth.reshape(-1, *gt_depth.shape[-2:]), gt_projected, frame_idx)
         contact_target = (torch.abs(sampled_gt - gt_sole[..., 2].to(dtype=sampled_gt.dtype)) < float(self.hsi_support_plane_contact_threshold_m)) & gt_valid
@@ -2200,6 +2412,15 @@ class HungarianSMPLLoss(nn.Module):
             self._foot_sole_indices = cached
         return cached.to(device=device)
 
+    def _get_foot_sole_indices_lr(self, device: torch.device, count_per_foot: int = 48) -> torch.Tensor:
+        cache_name = f"_foot_sole_lr_{int(count_per_foot)}"
+        cached = getattr(self, cache_name, None)
+        if cached is None:
+            smpl = self._get_smpl_layer(device)
+            cached = build_sole_vertex_indices(smpl.layer.v_template.detach().float(), count_per_foot).cpu()
+            setattr(self, cache_name, cached)
+        return cached.to(device=device)
+
     def _identity_loss(
         self,
         pred_id_embed: torch.Tensor | None,
@@ -2238,6 +2459,16 @@ def flatten_smpl_targets(batch: dict[str, torch.Tensor], device: torch.device) -
     person_id_mask = batch.get("gt_track_mask", batch.get("person_id_mask"))
     track_source = batch.get("gt_track_source")
     track_quality = batch.get("gt_track_quality")
+    contact_keys = (
+        "contact_plane_center_cam",
+        "contact_plane_normal_cam",
+        "contact_plane_rmse_m",
+        "contact_signed_distance_m",
+        "contact_foot_velocity_m",
+        "contact_label",
+        "contact_teacher_valid",
+    )
+    contact_values = {key: batch.get(key) for key in contact_keys}
     if person_ids is not None:
         person_ids = person_ids.to(device=device)
     if person_id_mask is not None:
@@ -2272,6 +2503,15 @@ def flatten_smpl_targets(batch: dict[str, torch.Tensor], device: torch.device) -
                 target["gt_track_quality"] = track_quality[batch_idx, frame_idx, valid]
             else:
                 target["gt_track_quality"] = torch.zeros(int(valid.sum()), dtype=torch.float32, device=device)
+            for key, value in contact_values.items():
+                if value is not None:
+                    target[key] = value.to(device=device)[batch_idx, frame_idx, valid]
+                elif key in {"contact_plane_center_cam", "contact_plane_normal_cam"}:
+                    target[key] = torch.zeros(int(valid.sum()), 2, 3, dtype=torch.float32, device=device)
+                elif key in {"contact_label", "contact_teacher_valid"}:
+                    target[key] = torch.zeros(int(valid.sum()), 2, dtype=torch.bool, device=device)
+                else:
+                    target[key] = torch.zeros(int(valid.sum()), 2, dtype=torch.float32, device=device)
             targets.append(target)
     return targets
 
@@ -2288,6 +2528,13 @@ def _collect_matches(indices, targets: list[dict[str, torch.Tensor]], device: to
         "person_id_mask": [],
         "gt_track_source": [],
         "gt_track_quality": [],
+        "contact_plane_center_cam": [],
+        "contact_plane_normal_cam": [],
+        "contact_plane_rmse_m": [],
+        "contact_signed_distance_m": [],
+        "contact_foot_velocity_m": [],
+        "contact_label": [],
+        "contact_teacher_valid": [],
     }
     for frame_idx, (src_idx, tgt_idx) in enumerate(indices):
         if src_idx.numel() == 0:

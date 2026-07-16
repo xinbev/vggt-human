@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ "${ALLOW_LEGACY_HSI_FOUR_STAGE:-false}" != "true" ]]; then
+  echo "[ERROR] This legacy pipeline still uses anchor_transl/contact_detail and is disabled by default." >&2
+  echo "Use: bash scripts/train/train_smpl_hsi_scale_trans_contact_curriculum.sh" >&2
+  echo "Set ALLOW_LEGACY_HSI_FOUR_STAGE=true only to reproduce the historical baseline." >&2
+  exit 2
+fi
+
 REPO_ROOT="${REPO_ROOT:-/home/zhw/lab_users/xyb/home/projects/vggt-human}"
 BEDLAM_ROOT="${BEDLAM_ROOT:-/home/zhw/xyb_space/bedlam/processed_bedlam}"
 DATA_ROOT="${DATA_ROOT:-/home/zhw/xyb_space}"

@@ -24,6 +24,12 @@ class HSIHumanSceneAlignHead(nn.Module):
         max_tangent_delta_m: float = 0.12,
         use_delta_gate: bool = True,
         overwrite_refined: bool = True,
+        base_source: str = "hsi_refined",
+        max_correspondence_distance_m: float = 0.35,
+        gt_max_correspondence_distance_m: float = 3.5,
+        min_depth_confidence: float = 0.0,
+        residual_mad_multiplier: float = 3.0,
+        max_depth_m: float = 20.0,
         image_size: int = 518,
     ) -> None:
         super().__init__()
@@ -41,6 +47,14 @@ class HSIHumanSceneAlignHead(nn.Module):
         self.max_tangent_delta_m = float(max_tangent_delta_m)
         self.use_delta_gate = bool(use_delta_gate)
         self.overwrite_refined = bool(overwrite_refined)
+        self.base_source = str(base_source or "hsi_refined").lower()
+        if self.base_source not in {"pred", "hsi_refined"}:
+            raise ValueError(f"Unsupported HSI align base source: {self.base_source!r}")
+        self.max_correspondence_distance_m = float(max_correspondence_distance_m)
+        self.gt_max_correspondence_distance_m = float(gt_max_correspondence_distance_m)
+        self.min_depth_confidence = float(min_depth_confidence)
+        self.residual_mad_multiplier = float(residual_mad_multiplier)
+        self.max_depth_m = float(max_depth_m)
         self.image_size = int(image_size)
 
         vertex_indices = _deterministic_fps_indices(
@@ -49,7 +63,10 @@ class HSIHumanSceneAlignHead(nn.Module):
         )
         self.register_buffer("sample_vertex_indices", vertex_indices, persistent=False)
 
-        feature_dim = 3 + 1 + 1 + 1 + 3 + 3 + 3 + 3 + 3 + 2 + 2
+        # Metric point residuals contain the scale information needed by this
+        # head.  Deliberately omit scene scale/bias scalars to prevent a
+        # gt-depth versus VGGT-depth domain shortcut.
+        feature_dim = 3 + 1 + 1 + 1 + 3 + 3 + 3 + 3 + 3 + 2
         self.mlp = nn.Sequential(
             nn.Linear(feature_dim, hidden_dim),
             nn.GELU(),
@@ -71,11 +88,19 @@ class HSIHumanSceneAlignHead(nn.Module):
         pose_enc: torch.Tensor,
         image_size_hw: tuple[int, int] | None = None,
         intrinsics_override: torch.Tensor | None = None,
+        depth_is_metric: bool = False,
+        person_boxes: torch.Tensor | None = None,
+        depth_confidence: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor]:
-        pose6d = predictions.get("hsi_refined_pred_pose_6d", predictions.get("pred_pose_6d"))
-        poses = predictions.get("hsi_refined_pred_poses", predictions.get("pred_poses"))
-        betas = predictions.get("hsi_refined_pred_betas", predictions.get("pred_betas"))
-        base_transl = predictions.get("hsi_refined_pred_transl_cam", predictions.get("pred_transl_cam"))
+        use_hsi_base = self.base_source == "hsi_refined"
+        pose6d = predictions.get("hsi_refined_pred_pose_6d") if use_hsi_base else None
+        poses = predictions.get("hsi_refined_pred_poses") if use_hsi_base else None
+        betas = predictions.get("hsi_refined_pred_betas") if use_hsi_base else None
+        base_transl = predictions.get("hsi_refined_pred_transl_cam") if use_hsi_base else None
+        pose6d = predictions.get("pred_pose_6d") if pose6d is None else pose6d
+        poses = predictions.get("pred_poses") if poses is None else poses
+        betas = predictions.get("pred_betas") if betas is None else betas
+        base_transl = predictions.get("pred_transl_cam") if base_transl is None else base_transl
         confs = predictions.get("pred_confs")
         if pose6d is None or poses is None or betas is None or base_transl is None or confs is None:
             raise ValueError("HSI human-scene align requires SMPL pose/betas/transl/confs")
@@ -105,7 +130,7 @@ class HSIHumanSceneAlignHead(nn.Module):
             intrinsics_override=intrinsics_override,
         )
 
-        metric_depth = self._metric_depth(predictions, depth_hw)
+        metric_depth = depth_hw if depth_is_metric else self._metric_depth(predictions, depth_hw)
         sample_points = self._sample_smpl_points(poses, betas, base_transl)
         scene_points, valid = _local_scene_points(
             depth_hw=metric_depth,
@@ -113,6 +138,14 @@ class HSIHumanSceneAlignHead(nn.Module):
             intrinsics=intrinsics,
             image_size_hw=image_size_hw,
             local_window=self.local_window,
+            person_boxes=person_boxes,
+            depth_confidence=depth_confidence,
+            min_depth_confidence=self.min_depth_confidence,
+            max_correspondence_distance_m=(
+                self.gt_max_correspondence_distance_m if depth_is_metric else self.max_correspondence_distance_m
+            ),
+            residual_mad_multiplier=self.residual_mad_multiplier,
+            max_depth_m=self.max_depth_m,
         )
         valid = valid & (confs[..., :1].unsqueeze(-2) > 0.0)
         residual = scene_points - sample_points
@@ -127,10 +160,6 @@ class HSIHumanSceneAlignHead(nn.Module):
         valid_ratio = valid_f.mean(dim=-2)
 
         ray, tangent_x, tangent_y = _camera_basis(base_transl)
-        scale = predictions.get("hsi_scene_scale")
-        bias = predictions.get("hsi_scene_depth_bias")
-        scale_feat = _broadcast_affine_feature(scale, base_transl, default=1.0)
-        bias_feat = _broadcast_affine_feature(bias, base_transl, default=0.0)
         projected_center = _project_points(
             base_transl.reshape(-1, 1, 3),
             intrinsics.repeat_interleave(num_queries, dim=0),
@@ -154,8 +183,6 @@ class HSIHumanSceneAlignHead(nn.Module):
                 ray,
                 tangent_x,
                 tangent_y,
-                scale_feat,
-                bias_feat,
                 proj_norm,
             ],
             dim=-1,
@@ -190,12 +217,13 @@ class HSIHumanSceneAlignHead(nn.Module):
             "hsi_align_delta_coeff": coeff,
             "hsi_align_gate": gate,
             "hsi_align_valid_ratio": valid_ratio,
+            "hsi_align_depth_is_metric": base_transl.new_tensor(float(depth_is_metric)),
             "hsi_align_base_point_l1": base_loss.detach(),
             "hsi_align_refined_point_l1": refined_loss.detach(),
             "hsi_align_point_l1_delta": (refined_loss - base_loss).detach(),
             "loss_hsi_align_point": refined_loss,
             "loss_hsi_align_delta_reg": _smooth_l1_abs(delta).mean(),
-            "loss_hsi_align_no_worse": F.relu(refined_point_dist - base_point_dist.detach() + 0.005).mul(valid_f).sum()
+            "loss_hsi_align_no_worse": F.relu(refined_point_dist - base_point_dist.detach() - 0.005).mul(valid_f).sum()
             / valid_f.sum().clamp(min=1.0),
         }
         if self.overwrite_refined:
@@ -285,6 +313,12 @@ def _local_scene_points(
     intrinsics: torch.Tensor,
     image_size_hw: tuple[int, int],
     local_window: int,
+    person_boxes: torch.Tensor | None = None,
+    depth_confidence: torch.Tensor | None = None,
+    min_depth_confidence: float = 0.0,
+    max_correspondence_distance_m: float = 0.35,
+    residual_mad_multiplier: float = 3.0,
+    max_depth_m: float = 20.0,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     batch_size, num_frames, num_queries, num_points, _ = points_cam.shape
     flat_frames = batch_size * num_frames
@@ -293,6 +327,7 @@ def _local_scene_points(
     flat_points = points_cam.reshape(flat_frames * num_queries, num_points, 3)
     projected = _project_points(flat_points, intrinsics.repeat_interleave(num_queries, dim=0))
     projected = projected.reshape(batch_size, num_frames, num_queries, num_points, 2)
+    front_visible = _coarse_front_surface_mask(projected, points_cam[..., 2], image_size_hw)
     depth_xy = projected * projected.new_tensor([float(width) / float(image_w), float(height) / float(image_h)])
     center_x = depth_xy[..., 0].round().long()
     center_y = depth_xy[..., 1].round().long()
@@ -309,7 +344,32 @@ def _local_scene_points(
     frame_idx = torch.arange(flat_frames, device=points_cam.device).reshape(batch_size, num_frames, 1, 1, 1)
     flat_depth = depth_hw.reshape(flat_frames, height, width)
     local_depth = flat_depth[frame_idx, ys, xs]
-    valid = in_bounds & torch.isfinite(local_depth) & (local_depth > 1e-6) & (points_cam[..., 2:3] > 1e-6)
+    valid = (
+        in_bounds
+        & torch.isfinite(local_depth)
+        & (local_depth > 1e-6)
+        & (points_cam[..., 2:3] > 1e-6)
+        & front_visible[..., None]
+    )
+    if float(max_depth_m) > 0.0:
+        valid = valid & (local_depth <= float(max_depth_m))
+    if depth_confidence is not None and float(min_depth_confidence) > 0.0:
+        conf_hw = _canonical_depth(depth_confidence).reshape(flat_frames, height, width)
+        local_conf = conf_hw[frame_idx, ys, xs]
+        valid = valid & torch.isfinite(local_conf) & (local_conf >= float(min_depth_confidence))
+    if person_boxes is not None:
+        boxes = person_boxes.to(device=points_cam.device, dtype=points_cam.dtype)
+        if boxes.ndim != 4 or tuple(boxes.shape[:3]) != (batch_size, num_frames, num_queries):
+            raise ValueError(
+                "person_boxes must have shape [B,S,Q,4], "
+                f"got {tuple(boxes.shape)} expected {(batch_size, num_frames, num_queries, 4)}"
+            )
+        center = boxes[..., :2]
+        size = boxes[..., 2:].clamp(min=1e-6)
+        box_min = (center - 0.55 * size) * boxes.new_tensor([float(width), float(height)])
+        box_max = (center + 0.55 * size) * boxes.new_tensor([float(width), float(height)])
+        valid = valid & (xs >= box_min[..., 0, None, None]) & (xs <= box_max[..., 0, None, None])
+        valid = valid & (ys >= box_min[..., 1, None, None]) & (ys <= box_max[..., 1, None, None])
 
     intr = intrinsics.reshape(batch_size, num_frames, 1, 1, 1, 3, 3)
     fx = intr[..., 0, 0].clamp(min=1e-6)
@@ -322,14 +382,47 @@ def _local_scene_points(
     scene_y = (image_y - cy.to(dtype=local_depth.dtype)) * local_depth / fy.to(dtype=local_depth.dtype)
     scene_xyz = torch.stack([scene_x, scene_y, local_depth], dim=-1)
     dist = torch.linalg.norm(scene_xyz - points_cam[..., None, :].to(dtype=scene_xyz.dtype), dim=-1)
+    if float(max_correspondence_distance_m) > 0.0:
+        valid = valid & (dist <= float(max_correspondence_distance_m))
     dist = torch.where(valid, dist, torch.full_like(dist, float("inf")))
     nearest_idx = dist.argmin(dim=-1)
     nearest_dist = dist.gather(dim=-1, index=nearest_idx[..., None]).squeeze(-1)
     has_valid = torch.isfinite(nearest_dist)
     gather_idx = nearest_idx[..., None, None].expand(*nearest_idx.shape, 1, 3)
     nearest_xyz = scene_xyz.gather(dim=-2, index=gather_idx).squeeze(-2)
+    # Reject per-person residual outliers after local nearest sampling.  This
+    # catches limbs whose projected window landed on background or another
+    # person without requiring GT visibility at inference time.
+    finite_dist = torch.where(has_valid, nearest_dist, torch.full_like(nearest_dist, float("nan")))
+    median = torch.nanmedian(finite_dist, dim=-1, keepdim=True).values
+    abs_dev = (finite_dist - median).abs()
+    mad = torch.nanmedian(abs_dev, dim=-1, keepdim=True).values.clamp(min=0.01)
+    robust_valid = nearest_dist <= (median + float(residual_mad_multiplier) * mad)
+    has_valid = has_valid & torch.nan_to_num(robust_valid, nan=False)
     nearest_xyz = torch.where(has_valid[..., None], nearest_xyz, points_cam)
     return nearest_xyz.to(dtype=points_cam.dtype), has_valid[..., None]
+
+
+def _coarse_front_surface_mask(
+    projected: torch.Tensor,
+    point_depth: torch.Tensor,
+    image_size_hw: tuple[int, int],
+    grid_size: int = 32,
+    tolerance_m: float = 0.10,
+) -> torch.Tensor:
+    image_h, image_w = float(image_size_hw[0]), float(image_size_hw[1])
+    flat_xy = projected.reshape(-1, projected.shape[-2], 2)
+    flat_z = point_depth.reshape(-1, point_depth.shape[-1])
+    gx = torch.floor(flat_xy[..., 0] / max(image_w, 1.0) * grid_size).long()
+    gy = torch.floor(flat_xy[..., 1] / max(image_h, 1.0) * grid_size).long()
+    in_bounds = (gx >= 0) & (gx < grid_size) & (gy >= 0) & (gy < grid_size) & (flat_z > 1e-6)
+    cell = (gy.clamp(0, grid_size - 1) * grid_size + gx.clamp(0, grid_size - 1)).long()
+    min_depth = flat_z.new_full((flat_z.shape[0], grid_size * grid_size), float("inf"))
+    source = torch.where(in_bounds, flat_z, torch.full_like(flat_z, float("inf")))
+    min_depth.scatter_reduce_(1, cell, source, reduce="amin", include_self=True)
+    nearest = min_depth.gather(1, cell)
+    visible = in_bounds & (flat_z <= nearest + float(tolerance_m))
+    return visible.reshape(projected.shape[:-1])
 
 
 def _camera_basis(transl: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
