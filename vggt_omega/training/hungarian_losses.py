@@ -69,6 +69,7 @@ class HungarianSMPLLoss(nn.Module):
         hsi_align_delta_reg_weight: float = 0.0,
         hsi_align_no_worse_weight: float = 0.0,
         hsi_transl_clean_identity_weight: float = 0.0,
+        hsi_transl_noise_gate_weight: float = 0.0,
         hsi_joints3d_weight: float = 0.0,
         hsi_vertices_weight: float = 0.0,
         hsi_projected_joints2d_weight: float = 0.0,
@@ -201,6 +202,7 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_align_delta_reg_weight = hsi_align_delta_reg_weight
         self.hsi_align_no_worse_weight = hsi_align_no_worse_weight
         self.hsi_transl_clean_identity_weight = hsi_transl_clean_identity_weight
+        self.hsi_transl_noise_gate_weight = hsi_transl_noise_gate_weight
         self.hsi_joints3d_weight = hsi_joints3d_weight
         self.hsi_vertices_weight = hsi_vertices_weight
         self.hsi_projected_joints2d_weight = hsi_projected_joints2d_weight
@@ -467,6 +469,7 @@ class HungarianSMPLLoss(nn.Module):
             + self.hsi_align_delta_reg_weight * losses["loss_hsi_align_delta_reg"]
             + self.hsi_align_no_worse_weight * losses["loss_hsi_align_no_worse"]
             + self.hsi_transl_clean_identity_weight * losses["loss_hsi_transl_clean_identity"]
+            + self.hsi_transl_noise_gate_weight * losses["loss_hsi_transl_noise_gate"]
             + self.hsi_joints3d_weight * losses["loss_hsi_joints3d"]
             + self.hsi_vertices_weight * losses["loss_hsi_vertices"]
             + self.hsi_projected_joints2d_weight * losses["loss_hsi_projected_joints2d"]
@@ -1142,6 +1145,7 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_align_delta_reg": zero,
             "loss_hsi_align_no_worse": zero,
             "loss_hsi_transl_clean_identity": zero,
+            "loss_hsi_transl_noise_gate": zero,
             "loss_hsi_contact_refine_plane": zero,
             "loss_hsi_contact_refine_pose": zero,
             "loss_hsi_contact_refine_class": zero,
@@ -1208,6 +1212,8 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_transl_noisy_l2_median": zero.detach(),
             "metric_hsi_transl_noisy_improvement_rate": zero.detach(),
             "metric_hsi_transl_clean_displacement_mean_m": zero.detach(),
+            "metric_hsi_transl_clean_gate_mean": zero.detach(),
+            "metric_hsi_transl_noisy_gate_mean": zero.detach(),
             "metric_hsi_contact_float_p95_m": zero.detach(),
             "metric_hsi_contact_penetration_p95_m": zero.detach(),
             "metric_hsi_contact_false_pull_rate": zero.detach(),
@@ -1293,6 +1299,7 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_betas": F.l1_loss(pred_betas, target_betas),
             "loss_hsi_transl_cam": F.l1_loss(pred_transl, target_transl),
             "loss_hsi_transl_clean_identity": pred_transl.sum() * 0.0,
+            "loss_hsi_transl_noise_gate": pred_transl.sum() * 0.0,
         }
         base_pose_value = predictions.get("hsi_contact_base_pred_pose_6d", predictions.get("pred_pose_6d"))
         base_transl_value = predictions.get("hsi_contact_base_pred_transl_cam", predictions.get("pred_transl_cam"))
@@ -1343,6 +1350,18 @@ class HungarianSMPLLoss(nn.Module):
         if clean_flat is not None:
             clean_items = clean_flat[frame_idx, src_idx, 0] > 0.5
             noisy_items = ~clean_items
+            align_gate_value = predictions.get("hsi_align_gate")
+            align_gate_flat = (
+                _flatten_prediction(align_gate_value, unframed_ndim=3)
+                if isinstance(align_gate_value, torch.Tensor)
+                else None
+            )
+            matched_align_gate = align_gate_flat[frame_idx, src_idx, 0] if align_gate_flat is not None else None
+            if matched_align_gate is not None:
+                gate_target = noisy_items.to(dtype=matched_align_gate.dtype)
+                losses["loss_hsi_transl_noise_gate"] = F.binary_cross_entropy(
+                    matched_align_gate.clamp(min=1e-6, max=1.0 - 1e-6), gate_target
+                )
             losses["metric_hsi_transl_noisy_fraction"] = noisy_items.to(dtype=pred_transl.dtype).mean().detach()
             if noisy_items.any():
                 noisy_base = base_transl_l2_items[noisy_items]
@@ -1352,6 +1371,8 @@ class HungarianSMPLLoss(nn.Module):
                 losses["metric_hsi_transl_noisy_improvement_rate"] = (
                     noisy_refined < noisy_base
                 ).to(dtype=pred_transl.dtype).mean().detach()
+                if matched_align_gate is not None:
+                    losses["metric_hsi_transl_noisy_gate_mean"] = matched_align_gate[noisy_items].mean().detach()
             if clean_items.any():
                 clean_displacement = torch.linalg.norm(
                     pred_transl[clean_items] - base_transl_matched[clean_items], dim=-1
@@ -1360,6 +1381,8 @@ class HungarianSMPLLoss(nn.Module):
                     pred_transl[clean_items], base_transl_matched[clean_items], beta=0.005
                 )
                 losses["metric_hsi_transl_clean_displacement_mean_m"] = clean_displacement.mean().detach()
+                if matched_align_gate is not None:
+                    losses["metric_hsi_transl_clean_gate_mean"] = matched_align_gate[clean_items].mean().detach()
         ray = F.normalize(base_transl_matched, dim=-1, eps=1e-6)
         expected_ray_delta = ((target_transl - base_transl_matched) * ray).sum(dim=-1, keepdim=True)
         predicted_ray_delta = ((pred_transl - base_transl_matched) * ray).sum(dim=-1, keepdim=True)

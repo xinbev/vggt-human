@@ -146,7 +146,8 @@ loss:
   hsi_align_point_weight: 0.25
   hsi_align_delta_reg_weight: 0.02
   hsi_align_no_worse_weight: 2.0
-  hsi_transl_clean_identity_weight: 10.0
+  hsi_transl_clean_identity_weight: 20.0
+  hsi_transl_noise_gate_weight: 2.0
   hsi_delta_reg_weight: 0.0
   hsi_no_worse_weight: 2.0
   hsi_no_worse_margin_m: 0.002

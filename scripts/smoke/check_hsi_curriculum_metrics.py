@@ -24,6 +24,8 @@ def main() -> None:
             "metric_hsi_transl_noisy_l2_median",
             "metric_hsi_transl_noisy_improvement_rate",
             "metric_hsi_transl_clean_displacement_mean_m",
+            "metric_hsi_transl_clean_gate_mean",
+            "metric_hsi_transl_noisy_gate_mean",
             "metric_hsi_tangent_delta_base_l1",
             "metric_hsi_tangent_delta_refined_l1",
         ],
@@ -52,6 +54,8 @@ def main() -> None:
                 raise SystemExit("Stage2 overfit gate failed: noisy refined median is above 30% of base")
             if float(metrics["metric_hsi_transl_clean_displacement_mean_m"]) > 0.005:
                 raise SystemExit("Stage2 overfit gate failed: clean displacement exceeds 5 mm")
+            if float(metrics["metric_hsi_transl_clean_gate_mean"]) >= float(metrics["metric_hsi_transl_noisy_gate_mean"]):
+                raise SystemExit("Stage2 overfit gate failed: align gate did not separate clean and noisy people")
             tangent_base = float(metrics["metric_hsi_tangent_delta_base_l1"])
             tangent_refined = float(metrics["metric_hsi_tangent_delta_refined_l1"])
             if tangent_refined > tangent_base + 0.0005:
@@ -106,7 +110,8 @@ def check_resolved_config(config: dict, stage: str) -> None:
                 "loss.hsi_projected_joints2d_weight": 0.0,
                 "loss.hsi_delta_reg_weight": 0.0,
                 "loss.hsi_no_worse_weight": 2.0,
-                "loss.hsi_transl_clean_identity_weight": 10.0,
+                "loss.hsi_transl_clean_identity_weight": 20.0,
+                "loss.hsi_transl_noise_gate_weight": 2.0,
             }
         )
     else:
