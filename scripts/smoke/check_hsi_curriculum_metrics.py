@@ -114,6 +114,14 @@ def check_resolved_config(config: dict, stage: str) -> None:
                 "loss.hsi_transl_noise_gate_weight": 2.0,
             }
         )
+        if nested_value(config, "model.hsi_align_feature_version") == "robust_basis_v2":
+            expected.update(
+                {
+                    "model.hsi_align_feature_version": "robust_basis_v2",
+                    "loss.hsi_transl_gate_target_mode": "magnitude_v2",
+                    "loss.hsi_transl_gate_full_open_m": 0.10,
+                }
+            )
     else:
         expected.update(
             {

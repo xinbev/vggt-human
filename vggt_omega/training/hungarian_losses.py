@@ -70,6 +70,8 @@ class HungarianSMPLLoss(nn.Module):
         hsi_align_no_worse_weight: float = 0.0,
         hsi_transl_clean_identity_weight: float = 0.0,
         hsi_transl_noise_gate_weight: float = 0.0,
+        hsi_transl_gate_full_open_m: float = 0.10,
+        hsi_transl_gate_target_mode: str = "binary_v1",
         hsi_joints3d_weight: float = 0.0,
         hsi_vertices_weight: float = 0.0,
         hsi_projected_joints2d_weight: float = 0.0,
@@ -203,6 +205,10 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_align_no_worse_weight = hsi_align_no_worse_weight
         self.hsi_transl_clean_identity_weight = hsi_transl_clean_identity_weight
         self.hsi_transl_noise_gate_weight = hsi_transl_noise_gate_weight
+        self.hsi_transl_gate_full_open_m = max(float(hsi_transl_gate_full_open_m), 1e-6)
+        self.hsi_transl_gate_target_mode = str(hsi_transl_gate_target_mode or "binary_v1").lower()
+        if self.hsi_transl_gate_target_mode not in {"binary_v1", "magnitude_v2"}:
+            raise ValueError(f"Unsupported HSI translation gate target mode: {self.hsi_transl_gate_target_mode!r}")
         self.hsi_joints3d_weight = hsi_joints3d_weight
         self.hsi_vertices_weight = hsi_vertices_weight
         self.hsi_projected_joints2d_weight = hsi_projected_joints2d_weight
@@ -1358,13 +1364,17 @@ class HungarianSMPLLoss(nn.Module):
             )
             matched_align_gate = align_gate_flat[frame_idx, src_idx, 0] if align_gate_flat is not None else None
             if matched_align_gate is not None:
+                if self.hsi_transl_gate_target_mode == "magnitude_v2":
+                    gate_target = (base_transl_l2_items / self.hsi_transl_gate_full_open_m).clamp(min=0.0, max=1.0)
+                else:
+                    gate_target = noisy_items.to(dtype=matched_align_gate.dtype)
                 gate_losses = []
                 if clean_items.any():
                     clean_gate = matched_align_gate[clean_items].clamp(min=1e-6, max=1.0 - 1e-6)
-                    gate_losses.append(F.binary_cross_entropy(clean_gate, torch.zeros_like(clean_gate)))
+                    gate_losses.append(F.binary_cross_entropy(clean_gate, gate_target[clean_items]))
                 if noisy_items.any():
                     noisy_gate = matched_align_gate[noisy_items].clamp(min=1e-6, max=1.0 - 1e-6)
-                    gate_losses.append(F.binary_cross_entropy(noisy_gate, torch.ones_like(noisy_gate)))
+                    gate_losses.append(F.binary_cross_entropy(noisy_gate, gate_target[noisy_items]))
                 if gate_losses:
                     losses["loss_hsi_transl_noise_gate"] = torch.stack(gate_losses).mean()
             losses["metric_hsi_transl_noisy_fraction"] = noisy_items.to(dtype=pred_transl.dtype).mean().detach()

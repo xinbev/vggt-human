@@ -30,6 +30,7 @@ class HSIHumanSceneAlignHead(nn.Module):
         min_depth_confidence: float = 0.0,
         residual_mad_multiplier: float = 3.0,
         max_depth_m: float = 20.0,
+        feature_version: str = "legacy_mean_v1",
         image_size: int = 518,
     ) -> None:
         super().__init__()
@@ -55,6 +56,9 @@ class HSIHumanSceneAlignHead(nn.Module):
         self.min_depth_confidence = float(min_depth_confidence)
         self.residual_mad_multiplier = float(residual_mad_multiplier)
         self.max_depth_m = float(max_depth_m)
+        self.feature_version = str(feature_version or "legacy_mean_v1").lower()
+        if self.feature_version not in {"legacy_scale_bias_v0", "legacy_mean_v1", "robust_basis_v2"}:
+            raise ValueError(f"Unsupported HSI align feature version: {self.feature_version!r}")
         self.image_size = int(image_size)
 
         vertex_indices = _deterministic_fps_indices(
@@ -67,6 +71,10 @@ class HSIHumanSceneAlignHead(nn.Module):
         # head.  Deliberately omit scene scale/bias scalars to prevent a
         # gt-depth versus VGGT-depth domain shortcut.
         feature_dim = 3 + 1 + 1 + 1 + 3 + 3 + 3 + 3 + 3 + 2
+        if self.feature_version == "legacy_scale_bias_v0":
+            feature_dim += 2
+        if self.feature_version == "robust_basis_v2":
+            feature_dim += 12
         self.mlp = nn.Sequential(
             nn.Linear(feature_dim, hidden_dim),
             nn.GELU(),
@@ -160,6 +168,28 @@ class HSIHumanSceneAlignHead(nn.Module):
         valid_ratio = valid_f.mean(dim=-2)
 
         ray, tangent_x, tangent_y = _camera_basis(base_transl)
+        robust_features = []
+        robust_outputs = {}
+        if self.feature_version == "robust_basis_v2":
+            residual_basis = torch.stack(
+                [
+                    (residual * ray.unsqueeze(-2)).sum(dim=-1),
+                    (residual * tangent_x.unsqueeze(-2)).sum(dim=-1),
+                    (residual * tangent_y.unsqueeze(-2)).sum(dim=-1),
+                ],
+                dim=-1,
+            )
+            basis_p10 = _masked_quantile(residual_basis, valid, 0.10)
+            basis_median = _masked_quantile(residual_basis, valid, 0.50)
+            basis_p90 = _masked_quantile(residual_basis, valid, 0.90)
+            basis_mad = _masked_quantile((residual_basis - basis_median.unsqueeze(-2)).abs(), valid, 0.50)
+            robust_features = [basis_p10, basis_median, basis_p90, basis_mad]
+            robust_outputs = {
+                "hsi_align_residual_basis_p10": basis_p10.detach(),
+                "hsi_align_residual_basis_median": basis_median.detach(),
+                "hsi_align_residual_basis_p90": basis_p90.detach(),
+                "hsi_align_residual_basis_mad": basis_mad.detach(),
+            }
         projected_center = _project_points(
             base_transl.reshape(-1, 1, 3),
             intrinsics.repeat_interleave(num_queries, dim=0),
@@ -172,6 +202,12 @@ class HSIHumanSceneAlignHead(nn.Module):
             dim=-1,
         )
         base_norm = torch.linalg.norm(base_transl, dim=-1, keepdim=True)
+        legacy_affine_features = []
+        if self.feature_version == "legacy_scale_bias_v0":
+            legacy_affine_features = [
+                _broadcast_affine_feature(predictions.get("hsi_scene_scale"), base_transl, default=1.0),
+                _broadcast_affine_feature(predictions.get("hsi_scene_depth_bias"), base_transl, default=0.0),
+            ]
         features = torch.cat(
             [
                 base_transl,
@@ -183,7 +219,9 @@ class HSIHumanSceneAlignHead(nn.Module):
                 ray,
                 tangent_x,
                 tangent_y,
+                *legacy_affine_features,
                 proj_norm,
+                *robust_features,
             ],
             dim=-1,
         )
@@ -226,6 +264,7 @@ class HSIHumanSceneAlignHead(nn.Module):
             "loss_hsi_align_no_worse": F.relu(refined_point_dist - base_point_dist.detach() - 0.005).mul(valid_f).sum()
             / valid_f.sum().clamp(min=1.0),
         }
+        outputs.update(robust_outputs)
         if self.overwrite_refined:
             outputs["hsi_refined_pred_pose_6d"] = pose6d
             outputs["hsi_refined_pred_poses"] = poses
@@ -458,6 +497,13 @@ def _broadcast_affine_feature(
 
 def _masked_mean(values: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
     return (values * mask).sum() / mask.sum().clamp(min=1.0)
+
+
+def _masked_quantile(values: torch.Tensor, mask: torch.Tensor, q: float) -> torch.Tensor:
+    expanded_mask = mask.expand_as(values)
+    masked = torch.where(expanded_mask, values.float(), torch.full_like(values.float(), float("nan")))
+    quantile = torch.nanquantile(masked, float(q), dim=-2)
+    return torch.nan_to_num(quantile, nan=0.0, posinf=0.0, neginf=0.0).to(dtype=values.dtype)
 
 
 def _smooth_l1_abs(values: torch.Tensor, beta: float = 0.05) -> torch.Tensor:

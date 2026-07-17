@@ -10,6 +10,7 @@ CONTACT_TEACHER_ROOT="${CONTACT_TEACHER_ROOT:-${REPO_ROOT}/outputs/preprocess/hs
 TRAIN_SEQUENCE_MANIFEST="${TRAIN_SEQUENCE_MANIFEST:-${SPLIT_ROOT}/train_sequences.txt}"
 VAL_SEQUENCE_MANIFEST="${VAL_SEQUENCE_MANIFEST:-${SPLIT_ROOT}/val_sequences.txt}"
 STAGE1_CKPT="${STAGE1_CKPT:-${REPO_ROOT}/outputs/train/stage1_scale_linear_b20_gpu7/checkpoint_top_train_epoch_0003_loss_total_0.171740.pt}"
+STAGE2_TRAIN_CONFIG="${STAGE2_TRAIN_CONFIG:-${REPO_ROOT}/configs/train_smpl_hsi_stage2_transl_curriculum_v2.yaml}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-${REPO_ROOT}/outputs/train/hsi_scale_trans_contact_v2}"
 RUN_STAGES="${RUN_STAGES:-2A,2B,3A1,3A2,3B}"
 ALLOW_EXISTING_OUTPUT="${ALLOW_EXISTING_OUTPUT:-false}"
@@ -82,7 +83,7 @@ run_provider() {
 if contains_stage 2A; then
   echo "========== V2 Stage2-A: GT metric translation denoising =========="
   (
-    export TRAIN_CONFIG="${REPO_ROOT}/configs/train_smpl_hsi_stage2_transl_curriculum_v2.yaml"
+    export TRAIN_CONFIG="${STAGE2_TRAIN_CONFIG}"
     export OUTPUT_DIR="${STAGE2A_DIR}" RESUME_CKPT="${STAGE1_CKPT}"
     export BATCH_SIZE="${BATCH_SIZE_2A}" NUM_VIEWS=2 EPOCHS="${EPOCHS_2A}" LR="${LR_2A}"
     export SMPL_PROVIDER=gt_perturbed HSI_GEOMETRY_MODE=gt_metric SMPL_PERTURB_MODE=translation
@@ -93,6 +94,7 @@ if contains_stage 2A; then
     export HSI_JOINTS3D_WEIGHT=1 HSI_VERTICES_WEIGHT=0 HSI_PROJECTED_J2D_WEIGHT=0
     export HSI_DELTA_REG_WEIGHT=0 HSI_NO_WORSE_WEIGHT=2 HSI_TRANSL_CLEAN_IDENTITY_WEIGHT=20
     export HSI_TRANSL_NOISE_GATE_WEIGHT=2
+    export HSI_TRANSL_GATE_FULL_OPEN_M=0.10
     export HSI_ALIGN_POINT_WEIGHT=0.25
     export HSI_ALIGN_DELTA_REG_WEIGHT=0.02 HSI_ALIGN_NO_WORSE_WEIGHT=2 MONITOR=metric_stage2_selection
     run_provider
@@ -103,7 +105,7 @@ if contains_stage 2B; then
   require_file "Stage2-A top checkpoint" "$(top_ckpt "${STAGE2A_DIR}")"
   echo "========== V2 Stage2-B: coherent GT/real bridge =========="
   (
-    export TRAIN_CONFIG="${REPO_ROOT}/configs/train_smpl_hsi_stage2_transl_curriculum_v2.yaml"
+    export TRAIN_CONFIG="${STAGE2_TRAIN_CONFIG}"
     export OUTPUT_DIR="${STAGE2B_DIR}" RESUME_CKPT="$(top_ckpt "${STAGE2A_DIR}")"
     export BATCH_SIZE="${BATCH_SIZE_2B}" NUM_VIEWS=2 EPOCHS="${EPOCHS_2B}" LR="${LR_2B}"
     export SMPL_PROVIDER=nlf HSI_GEOMETRY_MODE=mixed SMPL_PERTURB_MODE=translation
@@ -115,6 +117,7 @@ if contains_stage 2B; then
     export HSI_JOINTS3D_WEIGHT=1 HSI_VERTICES_WEIGHT=0.25 HSI_PROJECTED_J2D_WEIGHT=0.05
     export HSI_DELTA_REG_WEIGHT=0 HSI_NO_WORSE_WEIGHT=2 HSI_TRANSL_CLEAN_IDENTITY_WEIGHT=10
     export HSI_TRANSL_NOISE_GATE_WEIGHT=1
+    export HSI_TRANSL_GATE_FULL_OPEN_M=0.10
     export HSI_ALIGN_POINT_WEIGHT=0.50 HSI_ALIGN_DELTA_REG_WEIGHT=0.05 HSI_ALIGN_NO_WORSE_WEIGHT=5
     export MONITOR=metric_stage2_selection
     run_provider
