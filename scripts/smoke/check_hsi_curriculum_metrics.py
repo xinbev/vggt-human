@@ -12,8 +12,8 @@ def main() -> None:
     data = json.loads((output_dir / "metrics_latest.json").read_text(encoding="utf-8"))
     config = json.loads((output_dir / "resolved_config.json").read_text(encoding="utf-8"))
     check_resolved_config(config, args.stage)
-    metric_source = "train" if args.mode == "overfit" else "val"
-    metrics = data.get(metric_source) or data.get("train") or {}
+    metric_source = "val" if data.get("val") else "train"
+    metrics = data.get(metric_source) or {}
     required = {
         "stage2": [
             "metric_stage2_selection",

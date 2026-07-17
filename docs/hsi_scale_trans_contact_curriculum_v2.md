@@ -156,8 +156,11 @@ bash scripts/smoke/check_hsi_curriculum_v2.sh
 ```
 
 The overfit loader repeats the same 64 training clips enough times to execute
-1000 optimizer steps in one epoch. Its pass/fail decision uses the repeated
-training-subset metrics; the short validation pass is diagnostic only.
+1000 optimizer steps in one epoch. Its pass/fail decision evaluates the final
+model on that same fixed subset; it does not average metrics from early and late
+optimization steps together.
+An already completed run can be checked without retraining via
+`scripts/smoke/inspect_hsi_curriculum_metrics.sh`.
 
 Full-distribution 500-step gate:
 
