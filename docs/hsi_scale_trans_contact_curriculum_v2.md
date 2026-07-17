@@ -71,7 +71,26 @@ outputs/preprocess/hsi_sequence_split_v2/val_sequences.txt
 outputs/preprocess/hsi_sequence_split_v2/overfit64_indices.csv
 ```
 
-Precompute contact teachers on GPU 7:
+Before the full pass, generate a 256-window strict pilot in an isolated output
+directory. Partial mode writes all three frames needed by each sampled clip and
+marks the summary with `partial=true`:
+
+```bash
+SEQUENCE_MANIFEST=outputs/preprocess/hsi_sequence_split_v2/val_sequences.txt \
+OUTPUT_ROOT=outputs/debug/hsi_contact_teachers_v3_strict_pilot256 \
+MAX_WINDOWS=256 \
+CUDA_VISIBLE_DEVICES_VALUE=7 \
+bash scripts/preprocess/prepare_hsi_contact_teachers.sh
+```
+
+Validate every strict field in the pilot sidecars:
+
+```bash
+CONTACT_TEACHER_ROOT=outputs/debug/hsi_contact_teachers_v3_strict_pilot256 \
+bash scripts/smoke/check_hsi_contact_teacher_strict.sh
+```
+
+After the pilot passes, precompute the full strict contact teachers on GPU 7:
 
 ```bash
 BEDLAM_ROOT=/home/zhw/xyb_space/bedlam/processed_bedlam \
@@ -80,9 +99,12 @@ CUDA_VISIBLE_DEVICES_VALUE=7 \
 bash scripts/preprocess/prepare_hsi_contact_teachers.sh
 ```
 
-Outputs are under `outputs/preprocess/hsi_contact_teachers_v2`. Each sidecar
-contains local plane center/normal/RMSE, signed sole distance, foot velocity,
-contact label, and validity for both feet of every visible-person slot.
+Outputs are under `outputs/preprocess/hsi_contact_teachers_v3_strict`. Each
+sidecar contains local plane center/normal/RMSE, signed sole distance, foot
+velocity, contact label, and validity for both feet of every visible-person
+slot. Final teacher validity also requires the sole center to remain inside its
+visible-person box and enough sole vertices to agree with GT depth within
+`0.20m`; the raw plane and geometry validity fields are retained separately.
 
 Audit the GT projection, boxes, depth, and synthetic contact shift before any
 training:
@@ -112,6 +134,10 @@ four-panel images expose hand/foot endpoints, sole vertices, support samples,
 plane normals, and synthetic float/penetration directions. `audit_summary.json`
 reports existing-teacher rejection rates; `worst_feet.json` lists the feet that
 most strongly violate the sole visibility and person-box checks.
+
+To audit the previously generated unfiltered V2 teachers before regenerating,
+set `CONTACT_TEACHER_ROOT=outputs/preprocess/hsi_contact_teachers_v2`
+explicitly. Stage3 training defaults only to the strict V3 directory.
 
 ## Gates
 

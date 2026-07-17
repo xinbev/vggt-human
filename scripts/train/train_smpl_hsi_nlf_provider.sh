@@ -136,6 +136,7 @@ HSI_CONTACT_REFINE_PLANE_WEIGHT="${HSI_CONTACT_REFINE_PLANE_WEIGHT:-0.0}"
 HSI_CONTACT_REFINE_POSE_WEIGHT="${HSI_CONTACT_REFINE_POSE_WEIGHT:-0.0}"
 HSI_CONTACT_REFINE_CLASS_WEIGHT="${HSI_CONTACT_REFINE_CLASS_WEIGHT:-0.0}"
 HSI_CONTACT_REFINE_NO_WORSE_WEIGHT="${HSI_CONTACT_REFINE_NO_WORSE_WEIGHT:-0.0}"
+HSI_CONTACT_REFINE_SWING_NO_PULL_WEIGHT="${HSI_CONTACT_REFINE_SWING_NO_PULL_WEIGHT:-0.0}"
 PROGRESS_LOG_KEYS="${PROGRESS_LOG_KEYS:-}"
 
 cd "${REPO_ROOT}"
@@ -352,6 +353,7 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/train/train_
   --override "loss.hsi_contact_refine_pose_weight=${HSI_CONTACT_REFINE_POSE_WEIGHT}" \
   --override "loss.hsi_contact_refine_class_weight=${HSI_CONTACT_REFINE_CLASS_WEIGHT}" \
   --override "loss.hsi_contact_refine_no_worse_weight=${HSI_CONTACT_REFINE_NO_WORSE_WEIGHT}" \
+  --override "loss.hsi_contact_refine_swing_no_pull_weight=${HSI_CONTACT_REFINE_SWING_NO_PULL_WEIGHT}" \
   --override "loss.hsi_transl_velocity_weight=${HSI_TRANSL_VELOCITY_WEIGHT}" \
   --override "loss.hsi_joints_velocity_weight=${HSI_JOINTS_VELOCITY_WEIGHT}" \
   --override "loss.hsi_joints_acceleration_weight=${HSI_JOINTS_ACCELERATION_WEIGHT}" \

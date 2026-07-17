@@ -308,6 +308,27 @@ def _load_contact_teacher(path: Path, max_humans: int, required: bool) -> dict[s
             out[key] = torch.from_numpy(value.astype(np.bool_, copy=False).copy())
         else:
             out[key] = torch.from_numpy(value.astype(np.float32, copy=False).copy())
+    optional_shapes = {
+        "contact_plane_valid": (max_humans, 2),
+        "contact_geometry_valid": (max_humans, 2),
+        "contact_sole_center_inside_box": (max_humans, 2),
+        "contact_sole_visible_ratio": (max_humans, 2),
+        "contact_sole_median_depth_delta_m": (max_humans, 2),
+    }
+    for key, shape in optional_shapes.items():
+        if key in data:
+            value = np.asarray(data[key])
+            if value.shape != shape:
+                raise ValueError(f"Contact teacher {key} shape {value.shape} != {shape}: {path}")
+            if key in {"contact_plane_valid", "contact_geometry_valid", "contact_sole_center_inside_box"}:
+                out[key] = torch.from_numpy(value.astype(np.bool_, copy=False).copy())
+            else:
+                out[key] = torch.from_numpy(value.astype(np.float32, copy=False).copy())
+    out.setdefault("contact_plane_valid", out["contact_teacher_valid"].clone())
+    out.setdefault("contact_geometry_valid", out["contact_teacher_valid"].clone())
+    out.setdefault("contact_sole_center_inside_box", out["contact_teacher_valid"].clone())
+    out.setdefault("contact_sole_visible_ratio", out["contact_teacher_valid"].float())
+    out.setdefault("contact_sole_median_depth_delta_m", torch.zeros(max_humans, 2))
     return out
 
 
@@ -323,6 +344,11 @@ def _stack_contact_teacher_frames(
         "contact_foot_velocity_m": torch.zeros(max_humans, 2),
         "contact_label": torch.zeros(max_humans, 2, dtype=torch.bool),
         "contact_teacher_valid": torch.zeros(max_humans, 2, dtype=torch.bool),
+        "contact_plane_valid": torch.zeros(max_humans, 2, dtype=torch.bool),
+        "contact_geometry_valid": torch.zeros(max_humans, 2, dtype=torch.bool),
+        "contact_sole_center_inside_box": torch.zeros(max_humans, 2, dtype=torch.bool),
+        "contact_sole_visible_ratio": torch.zeros(max_humans, 2),
+        "contact_sole_median_depth_delta_m": torch.zeros(max_humans, 2),
     }
     return {
         key: torch.stack([(frame[key] if frame is not None else default.clone()) for frame in frames], dim=0)

@@ -6,7 +6,7 @@ DATA_ROOT="${DATA_ROOT:-/home/zhw/xyb_space}"
 BEDLAM_ROOT="${BEDLAM_ROOT:-${DATA_ROOT}/bedlam/processed_bedlam}"
 PREPROCESSED_ROOT="${PREPROCESSED_ROOT:-${REPO_ROOT}/outputs/preprocess/bedlam_boxes}"
 SPLIT_ROOT="${SPLIT_ROOT:-${REPO_ROOT}/outputs/preprocess/hsi_sequence_split_v2}"
-CONTACT_TEACHER_ROOT="${CONTACT_TEACHER_ROOT:-${REPO_ROOT}/outputs/preprocess/hsi_contact_teachers_v2}"
+CONTACT_TEACHER_ROOT="${CONTACT_TEACHER_ROOT:-${REPO_ROOT}/outputs/preprocess/hsi_contact_teachers_v3_strict}"
 TRAIN_SEQUENCE_MANIFEST="${TRAIN_SEQUENCE_MANIFEST:-${SPLIT_ROOT}/train_sequences.txt}"
 VAL_SEQUENCE_MANIFEST="${VAL_SEQUENCE_MANIFEST:-${SPLIT_ROOT}/val_sequences.txt}"
 STAGE1_CKPT="${STAGE1_CKPT:-${REPO_ROOT}/outputs/train/stage1_scale_linear_b20_gpu7/checkpoint_top_train_epoch_0003_loss_total_0.171740.pt}"
@@ -128,6 +128,7 @@ if contains_stage 3A1; then
     export RESUME_REQUIRED_PREFIXES=hsi_refinement_head.,hsi_human_scene_align_head. FROZEN_HASH_PREFIXES=hsi_refinement_head.,hsi_human_scene_align_head.
     export HSI_CONTACT_REFINE_PLANE_WEIGHT=6 HSI_CONTACT_REFINE_POSE_WEIGHT=0
     export HSI_CONTACT_REFINE_CLASS_WEIGHT=0.2 HSI_CONTACT_REFINE_NO_WORSE_WEIGHT=8
+    export HSI_CONTACT_REFINE_SWING_NO_PULL_WEIGHT=5
     export MONITOR=metric_stage3_selection
     run_provider
   )
@@ -147,6 +148,7 @@ if contains_stage 3A2; then
     export RESUME_REQUIRED_PREFIXES=hsi_refinement_head.,hsi_human_scene_align_head.,hsi_contact_refine_head. FROZEN_HASH_PREFIXES=hsi_refinement_head.,hsi_human_scene_align_head.
     export HSI_CONTACT_REFINE_PLANE_WEIGHT=4 HSI_CONTACT_REFINE_POSE_WEIGHT=1
     export HSI_CONTACT_REFINE_CLASS_WEIGHT=0.2 HSI_CONTACT_REFINE_NO_WORSE_WEIGHT=8
+    export HSI_CONTACT_REFINE_SWING_NO_PULL_WEIGHT=5
     export MONITOR=metric_stage3_selection
     run_provider
   )
@@ -167,6 +169,7 @@ if contains_stage 3B; then
     export RESUME_REQUIRED_PREFIXES=hsi_refinement_head.,hsi_human_scene_align_head.,hsi_contact_refine_head. FROZEN_HASH_PREFIXES=hsi_refinement_head.,hsi_human_scene_align_head.
     export HSI_PROJECTED_J2D_WEIGHT=0.05 HSI_CONTACT_REFINE_PLANE_WEIGHT=3 HSI_CONTACT_REFINE_POSE_WEIGHT=0.5
     export HSI_CONTACT_REFINE_CLASS_WEIGHT=0.2 HSI_CONTACT_REFINE_NO_WORSE_WEIGHT=10
+    export HSI_CONTACT_REFINE_SWING_NO_PULL_WEIGHT=8
     export MONITOR=metric_stage3_selection
     run_provider
   )

@@ -127,15 +127,20 @@ class HSIContactRefineHead(nn.Module):
         hidden = self.mlp(features)
         contact_logits = self.contact_head(hidden)
         valid_f = planes["valid"].to(dtype=transl.dtype)
-        normal = (planes["normal"] * valid_f[..., None]).sum(dim=1) / valid_f.sum(dim=1, keepdim=True).clamp(min=1.0)
+        contact_probability = torch.sigmoid(contact_logits) * valid_f
+        normal_weights = contact_probability[..., None]
+        normal = (planes["normal"] * normal_weights).sum(dim=1) / normal_weights.sum(dim=1).clamp(min=1e-6)
         normal = F.normalize(normal, dim=-1, eps=1e-6)
         any_valid = planes["valid"].any(dim=1, keepdim=True).to(dtype=transl.dtype)
-        root_scalar = torch.tanh(self.root_normal_head(hidden)) * self.max_root_normal_delta_m * any_valid
+        person_contact_gate = contact_probability.amax(dim=1, keepdim=True) * any_valid
+        root_scalar = torch.tanh(self.root_normal_head(hidden)) * self.max_root_normal_delta_m * person_contact_gate
         root_delta = root_scalar * normal
         refined_transl = transl.reshape(-1, 3) + root_delta
 
         raw_pose_delta = torch.tanh(self.lower_pose_head(hidden)).reshape(-1, len(LOWER_BODY_JOINTS), 3)
         pose_delta = raw_pose_delta * self.max_pose_delta_rad.to(device=raw_pose_delta.device, dtype=raw_pose_delta.dtype)[None, :, None]
+        leg_contact_gate = contact_probability[:, [0, 1, 0, 1, 0, 1]].unsqueeze(-1)
+        pose_delta = pose_delta * leg_contact_gate
         refined_pose6d = _compose_lower_pose_delta(pose6d.reshape(-1, 24, 6), pose_delta)
         refined_pose6d = refined_pose6d.reshape(batch_size, num_frames, num_queries, 144)
         refined_transl = refined_transl.reshape(batch_size, num_frames, num_queries, 3)
@@ -153,6 +158,8 @@ class HSIContactRefineHead(nn.Module):
             "hsi_contact_root_normal_delta": root_delta.reshape(batch_size, num_frames, num_queries, 3),
             "hsi_contact_lower_pose_delta_aa": pose_delta.reshape(batch_size, num_frames, num_queries, len(LOWER_BODY_JOINTS), 3),
             "hsi_contact_foot_logits": contact_logits.reshape(batch_size, num_frames, num_queries, 2),
+            "hsi_contact_foot_probability": contact_probability.reshape(batch_size, num_frames, num_queries, 2),
+            "hsi_contact_person_gate": person_contact_gate.reshape(batch_size, num_frames, num_queries, 1),
             "hsi_contact_support_center": planes["center"].reshape(batch_size, num_frames, num_queries, 2, 3),
             "hsi_contact_support_normal": planes["normal"].reshape(batch_size, num_frames, num_queries, 2, 3),
             "hsi_contact_support_rmse": planes["rmse"].reshape(batch_size, num_frames, num_queries, 2),

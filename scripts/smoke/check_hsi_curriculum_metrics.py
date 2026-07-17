@@ -24,6 +24,9 @@ def main() -> None:
             "metric_hsi_contact_base_abs_p95_m",
             "metric_hsi_contact_refined_abs_p95_m",
             "metric_hsi_contact_false_pull_rate",
+            "metric_hsi_contact_contact_gate_mean",
+            "metric_hsi_contact_swing_gate_mean",
+            "metric_hsi_contact_swing_displacement_mean_m",
         ],
     }[args.stage]
     missing = [key for key in required if key not in metrics or not math.isfinite(float(metrics[key]))]
@@ -40,6 +43,8 @@ def main() -> None:
         if args.stage == "stage3":
             if float(metrics["metric_hsi_contact_false_pull_rate"]) > 0.05:
                 raise SystemExit("Stage3 overfit gate failed: false_pull_rate > 0.05")
+            if float(metrics["metric_hsi_contact_contact_gate_mean"]) <= float(metrics["metric_hsi_contact_swing_gate_mean"]):
+                raise SystemExit("Stage3 overfit gate failed: contact gate did not separate from swing gate")
             base = float(metrics["metric_hsi_contact_base_abs_p95_m"])
             refined = float(metrics["metric_hsi_contact_refined_abs_p95_m"])
             if base <= 0.0 or refined > 0.30 * base:

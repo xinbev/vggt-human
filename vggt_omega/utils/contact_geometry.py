@@ -30,6 +30,7 @@ def estimate_local_support_planes(
     max_rmse_m: float = 0.05,
     max_depth_m: float = 20.0,
     max_point_depth_delta_m: float = 0.75,
+    min_up_component: float = 0.25,
     exclusion_mask: torch.Tensor | None = None,
 ) -> dict[str, torch.Tensor]:
     """Fit robust local planes around [M,2,3] foot centers in camera space."""
@@ -93,9 +94,15 @@ def estimate_local_support_planes(
     scene = torch.stack([scene_x, scene_y, sampled], dim=-1)
 
     center, normal, rmse, plane_valid = _robust_plane_fit(scene, valid, min_points=min_points)
-    normal = torch.where(normal[..., 2:3] > 0.0, -normal, normal)
+    # Camera +Y points down in the image, so an upward support normal has -Y.
+    normal = torch.where(normal[..., 1:2] > 0.0, -normal, normal)
     signed = ((points - center) * normal).sum(dim=-1)
-    plane_valid = plane_valid & torch.isfinite(signed) & (rmse <= float(max_rmse_m))
+    plane_valid = (
+        plane_valid
+        & torch.isfinite(signed)
+        & (rmse <= float(max_rmse_m))
+        & ((-normal[..., 1]) >= float(min_up_component))
+    )
     return {
         "center": center.to(dtype=foot_points_cam.dtype),
         "normal": normal.to(dtype=foot_points_cam.dtype),

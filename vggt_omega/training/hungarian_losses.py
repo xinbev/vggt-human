@@ -143,6 +143,7 @@ class HungarianSMPLLoss(nn.Module):
         hsi_contact_refine_pose_weight: float = 0.0,
         hsi_contact_refine_class_weight: float = 0.0,
         hsi_contact_refine_no_worse_weight: float = 0.0,
+        hsi_contact_refine_swing_no_pull_weight: float = 0.0,
     ) -> None:
         super().__init__()
         self.matcher = matcher
@@ -273,6 +274,7 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_contact_refine_pose_weight = float(hsi_contact_refine_pose_weight)
         self.hsi_contact_refine_class_weight = float(hsi_contact_refine_class_weight)
         self.hsi_contact_refine_no_worse_weight = float(hsi_contact_refine_no_worse_weight)
+        self.hsi_contact_refine_swing_no_pull_weight = float(hsi_contact_refine_swing_no_pull_weight)
         self._smpl_layer: SMPLLayer | None = None
         self._foot_sole_indices: torch.Tensor | None = None
         self._foot_sole_indices_by_count: dict[int, torch.Tensor] = {}
@@ -352,6 +354,7 @@ class HungarianSMPLLoss(nn.Module):
                     "loss_hsi_contact_refine_pose": zero,
                     "loss_hsi_contact_refine_class": zero,
                     "loss_hsi_contact_refine_no_worse": zero,
+                    "loss_hsi_contact_refine_swing_no_pull": zero,
                     "metric_joints3d_l1": zero.detach(),
                     "metric_local_joints3d_l1": zero.detach(),
                     "metric_local_vertices_l1": zero.detach(),
@@ -496,6 +499,7 @@ class HungarianSMPLLoss(nn.Module):
             + self.hsi_contact_refine_pose_weight * losses["loss_hsi_contact_refine_pose"]
             + self.hsi_contact_refine_class_weight * losses["loss_hsi_contact_refine_class"]
             + self.hsi_contact_refine_no_worse_weight * losses["loss_hsi_contact_refine_no_worse"]
+            + self.hsi_contact_refine_swing_no_pull_weight * losses["loss_hsi_contact_refine_swing_no_pull"]
         )
         return losses
 
@@ -1138,6 +1142,7 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_contact_refine_pose": zero,
             "loss_hsi_contact_refine_class": zero,
             "loss_hsi_contact_refine_no_worse": zero,
+            "loss_hsi_contact_refine_swing_no_pull": zero,
             "loss_hsi_joints3d": zero,
             "loss_hsi_vertices": zero,
             "loss_hsi_projected_joints2d": zero,
@@ -1199,6 +1204,9 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_contact_false_pull_rate": zero.detach(),
             "metric_hsi_contact_base_abs_p95_m": zero.detach(),
             "metric_hsi_contact_refined_abs_p95_m": zero.detach(),
+            "metric_hsi_contact_swing_displacement_mean_m": zero.detach(),
+            "metric_hsi_contact_contact_gate_mean": zero.detach(),
+            "metric_hsi_contact_swing_gate_mean": zero.detach(),
             "metric_stage2_selection": zero.detach(),
             "metric_stage3_selection": zero.detach(),
             "metric_hsi_no_worse_ratio": zero.detach(),
@@ -1499,11 +1507,15 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_contact_refine_pose": zero,
             "loss_hsi_contact_refine_class": zero,
             "loss_hsi_contact_refine_no_worse": zero,
+            "loss_hsi_contact_refine_swing_no_pull": zero,
             "metric_hsi_contact_float_p95_m": zero.detach(),
             "metric_hsi_contact_penetration_p95_m": zero.detach(),
             "metric_hsi_contact_false_pull_rate": zero.detach(),
             "metric_hsi_contact_base_abs_p95_m": zero.detach(),
             "metric_hsi_contact_refined_abs_p95_m": zero.detach(),
+            "metric_hsi_contact_swing_displacement_mean_m": zero.detach(),
+            "metric_hsi_contact_contact_gate_mean": zero.detach(),
+            "metric_hsi_contact_swing_gate_mean": zero.detach(),
             "metric_stage3_selection": zero.detach(),
         }
         if "contact_teacher_valid" not in matched:
@@ -1551,12 +1563,23 @@ class HungarianSMPLLoss(nn.Module):
                 out["loss_hsi_contact_refine_class"] = F.binary_cross_entropy_with_logits(
                     flat_logits[teacher_valid], contact_label[teacher_valid].to(dtype=flat_logits.dtype)
                 )
+            probability = torch.sigmoid(flat_logits)
+            if contact_valid.any():
+                out["metric_hsi_contact_contact_gate_mean"] = probability[contact_valid].mean().detach()
         swing_valid = teacher_valid & ~contact_label
         if swing_valid.any():
             swing_displacement = torch.linalg.norm(pred_foot - base_foot.detach(), dim=-1)
+            out["loss_hsi_contact_refine_swing_no_pull"] = F.smooth_l1_loss(
+                swing_displacement[swing_valid],
+                torch.zeros_like(swing_displacement[swing_valid]),
+                beta=0.005,
+            )
+            out["metric_hsi_contact_swing_displacement_mean_m"] = swing_displacement[swing_valid].mean().detach()
             out["metric_hsi_contact_false_pull_rate"] = (
                 swing_displacement[swing_valid] > 0.02
             ).to(dtype=pred_vertices_cam.dtype).mean().detach()
+            if isinstance(logits, torch.Tensor):
+                out["metric_hsi_contact_swing_gate_mean"] = torch.sigmoid(flat_logits)[swing_valid].mean().detach()
         out["metric_stage3_selection"] = (
             out["metric_hsi_contact_float_p95_m"]
             + 2.0 * out["metric_hsi_contact_penetration_p95_m"]
