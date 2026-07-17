@@ -95,6 +95,24 @@ bash scripts/vis/vis_hsi_curriculum_data_audit.sh
 
 Output: `outputs/vis/hsi_curriculum_v2_data_audit`.
 
+Run the depth-visible endpoint/contact audit before accepting the contact
+sidecars. This only samples validation frames and does not regenerate teachers:
+
+```bash
+CUDA_VISIBLE_DEVICES_VALUE=7 \
+NUM_SAMPLES=24 \
+DEPTH_VISIBILITY_TOLERANCE_M=0.20 \
+MIN_SOLE_VISIBLE_RATIO=0.25 \
+bash scripts/vis/vis_hsi_contact_visibility_audit.sh
+```
+
+Output: `outputs/vis/hsi_contact_visibility_audit_v2`. The overview images
+separate all projected vertices from GT-depth-consistent vertices. Per-person
+four-panel images expose hand/foot endpoints, sole vertices, support samples,
+plane normals, and synthetic float/penetration directions. `audit_summary.json`
+reports existing-teacher rejection rates; `worst_feet.json` lists the feet that
+most strongly violate the sole visibility and person-box checks.
+
 ## Gates
 
 Two-batch interface smoke:
