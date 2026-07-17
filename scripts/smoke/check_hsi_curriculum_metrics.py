@@ -8,7 +8,10 @@ from pathlib import Path
 
 def main() -> None:
     args = parse_args()
-    data = json.loads((Path(args.output_dir) / "metrics_latest.json").read_text(encoding="utf-8"))
+    output_dir = Path(args.output_dir)
+    data = json.loads((output_dir / "metrics_latest.json").read_text(encoding="utf-8"))
+    config = json.loads((output_dir / "resolved_config.json").read_text(encoding="utf-8"))
+    check_resolved_config(config, args.stage)
     metrics = data.get("val") or data.get("train") or {}
     required = {
         "stage2": [
@@ -60,6 +63,62 @@ def main() -> None:
         if float(metrics["metric_hsi_contact_false_pull_rate"]) > 0.10:
             raise SystemExit("Stage3 distribution gate failed: false_pull_rate > 0.10")
     print(json.dumps({"gate": "pass", "stage": args.stage, "mode": args.mode, "metrics": {key: metrics[key] for key in required}}, indent=2))
+
+
+def check_resolved_config(config: dict, stage: str) -> None:
+    expected = {
+        "loss.hsi_depth_teacher_weight": 0.0,
+        "loss.hsi_anchor_depth_weight": 0.0,
+        "loss.hsi_anchor_scene_xyz_weight": 0.0,
+        "loss.hsi_smpl_scale_teacher_weight": 0.0,
+        "loss.hsi_betas_weight": 0.0,
+        "loss.hsi_gate_reg_weight": 0.0,
+        "model.hsi_geometry_mode": "gt_metric",
+    }
+    if stage == "stage2":
+        expected.update(
+            {
+                "model.enable_hsi_contact_refine": False,
+                "loss.hsi_projected_joints2d_weight": 0.0,
+                "loss.hsi_delta_reg_weight": 0.0,
+                "loss.hsi_no_worse_weight": 2.0,
+            }
+        )
+    else:
+        expected.update(
+            {
+                "model.enable_hsi_contact_refine": True,
+                "loss.hsi_projected_joints2d_weight": 0.0,
+                "loss.hsi_delta_reg_weight": 0.05,
+                "loss.hsi_no_worse_weight": 8.0,
+                "loss.hsi_contact_refine_plane_weight": 6.0,
+                "loss.hsi_contact_refine_class_weight": 0.2,
+                "loss.hsi_contact_refine_swing_no_pull_weight": 5.0,
+            }
+        )
+
+    mismatches = []
+    for path, expected_value in expected.items():
+        actual = nested_value(config, path)
+        if isinstance(expected_value, float):
+            matches = isinstance(actual, (int, float)) and math.isclose(
+                float(actual), expected_value, rel_tol=0.0, abs_tol=1e-12
+            )
+        else:
+            matches = actual == expected_value
+        if not matches:
+            mismatches.append(f"{path}: expected {expected_value!r}, got {actual!r}")
+    if mismatches:
+        raise SystemExit("Resolved curriculum config gate failed:\n  " + "\n  ".join(mismatches))
+
+
+def nested_value(data: dict, path: str):
+    value = data
+    for key in path.split("."):
+        if not isinstance(value, dict) or key not in value:
+            return None
+        value = value[key]
+    return value
 
 
 def parse_args() -> argparse.Namespace:

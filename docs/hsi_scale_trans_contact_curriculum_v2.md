@@ -207,6 +207,9 @@ metrics, HSI-only `checkpoint_latest.pt`, and validation-selected stable
 
 ## Safety Checks
 
+- The curriculum launcher explicitly zeros dense-depth, anchor-depth, scene-scale,
+  betas, and legacy gate losses. The smoke gate reads `resolved_config.json` and
+  aborts if a generic provider default re-enables any of them.
 - Checkpoint loading validates every tensor under required HSI prefixes.
 - Stage2 hashes `hsi_refinement_head`; Stage3 hashes both scene refinement and
   translation alignment. Any frozen-weight change aborts training.
