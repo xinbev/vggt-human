@@ -28,3 +28,4 @@ outputs/preprocess
 outputs/vis/full_pipeline_frame_folder_ply
 outputs/vis/vggt_omega_folder_depth_ply
 third_party/weights/nlf/nlf_l_multi_0.3.2.torchscript
+outputs/debug/hsi_contact_teachers_v3_strict_pilot256/Training

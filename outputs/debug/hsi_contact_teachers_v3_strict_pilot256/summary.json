@@ -1,0 +1,16 @@
+{
+  "frames_written_or_seen": 278,
+  "expected_frames": 278,
+  "missing_frames": 0,
+  "valid_people": 1268,
+  "contact_feet": 992,
+  "plane_valid_feet": 3822,
+  "geometry_valid_feet": 2122,
+  "geometry_rejected_feet": 1775,
+  "contact_windows": 251,
+  "output_root": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/debug/hsi_contact_teachers_v3_strict_pilot256",
+  "split": "Training",
+  "partial": true,
+  "processed_windows": 256,
+  "dataset_windows": 8904
+}
