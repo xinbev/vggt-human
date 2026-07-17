@@ -68,6 +68,7 @@ class HungarianSMPLLoss(nn.Module):
         hsi_align_point_weight: float = 0.0,
         hsi_align_delta_reg_weight: float = 0.0,
         hsi_align_no_worse_weight: float = 0.0,
+        hsi_transl_clean_identity_weight: float = 0.0,
         hsi_joints3d_weight: float = 0.0,
         hsi_vertices_weight: float = 0.0,
         hsi_projected_joints2d_weight: float = 0.0,
@@ -199,6 +200,7 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_align_point_weight = hsi_align_point_weight
         self.hsi_align_delta_reg_weight = hsi_align_delta_reg_weight
         self.hsi_align_no_worse_weight = hsi_align_no_worse_weight
+        self.hsi_transl_clean_identity_weight = hsi_transl_clean_identity_weight
         self.hsi_joints3d_weight = hsi_joints3d_weight
         self.hsi_vertices_weight = hsi_vertices_weight
         self.hsi_projected_joints2d_weight = hsi_projected_joints2d_weight
@@ -464,6 +466,7 @@ class HungarianSMPLLoss(nn.Module):
             + self.hsi_align_point_weight * losses["loss_hsi_align_point"]
             + self.hsi_align_delta_reg_weight * losses["loss_hsi_align_delta_reg"]
             + self.hsi_align_no_worse_weight * losses["loss_hsi_align_no_worse"]
+            + self.hsi_transl_clean_identity_weight * losses["loss_hsi_transl_clean_identity"]
             + self.hsi_joints3d_weight * losses["loss_hsi_joints3d"]
             + self.hsi_vertices_weight * losses["loss_hsi_vertices"]
             + self.hsi_projected_joints2d_weight * losses["loss_hsi_projected_joints2d"]
@@ -1138,6 +1141,7 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_align_point": zero,
             "loss_hsi_align_delta_reg": zero,
             "loss_hsi_align_no_worse": zero,
+            "loss_hsi_transl_clean_identity": zero,
             "loss_hsi_contact_refine_plane": zero,
             "loss_hsi_contact_refine_pose": zero,
             "loss_hsi_contact_refine_class": zero,
@@ -1288,6 +1292,7 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_pose": F.l1_loss(pred_pose, target_pose),
             "loss_hsi_betas": F.l1_loss(pred_betas, target_betas),
             "loss_hsi_transl_cam": F.l1_loss(pred_transl, target_transl),
+            "loss_hsi_transl_clean_identity": pred_transl.sum() * 0.0,
         }
         base_pose_value = predictions.get("hsi_contact_base_pred_pose_6d", predictions.get("pred_pose_6d"))
         base_transl_value = predictions.get("hsi_contact_base_pred_transl_cam", predictions.get("pred_transl_cam"))
@@ -1350,6 +1355,9 @@ class HungarianSMPLLoss(nn.Module):
             if clean_items.any():
                 clean_displacement = torch.linalg.norm(
                     pred_transl[clean_items] - base_transl_matched[clean_items], dim=-1
+                )
+                losses["loss_hsi_transl_clean_identity"] = F.smooth_l1_loss(
+                    pred_transl[clean_items], base_transl_matched[clean_items], beta=0.005
                 )
                 losses["metric_hsi_transl_clean_displacement_mean_m"] = clean_displacement.mean().detach()
         ray = F.normalize(base_transl_matched, dim=-1, eps=1e-6)

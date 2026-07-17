@@ -106,6 +106,7 @@ def check_resolved_config(config: dict, stage: str) -> None:
                 "loss.hsi_projected_joints2d_weight": 0.0,
                 "loss.hsi_delta_reg_weight": 0.0,
                 "loss.hsi_no_worse_weight": 2.0,
+                "loss.hsi_transl_clean_identity_weight": 10.0,
             }
         )
     else:
