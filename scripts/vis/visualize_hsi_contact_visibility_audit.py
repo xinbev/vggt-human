@@ -245,6 +245,7 @@ def main() -> None:
         foot_rows,
         key=lambda row: (
             not row["rejected_by_audit"],
+            not row["teacher_valid"],
             row["sole_visible_ratio"],
             -(row["sole_median_abs_depth_delta_m"] or 0.0),
         ),
