@@ -183,8 +183,8 @@ if contains_stage 3B; then
 fi
 
 echo "========== HSI scale/trans/contact curriculum V2 finished =========="
-echo "Stage2-A: $(top_ckpt "${STAGE2A_DIR}")"
-echo "Stage2-B: $(top_ckpt "${STAGE2B_DIR}")"
-echo "Stage3-A1: $(top_ckpt "${STAGE3A1_DIR}")"
-echo "Stage3-A2: $(top_ckpt "${STAGE3A2_DIR}")"
-echo "Stage3-B: $(top_ckpt "${STAGE3B_DIR}")"
+contains_stage 2A && echo "Stage2-A: $(top_ckpt "${STAGE2A_DIR}")"
+contains_stage 2B && echo "Stage2-B: $(top_ckpt "${STAGE2B_DIR}")"
+contains_stage 3A1 && echo "Stage3-A1: $(top_ckpt "${STAGE3A1_DIR}")"
+contains_stage 3A2 && echo "Stage3-A2: $(top_ckpt "${STAGE3A2_DIR}")"
+contains_stage 3B && echo "Stage3-B: $(top_ckpt "${STAGE3B_DIR}")"

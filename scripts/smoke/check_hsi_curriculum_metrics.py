@@ -12,7 +12,8 @@ def main() -> None:
     data = json.loads((output_dir / "metrics_latest.json").read_text(encoding="utf-8"))
     config = json.loads((output_dir / "resolved_config.json").read_text(encoding="utf-8"))
     check_resolved_config(config, args.stage)
-    metrics = data.get("val") or data.get("train") or {}
+    metric_source = "train" if args.mode == "overfit" else "val"
+    metrics = data.get(metric_source) or data.get("train") or {}
     required = {
         "stage2": [
             "metric_stage2_selection",
@@ -62,7 +63,18 @@ def main() -> None:
             raise SystemExit("Stage3 distribution gate failed: contact p95 did not improve")
         if float(metrics["metric_hsi_contact_false_pull_rate"]) > 0.10:
             raise SystemExit("Stage3 distribution gate failed: false_pull_rate > 0.10")
-    print(json.dumps({"gate": "pass", "stage": args.stage, "mode": args.mode, "metrics": {key: metrics[key] for key in required}}, indent=2))
+    print(
+        json.dumps(
+            {
+                "gate": "pass",
+                "stage": args.stage,
+                "mode": args.mode,
+                "metric_source": metric_source,
+                "metrics": {key: metrics[key] for key in required},
+            },
+            indent=2,
+        )
+    )
 
 
 def check_resolved_config(config: dict, stage: str) -> None:

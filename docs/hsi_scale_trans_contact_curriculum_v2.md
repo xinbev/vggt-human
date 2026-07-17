@@ -155,6 +155,10 @@ GATE_STAGE=2A GATE_MODE=overfit CUDA_VISIBLE_DEVICES_VALUE=7 \
 bash scripts/smoke/check_hsi_curriculum_v2.sh
 ```
 
+The overfit loader repeats the same 64 training clips enough times to execute
+1000 optimizer steps in one epoch. Its pass/fail decision uses the repeated
+training-subset metrics; the short validation pass is diagnostic only.
+
 Full-distribution 500-step gate:
 
 ```bash
