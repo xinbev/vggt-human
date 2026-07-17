@@ -159,6 +159,9 @@ The overfit loader repeats the same 64 training clips enough times to execute
 1000 optimizer steps in one epoch. Its pass/fail decision evaluates the final
 model on that same fixed subset; it does not average metrics from early and late
 optimization steps together.
+The 90% improvement gate is computed only over perturbed people. Clean people
+are checked separately and must move by less than 5 mm on average; tangent
+translation must not degrade by more than 0.5 mm from its perturbed baseline.
 An already completed run can be checked without retraining via
 `scripts/smoke/inspect_hsi_curriculum_metrics.sh`.
 

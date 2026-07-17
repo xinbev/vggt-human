@@ -20,6 +20,12 @@ def main() -> None:
             "metric_hsi_base_transl_l2_median",
             "metric_hsi_transl_l2_median",
             "metric_hsi_transl_improvement_rate",
+            "metric_hsi_base_transl_noisy_l2_median",
+            "metric_hsi_transl_noisy_l2_median",
+            "metric_hsi_transl_noisy_improvement_rate",
+            "metric_hsi_transl_clean_displacement_mean_m",
+            "metric_hsi_tangent_delta_base_l1",
+            "metric_hsi_tangent_delta_refined_l1",
         ],
         "stage3": [
             "metric_stage3_selection",
@@ -37,13 +43,19 @@ def main() -> None:
     if missing:
         raise SystemExit(f"Missing or non-finite gate metrics: {missing}")
     if args.mode == "overfit":
-        if args.stage == "stage2" and float(metrics["metric_hsi_transl_improvement_rate"]) < 0.90:
-            raise SystemExit("Stage2 overfit gate failed: improvement_rate < 0.90")
+        if args.stage == "stage2" and float(metrics["metric_hsi_transl_noisy_improvement_rate"]) < 0.90:
+            raise SystemExit("Stage2 overfit gate failed: noisy improvement_rate < 0.90")
         if args.stage == "stage2":
-            base = float(metrics["metric_hsi_base_transl_l2_median"])
-            refined = float(metrics["metric_hsi_transl_l2_median"])
+            base = float(metrics["metric_hsi_base_transl_noisy_l2_median"])
+            refined = float(metrics["metric_hsi_transl_noisy_l2_median"])
             if base <= 0.0 or refined > 0.30 * base:
-                raise SystemExit("Stage2 overfit gate failed: refined median is above 30% of base")
+                raise SystemExit("Stage2 overfit gate failed: noisy refined median is above 30% of base")
+            if float(metrics["metric_hsi_transl_clean_displacement_mean_m"]) > 0.005:
+                raise SystemExit("Stage2 overfit gate failed: clean displacement exceeds 5 mm")
+            tangent_base = float(metrics["metric_hsi_tangent_delta_base_l1"])
+            tangent_refined = float(metrics["metric_hsi_tangent_delta_refined_l1"])
+            if tangent_refined > tangent_base + 0.0005:
+                raise SystemExit("Stage2 overfit gate failed: tangent translation degraded by more than 0.5 mm")
         if args.stage == "stage3":
             if float(metrics["metric_hsi_contact_false_pull_rate"]) > 0.05:
                 raise SystemExit("Stage3 overfit gate failed: false_pull_rate > 0.05")
@@ -54,8 +66,8 @@ def main() -> None:
             if base <= 0.0 or refined > 0.30 * base:
                 raise SystemExit("Stage3 overfit gate failed: contact p95 reduction is below 70%")
     if args.mode == "distribution" and args.stage == "stage2":
-        if float(metrics["metric_hsi_transl_improvement_rate"]) <= 0.50:
-            raise SystemExit("Stage2 distribution gate failed: improvement_rate <= 0.50")
+        if float(metrics["metric_hsi_transl_noisy_improvement_rate"]) <= 0.50:
+            raise SystemExit("Stage2 distribution gate failed: noisy improvement_rate <= 0.50")
     if args.mode == "distribution" and args.stage == "stage3":
         base = float(metrics["metric_hsi_contact_base_abs_p95_m"])
         refined = float(metrics["metric_hsi_contact_refined_abs_p95_m"])

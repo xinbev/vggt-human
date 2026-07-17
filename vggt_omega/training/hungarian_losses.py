@@ -1199,6 +1199,11 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_base_transl_l2_median": zero.detach(),
             "metric_hsi_transl_l2_p90": zero.detach(),
             "metric_hsi_transl_improvement_rate": zero.detach(),
+            "metric_hsi_transl_noisy_fraction": zero.detach(),
+            "metric_hsi_base_transl_noisy_l2_median": zero.detach(),
+            "metric_hsi_transl_noisy_l2_median": zero.detach(),
+            "metric_hsi_transl_noisy_improvement_rate": zero.detach(),
+            "metric_hsi_transl_clean_displacement_mean_m": zero.detach(),
             "metric_hsi_contact_float_p95_m": zero.detach(),
             "metric_hsi_contact_penetration_p95_m": zero.detach(),
             "metric_hsi_contact_false_pull_rate": zero.detach(),
@@ -1328,6 +1333,25 @@ class HungarianSMPLLoss(nn.Module):
         losses["metric_hsi_transl_improvement_rate"] = (
             refined_transl_l2_items < base_transl_l2_items
         ).to(dtype=pred_transl.dtype).mean().detach()
+        clean_value = predictions.get("transl_noise_is_clean")
+        clean_flat = _flatten_prediction(clean_value, unframed_ndim=3) if isinstance(clean_value, torch.Tensor) else None
+        if clean_flat is not None:
+            clean_items = clean_flat[frame_idx, src_idx, 0] > 0.5
+            noisy_items = ~clean_items
+            losses["metric_hsi_transl_noisy_fraction"] = noisy_items.to(dtype=pred_transl.dtype).mean().detach()
+            if noisy_items.any():
+                noisy_base = base_transl_l2_items[noisy_items]
+                noisy_refined = refined_transl_l2_items[noisy_items]
+                losses["metric_hsi_base_transl_noisy_l2_median"] = noisy_base.median().detach()
+                losses["metric_hsi_transl_noisy_l2_median"] = noisy_refined.median().detach()
+                losses["metric_hsi_transl_noisy_improvement_rate"] = (
+                    noisy_refined < noisy_base
+                ).to(dtype=pred_transl.dtype).mean().detach()
+            if clean_items.any():
+                clean_displacement = torch.linalg.norm(
+                    pred_transl[clean_items] - base_transl_matched[clean_items], dim=-1
+                )
+                losses["metric_hsi_transl_clean_displacement_mean_m"] = clean_displacement.mean().detach()
         ray = F.normalize(base_transl_matched, dim=-1, eps=1e-6)
         expected_ray_delta = ((target_transl - base_transl_matched) * ray).sum(dim=-1, keepdim=True)
         predicted_ray_delta = ((pred_transl - base_transl_matched) * ray).sum(dim=-1, keepdim=True)
