@@ -4,24 +4,24 @@
   "entries": [
     {
       "rank": 1,
+      "metric": 1.392446885724412,
+      "epoch": 7,
+      "source": "train",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_full_b12_20260710/stage4_temporal_tracks/checkpoint_top_train_epoch_0007_loss_total_1.392447.pt"
+    },
+    {
+      "rank": 2,
       "metric": 1.408220981101561,
       "epoch": 6,
       "source": "train",
       "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_full_b12_20260710/stage4_temporal_tracks/checkpoint_top_train_epoch_0006_loss_total_1.408221.pt"
     },
     {
-      "rank": 2,
+      "rank": 3,
       "metric": 1.422483678054455,
       "epoch": 5,
       "source": "train",
       "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_full_b12_20260710/stage4_temporal_tracks/checkpoint_top_train_epoch_0005_loss_total_1.422484.pt"
-    },
-    {
-      "rank": 3,
-      "metric": 1.448130672135873,
-      "epoch": 4,
-      "source": "train",
-      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_full_b12_20260710/stage4_temporal_tracks/checkpoint_top_train_epoch_0004_loss_total_1.448131.pt"
     }
   ]
 }
