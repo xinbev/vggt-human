@@ -165,7 +165,8 @@ translation must not degrade by more than 0.5 mm from its perturbed baseline.
 Stage2-A applies a clean-only translation identity loss so this invariant is
 trained explicitly rather than inferred indirectly from the no-worse margin.
 The align gate is also supervised as open for perturbed people and closed for
-clean people; its clean/noisy means are part of the overfit gate report.
+clean people. The two groups contribute equally to the gate BCE regardless of
+the configured clean probability; their means are part of the overfit report.
 An already completed run can be checked without retraining via
 `scripts/smoke/inspect_hsi_curriculum_metrics.sh`.
 

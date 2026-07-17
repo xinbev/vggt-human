@@ -1358,10 +1358,15 @@ class HungarianSMPLLoss(nn.Module):
             )
             matched_align_gate = align_gate_flat[frame_idx, src_idx, 0] if align_gate_flat is not None else None
             if matched_align_gate is not None:
-                gate_target = noisy_items.to(dtype=matched_align_gate.dtype)
-                losses["loss_hsi_transl_noise_gate"] = F.binary_cross_entropy(
-                    matched_align_gate.clamp(min=1e-6, max=1.0 - 1e-6), gate_target
-                )
+                gate_losses = []
+                if clean_items.any():
+                    clean_gate = matched_align_gate[clean_items].clamp(min=1e-6, max=1.0 - 1e-6)
+                    gate_losses.append(F.binary_cross_entropy(clean_gate, torch.zeros_like(clean_gate)))
+                if noisy_items.any():
+                    noisy_gate = matched_align_gate[noisy_items].clamp(min=1e-6, max=1.0 - 1e-6)
+                    gate_losses.append(F.binary_cross_entropy(noisy_gate, torch.ones_like(noisy_gate)))
+                if gate_losses:
+                    losses["loss_hsi_transl_noise_gate"] = torch.stack(gate_losses).mean()
             losses["metric_hsi_transl_noisy_fraction"] = noisy_items.to(dtype=pred_transl.dtype).mean().detach()
             if noisy_items.any():
                 noisy_base = base_transl_l2_items[noisy_items]
