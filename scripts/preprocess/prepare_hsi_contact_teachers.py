@@ -85,10 +85,8 @@ def main() -> None:
                 plane_valid_feet += int(existing_plane.sum())
                 geometry_valid_feet += int(existing_geometry.sum())
                 geometry_rejected_feet += int((existing_plane & ~existing_geometry).sum())
-                if position == 1:
-                    if bool(existing_contact.any()):
-                        contact_window_indices.add(dataset_idx)
-                        contact_frame_keys.add(f"{args.split}/{seq_dir.name}/{frame_id}")
+                if bool(existing_contact.any()):
+                    contact_frame_keys.add(f"{args.split}/{seq_dir.name}/{frame_id}")
                 continue
             exclusion = projected_body_mask(
                 vertices[position] + transl[position, :, None, :],
@@ -171,6 +169,14 @@ def main() -> None:
             process_window(dataset_idx, (0,))
         for dataset_idx in last_by_seq.values():
             process_window(dataset_idx, (2,))
+
+    contact_window_indices.clear()
+    for dataset_idx in range(window_limit):
+        seq_idx, start_idx = dataset._index[dataset_idx]
+        seq_dir, frame_ids = dataset._sequences[seq_idx]
+        center_frame = frame_ids[start_idx + 1]
+        if f"{args.split}/{seq_dir.name}/{center_frame}" in contact_frame_keys:
+            contact_window_indices.add(dataset_idx)
 
     expected_frames = sum(len(frame_ids) for _, frame_ids in dataset._sequences) if not partial else len(written)
     summary = {

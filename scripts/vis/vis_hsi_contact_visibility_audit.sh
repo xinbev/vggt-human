@@ -14,6 +14,7 @@ DEPTH_VISIBILITY_TOLERANCE_M="${DEPTH_VISIBILITY_TOLERANCE_M:-0.20}"
 MIN_SOLE_VISIBLE_RATIO="${MIN_SOLE_VISIBLE_RATIO:-0.25}"
 VISIBILITY_WINDOW="${VISIBILITY_WINDOW:-3}"
 DRAW_VERTEX_STRIDE="${DRAW_VERTEX_STRIDE:-10}"
+SAMPLE_POOL_SIZE="${SAMPLE_POOL_SIZE:-0}"
 
 cd "${REPO_ROOT}"
 [[ -f "${SMPL_MODEL_DIR}/smpl/SMPL_NEUTRAL.pkl" ]] || {
@@ -37,6 +38,7 @@ CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/vis/visualiz
   --smpl-model-dir "${SMPL_MODEL_DIR}" \
   --output-dir "${OUTPUT_DIR}" \
   --num-samples "${NUM_SAMPLES}" \
+  --sample-pool-size "${SAMPLE_POOL_SIZE}" \
   --depth-tolerance-m "${DEPTH_VISIBILITY_TOLERANCE_M}" \
   --min-sole-visible-ratio "${MIN_SOLE_VISIBLE_RATIO}" \
   --visibility-window "${VISIBILITY_WINDOW}" \

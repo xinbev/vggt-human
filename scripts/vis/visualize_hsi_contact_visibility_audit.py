@@ -59,8 +59,9 @@ def main() -> None:
     people_output = output / "people"
     people_output.mkdir(parents=True, exist_ok=True)
 
-    count = min(args.num_samples, len(dataset))
-    indices = np.linspace(0, len(dataset) - 1, num=count, dtype=np.int64)
+    pool_size = len(dataset) if args.sample_pool_size <= 0 else min(len(dataset), args.sample_pool_size)
+    count = min(args.num_samples, pool_size)
+    indices = np.linspace(0, pool_size - 1, num=count, dtype=np.int64)
     sample_rows: list[dict] = []
     person_rows: list[dict] = []
     foot_rows: list[dict] = []
@@ -556,6 +557,7 @@ def parse_args():
     parser.add_argument("--image-resolution", type=int, default=512)
     parser.add_argument("--max-humans", type=int, default=20)
     parser.add_argument("--num-samples", type=int, default=24)
+    parser.add_argument("--sample-pool-size", type=int, default=0)
     parser.add_argument("--num-worst-feet", type=int, default=50)
     parser.add_argument("--sole-vertices-per-foot", type=int, default=48)
     parser.add_argument("--visibility-window", type=int, default=3)
