@@ -33,6 +33,8 @@ class HSIHumanSceneAlignHead(nn.Module):
         residual_mad_multiplier: float = 3.0,
         max_depth_m: float = 20.0,
         feature_version: str = "legacy_mean_v1",
+        delta_parameterization: str = "learned_v1",
+        robust_ray_gain: float = 1.0,
         image_size: int = 518,
     ) -> None:
         super().__init__()
@@ -65,6 +67,12 @@ class HSIHumanSceneAlignHead(nn.Module):
         self.feature_version = str(feature_version or "legacy_mean_v1").lower()
         if self.feature_version not in {"legacy_scale_bias_v0", "legacy_mean_v1", "robust_basis_v2"}:
             raise ValueError(f"Unsupported HSI align feature version: {self.feature_version!r}")
+        self.delta_parameterization = str(delta_parameterization or "learned_v1").lower()
+        if self.delta_parameterization not in {"learned_v1", "robust_sign_v3"}:
+            raise ValueError(f"Unsupported HSI align delta parameterization: {self.delta_parameterization!r}")
+        if self.delta_parameterization == "robust_sign_v3" and self.feature_version != "robust_basis_v2":
+            raise ValueError("robust_sign_v3 requires hsi_align_feature_version=robust_basis_v2")
+        self.robust_ray_gain = max(float(robust_ray_gain), 0.0)
         self.image_size = int(image_size)
 
         vertex_indices = _deterministic_fps_indices(
@@ -176,6 +184,7 @@ class HSIHumanSceneAlignHead(nn.Module):
         ray, tangent_x, tangent_y = _camera_basis(base_transl)
         robust_features = []
         robust_outputs = {}
+        basis_median = None
         if self.feature_version == "robust_basis_v2":
             residual_basis = torch.stack(
                 [
@@ -241,6 +250,12 @@ class HSIHumanSceneAlignHead(nn.Module):
             ],
             dim=-1,
         )
+        if self.delta_parameterization == "robust_sign_v3":
+            if basis_median is None:
+                raise RuntimeError("robust_sign_v3 requires signed robust residual statistics")
+            residual_ray = basis_median[..., :1]
+            signed_ray_coeff = torch.sign(residual_ray) * coeff[..., :1].abs() * self.robust_ray_gain
+            coeff = torch.cat([signed_ray_coeff, coeff[..., 1:]], dim=-1)
         delta = coeff[..., :1] * ray + coeff[..., 1:2] * tangent_x + coeff[..., 2:3] * tangent_y
         raw_gate = torch.sigmoid(self.gate_head(hidden))
         if self.gate_application_mode == "soft_deadzone_v2":

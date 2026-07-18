@@ -62,6 +62,8 @@ model:
   hsi_scene_affine_mode: clip_median
   hsi_enable_temporal_momentum: false
   hsi_align_feature_version: robust_basis_v2
+  hsi_align_delta_parameterization: robust_sign_v3
+  hsi_align_robust_ray_gain: 1.10
   hsi_align_hidden_dim: 256
   hsi_align_num_sample_vertices: 128
   hsi_align_local_window: 7

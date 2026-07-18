@@ -481,6 +481,8 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_align_residual_mad_multiplier=float(model_cfg.get("hsi_align_residual_mad_multiplier", 3.0)),
         hsi_align_max_depth_m=float(model_cfg.get("hsi_align_max_depth_m", 20.0)),
         hsi_align_feature_version=str(model_cfg.get("hsi_align_feature_version", "legacy_mean_v1")),
+        hsi_align_delta_parameterization=str(model_cfg.get("hsi_align_delta_parameterization", "learned_v1")),
+        hsi_align_robust_ray_gain=float(model_cfg.get("hsi_align_robust_ray_gain", 1.0)),
         enable_hsi_contact_refine=bool(model_cfg.get("enable_hsi_contact_refine", False)),
         hsi_contact_hidden_dim=int(model_cfg.get("hsi_contact_hidden_dim", 256)),
         hsi_contact_sole_vertices_per_foot=int(model_cfg.get("hsi_contact_sole_vertices_per_foot", 48)),

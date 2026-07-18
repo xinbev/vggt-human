@@ -34,6 +34,13 @@ localized clothing, silhouette, occlusion, and depth-boundary residuals. The
 statistics use only inference-time geometry and do not expose GT noise values
 to the model.
 
+V3 uses `robust_sign_v3` for the ray coefficient. The MLP still predicts the
+correction magnitude, but its ray sign is constrained by the signed median
+scene residual and receives a conservative `1.10` magnitude gain. Tangent
+coefficients remain fully learned. This preserves checkpoint tensor shapes and
+the legacy `learned_v1` path while preventing an unconstrained MLP from
+discarding the reliable depth-residual direction.
+
 ## Gate Supervision
 
 The gate target is continuous:

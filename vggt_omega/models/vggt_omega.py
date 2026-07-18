@@ -119,6 +119,8 @@ class VGGTOmega(nn.Module):
         hsi_align_residual_mad_multiplier: float = 3.0,
         hsi_align_max_depth_m: float = 20.0,
         hsi_align_feature_version: str = "legacy_mean_v1",
+        hsi_align_delta_parameterization: str = "learned_v1",
+        hsi_align_robust_ray_gain: float = 1.0,
         enable_hsi_contact_refine: bool = False,
         hsi_contact_hidden_dim: int = 256,
         hsi_contact_sole_vertices_per_foot: int = 48,
@@ -294,6 +296,8 @@ class VGGTOmega(nn.Module):
                 residual_mad_multiplier=hsi_align_residual_mad_multiplier,
                 max_depth_m=hsi_align_max_depth_m,
                 feature_version=hsi_align_feature_version,
+                delta_parameterization=hsi_align_delta_parameterization,
+                robust_ray_gain=hsi_align_robust_ray_gain,
                 image_size=image_size,
             )
             if enable_hsi_human_scene_align
