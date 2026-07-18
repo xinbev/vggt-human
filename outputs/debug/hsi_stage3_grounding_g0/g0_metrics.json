@@ -5,10 +5,10 @@
   "num_geometry_valid": 5278,
   "geometry_valid_coverage": 0.9975429773330688,
   "base_translation_p95_m": 0.12000000476837158,
-  "analytic_candidate_translation_p95_m": 0.050656531006097794,
-  "p95_reduction": 0.5778622583900985,
-  "candidate_improvement_rate": 0.628078818321228,
-  "clean_candidate_displacement_p95_m": 0.046126145869493484,
+  "analytic_candidate_translation_p95_m": 0.048426173627376556,
+  "p95_reduction": 0.5964485691408885,
+  "candidate_improvement_rate": 0.6186055541038513,
+  "clean_candidate_displacement_p95_m": 0.0,
   "online_vs_teacher_signed_error_median_m": 1.825392246246338e-07,
   "online_vs_teacher_signed_error_p95_m": 0.001799176912754774,
   "online_vs_teacher_normal_cosine_median": 1.0,
@@ -17,44 +17,44 @@
     "-6cm": {
       "count": 663,
       "base_p95_m": 0.06000005453824997,
-      "candidate_p95_m": 0.060775406658649445,
-      "p95_reduction": -0.0129225235937942,
-      "improvement_rate": 0.9426847696304321
+      "candidate_p95_m": 0.0599999837577343,
+      "p95_reduction": 1.1796741888892015e-06,
+      "improvement_rate": 0.9351432919502258
     },
     "-4cm": {
       "count": 734,
       "base_p95_m": 0.040000054985284805,
-      "candidate_p95_m": 0.05409497022628784,
-      "p95_reduction": -0.3523723966426613,
-      "improvement_rate": 0.8242506980895996
+      "candidate_p95_m": 0.040000032633543015,
+      "p95_reduction": 5.587927766059764e-07,
+      "improvement_rate": 0.7261580228805542
     },
     "-2cm": {
       "count": 599,
       "base_p95_m": 0.020000049844384193,
-      "candidate_p95_m": 0.04465343803167343,
-      "p95_reduction": -1.232666337289737,
-      "improvement_rate": 0.32053422927856445
+      "candidate_p95_m": 0.022360365837812424,
+      "p95_reduction": -0.11801550555090157,
+      "improvement_rate": 0.3522537648677826
     },
     "-1cm": {
       "count": 660,
       "base_p95_m": 0.010000046342611313,
-      "candidate_p95_m": 0.05032212659716606,
-      "p95_reduction": -4.032189339237146,
+      "candidate_p95_m": 0.023258300498127937,
+      "p95_reduction": -1.325819271358946,
       "improvement_rate": 0.0
     },
     "+2cm": {
       "count": 669,
       "base_p95_m": 0.020000049844384193,
-      "candidate_p95_m": 0.03730662539601326,
-      "p95_reduction": -0.8653266209978259,
-      "improvement_rate": 0.12855006754398346
+      "candidate_p95_m": 0.020000072196125984,
+      "p95_reduction": -1.11758430421105e-06,
+      "improvement_rate": 0.13751868903636932
     },
     "+5cm": {
       "count": 645,
       "base_p95_m": 0.05000005289912224,
       "candidate_p95_m": 0.05000002682209015,
       "p95_reduction": 5.215400900038247e-07,
-      "improvement_rate": 0.8062015771865845
+      "improvement_rate": 0.8093023300170898
     },
     "+8cm": {
       "count": 644,
