@@ -1,0 +1,16 @@
+{
+  "gate": "fail",
+  "num_active": 5291,
+  "num_geometry_valid": 5240,
+  "geometry_valid_coverage": 0.9903609752655029,
+  "base_translation_p95_m": 0.12000000476837158,
+  "analytic_candidate_translation_p95_m": 0.07681308686733246,
+  "p95_reduction": 0.35989096820787714,
+  "candidate_improvement_rate": 0.6730915904045105,
+  "clean_candidate_displacement_p95_m": 0.06354421377182007,
+  "thresholds": {
+    "min_p95_reduction": 0.7,
+    "min_valid_coverage": 0.8,
+    "max_clean_displacement_m": 0.001
+  }
+}

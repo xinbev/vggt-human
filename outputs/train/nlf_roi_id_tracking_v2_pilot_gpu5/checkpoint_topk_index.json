@@ -1,0 +1,20 @@
+{
+  "monitor": "loss_id",
+  "monitor_mode": "min",
+  "entries": [
+    {
+      "rank": 1,
+      "metric": 1.4571009210944175,
+      "epoch": 1,
+      "source": "train",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/nlf_roi_id_tracking_v2_pilot_gpu5/checkpoint_top_train_epoch_0001_loss_id_1.457101.pt"
+    },
+    {
+      "rank": 2,
+      "metric": 1.4571009210944175,
+      "epoch": 1,
+      "source": "train",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/nlf_roi_id_tracking_v2_pilot_gpu5/checkpoint_top_train_epoch_0001_loss_id_1.457101.pt"
+    }
+  ]
+}
