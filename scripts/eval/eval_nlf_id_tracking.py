@@ -145,7 +145,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--path-config", default="configs/path.yaml")
     parser.add_argument("--train-config", default="configs/train_nlf_id_tracking.yaml")
     parser.add_argument("--checkpoint", required=True)
-    parser.add_argument("--split", default="Test")
+    parser.add_argument("--split", default="Training")
     parser.add_argument("--device", default="")
     parser.add_argument("--max-batches", type=int, default=0)
     parser.add_argument("--track-id-weight", type=float, default=0.35)

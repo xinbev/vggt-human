@@ -31,9 +31,9 @@ The server checkout is `/home/zhw/lab_users/xyb/home/projects/vggt-human`. Run:
 ```bash
 bash scripts/smoke/run_nlf_id_tracking_smoke.sh
 bash scripts/train/train_nlf_id_tracking_gpu5.sh
-bash scripts/eval/run_nlf_id_tracking_eval_gpu5.sh outputs/train/nlf_id_tracking_gpu5/checkpoint_latest.pt Test
+bash scripts/eval/run_nlf_id_tracking_eval_gpu5.sh outputs/train/nlf_id_tracking_gpu5/checkpoint_latest.pt Training 0.35 0.70 200 pilot_id
 # Geometry-only ablation using the same checkpoint.
-bash scripts/eval/run_nlf_id_tracking_eval_gpu5.sh outputs/train/nlf_id_tracking_gpu5/checkpoint_latest.pt Test 0.0 0.70
+bash scripts/eval/run_nlf_id_tracking_eval_gpu5.sh outputs/train/nlf_id_tracking_gpu5/checkpoint_latest.pt Training 0.0 0.70 200 pilot_geometry
 ```
 
 The evaluator reports temporal ID switch rate, majority association accuracy, positive/negative embedding cosine, and their margin. Because the training loader uses short clips, switches are measured within each evaluated clip; a long-sequence evaluation should use a sequence-length configuration or a persistent track-memory wrapper before claiming full-video IDF1.
