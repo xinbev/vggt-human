@@ -1,0 +1,10 @@
+{
+  "embedding_margin": 0.09752268756364202,
+  "id_switch_rate": 0.06770567194685743,
+  "majority_association_accuracy": 0.9430428134556575,
+  "negative_embedding_cosine": 0.7763121846878668,
+  "num_id_switches": 265,
+  "num_temporal_pairs": 3914,
+  "num_valid_assignments": 5232,
+  "positive_embedding_cosine": 0.8738348722515088
+}
