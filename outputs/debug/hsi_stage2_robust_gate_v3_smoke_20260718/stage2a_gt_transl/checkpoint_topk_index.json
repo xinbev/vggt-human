@@ -1,0 +1,13 @@
+{
+  "monitor": "metric_stage2_selection",
+  "monitor_mode": "min",
+  "entries": [
+    {
+      "rank": 1,
+      "metric": 0.308066263794899,
+      "epoch": 1,
+      "source": "val",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/debug/hsi_stage2_robust_gate_v3_smoke_20260718/stage2a_gt_transl/checkpoint_top_val_epoch_0001_metric_stage2_selection_0.308066.pt"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "monitor": "metric_stage2_selection",
+  "monitor_mode": "min",
+  "entries": [
+    {
+      "rank": 1,
+      "metric": 0.3061091899871826,
+      "epoch": 1,
+      "source": "val",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/debug/hsi_curriculum_v2_stage2a_smoke_fixedloss_20260718/stage2a_gt_transl/checkpoint_top_val_epoch_0001_metric_stage2_selection_0.306109.pt"
+    }
+  ]
+}

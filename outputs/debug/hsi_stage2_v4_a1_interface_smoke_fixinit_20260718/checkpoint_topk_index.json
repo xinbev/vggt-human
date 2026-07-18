@@ -1,0 +1,13 @@
+{
+  "monitor": "metric_hsi_v4_selection",
+  "monitor_mode": "min",
+  "entries": [
+    {
+      "rank": 1,
+      "metric": 0.6375006079673767,
+      "epoch": 1,
+      "source": "val",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/debug/hsi_stage2_v4_a1_interface_smoke_fixinit_20260718/checkpoint_top_val_epoch_0001_metric_hsi_v4_selection_0.637501.pt"
+    }
+  ]
+}

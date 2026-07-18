@@ -1,0 +1,293 @@
+{
+  "epoch": 1,
+  "worst_samples": [
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 24,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0000.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 25,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0005.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 26,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0010.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 27,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0015.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 28,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0020.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 29,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0025.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 30,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0030.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 31,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0035.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 32,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0040.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 33,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0045.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 34,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0050.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 35,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0055.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 36,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0060.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 37,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0065.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 38,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0070.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 39,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0075.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 40,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0080.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 41,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0085.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 42,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0090.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 43,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0095.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 44,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0100.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 45,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0105.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 46,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0110.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.35653913021087646,
+      "dataset_index": 47,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000002/rgb/seq_000002_0115.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 0,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0000.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 1,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0005.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 2,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0010.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 3,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0015.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 4,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0020.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 5,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0025.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 6,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0030.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 7,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0035.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 8,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0040.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 9,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0045.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 10,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0050.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 11,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0055.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 12,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0060.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 13,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0065.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 14,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0070.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 15,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0075.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 16,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0080.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 17,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0085.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 18,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0090.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 19,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0095.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 20,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0100.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 21,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0105.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 22,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0110.png"
+    },
+    {
+      "selection_metric": "metric_stage2_selection",
+      "selection_value": 0.2556794583797455,
+      "dataset_index": 23,
+      "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0115.png"
+    }
+  ]
+}
