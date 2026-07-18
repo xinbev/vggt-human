@@ -54,8 +54,10 @@
     "require_boxes": true,
     "require_smpl": true,
     "require_depth": false,
-    "num_workers": 4,
-    "pin_memory": true
+    "num_workers": 16,
+    "pin_memory": true,
+    "prefetch_factor": 4,
+    "persistent_workers": true
   },
   "model": {
     "patch_size": 16,
@@ -68,7 +70,7 @@
     "nlf_use_detector": false,
     "nlf_require_boxes": true,
     "nlf_model_name": "smpl",
-    "nlf_internal_batch_size": 64,
+    "nlf_internal_batch_size": 512,
     "nlf_num_aug": 1,
     "num_smpl_queries": 20,
     "freeze_aggregator": true,
@@ -104,7 +106,7 @@
     "monitor_mode": "min"
   },
   "optim": {
-    "batch_size": 1,
+    "batch_size": 64,
     "epochs": 20,
     "lr": 5e-05,
     "weight_decay": 0.05,
