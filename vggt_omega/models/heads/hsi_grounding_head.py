@@ -104,6 +104,7 @@ class HSIGroundingHead(nn.Module):
         poses = poses.float()
         betas = betas.float()
         base_transl = base_transl.float()
+        _validate_smpl_inputs(pose6d, poses, betas, base_transl, confs)
         batch_size, num_frames, num_queries = base_transl.shape[:3]
         image_size_hw = image_size_hw or (self.image_size, self.image_size)
         intrinsics = _resolve_intrinsics(
@@ -171,21 +172,25 @@ class HSIGroundingHead(nn.Module):
         foot_range = torch.where(valid, signed, torch.zeros_like(signed)).amax(dim=-1) - torch.where(
             valid, signed, torch.zeros_like(signed)
         ).amin(dim=-1)
-        features = torch.cat(
-            [
-                lower_pose,
-                signed,
-                support_rmse,
-                valid.to(dtype=base_transl.dtype),
-                selected_normal,
-                point_count,
-                delta_scalar,
-                delta_scalar.abs(),
-                foot_range,
-                base_transl.reshape(-1, 3),
-            ],
-            dim=-1,
-        )
+        feature_parts = {
+            "lower_pose": lower_pose,
+            "signed": signed,
+            "support_rmse": support_rmse,
+            "valid": valid.to(dtype=base_transl.dtype),
+            "selected_normal": selected_normal,
+            "point_count": point_count,
+            "delta_scalar": delta_scalar,
+            "delta_abs": delta_scalar.abs(),
+            "foot_range": foot_range.unsqueeze(-1),
+            "base_transl": base_transl.reshape(-1, 3),
+        }
+        _validate_feature_parts(feature_parts, expected_rows=batch_size * num_frames * num_queries)
+        features = torch.cat(list(feature_parts.values()), dim=-1)
+        if features.shape[-1] != self.gate_mlp[0].in_features:
+            raise RuntimeError(
+                f"Grounding gate feature width {features.shape[-1]} does not match "
+                f"configured width {self.gate_mlp[0].in_features}"
+            )
         hidden = self.gate_mlp(torch.nan_to_num(features, nan=0.0, posinf=0.0, neginf=0.0))
         probability = torch.sigmoid(self.gate_head(hidden)) * candidate_valid.to(dtype=base_transl.dtype)
         if self.training or not self.hard_gate_eval:
@@ -193,7 +198,14 @@ class HSIGroundingHead(nn.Module):
         else:
             apply_gate = (probability >= self.gate_threshold).to(dtype=probability.dtype)
         refined_transl = base_transl.reshape(-1, 3) + apply_gate * candidate_delta
-        refined_signed = signed + (apply_gate * candidate_delta[:, None, :] * planes["normal"]).sum(dim=-1)
+        refined_signed = signed + (
+            apply_gate.unsqueeze(-1) * candidate_delta[:, None, :] * planes["normal"]
+        ).sum(dim=-1)
+        expected_flat = batch_size * num_frames * num_queries
+        _require_shape(candidate_delta, (expected_flat, 3), "candidate_delta")
+        _require_shape(probability, (expected_flat, 1), "gate_probability")
+        _require_shape(refined_transl, (expected_flat, 3), "refined_transl")
+        _require_shape(refined_signed, (expected_flat, 2), "refined_signed")
         outputs = {
             "hsi_grounding_base_pred_transl_cam": base_transl,
             "hsi_grounding_candidate_pred_transl_cam": candidate_transl.reshape(batch_size, num_frames, num_queries, 3),
@@ -286,3 +298,40 @@ def _foot_inside_person_box(sole_cam, intrinsics, person_boxes, image_size_hw):
     box_max = boxes[:, None, :2] + 0.60 * boxes[:, None, 2:]
     inside = (projected >= box_min).all(dim=-1) & (projected <= box_max).all(dim=-1)
     return inside.reshape(batch_size, num_frames, num_queries, 2)
+
+
+def _validate_feature_parts(parts: dict[str, torch.Tensor], expected_rows: int) -> None:
+    problems = []
+    for name, value in parts.items():
+        if value.ndim != 2:
+            problems.append(f"{name}={tuple(value.shape)} (expected [M,C])")
+        elif value.shape[0] != expected_rows:
+            problems.append(f"{name}={tuple(value.shape)} (expected M={expected_rows})")
+    if problems:
+        raise RuntimeError("Invalid grounding gate feature shapes: " + "; ".join(problems))
+
+
+def _validate_smpl_inputs(pose6d, poses, betas, transl, confs) -> None:
+    if transl.ndim != 4 or transl.shape[-1] != 3:
+        raise ValueError(f"Grounding translation must have [B,S,Q,3], got {tuple(transl.shape)}")
+    prefix = tuple(transl.shape[:3])
+    expected = {
+        "pose6d": (prefix, 144),
+        "poses": (prefix, 72),
+        "betas": (prefix, None),
+        "confs": (prefix, 1),
+    }
+    values = {"pose6d": pose6d, "poses": poses, "betas": betas, "confs": confs}
+    for name, value in values.items():
+        expected_prefix, expected_width = expected[name]
+        if value.ndim != 4 or tuple(value.shape[:3]) != expected_prefix:
+            raise ValueError(
+                f"Grounding {name} must start with [B,S,Q]={expected_prefix}, got {tuple(value.shape)}"
+            )
+        if expected_width is not None and value.shape[-1] != expected_width:
+            raise ValueError(f"Grounding {name} width must be {expected_width}, got {tuple(value.shape)}")
+
+
+def _require_shape(value: torch.Tensor, expected: tuple[int, ...], name: str) -> None:
+    if tuple(value.shape) != tuple(expected):
+        raise RuntimeError(f"Grounding {name} shape {tuple(value.shape)} != expected {tuple(expected)}")
