@@ -1808,9 +1808,23 @@ class HungarianSMPLLoss(nn.Module):
         if isinstance(logits, torch.Tensor):
             flat_logits = _flatten_prediction(logits, unframed_ndim=3)[frame_idx, src_idx]
             if teacher_valid.any():
-                out["loss_hsi_contact_refine_class"] = F.binary_cross_entropy_with_logits(
-                    flat_logits[teacher_valid], contact_label[teacher_valid].to(dtype=flat_logits.dtype)
-                )
+                valid_logits = flat_logits[teacher_valid]
+                valid_targets = contact_label[teacher_valid]
+                class_terms = []
+                if valid_targets.any():
+                    class_terms.append(
+                        F.binary_cross_entropy_with_logits(
+                            valid_logits[valid_targets], torch.ones_like(valid_logits[valid_targets])
+                        )
+                    )
+                if (~valid_targets).any():
+                    class_terms.append(
+                        F.binary_cross_entropy_with_logits(
+                            valid_logits[~valid_targets], torch.zeros_like(valid_logits[~valid_targets])
+                        )
+                    )
+                if class_terms:
+                    out["loss_hsi_contact_refine_class"] = torch.stack(class_terms).mean()
             probability = torch.sigmoid(flat_logits)
             if contact_valid.any():
                 out["metric_hsi_contact_contact_gate_mean"] = probability[contact_valid].mean().detach()

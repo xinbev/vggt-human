@@ -19,6 +19,7 @@ class _TrackState:
     betas: torch.Tensor
     confidence: float
     external_id: int = -1
+    id_embed: torch.Tensor | None = None
 
 
 class BaseSMPLTrackAssigner:
@@ -32,6 +33,8 @@ class BaseSMPLTrackAssigner:
         max_transl_distance_m: float = 1.50,
         max_beta_l1: float = 0.30,
         external_prior_iou_min: float = 0.50,
+        id_weight: float = 0.0,
+        max_id_distance: float = 0.70,
     ) -> None:
         self.max_age = int(max_age)
         self.min_track_quality = float(min_track_quality)
@@ -39,6 +42,8 @@ class BaseSMPLTrackAssigner:
         self.max_transl_distance_m = float(max_transl_distance_m)
         self.max_beta_l1 = float(max_beta_l1)
         self.external_prior_iou_min = float(external_prior_iou_min)
+        self.id_weight = min(max(float(id_weight), 0.0), 1.0)
+        self.max_id_distance = max(float(max_id_distance), 0.0)
 
     @torch.no_grad()
     def assign(
@@ -51,6 +56,7 @@ class BaseSMPLTrackAssigner:
         external_track_ids: torch.Tensor | None = None,
         external_track_mask: torch.Tensor | None = None,
         external_track_confidence: torch.Tensor | None = None,
+        pred_id_embed: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor]:
         if boxes.ndim != 4 or boxes.shape[-1] != 4:
             raise ValueError(f"boxes must have shape [B,S,Q,4], got {tuple(boxes.shape)}")
@@ -76,6 +82,11 @@ class BaseSMPLTrackAssigner:
         boxes_f = boxes.detach().float()
         betas_f = pred_betas.detach().float()
         transl_f = pred_transl_cam.detach().float()
+        id_f = None
+        if pred_id_embed is not None:
+            if pred_id_embed.shape[:3] != boxes.shape[:3]:
+                raise ValueError("pred_id_embed must share [B,S,Q] with boxes")
+            id_f = torch.nn.functional.normalize(pred_id_embed.detach().float(), dim=-1)
         external_ids = external_track_ids.to(device=device).long() if external_track_ids is not None else None
         external_mask = external_track_mask.to(device=device).bool() if external_track_mask is not None else None
         external_conf = external_track_confidence.to(device=device).float() if external_track_confidence is not None else None
@@ -107,6 +118,7 @@ class BaseSMPLTrackAssigner:
                             ext_id,
                             ext_conf,
                             gap,
+                            None if id_f is None else id_f[batch_idx, frame_idx, query_idx],
                         )
                         if score > best_score:
                             best_score = score
@@ -136,6 +148,7 @@ class BaseSMPLTrackAssigner:
                         betas=betas_f[batch_idx, frame_idx, query_idx].detach(),
                         confidence=float(conf[batch_idx, frame_idx, query_idx]),
                         external_id=ext_id,
+                        id_embed=(None if id_f is None else id_f[batch_idx, frame_idx, query_idx].detach()),
                     )
                     assigned_ids[batch_idx, frame_idx, query_idx] = int(track_id)
                     assigned_mask[batch_idx, frame_idx, query_idx] = True
@@ -165,6 +178,7 @@ class BaseSMPLTrackAssigner:
         external_id: int,
         external_confidence: float,
         gap: int,
+        id_embed: torch.Tensor | None,
     ) -> float:
         center_dist = torch.linalg.norm(box[:2] - track.box[:2]).item()
         transl_dist = torch.linalg.norm(transl - track.transl).item()
@@ -176,15 +190,24 @@ class BaseSMPLTrackAssigner:
         beta_score = max(0.0, 1.0 - beta_l1 / max(self.max_beta_l1, 1e-6))
         confidence_score = max(0.0, min(float(confidence), 1.0))
         external_score = max(0.0, min(float(external_confidence), 1.0)) if external_id >= 0 and external_id == track.external_id else 0.0
+        id_score = None
+        if self.id_weight > 0.0 and id_embed is not None and track.id_embed is not None:
+            cosine = float(torch.dot(id_embed, track.id_embed).clamp(-1.0, 1.0).item())
+            id_distance = 1.0 - cosine
+            if id_distance > self.max_id_distance:
+                return float("-inf")
+            id_score = max(0.0, min(1.0, 1.0 - id_distance / max(self.max_id_distance, 1e-6)))
         gap_penalty = 0.01 * max(int(gap) - 1, 0)
-        return (
+        geometry_score = (
             0.35 * bbox_score
             + 0.35 * transl_score
             + 0.15 * beta_score
             + 0.10 * confidence_score
             + 0.05 * external_score
-            - gap_penalty
         )
+        if id_score is not None:
+            return (1.0 - self.id_weight) * geometry_score + self.id_weight * id_score - gap_penalty
+        return geometry_score - gap_penalty
 
     @staticmethod
     def _external_id(

@@ -28,6 +28,25 @@ class MLP(nn.Module):
         return self.layers(x)
 
 
+class SMPLIdentityHead(nn.Module):
+    """Project SMPL query tokens into normalized identity embeddings."""
+
+    def __init__(self, dim_in: int, hidden_dim: int = 512, id_embed_dim: int = 256) -> None:
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.LayerNorm(dim_in),
+            nn.Linear(dim_in, hidden_dim),
+            nn.GELU(),
+            nn.LayerNorm(hidden_dim),
+            nn.Linear(hidden_dim, id_embed_dim),
+        )
+
+    def forward(self, hidden: torch.Tensor) -> torch.Tensor:
+        if hidden.ndim < 2:
+            raise ValueError(f"SMPLIdentityHead expects [..., C], got {tuple(hidden.shape)}")
+        return F.normalize(self.net(hidden.float()), dim=-1)
+
+
 def _get_clones(module: nn.Module, num_layers: int) -> nn.ModuleList:
     return nn.ModuleList([copy.deepcopy(module) for _ in range(num_layers)])
 

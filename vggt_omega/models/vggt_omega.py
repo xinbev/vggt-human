@@ -19,6 +19,7 @@ from vggt_omega.models.heads import (
     HSIContactRefineHead,
     HSIRefinementHead,
     HSITranslationRefineV4Head,
+    SMPLIdentityHead,
     TextAlignmentHead,
 )
 from vggt_omega.tracking.smpl_track_assigner import BaseSMPLTrackAssigner
@@ -43,6 +44,7 @@ class VGGTOmega(nn.Module):
         smpl_bbox_mode: str = "direct",
         smpl_predict_id_embed: bool = False,
         smpl_id_embed_dim: int = 256,
+        smpl_id_hidden_dim: int = 512,
         smpl_return_aux: bool = False,
         smpl_translation_output_mode: str = "direct",
         smpl_translation_decode_hidden_dim: int = 512,
@@ -73,6 +75,8 @@ class VGGTOmega(nn.Module):
         smpl_track_assign_max_transl_distance_m: float = 1.50,
         smpl_track_assign_max_beta_l1: float = 0.30,
         smpl_track_assign_external_iou_min: float = 0.50,
+        smpl_track_assign_id_weight: float = 0.0,
+        smpl_track_assign_max_id_distance: float = 0.70,
         smpl_enable_temporal_translation: bool = False,
         smpl_temporal_translation_hidden_dim: int = 512,
         smpl_temporal_translation_max_velocity_delta_m: float = 0.25,
@@ -204,6 +208,8 @@ class VGGTOmega(nn.Module):
                 max_transl_distance_m=smpl_track_assign_max_transl_distance_m,
                 max_beta_l1=smpl_track_assign_max_beta_l1,
                 external_prior_iou_min=smpl_track_assign_external_iou_min,
+                id_weight=smpl_track_assign_id_weight,
+                max_id_distance=smpl_track_assign_max_id_distance,
             )
             if enable_smpl
             else None
@@ -244,6 +250,15 @@ class VGGTOmega(nn.Module):
                 image_size=image_size,
             )
             if enable_smpl and self.smpl_provider == "internal"
+            else None
+        )
+        self.nlf_id_head = (
+            SMPLIdentityHead(
+                dim_in=2 * embed_dim,
+                hidden_dim=smpl_id_hidden_dim,
+                id_embed_dim=smpl_id_embed_dim,
+            )
+            if enable_smpl and self.smpl_provider == "nlf" and smpl_predict_id_embed
             else None
         )
         self.nlf_smpl_provider = (
@@ -421,6 +436,10 @@ class VGGTOmega(nn.Module):
             "camera_and_register_tokens": final_tokens[:, :, : token_layout.register_end].contiguous(),
         }
         with torch.autocast(device_type=images.device.type, enabled=False):
+            if self.nlf_id_head is not None:
+                smpl_tokens = final_tokens[:, :, token_layout.smpl_start : token_layout.smpl_end]
+                predictions["pred_id_embed"] = self.nlf_id_head(smpl_tokens)
+
             if self.camera_head is not None:
                 predictions["pose_enc"] = self.camera_head(
                     aggregated_tokens_list,
@@ -592,6 +611,7 @@ class VGGTOmega(nn.Module):
         pred_transl = predictions.get("pred_transl_cam")
         pred_betas = predictions.get("pred_betas")
         pred_confs = predictions.get("pred_confs")
+        pred_id_embed = predictions.get("pred_id_embed")
         if not isinstance(pred_transl, torch.Tensor) or not isinstance(pred_betas, torch.Tensor) or not isinstance(pred_confs, torch.Tensor):
             return {}
         batch_size, num_frames, num_queries = pred_transl.shape[:3]
@@ -645,6 +665,7 @@ class VGGTOmega(nn.Module):
             external_track_ids=external_track_ids if self.smpl_use_external_track_prior else None,
             external_track_mask=external_track_mask if self.smpl_use_external_track_prior else None,
             external_track_confidence=external_track_confidence if self.smpl_use_external_track_prior else None,
+            pred_id_embed=pred_id_embed if isinstance(pred_id_embed, torch.Tensor) else None,
         )
 
 
