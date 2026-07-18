@@ -10,6 +10,7 @@ STAGE2_TRAIN_CONFIG="${STAGE2_TRAIN_CONFIG:-${REPO_ROOT}/configs/train_smpl_hsi_
 OVERFIT_CKPT="${OVERFIT_CKPT:?Set OVERFIT_CKPT to the Stage2 checkpoint_top01.pt to evaluate}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-${REPO_ROOT}/outputs/debug/hsi_curriculum_v2_stage2a_overfit64_final_eval}"
 CUDA_VISIBLE_DEVICES_VALUE="${CUDA_VISIBLE_DEVICES_VALUE:-7}"
+EVAL_GATE_MODE="${EVAL_GATE_MODE:-overfit}"
 
 cd "${REPO_ROOT}"
 
@@ -40,5 +41,5 @@ bash scripts/train/train_smpl_hsi_scale_trans_contact_curriculum.sh
 
 OUTPUT_DIR="${OUTPUT_ROOT}/stage2a_gt_transl" \
 GATE_STAGE=stage2 \
-GATE_MODE=overfit \
+GATE_MODE="${EVAL_GATE_MODE}" \
 bash scripts/smoke/inspect_hsi_curriculum_metrics.sh

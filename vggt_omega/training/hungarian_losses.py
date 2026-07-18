@@ -1223,6 +1223,10 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_base_transl_active_noisy_l2_median": zero.detach(),
             "metric_hsi_transl_active_noisy_l2_median": zero.detach(),
             "metric_hsi_transl_active_noisy_improvement_rate": zero.detach(),
+            "metric_hsi_align_active_valid_ratio": zero.detach(),
+            "metric_hsi_align_residual_ray_sign_acc": zero.detach(),
+            "metric_hsi_align_residual_ray_l1": zero.detach(),
+            "metric_hsi_align_residual_ray_improvement_rate": zero.detach(),
             "metric_hsi_transl_clean_displacement_mean_m": zero.detach(),
             "metric_hsi_transl_clean_gate_mean": zero.detach(),
             "metric_hsi_transl_noisy_gate_mean": zero.detach(),
@@ -1357,6 +1361,7 @@ class HungarianSMPLLoss(nn.Module):
         losses["metric_hsi_transl_improvement_rate"] = (
             refined_transl_l2_items < base_transl_l2_items
         ).to(dtype=pred_transl.dtype).mean().detach()
+        active_noisy_items = None
         clean_value = predictions.get("transl_noise_is_clean")
         clean_flat = _flatten_prediction(clean_value, unframed_ndim=3) if isinstance(clean_value, torch.Tensor) else None
         if clean_flat is not None:
@@ -1435,6 +1440,29 @@ class HungarianSMPLLoss(nn.Module):
             losses["metric_hsi_ray_delta_sign_acc"] = sign_match.to(dtype=pred_transl.dtype).mean().detach()
         else:
             losses["metric_hsi_ray_delta_sign_acc"] = pred_transl.sum().detach() * 0.0
+
+        residual_basis_value = predictions.get("hsi_align_residual_basis_median")
+        if isinstance(residual_basis_value, torch.Tensor) and active_noisy_items is not None and active_noisy_items.any():
+            residual_basis = _flatten_prediction(residual_basis_value, unframed_ndim=3)[frame_idx, src_idx]
+            residual_ray = residual_basis[..., :1]
+            active_expected_ray = expected_ray_delta[active_noisy_items]
+            active_residual_ray = residual_ray[active_noisy_items]
+            active_sign_valid = active_expected_ray.abs() > 1e-6
+            if active_sign_valid.any():
+                losses["metric_hsi_align_residual_ray_sign_acc"] = (
+                    torch.sign(active_residual_ray[active_sign_valid])
+                    == torch.sign(active_expected_ray[active_sign_valid])
+                ).to(dtype=pred_transl.dtype).mean().detach()
+            losses["metric_hsi_align_residual_ray_l1"] = (
+                active_residual_ray - active_expected_ray
+            ).abs().mean().detach()
+            losses["metric_hsi_align_residual_ray_improvement_rate"] = (
+                (active_residual_ray - active_expected_ray).abs() < active_expected_ray.abs()
+            ).to(dtype=pred_transl.dtype).mean().detach()
+            align_valid_value = predictions.get("hsi_align_valid_ratio")
+            if isinstance(align_valid_value, torch.Tensor):
+                align_valid = _flatten_prediction(align_valid_value, unframed_ndim=3)[frame_idx, src_idx, 0]
+                losses["metric_hsi_align_active_valid_ratio"] = align_valid[active_noisy_items].mean().detach()
 
         expected_delta = target_transl - base_transl_matched
         predicted_delta = pred_transl - base_transl_matched
