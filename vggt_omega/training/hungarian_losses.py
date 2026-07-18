@@ -72,6 +72,7 @@ class HungarianSMPLLoss(nn.Module):
         hsi_transl_noise_gate_weight: float = 0.0,
         hsi_transl_gate_full_open_m: float = 0.10,
         hsi_transl_gate_target_mode: str = "binary_v1",
+        hsi_transl_active_noise_threshold_m: float = 0.05,
         hsi_joints3d_weight: float = 0.0,
         hsi_vertices_weight: float = 0.0,
         hsi_projected_joints2d_weight: float = 0.0,
@@ -209,6 +210,7 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_transl_gate_target_mode = str(hsi_transl_gate_target_mode or "binary_v1").lower()
         if self.hsi_transl_gate_target_mode not in {"binary_v1", "magnitude_v2"}:
             raise ValueError(f"Unsupported HSI translation gate target mode: {self.hsi_transl_gate_target_mode!r}")
+        self.hsi_transl_active_noise_threshold_m = max(float(hsi_transl_active_noise_threshold_m), 0.0)
         self.hsi_joints3d_weight = hsi_joints3d_weight
         self.hsi_vertices_weight = hsi_vertices_weight
         self.hsi_projected_joints2d_weight = hsi_projected_joints2d_weight
@@ -1217,6 +1219,10 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_base_transl_noisy_l2_median": zero.detach(),
             "metric_hsi_transl_noisy_l2_median": zero.detach(),
             "metric_hsi_transl_noisy_improvement_rate": zero.detach(),
+            "metric_hsi_transl_active_noisy_fraction": zero.detach(),
+            "metric_hsi_base_transl_active_noisy_l2_median": zero.detach(),
+            "metric_hsi_transl_active_noisy_l2_median": zero.detach(),
+            "metric_hsi_transl_active_noisy_improvement_rate": zero.detach(),
             "metric_hsi_transl_clean_displacement_mean_m": zero.detach(),
             "metric_hsi_transl_clean_gate_mean": zero.detach(),
             "metric_hsi_transl_noisy_gate_mean": zero.detach(),
@@ -1388,6 +1394,18 @@ class HungarianSMPLLoss(nn.Module):
                 ).to(dtype=pred_transl.dtype).mean().detach()
                 if matched_align_gate is not None:
                     losses["metric_hsi_transl_noisy_gate_mean"] = matched_align_gate[noisy_items].mean().detach()
+            active_noisy_items = noisy_items & (base_transl_l2_items >= self.hsi_transl_active_noise_threshold_m)
+            losses["metric_hsi_transl_active_noisy_fraction"] = active_noisy_items.to(
+                dtype=pred_transl.dtype
+            ).mean().detach()
+            if active_noisy_items.any():
+                active_base = base_transl_l2_items[active_noisy_items]
+                active_refined = refined_transl_l2_items[active_noisy_items]
+                losses["metric_hsi_base_transl_active_noisy_l2_median"] = active_base.median().detach()
+                losses["metric_hsi_transl_active_noisy_l2_median"] = active_refined.median().detach()
+                losses["metric_hsi_transl_active_noisy_improvement_rate"] = (
+                    active_refined < active_base
+                ).to(dtype=pred_transl.dtype).mean().detach()
             if clean_items.any():
                 clean_displacement = torch.linalg.norm(
                     pred_transl[clean_items] - base_transl_matched[clean_items], dim=-1

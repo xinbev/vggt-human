@@ -23,6 +23,9 @@ def main() -> None:
             "metric_hsi_base_transl_noisy_l2_median",
             "metric_hsi_transl_noisy_l2_median",
             "metric_hsi_transl_noisy_improvement_rate",
+            "metric_hsi_base_transl_active_noisy_l2_median",
+            "metric_hsi_transl_active_noisy_l2_median",
+            "metric_hsi_transl_active_noisy_improvement_rate",
             "metric_hsi_transl_clean_displacement_mean_m",
             "metric_hsi_transl_clean_gate_mean",
             "metric_hsi_transl_noisy_gate_mean",
@@ -45,13 +48,13 @@ def main() -> None:
     if missing:
         raise SystemExit(f"Missing or non-finite gate metrics: {missing}")
     if args.mode == "overfit":
-        if args.stage == "stage2" and float(metrics["metric_hsi_transl_noisy_improvement_rate"]) < 0.90:
-            raise SystemExit("Stage2 overfit gate failed: noisy improvement_rate < 0.90")
+        if args.stage == "stage2" and float(metrics["metric_hsi_transl_active_noisy_improvement_rate"]) < 0.90:
+            raise SystemExit("Stage2 overfit gate failed: active-noisy improvement_rate < 0.90")
         if args.stage == "stage2":
-            base = float(metrics["metric_hsi_base_transl_noisy_l2_median"])
-            refined = float(metrics["metric_hsi_transl_noisy_l2_median"])
+            base = float(metrics["metric_hsi_base_transl_active_noisy_l2_median"])
+            refined = float(metrics["metric_hsi_transl_active_noisy_l2_median"])
             if base <= 0.0 or refined > 0.30 * base:
-                raise SystemExit("Stage2 overfit gate failed: noisy refined median is above 30% of base")
+                raise SystemExit("Stage2 overfit gate failed: active-noisy refined median is above 30% of base")
             if float(metrics["metric_hsi_transl_clean_displacement_mean_m"]) > 0.005:
                 raise SystemExit("Stage2 overfit gate failed: clean displacement exceeds 5 mm")
             if float(metrics["metric_hsi_transl_clean_gate_mean"]) >= float(metrics["metric_hsi_transl_noisy_gate_mean"]):
@@ -70,8 +73,8 @@ def main() -> None:
             if base <= 0.0 or refined > 0.30 * base:
                 raise SystemExit("Stage3 overfit gate failed: contact p95 reduction is below 70%")
     if args.mode == "distribution" and args.stage == "stage2":
-        if float(metrics["metric_hsi_transl_noisy_improvement_rate"]) <= 0.50:
-            raise SystemExit("Stage2 distribution gate failed: noisy improvement_rate <= 0.50")
+        if float(metrics["metric_hsi_transl_active_noisy_improvement_rate"]) <= 0.50:
+            raise SystemExit("Stage2 distribution gate failed: active-noisy improvement_rate <= 0.50")
     if args.mode == "distribution" and args.stage == "stage3":
         base = float(metrics["metric_hsi_contact_base_abs_p95_m"])
         refined = float(metrics["metric_hsi_contact_refined_abs_p95_m"])
@@ -119,9 +122,10 @@ def check_resolved_config(config: dict, stage: str) -> None:
                 {
                     "model.hsi_align_feature_version": "robust_basis_v2",
                     "model.hsi_align_gate_application_mode": "soft_deadzone_v2",
-                    "model.hsi_align_gate_deadzone": 0.50,
+                    "model.hsi_align_gate_deadzone": 0.55,
                     "loss.hsi_transl_gate_target_mode": "magnitude_v2",
                     "loss.hsi_transl_gate_full_open_m": 0.10,
+                    "loss.hsi_transl_active_noise_threshold_m": 0.05,
                 }
             )
     else:

@@ -49,12 +49,16 @@ and metrics, never as a model input.
 V3 applies the raw sigmoid gate through a differentiable dead-zone:
 
 ```text
-effective_gate = relu(raw_gate - 0.5) / 0.5
+effective_gate = relu(raw_gate - 0.55) / 0.45
 ```
 
 The raw gate remains supervised. A confidently clean person therefore receives
 exactly zero translation update, while noisy people retain a gradient above the
 threshold. Legacy modes continue to apply the original sigmoid gate directly.
+
+Because the magnitude target intentionally ignores tiny corrections, overfit
+improvement metrics are evaluated on perturbed people with at least 5 cm base
+translation error. Exact clean people retain the separate 5 mm identity gate.
 
 ## Frozen Components
 
@@ -71,8 +75,8 @@ Only `hsi_human_scene_align_head` is trainable.
 Run smoke, fixed-64 overfit, and 500-step distribution checks in that order.
 The fixed-64 gate requires:
 
-- noisy improvement rate at least 90%
-- noisy refined median no more than 30% of base
+- active-noisy improvement rate at least 90%
+- active-noisy refined median no more than 30% of base
 - clean displacement no more than 5 mm
 - clean gate lower than noisy gate
 - tangent degradation no more than 0.5 mm
