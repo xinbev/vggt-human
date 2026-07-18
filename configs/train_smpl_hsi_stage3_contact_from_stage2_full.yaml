@@ -135,6 +135,7 @@ optim:
   grad_clip_norm: 1.0
   log_interval: 20
   log_style: progress
+  val_log_style: compact
   progress_bar_width: 28
   progress_max_loss_items: 12
   progress_log_keys:
@@ -150,6 +151,20 @@ optim:
     - metric_hsi_contact_swing_gate_mean
     - metric_hsi_transl_l1_delta
     - metric_hsi_joint_error_delta
+  val_log_keys:
+    - loss_total
+    - loss_hsi_contact_refine_plane
+    - loss_hsi_contact_refine_class
+    - loss_hsi_contact_refine_no_worse
+    - loss_hsi_contact_refine_swing_no_pull
+    - metric_hsi_contact_float_p95_m
+    - metric_hsi_contact_penetration_p95_m
+    - metric_hsi_contact_false_pull_rate
+    - metric_hsi_contact_contact_gate_mean
+    - metric_hsi_contact_swing_gate_mean
+    - metric_hsi_contact_base_abs_p95_m
+    - metric_hsi_contact_refined_abs_p95_m
+    - metric_hsi_contact_swing_displacement_mean_m
   val_interval: 1
   allowed_trainable_prefixes:
     - hsi_contact_refine_head.

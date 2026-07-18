@@ -1135,7 +1135,11 @@ def validate(
             {"epoch": epoch + 1, "num_records": len(v4_records), "metrics": v4_metrics},
             Path(config["experiment"]["output_dir"]) / f"v4_val_metrics_epoch_{epoch + 1:04d}.json",
         )
-    print(format_log("val", epoch, 0, len(loader), 0, averaged))
+    val_log_style = str(config.get("optim", {}).get("val_log_style", "compact")).lower()
+    if val_log_style in {"full", "verbose"}:
+        print(format_log("val", epoch, 0, len(loader), 0, averaged))
+    else:
+        print(format_epoch_summary("val-epoch", epoch, averaged, config), flush=True)
     worst_rows.sort(key=lambda row: float(row["selection_value"]), reverse=True)
     save_json(
         {"epoch": epoch + 1, "worst_samples": worst_rows[:50]},
@@ -1803,7 +1807,7 @@ def format_log(prefix: str, epoch: int, step: int, steps: int, global_step: int,
 
 
 def format_epoch_summary(prefix: str, epoch: int, losses: dict[str, float], config: dict[str, Any]) -> str:
-    keys = get_progress_log_keys(config)
+    keys = get_val_log_keys(config) if prefix.startswith("val") else get_progress_log_keys(config)
     max_items = int(config.get("optim", {}).get("progress_max_loss_items", 8))
     items: list[str] = []
     for key in keys:
@@ -1926,6 +1930,15 @@ def get_progress_log_keys(config: dict[str, Any]) -> list[str]:
     ]
 
 
+def get_val_log_keys(config: dict[str, Any]) -> list[str]:
+    raw = config.get("optim", {}).get("val_log_keys")
+    if isinstance(raw, str) and raw.strip():
+        return [item.strip() for item in raw.split(",") if item.strip()]
+    if isinstance(raw, list):
+        return [str(item) for item in raw]
+    return get_progress_log_keys(config)
+
+
 def compact_loss_name(key: str) -> str:
     mapping = {
         "loss_total": "total",
@@ -1982,6 +1995,18 @@ def compact_loss_name(key: str) -> str:
         "metric_hsi_align_delta_l1": "alignDelta",
         "metric_hsi_align_gate_mean": "alignGate",
         "metric_hsi_align_valid_ratio": "alignValid",
+        "loss_hsi_contact_refine_plane": "contactPlane",
+        "loss_hsi_contact_refine_class": "contactCls",
+        "loss_hsi_contact_refine_no_worse": "contactNW",
+        "loss_hsi_contact_refine_swing_no_pull": "swingPull",
+        "metric_hsi_contact_float_p95_m": "floatP95",
+        "metric_hsi_contact_penetration_p95_m": "penetrP95",
+        "metric_hsi_contact_false_pull_rate": "falsePull",
+        "metric_hsi_contact_contact_gate_mean": "contactGate",
+        "metric_hsi_contact_swing_gate_mean": "swingGate",
+        "metric_hsi_contact_base_abs_p95_m": "baseP95",
+        "metric_hsi_contact_refined_abs_p95_m": "refinedP95",
+        "metric_hsi_contact_swing_displacement_mean_m": "swingDisp",
         "loss_transl_refine_delta_reg": "tDeltaReg",
         "loss_local_joints3d": "localJ",
         "loss_local_vertices": "localV",
