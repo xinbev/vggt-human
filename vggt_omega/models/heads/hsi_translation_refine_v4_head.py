@@ -68,7 +68,7 @@ class HSITranslationRefineV4Head(nn.Module):
         feature_dim = 3 + 1 + 1 + 1 + 1 + 12 + 12 + 3 + 1 + 1 + 2 + 2
         self.correction_trunk = _make_mlp(feature_dim, hidden_dim)
         self.correction_head = nn.Linear(hidden_dim, 3)
-        nn.init.zeros_(self.correction_head.weight)
+        nn.init.normal_(self.correction_head.weight, mean=0.0, std=1e-3)
         nn.init.zeros_(self.correction_head.bias)
         with torch.no_grad():
             self.correction_head.bias[0] = -4.0
@@ -76,7 +76,7 @@ class HSITranslationRefineV4Head(nn.Module):
         gate_feature_dim = feature_dim + 4
         self.gate_trunk = _make_mlp(gate_feature_dim, hidden_dim)
         self.gate_head = nn.Linear(hidden_dim, 1)
-        nn.init.zeros_(self.gate_head.weight)
+        nn.init.normal_(self.gate_head.weight, mean=0.0, std=1e-3)
         nn.init.constant_(self.gate_head.bias, -2.2)
 
     def forward(
