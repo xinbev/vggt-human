@@ -97,7 +97,13 @@ class HSIContactRefineHead(nn.Module):
 
         vertices, _ = self._decode(pose6d, betas)
         sole = vertices[:, self.sole_vertex_indices].mean(dim=-2)
-        sole_cam = sole + transl.reshape(-1, 1, 1, 3)
+        flat_transl = transl.reshape(-1, 1, 3)
+        if sole.shape != (flat_transl.shape[0], 2, 3):
+            raise ValueError(
+                f"Expected sole centers [B*S*Q,2,3], got {tuple(sole.shape)} "
+                f"for translations {tuple(flat_transl.shape)}"
+            )
+        sole_cam = sole + flat_transl
         flat_frames = batch_size * num_frames
         frame_idx = torch.arange(flat_frames, device=transl.device).repeat_interleave(num_queries)
         planes = estimate_local_support_planes(
@@ -147,7 +153,7 @@ class HSIContactRefineHead(nn.Module):
         refined_poses = rot6d_to_axis_angle(refined_pose6d.reshape(-1, 24, 6)).reshape(batch_size, num_frames, num_queries, 72)
 
         refined_vertices, _ = self._decode(refined_pose6d, betas)
-        refined_sole = refined_vertices[:, self.sole_vertex_indices].mean(dim=-2) + refined_transl.reshape(-1, 1, 1, 3)
+        refined_sole = refined_vertices[:, self.sole_vertex_indices].mean(dim=-2) + refined_transl.reshape(-1, 1, 3)
         refined_signed = ((refined_sole - planes["center"]) * planes["normal"]).sum(dim=-1)
         outputs = {
             "hsi_contact_base_pred_pose_6d": pose6d,
