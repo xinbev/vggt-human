@@ -1,0 +1,159 @@
+{
+  "checkpoints": {
+    "vggt_baseline": "/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt",
+    "yolo8x": "/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/yolov8x.torchscript",
+    "nlf_smpl": "/home/zhw/lab_users/xyb/home/projects/vggt-human/third_party/weights/nlf/nlf_l_multi_0.3.2.torchscript",
+    "sat_hmr_smpl": "/home/zhw/xyb_space/SAT-HMR/weights/sat_hmr/sat_644.pth"
+  },
+  "assets": {
+    "smpl_model_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/body_models/smpl",
+    "smpl_mean_params": "/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/body_models/smpl/smpl/smpl_mean_params.npz"
+  },
+  "datasets": {
+    "bedlam_root": "/home/zhw/xyb_space/bedlam/processed_bedlam/",
+    "bedlam_boxes_root": "outputs/preprocess/bedlam_boxes",
+    "bedlam_tracks_root": "outputs/preprocess/video_tracks",
+    "hf_bedlam_images_root": "/home/zhw/xyb_space/bedlam/hf_bedlam/training_images",
+    "hf_bedlam_npz_root": "/home/zhw/xyb_space/bedlam/all_npz_12_training",
+    "hf_bedlam_sam2_patch_masks_root": "outputs/preprocess/hf_bedlam_sam2_patch_masks",
+    "emdb_hmr4d_support_root": "/home/zhw/xyb_space/EMDB/hmr4d_support",
+    "rich_hmr4d_support_root": "/home/zhw/xyb_space/RICH/hmr4d_support",
+    "threedpw_hmr4d_support_root": "/home/zhw/xyb_space/3DPW/hmr4d_support",
+    "threedpw_root": "/home/zhw/xyb_space/3DPW",
+    "threedpw_smpl_base_root": "outputs/preprocess/3dpw_smpl_base",
+    "threedpw_sam2_patch_masks_root": "outputs/preprocess/3dpw_sam2_patch_masks",
+    "hmr4d_eval_frames_root": "outputs/preprocess/hmr4d_eval_frames",
+    "hmr4d_eval_tracks_root": "outputs/preprocess/hmr4d_eval_tracks"
+  },
+  "third_party": {
+    "boosttrack_root": "third_party/BoostTrack",
+    "boosttrack_weights_root": "third_party/weights/BoostTrack",
+    "sam2_root": "third_party/sam2",
+    "sam2_checkpoint": "third_party/weights/sam/sam2.1_hiera_large.pt",
+    "Omnieraser_root": "third_party/Omnieraser",
+    "Omnieraser_checkpoint": "third_party/weights/Omnieraser/controlnet_flux_pytorch_lora_weights.safetensors",
+    "nlf_root": "third_party/nlf"
+  },
+  "experiment": {
+    "name": "nlf_roi_id_tracking_v2_gpu5",
+    "output_dir": "outputs/train/nlf_roi_id_tracking_v2_gpu5",
+    "seed": 42
+  },
+  "data": {
+    "dataset": "bedlam",
+    "root_key": "datasets.bedlam_root",
+    "train_split": "Training",
+    "val_split": "",
+    "sequence_length": 4,
+    "stride": 1,
+    "image_size": 518,
+    "image_resolution": 512,
+    "resize_mode": "balanced",
+    "max_humans": 20,
+    "boxes_root_key": "datasets.bedlam_boxes_root",
+    "require_boxes": true,
+    "require_smpl": true,
+    "require_depth": false,
+    "num_workers": 4,
+    "pin_memory": true
+  },
+  "model": {
+    "patch_size": 16,
+    "embed_dim": 1024,
+    "enable_camera": true,
+    "enable_depth": false,
+    "enable_alignment": false,
+    "enable_smpl": true,
+    "smpl_provider": "nlf",
+    "nlf_use_detector": false,
+    "nlf_require_boxes": true,
+    "nlf_model_name": "smpl",
+    "nlf_internal_batch_size": 64,
+    "nlf_num_aug": 1,
+    "num_smpl_queries": 20,
+    "freeze_aggregator": true,
+    "freeze_camera_head": true,
+    "freeze_aggregator_forward": true,
+    "train_smpl_query_token": false,
+    "predict_boxes": false,
+    "predict_id_embed": true,
+    "id_feature_mode": "roi_query",
+    "id_embed_dim": 256,
+    "id_hidden_dim": 512,
+    "smpl_query_patch_pool_expand": 0.05,
+    "smpl_query_patch_pool_mode": "box",
+    "smpl_track_assignment_mode": "gt",
+    "smpl_track_assign_id_weight": 0.1,
+    "smpl_track_assign_max_id_distance": 2.0
+  },
+  "checkpoint": {
+    "resume": "",
+    "load_vggt_baseline": true,
+    "strict": false,
+    "resume_strict": false,
+    "resume_optimizer": false,
+    "save_scope": "trainable",
+    "save_optimizer": false,
+    "save_epoch_checkpoint": true,
+    "save_latest": true,
+    "save_final": true,
+    "save_top_k": 3,
+    "save_top_k_from_train": true,
+    "topk_create_stable_copies": false,
+    "monitor": "loss_id",
+    "monitor_mode": "min"
+  },
+  "optim": {
+    "batch_size": 1,
+    "epochs": 20,
+    "lr": 5e-05,
+    "weight_decay": 0.05,
+    "grad_clip_norm": 1.0,
+    "log_interval": 20,
+    "log_style": "progress",
+    "progress_bar_width": 28,
+    "progress_max_loss_items": 10,
+    "progress_log_keys": [
+      "loss_total",
+      "loss_id",
+      "loss_id_supcon",
+      "loss_id_hard_negative",
+      "metric_id_positive_cosine",
+      "metric_id_negative_cosine",
+      "metric_id_embedding_margin"
+    ],
+    "allowed_trainable_prefixes": [
+      "nlf_id_head."
+    ],
+    "required_trainable_prefixes": [
+      "nlf_id_head."
+    ],
+    "required_gradient_prefixes": [
+      "nlf_id_head."
+    ],
+    "save_interval": 1,
+    "val_interval": 1
+  },
+  "loss": {
+    "type": "hungarian",
+    "pose_weight": 0.0,
+    "betas_weight": 0.0,
+    "transl_cam_weight": 0.0,
+    "joints3d_weight": 0.0,
+    "projected_joints2d_weight": 0.0,
+    "conf_weight": 0.0,
+    "bbox_weight": 0.0,
+    "giou_weight": 0.0,
+    "id_weight": 1.0,
+    "id_temperature": 0.1,
+    "id_hard_negative_weight": 2.0,
+    "id_margin": 0.2
+  },
+  "matching": {
+    "enabled": true,
+    "cost_conf": 0.5,
+    "cost_bbox": 8.0,
+    "cost_giou": 4.0,
+    "cost_kpts": 0.0
+  }
+}
