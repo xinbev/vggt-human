@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="${REPO_ROOT:-/home/zhw/lab_users/xyb/home/projects/vggt-human}"
+export REPO_ROOT
+
+export STAGE2_CKPT="${STAGE2_CKPT:-${REPO_ROOT}/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt}"
+export RESUME_CKPT="${RESUME_CKPT:-${STAGE2_CKPT}}"
+export TRAIN_CONFIG="${TRAIN_CONFIG:-${REPO_ROOT}/configs/train_smpl_hsi_stage3_contact_from_stage2_full.yaml}"
+export OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/outputs/train/hsi_stage3_contact_from_stage2_full}"
+export RESET_EPOCH="${RESET_EPOCH:-true}"
+
+export BEDLAM_ROOT="${BEDLAM_ROOT:-/home/zhw/xyb_space/bedlam/processed_bedlam}"
+export PREPROCESSED_ROOT="${PREPROCESSED_ROOT:-${REPO_ROOT}/outputs/preprocess/bedlam_boxes}"
+export CONTACT_TEACHER_ROOT="${CONTACT_TEACHER_ROOT:-${REPO_ROOT}/outputs/preprocess/hsi_contact_teachers_v3_strict}"
+export REQUIRE_CONTACT_TEACHER="${REQUIRE_CONTACT_TEACHER:-true}"
+export TRAIN_SEQUENCE_MANIFEST="${TRAIN_SEQUENCE_MANIFEST:-${REPO_ROOT}/outputs/preprocess/hsi_sequence_split_v2/train_sequences.txt}"
+export VAL_SEQUENCE_MANIFEST="${VAL_SEQUENCE_MANIFEST:-${REPO_ROOT}/outputs/preprocess/hsi_sequence_split_v2/val_sequences.txt}"
+export VAL_SPLIT="${VAL_SPLIT:-Training}"
+
+export CUDA_VISIBLE_DEVICES_VALUE="${CUDA_VISIBLE_DEVICES_VALUE:-7}"
+export BATCH_SIZE="${BATCH_SIZE:-16}"
+export NUM_WORKERS="${NUM_WORKERS:-12}"
+export NLF_INTERNAL_BATCH_SIZE="${NLF_INTERNAL_BATCH_SIZE:-128}"
+export MAX_HUMANS="${MAX_HUMANS:-20}"
+export NUM_VIEWS="${NUM_VIEWS:-2}"
+export EPOCHS="${EPOCHS:-3}"
+export LR="${LR:-2e-6}"
+export MAX_STEPS_PER_EPOCH="${MAX_STEPS_PER_EPOCH:-0}"
+export MAX_VAL_STEPS="${MAX_VAL_STEPS:-0}"
+
+export SMPL_PROVIDER="${SMPL_PROVIDER:-nlf}"
+export HSI_CAMERA_SOURCE="${HSI_CAMERA_SOURCE:-vggt}"
+export HSI_GEOMETRY_MODE="${HSI_GEOMETRY_MODE:-real_inference}"
+export ENABLE_HSI_CONTACT_REFINE="true"
+export TRAIN_HSI_CONTACT_REFINE_ONLY="true"
+export FREEZE_HSI_CONTACT_REFINE="false"
+export FREEZE_HSI_CONTACT_POSE_BRANCH="true"
+export FREEZE_HSI_CONTACT_ROOT_BRANCH="false"
+export FREEZE_HSI_HUMAN_SCENE_ALIGN="true"
+export FREEZE_HSI_BACKBONE="true"
+export FREEZE_HSI_SCENE_AFFINE="true"
+export FREEZE_HSI_BETAS_DELTA="true"
+export TRAIN_HSI_LAST_BLOCKS="0"
+
+export HSI_CONTACT_REFINE_PLANE_WEIGHT="${HSI_CONTACT_REFINE_PLANE_WEIGHT:-4.0}"
+export HSI_CONTACT_REFINE_POSE_WEIGHT="${HSI_CONTACT_REFINE_POSE_WEIGHT:-0.0}"
+export HSI_CONTACT_REFINE_CLASS_WEIGHT="${HSI_CONTACT_REFINE_CLASS_WEIGHT:-0.5}"
+export HSI_CONTACT_REFINE_NO_WORSE_WEIGHT="${HSI_CONTACT_REFINE_NO_WORSE_WEIGHT:-2.0}"
+export HSI_CONTACT_REFINE_SWING_NO_PULL_WEIGHT="${HSI_CONTACT_REFINE_SWING_NO_PULL_WEIGHT:-2.0}"
+export HSI_CONTACT_TEACHER_CAMERA_SOURCE="${HSI_CONTACT_TEACHER_CAMERA_SOURCE:-gt}"
+
+export SAVE_SCOPE="hsi"
+export SAVE_TOP_K="3"
+export SAVE_TOP_K_FROM_TRAIN="false"
+export TOPK_CREATE_STABLE_COPIES="true"
+export SAVE_EPOCH_CHECKPOINT="false"
+export SAVE_OPTIMIZER="false"
+export MONITOR="metric_stage3_selection"
+export MONITOR_MODE="min"
+export RESUME_REQUIRED_PREFIXES="hsi_refinement_head.,hsi_human_scene_align_head."
+export FROZEN_HASH_PREFIXES="hsi_refinement_head.,hsi_human_scene_align_head."
+export PROGRESS_LOG_KEYS="loss_total,loss_hsi_contact_refine_plane,loss_hsi_contact_refine_class,loss_hsi_contact_refine_no_worse,loss_hsi_contact_refine_swing_no_pull,metric_hsi_contact_float_p95_m,metric_hsi_contact_penetration_p95_m,metric_hsi_contact_false_pull_rate,metric_hsi_contact_contact_gate_mean,metric_hsi_contact_swing_gate_mean,metric_hsi_transl_l1_delta,metric_hsi_joint_error_delta"
+
+[[ -f "${RESUME_CKPT}" ]] || { echo "[ERROR] Missing Stage2 checkpoint: ${RESUME_CKPT}" >&2; exit 1; }
+[[ -f "${TRAIN_CONFIG}" ]] || { echo "[ERROR] Missing train config: ${TRAIN_CONFIG}" >&2; exit 1; }
+[[ -d "${CONTACT_TEACHER_ROOT}" ]] || { echo "[ERROR] Missing contact teacher root: ${CONTACT_TEACHER_ROOT}" >&2; exit 1; }
+[[ -f "${TRAIN_SEQUENCE_MANIFEST}" ]] || { echo "[ERROR] Missing train manifest: ${TRAIN_SEQUENCE_MANIFEST}" >&2; exit 1; }
+[[ -f "${VAL_SEQUENCE_MANIFEST}" ]] || { echo "[ERROR] Missing val manifest: ${VAL_SEQUENCE_MANIFEST}" >&2; exit 1; }
+
+echo "========== HSI Stage3 contact-only from frozen Stage2 =========="
+echo "Stage2 ckpt       : ${RESUME_CKPT}"
+echo "Contact teachers  : ${CONTACT_TEACHER_ROOT}"
+echo "Train/val manifests: ${TRAIN_SEQUENCE_MANIFEST} / ${VAL_SEQUENCE_MANIFEST}"
+echo "Output            : ${OUTPUT_DIR}"
+echo "GPU               : ${CUDA_VISIBLE_DEVICES_VALUE}"
+echo "Batch/views       : ${BATCH_SIZE} / ${NUM_VIEWS}"
+echo "Contact weights   : plane=${HSI_CONTACT_REFINE_PLANE_WEIGHT}, class=${HSI_CONTACT_REFINE_CLASS_WEIGHT}, no_worse=${HSI_CONTACT_REFINE_NO_WORSE_WEIGHT}, swing=${HSI_CONTACT_REFINE_SWING_NO_PULL_WEIGHT}"
+echo "Frozen modules    : Stage1 HSI + Stage2 align + VGGT + NLF"
+echo "Trainable module  : hsi_contact_refine_head"
+
+bash "${REPO_ROOT}/scripts/train/train_smpl_hsi_nlf_provider.sh"
+
+echo "========== HSI Stage3 contact-only finished =========="
+echo "Last checkpoint: ${OUTPUT_DIR}/checkpoint_latest.pt"
