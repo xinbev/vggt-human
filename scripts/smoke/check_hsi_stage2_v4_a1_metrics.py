@@ -49,6 +49,7 @@ def assert_config(config: dict) -> None:
         "model.enable_hsi_human_scene_align": False,
         "model.train_hsi_v4_correction_only": True,
         "model.hsi_v4_phase": "correction",
+        "model.hsi_v4_ray_parameterization": "residual_gain",
         "model.hsi_geometry_mode": "gt_metric",
         "training_prior.smpl_translation_noise_contract": "v4_deterministic",
         "loss.hsi_v4_candidate_transl_weight": 8.0,

@@ -31,6 +31,8 @@ class HSITranslationRefineV4Head(nn.Module):
         local_window: int = 7,
         min_correspondences: int = 12,
         max_ray_ratio: float = 0.25,
+        ray_parameterization: str = "residual_gain",
+        max_ray_gain: float = 4.0,
         max_tangent_delta_m: float = 0.12,
         max_correspondence_distance_m: float = 3.5,
         residual_mad_multiplier: float = 3.0,
@@ -51,6 +53,10 @@ class HSITranslationRefineV4Head(nn.Module):
         self.local_window = int(local_window)
         self.min_correspondences = max(int(min_correspondences), 1)
         self.max_ray_ratio = float(max_ray_ratio)
+        self.ray_parameterization = str(ray_parameterization or "residual_gain").lower()
+        if self.ray_parameterization not in {"residual_gain", "signed_magnitude"}:
+            raise ValueError(f"Unsupported V4 ray parameterization: {self.ray_parameterization!r}")
+        self.max_ray_gain = max(float(max_ray_gain), 0.0)
         self.max_tangent_delta_m = float(max_tangent_delta_m)
         self.max_correspondence_distance_m = float(max_correspondence_distance_m)
         self.residual_mad_multiplier = float(residual_mad_multiplier)
@@ -71,7 +77,7 @@ class HSITranslationRefineV4Head(nn.Module):
         nn.init.normal_(self.correction_head.weight, mean=0.0, std=1e-3)
         nn.init.zeros_(self.correction_head.bias)
         with torch.no_grad():
-            self.correction_head.bias[0] = -4.0
+            self.correction_head.bias[0] = -2.0
 
         gate_feature_dim = feature_dim + 4
         self.gate_trunk = _make_mlp(gate_feature_dim, hidden_dim)
@@ -197,8 +203,12 @@ class HSITranslationRefineV4Head(nn.Module):
 
         correction_hidden = self.correction_trunk(features)
         correction_raw = self.correction_head(correction_hidden)
-        ray_ratio = self.max_ray_ratio * torch.sigmoid(correction_raw[..., :1])
-        ray_delta = torch.sign(median_ray) * ray_ratio * base_norm
+        if self.ray_parameterization == "residual_gain":
+            ray_gain = self.max_ray_gain * torch.sigmoid(correction_raw[..., :1])
+            ray_delta = median_ray * ray_gain
+        else:
+            ray_ratio = self.max_ray_ratio * torch.sigmoid(correction_raw[..., :1])
+            ray_delta = torch.sign(median_ray) * ray_ratio * base_norm
         tangent_coeff = self.max_tangent_delta_m * torch.tanh(correction_raw[..., 1:])
         candidate_coeff = torch.cat([ray_delta, tangent_coeff], dim=-1)
         candidate_delta = (
@@ -228,6 +238,11 @@ class HSITranslationRefineV4Head(nn.Module):
             "hsi_v4_candidate_delta_transl_cam": candidate_delta,
             "hsi_v4_candidate_pred_transl_cam": candidate_transl,
             "hsi_v4_candidate_coeff": candidate_coeff,
+            "hsi_v4_ray_parameterization": torch.tensor(
+                0.0 if self.ray_parameterization == "residual_gain" else 1.0,
+                device=base_transl.device,
+                dtype=base_transl.dtype,
+            ),
             "hsi_v4_gate_logit": gate_logit,
             "hsi_v4_gate_probability": gate_probability,
             "hsi_v4_hard_apply": hard_apply.to(dtype=base_transl.dtype),

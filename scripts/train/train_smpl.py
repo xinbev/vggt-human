@@ -491,6 +491,8 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_v4_local_window=int(model_cfg.get("hsi_v4_local_window", 7)),
         hsi_v4_min_correspondences=int(model_cfg.get("hsi_v4_min_correspondences", 12)),
         hsi_v4_max_ray_ratio=float(model_cfg.get("hsi_v4_max_ray_ratio", 0.25)),
+        hsi_v4_ray_parameterization=str(model_cfg.get("hsi_v4_ray_parameterization", "residual_gain")),
+        hsi_v4_max_ray_gain=float(model_cfg.get("hsi_v4_max_ray_gain", 4.0)),
         hsi_v4_max_tangent_delta_m=float(model_cfg.get("hsi_v4_max_tangent_delta_m", 0.12)),
         hsi_v4_max_correspondence_distance_m=float(model_cfg.get("hsi_v4_max_correspondence_distance_m", 3.5)),
         hsi_v4_residual_mad_multiplier=float(model_cfg.get("hsi_v4_residual_mad_multiplier", 3.0)),

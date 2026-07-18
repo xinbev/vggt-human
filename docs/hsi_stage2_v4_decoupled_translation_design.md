@@ -150,17 +150,18 @@ tangent-x delta in meters
 tangent-y delta in meters
 ```
 
-Ray direction comes from the signed median residual when residual coherence is
-valid. The MLP predicts non-negative magnitude normalized by base depth:
+Ray direction and scale are anchored to the observed signed median residual
+when residual coherence is valid. The MLP predicts a positive gain rather than
+an unconstrained depth-sized magnitude:
 
 ```text
-ray_delta = sign(ray_residual_median) * predicted_ratio * base_depth
+ray_delta = ray_residual_median * predicted_positive_gain
 ```
 
-This retains the reliable geometric sign while learning the biased residual's
-missing magnitude. Tangent coefficients remain signed learned outputs. All
-outputs are bounded by explicit maximum ratios/distances (initially `25%` of
-base depth for ray and `12 cm` for each tangent coefficient).
+This retains the reliable geometric sign, learns the biased residual's missing
+magnitude, and prevents near-zero ray evidence from producing a large
+depth-proportional correction. Tangent coefficients remain signed learned
+outputs. The gain is bounded by `4.0` and tangent coefficients by `12 cm`.
 
 If correspondence support or sign coherence is below a threshold fixed by the
 training audit, the candidate is marked geometry-ineligible and the inference
