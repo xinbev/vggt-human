@@ -1,0 +1,14 @@
+{
+  "epoch": 1,
+  "num_records": 848,
+  "metrics": {
+    "metric_hsi_v4_geometry_eligibility_coverage": 1.0,
+    "metric_hsi_v4_base_active_l2_median": 0.3584004044532776,
+    "metric_hsi_v4_candidate_active_l2_median": 0.038766562938690186,
+    "metric_hsi_v4_candidate_active_l2_p90": 0.49944320917129587,
+    "metric_hsi_v4_candidate_improvement_rate": 0.9440353460972017,
+    "metric_hsi_v4_candidate_ray_sign_acc": 0.9661266568483063,
+    "metric_hsi_v4_candidate_tangent_l1_delta": -0.006566980846176154,
+    "metric_hsi_v4_selection": 0.16362736523151417
+  }
+}
