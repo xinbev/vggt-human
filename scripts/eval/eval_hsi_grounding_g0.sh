@@ -24,6 +24,7 @@ echo "GT geometry       : GT depth + GT K + perturbed GT SMPL"
 echo "Contact teachers  : ${CONTACT_TEACHER_ROOT}"
 echo "Output            : ${OUTPUT_DIR}/g0_metrics.json"
 echo "GPU / batches     : ${CUDA_VISIBLE_DEVICES_VALUE} / ${MAX_BATCHES}"
+echo "Implementation    : g0_teacher_aligned_deadzone_v2"
 
 CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python scripts/eval/eval_hsi_grounding_g0.py \
   --path-config configs/path.yaml \

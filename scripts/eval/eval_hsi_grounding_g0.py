@@ -107,6 +107,7 @@ def main() -> None:
         and clean_p95 <= args.max_clean_displacement
     )
     report = {
+        "implementation": "g0_teacher_aligned_deadzone_v2",
         "gate": "pass" if passed else "fail",
         "num_active": int(counts[0]),
         "num_geometry_valid": int(counts[1]),
