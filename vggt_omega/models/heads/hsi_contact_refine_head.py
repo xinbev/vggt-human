@@ -275,8 +275,10 @@ def _compute_temporal_foot_velocity(
             neighbor_world = sole_world[:, neighbor].gather(dim=1, index=gather_index)
             distance = torch.linalg.norm(sole_world[:, frame] - neighbor_world, dim=-1)
             valid_distance = has_match[:, :, None].expand(-1, -1, 2)
-            velocity = velocity + torch.where(valid_distance, distance, torch.zeros_like(distance))
-            velocity_count = velocity_count + valid_distance.to(dtype=velocity_count.dtype)
+            velocity[:, frame] = velocity[:, frame] + torch.where(
+                valid_distance, distance, torch.zeros_like(distance)
+            )
+            velocity_count[:, frame] = velocity_count[:, frame] + valid_distance.to(dtype=velocity_count.dtype)
 
     valid = velocity_count > 0.0
     velocity = velocity / velocity_count.clamp(min=1.0)
