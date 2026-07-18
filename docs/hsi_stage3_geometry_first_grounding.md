@@ -32,7 +32,7 @@ VGGT depth/K -> frozen Stage1 scale -> NLF SMPL -> frozen Stage2 align
 The analytic candidate is:
 
 ```text
-support_signed = minimum valid left/right sole signed distance
+support_signed = signed distance of the valid foot closest to the support plane
 delta_scalar = clamp(-support_signed, -0.12, 0.12)
 candidate_delta = delta_scalar * support_normal
 ```

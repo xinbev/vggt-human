@@ -160,8 +160,13 @@ class HSIGroundingHead(nn.Module):
         ).reshape(-1, 2)
         slot_valid = (confs[..., 0] > 0.0).reshape(-1, 1)
         valid = planes["valid"] & torch.isfinite(signed) & box_valid & slot_valid
+        # Pick the foot closest to the fitted support plane.  The minimum
+        # signed distance is dominated by a swing-foot/background outlier and
+        # can move an otherwise grounded person in the wrong direction.
         inf = torch.full_like(signed, float("inf"))
-        support_signed, support_index = torch.where(valid, signed, inf).min(dim=-1, keepdim=True)
+        abs_signed = torch.where(valid, signed.abs(), inf)
+        support_index = abs_signed.argmin(dim=-1, keepdim=True)
+        support_signed = signed.gather(dim=-1, index=support_index)
         candidate_valid = torch.isfinite(support_signed) & valid.any(dim=-1, keepdim=True)
         support_index = support_index.clamp(max=1)
         selected_normal = planes["normal"].gather(1, support_index[..., None].expand(-1, -1, 3)).squeeze(1)
