@@ -1,0 +1,13 @@
+{
+  "monitor": "loss_id",
+  "monitor_mode": "min",
+  "entries": [
+    {
+      "rank": 1,
+      "metric": 2.517611953318119,
+      "epoch": 1,
+      "source": "train",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/nlf_id_tracking_pilot_gpu5/checkpoint_top_train_epoch_0001_loss_id_2.517612.pt"
+    }
+  ]
+}

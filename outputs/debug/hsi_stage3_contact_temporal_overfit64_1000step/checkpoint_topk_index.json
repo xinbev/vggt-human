@@ -1,0 +1,13 @@
+{
+  "monitor": "metric_stage3_selection",
+  "monitor_mode": "min",
+  "entries": [
+    {
+      "rank": 1,
+      "metric": 0.0677178173015515,
+      "epoch": 1,
+      "source": "val",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/debug/hsi_stage3_contact_temporal_overfit64_1000step/checkpoint_top_val_epoch_0001_metric_stage3_selection_0.067718.pt"
+    }
+  ]
+}

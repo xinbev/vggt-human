@@ -1,0 +1,20 @@
+{
+  "monitor": "metric_stage3_selection",
+  "monitor_mode": "min",
+  "entries": [
+    {
+      "rank": 1,
+      "metric": 0.08495112508535385,
+      "epoch": 1,
+      "source": "val",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/debug/hsi_stage3_contact_overfit64_same_split/checkpoint_top_val_epoch_0001_metric_stage3_selection_0.084951.pt"
+    },
+    {
+      "rank": 2,
+      "metric": 0.08495112508535385,
+      "epoch": 1,
+      "source": "val",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/debug/hsi_stage3_contact_overfit64_same_split/checkpoint_top_val_epoch_0001_metric_stage3_selection_0.084951.pt"
+    }
+  ]
+}
