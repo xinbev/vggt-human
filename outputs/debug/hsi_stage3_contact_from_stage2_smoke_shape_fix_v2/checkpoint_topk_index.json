@@ -1,0 +1,13 @@
+{
+  "monitor": "metric_stage3_selection",
+  "monitor_mode": "min",
+  "entries": [
+    {
+      "rank": 1,
+      "metric": 0.11481234412640333,
+      "epoch": 1,
+      "source": "val",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/debug/hsi_stage3_contact_from_stage2_smoke_shape_fix_v2/checkpoint_top_val_epoch_0001_metric_stage3_selection_0.114812.pt"
+    }
+  ]
+}
