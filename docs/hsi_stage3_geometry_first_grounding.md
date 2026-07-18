@@ -77,8 +77,10 @@ their Y component is negative. Camera intrinsics are never scaled with depth.
 
 ## Gates
 
-1. G0 analytic audit, no optimization: p95 reduction >= 70%, valid coverage
-   >= 80%, clean contact displacement p95 <= 1 mm.
+1. G0 analytic audit, no optimization: clean contact displacement p95 <= 1 mm,
+   online/teacher plane signed error p95 <= 5 mm, +8/+12 cm float improvement
+   rate >= 95%, and p95 reduction >= 50%/60% respectively. Small penetration
+   and deadzone samples are learned gate negatives rather than analytic gates.
 2. G1 fixed-64 gate overfit: gate accuracy and improvement rate >= 90%, refined
    p95 <= 35% of base, clean displacement p95 <= 5 mm.
 3. G2 full-distribution 500-step gate: refined p95 <= 60% of base and no clean

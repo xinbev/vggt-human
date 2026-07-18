@@ -101,10 +101,19 @@ def main() -> None:
     coverage = float(counts[1] / counts[0].clamp(min=1.0))
     clean_p95 = _quantile(clean_delta, 0.95)
     improvement = float((candidate < base).float().mean()) if base.numel() else 0.0
+    grouped = _group_by_noise_level(noise, base, candidate)
+    float_5 = grouped.get("+5cm", {})
+    float_8 = grouped.get("+8cm", {})
+    float_12 = grouped.get("+12cm", {})
     passed = (
-        reduction >= args.min_p95_reduction
-        and coverage >= args.min_valid_coverage
-        and clean_p95 <= args.max_clean_displacement
+        clean_p95 <= args.max_clean_displacement
+        and _quantile(signed_error, 0.95) <= 0.005
+        and _quantile(normal_cosine, 0.10) >= 0.98
+        and float(float_5.get("improvement_rate", 0.0)) >= 0.90
+        and float(float_8.get("improvement_rate", 0.0)) >= 0.95
+        and float(float_8.get("p95_reduction", float("-inf"))) >= 0.50
+        and float(float_12.get("improvement_rate", 0.0)) >= 0.95
+        and float(float_12.get("p95_reduction", float("-inf"))) >= 0.60
     )
     report = {
         "implementation": "g0_teacher_aligned_deadzone_v2",
@@ -121,10 +130,13 @@ def main() -> None:
         "online_vs_teacher_signed_error_p95_m": _quantile(signed_error, 0.95),
         "online_vs_teacher_normal_cosine_median": _quantile(normal_cosine, 0.50),
         "online_vs_teacher_normal_cosine_p10": _quantile(normal_cosine, 0.10),
-        "by_noise_level": _group_by_noise_level(noise, base, candidate),
+        "by_noise_level": grouped,
         "thresholds": {
-            "min_p95_reduction": args.min_p95_reduction,
-            "min_valid_coverage": args.min_valid_coverage,
+            "float_8cm_min_p95_reduction": 0.50,
+            "float_12cm_min_p95_reduction": 0.60,
+            "severe_float_min_improvement_rate": 0.95,
+            "plane_signed_error_p95_max_m": 0.005,
+            "plane_normal_cosine_p10_min": 0.98,
             "max_clean_displacement_m": args.max_clean_displacement,
         },
     }

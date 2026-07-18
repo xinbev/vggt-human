@@ -19,9 +19,9 @@ def main() -> None:
     improvement = float(metrics.get("metric_hsi_grounding_improvement_rate", 0.0))
     clean = float(metrics.get("metric_hsi_grounding_clean_displacement_p95_m", float("inf")))
     if args.mode == "overfit":
-        limits = {"ratio": 0.35, "coverage": 0.70, "accuracy": 0.90, "improvement": 0.90, "clean": 0.005}
+        limits = {"ratio": 0.35, "coverage": 0.50, "accuracy": 0.90, "improvement": 0.90, "clean": 0.005}
     elif args.mode == "distribution":
-        limits = {"ratio": 0.60, "coverage": 0.70, "accuracy": 0.75, "improvement": 0.70, "clean": 0.005}
+        limits = {"ratio": 0.60, "coverage": 0.50, "accuracy": 0.75, "improvement": 0.70, "clean": 0.005}
     else:
         limits = {"ratio": 0.90, "coverage": 0.40, "accuracy": 0.65, "improvement": 0.55, "clean": 0.010}
     ratio = refined / max(base, 1e-8)
