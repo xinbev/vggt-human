@@ -18,6 +18,7 @@ from vggt_omega.models.heads import (
     HSIHumanSceneAlignHead,
     HSIContactRefineHead,
     HSIRefinementHead,
+    HSITranslationRefineV4Head,
     TextAlignmentHead,
 )
 from vggt_omega.tracking.smpl_track_assigner import BaseSMPLTrackAssigner
@@ -121,6 +122,19 @@ class VGGTOmega(nn.Module):
         hsi_align_feature_version: str = "legacy_mean_v1",
         hsi_align_delta_parameterization: str = "learned_v1",
         hsi_align_robust_ray_gain: float = 1.0,
+        enable_hsi_translation_refine_v4: bool = False,
+        hsi_v4_hidden_dim: int = 256,
+        hsi_v4_num_sample_vertices: int = 128,
+        hsi_v4_local_window: int = 7,
+        hsi_v4_min_correspondences: int = 12,
+        hsi_v4_max_ray_ratio: float = 0.25,
+        hsi_v4_max_tangent_delta_m: float = 0.12,
+        hsi_v4_max_correspondence_distance_m: float = 3.5,
+        hsi_v4_residual_mad_multiplier: float = 3.0,
+        hsi_v4_max_depth_m: float = 20.0,
+        hsi_v4_phase: str = "correction",
+        hsi_v4_gate_threshold: float = 0.5,
+        hsi_v4_overwrite_refined: bool = True,
         enable_hsi_contact_refine: bool = False,
         hsi_contact_hidden_dim: int = 256,
         hsi_contact_sole_vertices_per_foot: int = 48,
@@ -303,6 +317,26 @@ class VGGTOmega(nn.Module):
             if enable_hsi_human_scene_align
             else None
         )
+        self.hsi_translation_refine_v4_head = (
+            HSITranslationRefineV4Head(
+                smpl_model_dir=smpl_model_dir,
+                hidden_dim=hsi_v4_hidden_dim,
+                num_sample_vertices=hsi_v4_num_sample_vertices,
+                local_window=hsi_v4_local_window,
+                min_correspondences=hsi_v4_min_correspondences,
+                max_ray_ratio=hsi_v4_max_ray_ratio,
+                max_tangent_delta_m=hsi_v4_max_tangent_delta_m,
+                max_correspondence_distance_m=hsi_v4_max_correspondence_distance_m,
+                residual_mad_multiplier=hsi_v4_residual_mad_multiplier,
+                max_depth_m=hsi_v4_max_depth_m,
+                phase=hsi_v4_phase,
+                gate_threshold=hsi_v4_gate_threshold,
+                overwrite_refined=hsi_v4_overwrite_refined,
+                image_size=image_size,
+            )
+            if enable_hsi_translation_refine_v4
+            else None
+        )
         self.hsi_contact_refine_head = (
             HSIContactRefineHead(
                 smpl_model_dir=smpl_model_dir,
@@ -326,6 +360,7 @@ class VGGTOmega(nn.Module):
         if (
             self.hsi_refinement_head is not None
             or self.hsi_human_scene_align_head is not None
+            or self.hsi_translation_refine_v4_head is not None
             or self.hsi_contact_refine_head is not None
         ) and (
             (self.smpl_head is None and self.nlf_smpl_provider is None and not has_runtime_smpl_provider)
@@ -504,6 +539,24 @@ class VGGTOmega(nn.Module):
                 predictions["hsi_geometry_is_metric"] = predictions["pred_transl_cam"].new_tensor(float(hsi_depth_is_metric))
                 predictions["hsi_geometry_mode_id"] = predictions["pred_transl_cam"].new_tensor(
                     1.0 if str(hsi_geometry_mode) == "gt_metric" else 0.0
+                )
+            if self.hsi_translation_refine_v4_head is not None:
+                if hsi_intrinsics_override is not None:
+                    predictions["hsi_intrinsics_override"] = hsi_intrinsics_override
+                predictions.update(
+                    self.hsi_translation_refine_v4_head(
+                        predictions=predictions,
+                        depth=hsi_depth_override if hsi_depth_override is not None else predictions["depth"],
+                        pose_enc=predictions["pose_enc"],
+                        image_size_hw=image_size_hw,
+                        intrinsics_override=hsi_intrinsics_override,
+                        depth_is_metric=bool(hsi_depth_is_metric),
+                        person_boxes=smpl_reference_boxes,
+                        depth_confidence=None if hsi_depth_override is not None else predictions.get("depth_conf"),
+                    )
+                )
+                predictions["hsi_v4_geometry_is_metric"] = predictions["pred_transl_cam"].new_tensor(
+                    float(hsi_depth_is_metric)
                 )
             if self.hsi_contact_refine_head is not None:
                 predictions.update(

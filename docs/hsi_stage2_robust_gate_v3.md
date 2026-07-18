@@ -98,3 +98,15 @@ The robust statistics should improve clean/noisy identifiability, but this is
 not verified on Windows because the local checkout lacks Torch, checkpoints,
 SMPL assets, and BEDLAM. The server smoke must verify tensor shapes, finite
 quantiles, trainable prefixes, and frozen hashes before overfit training.
+
+## Residual-Signal Diagnosis
+
+The fixed-64 zero-LR diagnosis measured `95.52%` signed-residual ray accuracy
+and `93.85%` analytic residual improvement, while the learned effective delta
+reached only about `60%` ray-sign accuracy. This rules out a global sign error
+in GT perturbation, camera basis, or ray supervision. With `robust_sign_v3`
+enabled but before fine-tuning, active-noisy improvement remained `68.41%`
+because the existing soft dead-zone still suppressed roughly one third of
+active corrections. The next gate is therefore a 500-step continuation from
+the preserved V3 checkpoint under the new parameterization, not another
+geometry redesign or Stage1 restart.

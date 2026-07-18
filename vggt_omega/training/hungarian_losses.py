@@ -73,6 +73,11 @@ class HungarianSMPLLoss(nn.Module):
         hsi_transl_gate_full_open_m: float = 0.10,
         hsi_transl_gate_target_mode: str = "binary_v1",
         hsi_transl_active_noise_threshold_m: float = 0.05,
+        hsi_v4_candidate_transl_weight: float = 0.0,
+        hsi_v4_candidate_ray_weight: float = 0.0,
+        hsi_v4_candidate_tangent_weight: float = 0.0,
+        hsi_v4_candidate_reg_weight: float = 0.0,
+        hsi_v4_active_threshold_m: float = 0.05,
         hsi_joints3d_weight: float = 0.0,
         hsi_vertices_weight: float = 0.0,
         hsi_projected_joints2d_weight: float = 0.0,
@@ -211,6 +216,11 @@ class HungarianSMPLLoss(nn.Module):
         if self.hsi_transl_gate_target_mode not in {"binary_v1", "magnitude_v2"}:
             raise ValueError(f"Unsupported HSI translation gate target mode: {self.hsi_transl_gate_target_mode!r}")
         self.hsi_transl_active_noise_threshold_m = max(float(hsi_transl_active_noise_threshold_m), 0.0)
+        self.hsi_v4_candidate_transl_weight = float(hsi_v4_candidate_transl_weight)
+        self.hsi_v4_candidate_ray_weight = float(hsi_v4_candidate_ray_weight)
+        self.hsi_v4_candidate_tangent_weight = float(hsi_v4_candidate_tangent_weight)
+        self.hsi_v4_candidate_reg_weight = float(hsi_v4_candidate_reg_weight)
+        self.hsi_v4_active_threshold_m = max(float(hsi_v4_active_threshold_m), 0.0)
         self.hsi_joints3d_weight = hsi_joints3d_weight
         self.hsi_vertices_weight = hsi_vertices_weight
         self.hsi_projected_joints2d_weight = hsi_projected_joints2d_weight
@@ -478,6 +488,10 @@ class HungarianSMPLLoss(nn.Module):
             + self.hsi_align_no_worse_weight * losses["loss_hsi_align_no_worse"]
             + self.hsi_transl_clean_identity_weight * losses["loss_hsi_transl_clean_identity"]
             + self.hsi_transl_noise_gate_weight * losses["loss_hsi_transl_noise_gate"]
+            + self.hsi_v4_candidate_transl_weight * losses["loss_hsi_v4_candidate_transl"]
+            + self.hsi_v4_candidate_ray_weight * losses["loss_hsi_v4_candidate_ray"]
+            + self.hsi_v4_candidate_tangent_weight * losses["loss_hsi_v4_candidate_tangent"]
+            + self.hsi_v4_candidate_reg_weight * losses["loss_hsi_v4_candidate_reg"]
             + self.hsi_joints3d_weight * losses["loss_hsi_joints3d"]
             + self.hsi_vertices_weight * losses["loss_hsi_vertices"]
             + self.hsi_projected_joints2d_weight * losses["loss_hsi_projected_joints2d"]
@@ -1227,6 +1241,19 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_align_residual_ray_sign_acc": zero.detach(),
             "metric_hsi_align_residual_ray_l1": zero.detach(),
             "metric_hsi_align_residual_ray_improvement_rate": zero.detach(),
+            "loss_hsi_v4_candidate_transl": zero,
+            "loss_hsi_v4_candidate_ray": zero,
+            "loss_hsi_v4_candidate_tangent": zero,
+            "loss_hsi_v4_candidate_reg": zero,
+            "metric_hsi_v4_geometry_eligibility_coverage": zero.detach(),
+            "metric_hsi_v4_active_fraction": zero.detach(),
+            "metric_hsi_v4_base_active_l2_median": zero.detach(),
+            "metric_hsi_v4_candidate_active_l2_median": zero.detach(),
+            "metric_hsi_v4_candidate_active_l2_p90": zero.detach(),
+            "metric_hsi_v4_candidate_improvement_rate": zero.detach(),
+            "metric_hsi_v4_candidate_ray_sign_acc": zero.detach(),
+            "metric_hsi_v4_candidate_tangent_l1_delta": zero.detach(),
+            "metric_hsi_v4_selection": zero.detach(),
             "metric_hsi_transl_clean_displacement_mean_m": zero.detach(),
             "metric_hsi_transl_clean_gate_mean": zero.detach(),
             "metric_hsi_transl_noisy_gate_mean": zero.detach(),
@@ -1288,6 +1315,103 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_contact_pos_frac": zero.detach(),
         }
 
+    def _hsi_v4_candidate_losses(
+        self,
+        predictions: dict[str, torch.Tensor],
+        frame_idx: torch.Tensor,
+        src_idx: torch.Tensor,
+        target_transl: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        zero = target_transl.sum() * 0.0
+        out = {
+            "loss_hsi_v4_candidate_transl": zero,
+            "loss_hsi_v4_candidate_ray": zero,
+            "loss_hsi_v4_candidate_tangent": zero,
+            "loss_hsi_v4_candidate_reg": zero,
+            "metric_hsi_v4_geometry_eligibility_coverage": zero.detach(),
+            "metric_hsi_v4_active_fraction": zero.detach(),
+            "metric_hsi_v4_base_active_l2_median": zero.detach(),
+            "metric_hsi_v4_candidate_active_l2_median": zero.detach(),
+            "metric_hsi_v4_candidate_active_l2_p90": zero.detach(),
+            "metric_hsi_v4_candidate_improvement_rate": zero.detach(),
+            "metric_hsi_v4_candidate_ray_sign_acc": zero.detach(),
+            "metric_hsi_v4_candidate_tangent_l1_delta": zero.detach(),
+            "metric_hsi_v4_selection": zero.detach(),
+        }
+        candidate_value = predictions.get("hsi_v4_candidate_pred_transl_cam")
+        base_value = predictions.get("hsi_v4_base_pred_transl_cam")
+        eligible_value = predictions.get("hsi_v4_geometry_eligible")
+        if not all(isinstance(value, torch.Tensor) for value in (candidate_value, base_value, eligible_value)):
+            return out
+        candidate = _flatten_prediction(candidate_value, unframed_ndim=3)[frame_idx, src_idx]
+        base = _flatten_prediction(base_value, unframed_ndim=3)[frame_idx, src_idx].detach()
+        eligible = _flatten_prediction(eligible_value, unframed_ndim=3)[frame_idx, src_idx, 0] > 0.5
+        target = target_transl.to(device=candidate.device, dtype=candidate.dtype)
+        clean_value = predictions.get("transl_noise_is_clean")
+        if isinstance(clean_value, torch.Tensor):
+            clean = _flatten_prediction(clean_value, unframed_ndim=3)[frame_idx, src_idx, 0] > 0.5
+        else:
+            clean = torch.linalg.norm(base - target, dim=-1) <= 1e-8
+        noisy = ~clean
+        train_mask = noisy & eligible
+
+        ray = F.normalize(base, dim=-1, eps=1e-6)
+        expected_delta = target - base
+        candidate_delta = candidate - base
+        expected_ray = (expected_delta * ray).sum(dim=-1, keepdim=True)
+        candidate_ray = (candidate_delta * ray).sum(dim=-1, keepdim=True)
+        expected_tangent = expected_delta - expected_ray * ray
+        candidate_tangent = candidate_delta - candidate_ray * ray
+        if train_mask.any():
+            out["loss_hsi_v4_candidate_transl"] = F.smooth_l1_loss(
+                candidate[train_mask], target[train_mask], beta=0.02
+            )
+            out["loss_hsi_v4_candidate_ray"] = F.smooth_l1_loss(
+                candidate_ray[train_mask], expected_ray[train_mask], beta=0.01
+            )
+            out["loss_hsi_v4_candidate_tangent"] = F.smooth_l1_loss(
+                candidate_tangent[train_mask], expected_tangent[train_mask], beta=0.01
+            )
+            out["loss_hsi_v4_candidate_reg"] = F.smooth_l1_loss(
+                candidate_delta[train_mask], torch.zeros_like(candidate_delta[train_mask]), beta=0.05
+            )
+
+        base_l2 = torch.linalg.norm(base - target, dim=-1)
+        candidate_l2 = torch.linalg.norm(candidate - target, dim=-1)
+        active = noisy & (base_l2 >= float(self.hsi_v4_active_threshold_m))
+        out["metric_hsi_v4_active_fraction"] = active.to(dtype=candidate.dtype).mean().detach()
+        if active.any():
+            active_base = base_l2[active]
+            active_candidate = candidate_l2[active]
+            active_eligible = eligible[active]
+            out["metric_hsi_v4_geometry_eligibility_coverage"] = active_eligible.to(
+                dtype=candidate.dtype
+            ).mean().detach()
+            out["metric_hsi_v4_base_active_l2_median"] = active_base.median().detach()
+            out["metric_hsi_v4_candidate_active_l2_median"] = active_candidate.median().detach()
+            out["metric_hsi_v4_candidate_active_l2_p90"] = torch.quantile(
+                active_candidate.float(), 0.90
+            ).to(dtype=candidate.dtype).detach()
+            out["metric_hsi_v4_candidate_improvement_rate"] = (
+                active_candidate < active_base
+            ).to(dtype=candidate.dtype).mean().detach()
+            active_expected_ray = expected_ray[active, 0]
+            active_candidate_ray = candidate_ray[active, 0]
+            sign_valid = active_expected_ray.abs() > 1e-6
+            if sign_valid.any():
+                out["metric_hsi_v4_candidate_ray_sign_acc"] = (
+                    torch.sign(active_candidate_ray[sign_valid]) == torch.sign(active_expected_ray[sign_valid])
+                ).to(dtype=candidate.dtype).mean().detach()
+            tangent_base = expected_tangent[active].abs().mean()
+            tangent_refined = (candidate_tangent[active] - expected_tangent[active]).abs().mean()
+            out["metric_hsi_v4_candidate_tangent_l1_delta"] = (tangent_refined - tangent_base).detach()
+            out["metric_hsi_v4_selection"] = (
+                active_candidate.median()
+                + 0.25 * torch.quantile(active_candidate.float(), 0.90).to(dtype=candidate.dtype)
+                + 0.5 * (1.0 - active_eligible.to(dtype=candidate.dtype).mean())
+            ).detach()
+        return out
+
     def _hsi_refined_losses(
         self,
         predictions: dict[str, torch.Tensor],
@@ -1317,6 +1441,14 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_transl_clean_identity": pred_transl.sum() * 0.0,
             "loss_hsi_transl_noise_gate": pred_transl.sum() * 0.0,
         }
+        losses.update(
+            self._hsi_v4_candidate_losses(
+                predictions=predictions,
+                frame_idx=frame_idx,
+                src_idx=src_idx,
+                target_transl=target_transl,
+            )
+        )
         base_pose_value = predictions.get("hsi_contact_base_pred_pose_6d", predictions.get("pred_pose_6d"))
         base_transl_value = predictions.get("hsi_contact_base_pred_transl_cam", predictions.get("pred_transl_cam"))
         base_pose6d = _flatten_prediction(base_pose_value, unframed_ndim=3)

@@ -48,6 +48,7 @@ from vggt_omega.models import VGGTOmega
 from vggt_omega.models.smpl_layer import SMPLLayer
 from vggt_omega.training import HungarianSMPLLoss, HungarianSMPLMatcher, SMPLSlotLoss
 from vggt_omega.training.config import deep_update, load_yaml_config, require_path
+from vggt_omega.training.hsi_stage2_v4_noise import apply_deterministic_v4_noise
 from vggt_omega.utils.contact_geometry import build_sole_vertex_indices
 from vggt_omega.utils.rotation import axis_angle_to_rotmat, rot6d_to_axis_angle, rot6d_to_rotmat
 
@@ -87,6 +88,7 @@ def main() -> None:
     if not trainable_params:
         raise RuntimeError("No trainable parameters after applying freeze policy")
     print_trainable_summary(model)
+    validate_trainable_prefix_contract(model, config)
     optimizer = torch.optim.AdamW(
         trainable_params,
         lr=float(config["optim"]["lr"]),
@@ -483,6 +485,19 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_align_feature_version=str(model_cfg.get("hsi_align_feature_version", "legacy_mean_v1")),
         hsi_align_delta_parameterization=str(model_cfg.get("hsi_align_delta_parameterization", "learned_v1")),
         hsi_align_robust_ray_gain=float(model_cfg.get("hsi_align_robust_ray_gain", 1.0)),
+        enable_hsi_translation_refine_v4=bool(model_cfg.get("enable_hsi_translation_refine_v4", False)),
+        hsi_v4_hidden_dim=int(model_cfg.get("hsi_v4_hidden_dim", 256)),
+        hsi_v4_num_sample_vertices=int(model_cfg.get("hsi_v4_num_sample_vertices", 128)),
+        hsi_v4_local_window=int(model_cfg.get("hsi_v4_local_window", 7)),
+        hsi_v4_min_correspondences=int(model_cfg.get("hsi_v4_min_correspondences", 12)),
+        hsi_v4_max_ray_ratio=float(model_cfg.get("hsi_v4_max_ray_ratio", 0.25)),
+        hsi_v4_max_tangent_delta_m=float(model_cfg.get("hsi_v4_max_tangent_delta_m", 0.12)),
+        hsi_v4_max_correspondence_distance_m=float(model_cfg.get("hsi_v4_max_correspondence_distance_m", 3.5)),
+        hsi_v4_residual_mad_multiplier=float(model_cfg.get("hsi_v4_residual_mad_multiplier", 3.0)),
+        hsi_v4_max_depth_m=float(model_cfg.get("hsi_v4_max_depth_m", 20.0)),
+        hsi_v4_phase=str(model_cfg.get("hsi_v4_phase", "correction")),
+        hsi_v4_gate_threshold=float(model_cfg.get("hsi_v4_gate_threshold", 0.5)),
+        hsi_v4_overwrite_refined=bool(model_cfg.get("hsi_v4_overwrite_refined", True)),
         enable_hsi_contact_refine=bool(model_cfg.get("enable_hsi_contact_refine", False)),
         hsi_contact_hidden_dim=int(model_cfg.get("hsi_contact_hidden_dim", 256)),
         hsi_contact_sole_vertices_per_foot=int(model_cfg.get("hsi_contact_sole_vertices_per_foot", 48)),
@@ -669,6 +684,27 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
             freeze_module(hsi_contact_head.lower_pose_head)
         if bool(model_cfg.get("freeze_hsi_contact_root_branch", False)):
             freeze_module(hsi_contact_head.root_normal_head)
+    hsi_v4_head = getattr(model, "hsi_translation_refine_v4_head", None)
+    if hsi_v4_head is not None:
+        if bool(model_cfg.get("freeze_hsi_translation_refine_v4", False)):
+            freeze_module(hsi_v4_head)
+        if bool(model_cfg.get("train_hsi_v4_correction_only", False)):
+            for module_name in (
+                "aggregator",
+                "camera_head",
+                "dense_head",
+                "smpl_head",
+                "nlf_smpl_provider",
+                "hsi_refinement_head",
+                "hsi_human_scene_align_head",
+                "hsi_contact_refine_head",
+            ):
+                module = getattr(model, module_name, None)
+                if module is not None:
+                    freeze_module(module)
+            freeze_module(hsi_v4_head)
+            unfreeze_module(hsi_v4_head.correction_trunk)
+            unfreeze_module(hsi_v4_head.correction_head)
     if not bool(model_cfg.get("freeze_aggregator", False)):
         return
     aggregator = getattr(model, "aggregator", None)
@@ -709,6 +745,44 @@ def print_trainable_summary(model: torch.nn.Module, max_names: int = 40) -> None
         print(f"[trainable] {name} ({count:,})")
     if len(trainable) > max_names:
         print(f"[trainable] ... {len(trainable) - max_names} more tensors")
+
+
+def validate_trainable_prefix_contract(model: torch.nn.Module, config: dict[str, Any]) -> None:
+    optim_cfg = config.get("optim", {})
+    allowed = normalize_string_list(optim_cfg.get("allowed_trainable_prefixes", []))
+    required = normalize_string_list(optim_cfg.get("required_trainable_prefixes", []))
+    trainable = [name for name, parameter in model.named_parameters() if parameter.requires_grad]
+    if allowed:
+        unexpected = [name for name in trainable if not any(name.startswith(prefix) for prefix in allowed)]
+        if unexpected:
+            preview = "\n".join(f"  - {name}" for name in unexpected[:20])
+            raise RuntimeError(f"Trainable parameters violate allowed prefix contract:\n{preview}")
+    for prefix in required:
+        matches = [name for name in trainable if name.startswith(prefix)]
+        if not matches:
+            raise RuntimeError(f"Required trainable prefix has no parameters: {prefix!r}")
+        print(f"[trainable] required prefix active: {prefix} tensors={len(matches)}")
+
+
+def validate_required_gradient_prefixes(model: torch.nn.Module, config: dict[str, Any]) -> None:
+    prefixes = normalize_string_list(config.get("optim", {}).get("required_gradient_prefixes", []))
+    for prefix in prefixes:
+        gradients = [
+            parameter.grad
+            for name, parameter in model.named_parameters()
+            if name.startswith(prefix) and parameter.requires_grad
+        ]
+        if not gradients:
+            raise RuntimeError(f"Required gradient prefix has no trainable parameters: {prefix!r}")
+        finite_nonzero = any(
+            gradient is not None
+            and torch.isfinite(gradient).all()
+            and bool((gradient.detach().abs() > 0).any())
+            for gradient in gradients
+        )
+        if not finite_nonzero:
+            raise RuntimeError(f"Required gradient prefix has no finite non-zero gradient: {prefix!r}")
+        print(f"[grad] required prefix verified: {prefix}")
 
 
 def load_initial_checkpoint(model: torch.nn.Module, config: dict[str, Any], device: torch.device) -> None:
@@ -958,6 +1032,8 @@ def train_one_epoch(
         if not torch.isfinite(loss):
             raise FloatingPointError(f"Non-finite loss at epoch={epoch + 1}, step={step}: {loss.item()}")
         loss.backward()
+        if step == 0:
+            validate_required_gradient_prefixes(model, config)
         if grad_clip_norm > 0:
             torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip_norm)
         optimizer.step()
@@ -1012,6 +1088,7 @@ def validate(
     totals: dict[str, float] = {}
     count = 0
     worst_rows: list[dict[str, Any]] = []
+    v4_records: list[dict[str, Any]] = []
     max_val_steps = int(config.get("optim", {}).get("max_val_steps", 0) or 0)
     for batch_idx, batch in enumerate(loader):
         if max_val_steps > 0 and batch_idx >= max_val_steps:
@@ -1022,6 +1099,7 @@ def validate(
         if teacher_model is not None:
             attach_teacher_predictions(predictions, forward_teacher_model(teacher_model, batch, config))
         losses = criterion(predictions, batch)
+        v4_records.extend(collect_hsi_v4_validation_records(predictions, batch, config))
         for key, value in losses.items():
             totals[key] = totals.get(key, 0.0) + float(value.detach().cpu())
         configured_monitor = str(config.get("checkpoint", {}).get("monitor", ""))
@@ -1041,6 +1119,17 @@ def validate(
                 )
         count += 1
     averaged = {key: value / max(count, 1) for key, value in totals.items()}
+    if v4_records:
+        v4_metrics = reduce_hsi_v4_validation_records(v4_records, config)
+        averaged.update(v4_metrics)
+        write_jsonl(
+            v4_records,
+            Path(config["experiment"]["output_dir"]) / f"v4_val_people_epoch_{epoch + 1:04d}.jsonl",
+        )
+        save_json(
+            {"epoch": epoch + 1, "num_records": len(v4_records), "metrics": v4_metrics},
+            Path(config["experiment"]["output_dir"]) / f"v4_val_metrics_epoch_{epoch + 1:04d}.json",
+        )
     print(format_log("val", epoch, 0, len(loader), 0, averaged))
     worst_rows.sort(key=lambda row: float(row["selection_value"]), reverse=True)
     save_json(
@@ -1048,6 +1137,145 @@ def validate(
         Path(config["experiment"]["output_dir"]) / f"val_worst_samples_epoch_{epoch + 1:04d}.json",
     )
     return averaged
+
+
+def collect_hsi_v4_validation_records(
+    predictions: dict[str, torch.Tensor],
+    batch: dict[str, torch.Tensor],
+    config: dict[str, Any],
+) -> list[dict[str, Any]]:
+    candidate = predictions.get("hsi_v4_candidate_pred_transl_cam")
+    base = predictions.get("hsi_v4_base_pred_transl_cam")
+    eligible = predictions.get("hsi_v4_geometry_eligible")
+    if not all(isinstance(value, torch.Tensor) for value in (candidate, base, eligible)):
+        return []
+    target = batch.get("gt_transl_cam", batch.get("gt_cam_trans"))
+    valid = batch.get("smpl_mask")
+    if not isinstance(target, torch.Tensor) or not isinstance(valid, torch.Tensor):
+        return []
+    valid = valid.bool()
+    boxes_mask = batch.get("boxes_mask")
+    if isinstance(boxes_mask, torch.Tensor):
+        valid = valid & boxes_mask.bool()
+    clean = predictions.get("transl_noise_is_clean")
+    category = predictions.get("transl_noise_category")
+    dataset_indices = batch.get("dataset_index")
+    if not isinstance(clean, torch.Tensor):
+        clean = torch.linalg.norm(base - target, dim=-1, keepdim=True) <= 1e-8
+    if not isinstance(category, torch.Tensor):
+        category = torch.full_like(clean, -1, dtype=torch.long)
+    if not isinstance(dataset_indices, torch.Tensor):
+        dataset_indices = torch.arange(base.shape[0], device=base.device)
+
+    ray = torch.nn.functional.normalize(base, dim=-1, eps=1e-6)
+    expected_delta = target.to(dtype=base.dtype) - base
+    candidate_delta = candidate - base
+    expected_ray = (expected_delta * ray).sum(dim=-1)
+    candidate_ray = (candidate_delta * ray).sum(dim=-1)
+    expected_tangent = expected_delta - expected_ray[..., None] * ray
+    candidate_tangent = candidate_delta - candidate_ray[..., None] * ray
+    base_l2 = torch.linalg.norm(expected_delta, dim=-1)
+    candidate_l2 = torch.linalg.norm(candidate.to(dtype=base.dtype) - target.to(dtype=base.dtype), dim=-1)
+    tangent_base_l1 = expected_tangent.abs().mean(dim=-1)
+    tangent_refined_l1 = (candidate_tangent - expected_tangent).abs().mean(dim=-1)
+    threshold = float(config.get("loss", {}).get("hsi_v4_active_threshold_m", 0.05))
+    noise_names = ("clean", "ray", "tangent", "combined")
+
+    records: list[dict[str, Any]] = []
+    for batch_idx, frame_idx, person_idx in valid.nonzero(as_tuple=False).detach().cpu().tolist():
+        category_id = int(category[batch_idx, frame_idx, person_idx, 0].detach().cpu())
+        expected_ray_value = float(expected_ray[batch_idx, frame_idx, person_idx].detach().cpu())
+        candidate_ray_value = float(candidate_ray[batch_idx, frame_idx, person_idx].detach().cpu())
+        base_value = float(base_l2[batch_idx, frame_idx, person_idx].detach().cpu())
+        candidate_value = float(candidate_l2[batch_idx, frame_idx, person_idx].detach().cpu())
+        is_clean = bool(clean[batch_idx, frame_idx, person_idx, 0].detach().cpu() > 0.5)
+        records.append(
+            {
+                "dataset_index": int(dataset_indices[batch_idx].detach().cpu()),
+                "frame_offset": int(frame_idx),
+                "person_slot": int(person_idx),
+                "noise_category": noise_names[category_id] if 0 <= category_id < len(noise_names) else "unknown",
+                "clean": is_clean,
+                "active": (not is_clean) and base_value >= threshold,
+                "eligible": bool(eligible[batch_idx, frame_idx, person_idx, 0].detach().cpu() > 0.5),
+                "base_depth_m": float(torch.linalg.norm(base[batch_idx, frame_idx, person_idx]).detach().cpu()),
+                "base_l2_m": base_value,
+                "candidate_l2_m": candidate_value,
+                "improved": candidate_value < base_value,
+                "expected_ray_m": expected_ray_value,
+                "candidate_ray_m": candidate_ray_value,
+                "ray_sign_correct": abs(expected_ray_value) <= 1e-6
+                or (
+                    abs(candidate_ray_value) > 1e-8
+                    and math.copysign(1.0, expected_ray_value) == math.copysign(1.0, candidate_ray_value)
+                ),
+                "tangent_base_l1_m": float(tangent_base_l1[batch_idx, frame_idx, person_idx].detach().cpu()),
+                "tangent_refined_l1_m": float(tangent_refined_l1[batch_idx, frame_idx, person_idx].detach().cpu()),
+            }
+        )
+    return records
+
+
+def reduce_hsi_v4_validation_records(
+    records: list[dict[str, Any]],
+    config: dict[str, Any],
+) -> dict[str, float]:
+    active = [record for record in records if bool(record["active"])]
+    if not active:
+        return {
+            "metric_hsi_v4_geometry_eligibility_coverage": 0.0,
+            "metric_hsi_v4_base_active_l2_median": 0.0,
+            "metric_hsi_v4_candidate_active_l2_median": 0.0,
+            "metric_hsi_v4_candidate_active_l2_p90": 0.0,
+            "metric_hsi_v4_candidate_improvement_rate": 0.0,
+            "metric_hsi_v4_candidate_ray_sign_acc": 0.0,
+            "metric_hsi_v4_candidate_tangent_l1_delta": 0.0,
+            "metric_hsi_v4_selection": float("inf"),
+        }
+    base_values = [float(record["base_l2_m"]) for record in active]
+    candidate_values = [float(record["candidate_l2_m"]) for record in active]
+    coverage = sum(bool(record["eligible"]) for record in active) / len(active)
+    improvement = sum(bool(record["improved"]) for record in active) / len(active)
+    ray_items = [record for record in active if abs(float(record["expected_ray_m"])) > 1e-6]
+    ray_sign = sum(bool(record["ray_sign_correct"]) for record in ray_items) / max(len(ray_items), 1)
+    tangent_delta = sum(
+        float(record["tangent_refined_l1_m"]) - float(record["tangent_base_l1_m"])
+        for record in active
+    ) / len(active)
+    base_median = percentile(base_values, 0.50)
+    candidate_median = percentile(candidate_values, 0.50)
+    candidate_p90 = percentile(candidate_values, 0.90)
+    selection = candidate_median + 0.25 * candidate_p90 + 0.5 * (1.0 - coverage)
+    return {
+        "metric_hsi_v4_geometry_eligibility_coverage": coverage,
+        "metric_hsi_v4_base_active_l2_median": base_median,
+        "metric_hsi_v4_candidate_active_l2_median": candidate_median,
+        "metric_hsi_v4_candidate_active_l2_p90": candidate_p90,
+        "metric_hsi_v4_candidate_improvement_rate": improvement,
+        "metric_hsi_v4_candidate_ray_sign_acc": ray_sign,
+        "metric_hsi_v4_candidate_tangent_l1_delta": tangent_delta,
+        "metric_hsi_v4_selection": selection,
+    }
+
+
+def percentile(values: list[float], quantile: float) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(float(value) for value in values)
+    position = min(max(float(quantile), 0.0), 1.0) * (len(ordered) - 1)
+    lower = int(math.floor(position))
+    upper = int(math.ceil(position))
+    if lower == upper:
+        return ordered[lower]
+    alpha = position - lower
+    return ordered[lower] * (1.0 - alpha) + ordered[upper] * alpha
+
+
+def write_jsonl(rows: list[dict[str, Any]], path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as file:
+        for row in rows:
+            file.write(json.dumps(row, ensure_ascii=True, sort_keys=True) + "\n")
 
 
 def resolve_dataset_sample_path(dataset: Any, dataset_index: int) -> str:
@@ -1093,7 +1321,7 @@ def forward_model(
                 drop_prob=float(prior_cfg.get("drop_prob", 0.0)),
             )
     smpl_override_outputs = (
-        build_smpl_override_outputs(batch, config, epoch=epoch)
+        build_smpl_override_outputs(batch, config, epoch=epoch, is_training=model.training)
         if should_use_gt_smpl_override(model, config, epoch=epoch)
         else None
     )
@@ -1231,6 +1459,7 @@ def build_smpl_override_outputs(
     batch: dict[str, torch.Tensor],
     config: dict[str, Any],
     epoch: int = 0,
+    is_training: bool = True,
 ) -> dict[str, torch.Tensor]:
     pose6d = batch["gt_pose_6d"].float()
     betas = batch["gt_betas"].float()
@@ -1245,12 +1474,30 @@ def build_smpl_override_outputs(
         valid = valid & boxes_mask.bool()
     perturb_mode = str(config.get("training_prior", {}).get("smpl_perturb_mode", "translation") or "translation").lower()
     if perturb_mode == "translation":
-        noisy_transl, noise_ratio, tangent_noise, clean_mask = apply_smpl_translation_noise(
-            clean_transl,
-            valid,
-            config,
-            epoch=epoch,
-        )
+        prior_cfg = config.get("training_prior", {})
+        noise_contract = str(prior_cfg.get("smpl_translation_noise_contract", "legacy_random") or "legacy_random").lower()
+        if noise_contract == "v4_deterministic":
+            dataset_indices = batch.get("dataset_index")
+            if dataset_indices is None:
+                raise ValueError("V4 deterministic translation noise requires batch['dataset_index']")
+            noise_epoch = int(epoch) if is_training else int(prior_cfg.get("smpl_v4_validation_epoch", 0) or 0)
+            noisy_transl, noise_ratio, tangent_noise, clean_mask, noise_category = apply_deterministic_v4_noise(
+                clean_transl,
+                valid,
+                dataset_indices,
+                seed=int(prior_cfg.get("smpl_v4_noise_seed", 42) or 42),
+                epoch=noise_epoch,
+            )
+        elif noise_contract == "legacy_random":
+            noisy_transl, noise_ratio, tangent_noise, clean_mask = apply_smpl_translation_noise(
+                clean_transl,
+                valid,
+                config,
+                epoch=epoch,
+            )
+            noise_category = torch.full_like(clean_mask, -1, dtype=torch.long)
+        else:
+            raise ValueError(f"Unsupported training_prior.smpl_translation_noise_contract: {noise_contract!r}")
         noisy_pose6d = pose6d
         contact_noise_signed = clean_transl.new_zeros(*clean_transl.shape[:-1], 1)
     elif perturb_mode in {"contact_root", "contact_pose"}:
@@ -1265,6 +1512,7 @@ def build_smpl_override_outputs(
         )
         noise_ratio = clean_transl.new_ones(*clean_transl.shape[:-1], 1)
         tangent_noise = clean_transl.new_zeros(*clean_transl.shape[:-1], 2)
+        noise_category = torch.full_like(clean_mask, -1, dtype=torch.long)
     else:
         raise ValueError(f"Unsupported training_prior.smpl_perturb_mode: {perturb_mode!r}")
     poses = rot6d_to_axis_angle(noisy_pose6d.reshape(-1, 24, 6)).reshape(*pose6d.shape[:-1], 72)
@@ -1283,6 +1531,7 @@ def build_smpl_override_outputs(
         "transl_noise_ratio": noise_ratio,
         "transl_noise_tangent_m": tangent_noise,
         "transl_noise_is_clean": clean_mask,
+        "transl_noise_category": noise_category,
         "contact_noise_signed_m": contact_noise_signed,
         "base_clean_pred_pose_6d": pose6d,
         "gt_smpl_provider_mask": valid,
