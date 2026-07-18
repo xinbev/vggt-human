@@ -160,18 +160,26 @@ class HSIGroundingHead(nn.Module):
         ).reshape(-1, 2)
         slot_valid = (confs[..., 0] > 0.0).reshape(-1, 1)
         valid = planes["valid"] & torch.isfinite(signed) & box_valid & slot_valid
-        # Pick the foot closest to the fitted support plane.  The minimum
-        # signed distance is dominated by a swing-foot/background outlier and
-        # can move an otherwise grounded person in the wrong direction.
-        inf = torch.full_like(signed, float("inf"))
-        abs_signed = torch.where(valid, signed.abs(), inf)
-        support_index = abs_signed.argmin(dim=-1, keepdim=True)
-        support_signed = signed.gather(dim=-1, index=support_index)
-        candidate_valid = torch.isfinite(support_signed) & valid.any(dim=-1, keepdim=True)
-        support_index = support_index.clamp(max=1)
-        selected_normal = planes["normal"].gather(1, support_index[..., None].expand(-1, -1, 3)).squeeze(1)
-        selected_normal = torch.nan_to_num(selected_normal, nan=0.0)
-        selected_normal = selected_normal * candidate_valid.to(dtype=selected_normal.dtype)
+        # Estimate a person-level root offset only when the valid feet agree.
+        # A grounded support foot plus a swing foot must not pull the whole
+        # person; a globally floating/penetrating person has both feet outside
+        # the deadzone with the same signed direction.
+        active_positive = valid & (signed > self.clearance_deadzone_m)
+        active_negative = valid & (signed < -self.clearance_deadzone_m)
+        valid_count = valid.sum(dim=-1, keepdim=True)
+        positive_count = active_positive.sum(dim=-1, keepdim=True)
+        negative_count = active_negative.sum(dim=-1, keepdim=True)
+        common_positive = (positive_count == valid_count) & (positive_count > 0)
+        common_negative = (negative_count == valid_count) & (negative_count > 0)
+        candidate_valid = valid_count > 0
+        candidate_use = candidate_valid & (common_positive | common_negative | (valid_count == 1))
+        candidate_weights = valid.to(dtype=base_transl.dtype) * candidate_use.to(dtype=base_transl.dtype)
+        weight_sum = candidate_weights.sum(dim=-1, keepdim=True).clamp(min=1.0)
+        support_signed = (signed * candidate_weights).sum(dim=-1, keepdim=True) / weight_sum
+        selected_normal = (planes["normal"] * candidate_weights[..., None]).sum(dim=1) / weight_sum
+        selected_normal = torch.nn.functional.normalize(selected_normal, dim=-1, eps=1e-6)
+        selected_normal = selected_normal * candidate_use.to(dtype=selected_normal.dtype)
+        candidate_valid = candidate_use
         raw_delta_scalar = self.target_clearance_m - support_signed
         delta_scalar = raw_delta_scalar.clamp(-self.max_root_delta_m, self.max_root_delta_m)
         delta_scalar = torch.where(

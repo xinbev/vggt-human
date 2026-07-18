@@ -32,14 +32,16 @@ VGGT depth/K -> frozen Stage1 scale -> NLF SMPL -> frozen Stage2 align
 The analytic candidate is:
 
 ```text
-support_signed = signed distance of the valid foot closest to the support plane
+support_signed = robust common-sign average of valid foot signed distances
 delta_scalar = clamp(-support_signed, -0.12, 0.12)
 candidate_delta = delta_scalar * support_normal
 ```
 
 The strict teacher defines `abs(signed_distance) <= 2.5 cm` as normal contact.
 The online candidate therefore uses the same 2.5 cm deadzone and produces zero
-displacement inside it.
+displacement inside it. A person-level correction is applied only when all
+valid feet agree on the signed direction; a normal support foot plus a swing
+foot is left unchanged.
 
 The learned head cannot change candidate direction or magnitude. It predicts
 only whether the candidate should be applied. Its target is positive only when
