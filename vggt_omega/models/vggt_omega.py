@@ -17,6 +17,7 @@ from vggt_omega.models.heads import (
     DenseHead,
     HSIHumanSceneAlignHead,
     HSIContactRefineHead,
+    HSIGroundingHead,
     HSIRefinementHead,
     HSITranslationRefineV4Head,
     SMPLIdentityHead,
@@ -157,6 +158,21 @@ class VGGTOmega(nn.Module):
         hsi_contact_use_temporal_velocity: bool = False,
         hsi_contact_max_velocity_m: float = 0.25,
         hsi_contact_overwrite_refined: bool = True,
+        enable_hsi_grounding: bool = False,
+        hsi_grounding_hidden_dim: int = 192,
+        hsi_grounding_sole_vertices_per_foot: int = 48,
+        hsi_grounding_exclusion_vertices: int = 256,
+        hsi_grounding_support_window: int = 21,
+        hsi_grounding_support_min_points: int = 24,
+        hsi_grounding_support_max_rmse_m: float = 0.05,
+        hsi_grounding_support_max_depth_m: float = 20.0,
+        hsi_grounding_support_max_point_depth_delta_m: float = 0.75,
+        hsi_grounding_target_clearance_m: float = 0.005,
+        hsi_grounding_max_root_delta_m: float = 0.12,
+        hsi_grounding_gate_threshold: float = 0.5,
+        hsi_grounding_hard_gate_eval: bool = True,
+        hsi_grounding_overwrite_refined: bool = True,
+        hsi_grounding_min_depth_confidence: float = 0.0,
         smpl_model_dir: str = "",
         smpl_provider: str = "internal",
         nlf_model_path: str = "",
@@ -393,12 +409,35 @@ class VGGTOmega(nn.Module):
             if enable_hsi_contact_refine
             else None
         )
+        self.hsi_grounding_head = (
+            HSIGroundingHead(
+                smpl_model_dir=smpl_model_dir,
+                hidden_dim=hsi_grounding_hidden_dim,
+                sole_vertices_per_foot=hsi_grounding_sole_vertices_per_foot,
+                exclusion_vertices=hsi_grounding_exclusion_vertices,
+                support_window=hsi_grounding_support_window,
+                support_min_points=hsi_grounding_support_min_points,
+                support_max_rmse_m=hsi_grounding_support_max_rmse_m,
+                support_max_depth_m=hsi_grounding_support_max_depth_m,
+                support_max_point_depth_delta_m=hsi_grounding_support_max_point_depth_delta_m,
+                target_clearance_m=hsi_grounding_target_clearance_m,
+                max_root_delta_m=hsi_grounding_max_root_delta_m,
+                gate_threshold=hsi_grounding_gate_threshold,
+                hard_gate_eval=hsi_grounding_hard_gate_eval,
+                overwrite_refined=hsi_grounding_overwrite_refined,
+                min_depth_confidence=hsi_grounding_min_depth_confidence,
+                image_size=image_size,
+            )
+            if enable_hsi_grounding
+            else None
+        )
         has_runtime_smpl_provider = self.smpl_provider == "gt_perturbed"
         if (
             self.hsi_refinement_head is not None
             or self.hsi_human_scene_align_head is not None
             or self.hsi_translation_refine_v4_head is not None
             or self.hsi_contact_refine_head is not None
+            or self.hsi_grounding_head is not None
         ) and (
             (self.smpl_head is None and self.nlf_smpl_provider is None and not has_runtime_smpl_provider)
             or self.dense_head is None
@@ -656,6 +695,19 @@ class VGGTOmega(nn.Module):
                         image_size_hw=image_size_hw,
                         intrinsics_override=hsi_intrinsics_override,
                         depth_is_metric=bool(hsi_depth_is_metric),
+                    )
+                )
+            if self.hsi_grounding_head is not None:
+                predictions.update(
+                    self.hsi_grounding_head(
+                        predictions=predictions,
+                        depth=hsi_depth_override if hsi_depth_override is not None else predictions["depth"],
+                        pose_enc=predictions["pose_enc"],
+                        image_size_hw=image_size_hw,
+                        intrinsics_override=hsi_intrinsics_override,
+                        depth_is_metric=bool(hsi_depth_is_metric),
+                        person_boxes=smpl_reference_boxes,
+                        depth_confidence=None if hsi_depth_override is not None else predictions.get("depth_conf"),
                     )
                 )
 

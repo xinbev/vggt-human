@@ -156,6 +156,10 @@ class HungarianSMPLLoss(nn.Module):
         hsi_contact_refine_class_weight: float = 0.0,
         hsi_contact_refine_no_worse_weight: float = 0.0,
         hsi_contact_refine_swing_no_pull_weight: float = 0.0,
+        hsi_grounding_gate_weight: float = 0.0,
+        hsi_grounding_gate_margin_m: float = 0.002,
+        hsi_grounding_target_clearance_m: float = 0.005,
+        hsi_grounding_active_threshold_m: float = 0.02,
     ) -> None:
         super().__init__()
         self.matcher = matcher
@@ -301,6 +305,10 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_contact_refine_class_weight = float(hsi_contact_refine_class_weight)
         self.hsi_contact_refine_no_worse_weight = float(hsi_contact_refine_no_worse_weight)
         self.hsi_contact_refine_swing_no_pull_weight = float(hsi_contact_refine_swing_no_pull_weight)
+        self.hsi_grounding_gate_weight = float(hsi_grounding_gate_weight)
+        self.hsi_grounding_gate_margin_m = max(float(hsi_grounding_gate_margin_m), 0.0)
+        self.hsi_grounding_target_clearance_m = float(hsi_grounding_target_clearance_m)
+        self.hsi_grounding_active_threshold_m = max(float(hsi_grounding_active_threshold_m), 0.0)
         self._smpl_layer: SMPLLayer | None = None
         self._foot_sole_indices: torch.Tensor | None = None
         self._foot_sole_indices_by_count: dict[int, torch.Tensor] = {}
@@ -538,6 +546,7 @@ class HungarianSMPLLoss(nn.Module):
             + self.hsi_contact_refine_class_weight * losses["loss_hsi_contact_refine_class"]
             + self.hsi_contact_refine_no_worse_weight * losses["loss_hsi_contact_refine_no_worse"]
             + self.hsi_contact_refine_swing_no_pull_weight * losses["loss_hsi_contact_refine_swing_no_pull"]
+            + self.hsi_grounding_gate_weight * losses["loss_hsi_grounding_gate"]
         )
         return losses
 
@@ -1183,6 +1192,7 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_contact_refine_class": zero,
             "loss_hsi_contact_refine_no_worse": zero,
             "loss_hsi_contact_refine_swing_no_pull": zero,
+            "loss_hsi_grounding_gate": zero,
             "loss_hsi_joints3d": zero,
             "loss_hsi_vertices": zero,
             "loss_hsi_projected_joints2d": zero,
@@ -1275,6 +1285,18 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_contact_swing_displacement_mean_m": zero.detach(),
             "metric_hsi_contact_contact_gate_mean": zero.detach(),
             "metric_hsi_contact_swing_gate_mean": zero.detach(),
+            "metric_hsi_grounding_valid_coverage": zero.detach(),
+            "metric_hsi_grounding_apply_target_rate": zero.detach(),
+            "metric_hsi_grounding_gate_mean": zero.detach(),
+            "metric_hsi_grounding_gate_accuracy": zero.detach(),
+            "metric_hsi_grounding_base_l2_p95_m": zero.detach(),
+            "metric_hsi_grounding_candidate_l2_p95_m": zero.detach(),
+            "metric_hsi_grounding_refined_l2_p95_m": zero.detach(),
+            "metric_hsi_grounding_improvement_rate": zero.detach(),
+            "metric_hsi_grounding_float_p95_m": zero.detach(),
+            "metric_hsi_grounding_penetration_p95_m": zero.detach(),
+            "metric_hsi_grounding_clean_displacement_p95_m": zero.detach(),
+            "metric_hsi_grounding_selection": zero.detach(),
             "metric_stage2_selection": zero.detach(),
             "metric_stage3_selection": zero.detach(),
             "metric_hsi_no_worse_ratio": zero.detach(),
@@ -1460,7 +1482,10 @@ class HungarianSMPLLoss(nn.Module):
             )
         )
         base_pose_value = predictions.get("hsi_contact_base_pred_pose_6d", predictions.get("pred_pose_6d"))
-        base_transl_value = predictions.get("hsi_contact_base_pred_transl_cam", predictions.get("pred_transl_cam"))
+        base_transl_value = predictions.get(
+            "hsi_grounding_base_pred_transl_cam",
+            predictions.get("hsi_contact_base_pred_transl_cam", predictions.get("pred_transl_cam")),
+        )
         base_pose6d = _flatten_prediction(base_pose_value, unframed_ndim=3)
         base_betas = _flatten_prediction(_require_prediction(predictions, "pred_betas"), unframed_ndim=3)
         base_transl = _flatten_prediction(base_transl_value, unframed_ndim=3)
@@ -1662,6 +1687,14 @@ class HungarianSMPLLoss(nn.Module):
             + 0.25 * losses["metric_hsi_transl_l2_p90"]
             + 2.0 * F.relu(losses["metric_hsi_joint_error_delta"])
         ).detach()
+        losses.update(
+            self._hsi_grounding_losses(
+                predictions=predictions,
+                frame_idx=frame_idx,
+                src_idx=src_idx,
+                target_transl=target_transl,
+            )
+        )
         contact_losses = self._hsi_contact_refine_losses(
             predictions=predictions,
             frame_idx=frame_idx,
@@ -1747,6 +1780,126 @@ class HungarianSMPLLoss(nn.Module):
             )
         )
         return losses
+
+    def _hsi_grounding_losses(
+        self,
+        predictions: dict[str, torch.Tensor],
+        frame_idx: torch.Tensor,
+        src_idx: torch.Tensor,
+        target_transl: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        zero = target_transl.sum() * 0.0
+        out = {
+            "loss_hsi_grounding_gate": zero,
+            "metric_hsi_grounding_valid_coverage": zero.detach(),
+            "metric_hsi_grounding_apply_target_rate": zero.detach(),
+            "metric_hsi_grounding_gate_mean": zero.detach(),
+            "metric_hsi_grounding_gate_accuracy": zero.detach(),
+            "metric_hsi_grounding_base_l2_p95_m": zero.detach(),
+            "metric_hsi_grounding_candidate_l2_p95_m": zero.detach(),
+            "metric_hsi_grounding_refined_l2_p95_m": zero.detach(),
+            "metric_hsi_grounding_improvement_rate": zero.detach(),
+            "metric_hsi_grounding_float_p95_m": zero.detach(),
+            "metric_hsi_grounding_penetration_p95_m": zero.detach(),
+            "metric_hsi_grounding_clean_displacement_p95_m": zero.detach(),
+            "metric_hsi_grounding_selection": zero.detach(),
+        }
+        keys = (
+            "hsi_grounding_base_pred_transl_cam",
+            "hsi_grounding_candidate_pred_transl_cam",
+            "hsi_grounding_refined_pred_transl_cam",
+            "hsi_grounding_gate_probability",
+            "hsi_grounding_candidate_valid",
+        )
+        if not all(isinstance(predictions.get(key), torch.Tensor) for key in keys):
+            return out
+        base = _flatten_prediction(predictions[keys[0]], unframed_ndim=3)[frame_idx, src_idx].detach()
+        candidate = _flatten_prediction(predictions[keys[1]], unframed_ndim=3)[frame_idx, src_idx].detach()
+        refined = _flatten_prediction(predictions[keys[2]], unframed_ndim=3)[frame_idx, src_idx]
+        probability = _flatten_prediction(predictions[keys[3]], unframed_ndim=3)[frame_idx, src_idx, 0]
+        valid = _flatten_prediction(predictions[keys[4]], unframed_ndim=3)[frame_idx, src_idx, 0] > 0.5
+        target = target_transl.to(device=refined.device, dtype=refined.dtype)
+        base_error = torch.linalg.norm(base - target, dim=-1)
+        candidate_error = torch.linalg.norm(candidate - target, dim=-1)
+        refined_error = torch.linalg.norm(refined - target, dim=-1)
+        clean_value = predictions.get("transl_noise_is_clean")
+        if isinstance(clean_value, torch.Tensor):
+            clean = _flatten_prediction(clean_value, unframed_ndim=3)[frame_idx, src_idx, 0] > 0.5
+        else:
+            clean = base_error <= 0.005
+        apply_target = valid & ~clean & (
+            candidate_error + float(self.hsi_grounding_gate_margin_m) < base_error
+        )
+        if valid.any():
+            target_f = apply_target.to(dtype=probability.dtype)
+            positive = valid & apply_target
+            negative = valid & ~apply_target
+            terms = []
+            if positive.any():
+                terms.append(F.binary_cross_entropy(probability[positive], target_f[positive]))
+            if negative.any():
+                terms.append(F.binary_cross_entropy(probability[negative], target_f[negative]))
+            if terms:
+                out["loss_hsi_grounding_gate"] = torch.stack(terms).mean()
+            out["metric_hsi_grounding_gate_mean"] = probability[valid].mean().detach()
+            out["metric_hsi_grounding_gate_accuracy"] = (
+                (probability[valid] >= 0.5) == apply_target[valid]
+            ).to(dtype=refined.dtype).mean().detach()
+        active_all = base_error >= float(self.hsi_grounding_active_threshold_m)
+        coverage_mask = active_all if active_all.any() else torch.ones_like(active_all)
+        out["metric_hsi_grounding_valid_coverage"] = valid[coverage_mask].to(dtype=refined.dtype).mean().detach()
+        out["metric_hsi_grounding_apply_target_rate"] = apply_target.to(dtype=refined.dtype).mean().detach()
+
+        active = valid & active_all
+        if active.any():
+            out["metric_hsi_grounding_base_l2_p95_m"] = torch.quantile(base_error[active].float(), 0.95).to(
+                dtype=refined.dtype
+            ).detach()
+            out["metric_hsi_grounding_candidate_l2_p95_m"] = torch.quantile(
+                candidate_error[active].float(), 0.95
+            ).to(dtype=refined.dtype).detach()
+            out["metric_hsi_grounding_refined_l2_p95_m"] = torch.quantile(
+                refined_error[active].float(), 0.95
+            ).to(dtype=refined.dtype).detach()
+            improvement_mask = active & apply_target
+            if improvement_mask.any():
+                out["metric_hsi_grounding_improvement_rate"] = (
+                    refined_error[improvement_mask] < base_error[improvement_mask]
+                ).to(dtype=refined.dtype).mean().detach()
+
+        signed_value = predictions.get("hsi_grounding_support_signed_m")
+        refined_signed_value = predictions.get("hsi_grounding_refined_signed_m")
+        support_valid_value = predictions.get("hsi_grounding_support_valid")
+        if all(isinstance(value, torch.Tensor) for value in (signed_value, refined_signed_value, support_valid_value)):
+            signed = _flatten_prediction(signed_value, unframed_ndim=3)[frame_idx, src_idx]
+            refined_signed = _flatten_prediction(refined_signed_value, unframed_ndim=3)[frame_idx, src_idx]
+            support_valid = _flatten_prediction(support_valid_value, unframed_ndim=3)[frame_idx, src_idx].bool()
+            inf = torch.full_like(signed, float("inf"))
+            base_support = torch.where(support_valid, signed, inf).amin(dim=-1)
+            refined_support = torch.where(support_valid, refined_signed, inf).amin(dim=-1)
+            person_valid = torch.isfinite(base_support) & torch.isfinite(refined_support)
+            if person_valid.any():
+                residual = refined_support[person_valid] - float(self.hsi_grounding_target_clearance_m)
+                out["metric_hsi_grounding_float_p95_m"] = torch.quantile(
+                    F.relu(residual).float(), 0.95
+                ).to(dtype=refined.dtype).detach()
+                out["metric_hsi_grounding_penetration_p95_m"] = torch.quantile(
+                    F.relu(-residual).float(), 0.95
+                ).to(dtype=refined.dtype).detach()
+        clean_valid = clean & valid
+        if clean_valid.any():
+            clean_displacement = torch.linalg.norm(refined[clean_valid] - base[clean_valid], dim=-1)
+            out["metric_hsi_grounding_clean_displacement_p95_m"] = torch.quantile(
+                clean_displacement.float(), 0.95
+            ).to(dtype=refined.dtype).detach()
+        out["metric_hsi_grounding_selection"] = (
+            out["metric_hsi_grounding_refined_l2_p95_m"]
+            + 0.5 * out["metric_hsi_grounding_float_p95_m"]
+            + out["metric_hsi_grounding_penetration_p95_m"]
+            + 5.0 * out["metric_hsi_grounding_clean_displacement_p95_m"]
+            + 0.05 * (1.0 - out["metric_hsi_grounding_valid_coverage"])
+        ).detach()
+        return out
 
     def _hsi_contact_refine_losses(
         self,

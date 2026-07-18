@@ -32,6 +32,8 @@ def estimate_local_support_planes(
     max_point_depth_delta_m: float = 0.75,
     min_up_component: float = 0.25,
     exclusion_mask: torch.Tensor | None = None,
+    depth_confidence: torch.Tensor | None = None,
+    min_depth_confidence: float = 0.0,
 ) -> dict[str, torch.Tensor]:
     """Fit robust local planes around [M,2,3] foot centers in camera space."""
     depth = canonical_depth(depth_flat).float()
@@ -82,6 +84,14 @@ def estimate_local_support_planes(
     if exclusion_mask is not None:
         mask = exclusion_mask.bool()
         valid = valid & ~mask[frame_idx[:, None, None], ys, xs]
+    if depth_confidence is not None and float(min_depth_confidence) > 0.0:
+        confidence = canonical_depth(depth_confidence).float()
+        if confidence.shape != depth.shape:
+            raise ValueError(
+                f"depth_confidence must match depth shape {tuple(depth.shape)}, got {tuple(confidence.shape)}"
+            )
+        sampled_confidence = confidence[frame_idx[:, None, None], ys, xs]
+        valid = valid & torch.isfinite(sampled_confidence) & (sampled_confidence >= float(min_depth_confidence))
 
     fx = point_intr[:, None, None, 0, 0].clamp(min=1e-6)
     fy = point_intr[:, None, None, 1, 1].clamp(min=1e-6)

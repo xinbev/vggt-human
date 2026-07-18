@@ -104,6 +104,9 @@ def main() -> None:
             start_epoch = 0
             global_step = 0
             print("[ckpt] reset resume epoch/global_step to 0")
+    overlay_path = str(config.get("checkpoint", {}).get("overlay", "") or "")
+    if overlay_path:
+        load_overlay_checkpoint(model, overlay_path, device, config)
     frozen_hashes = hash_model_prefixes(model, normalize_string_list(config.get("checkpoint", {}).get("frozen_hash_prefixes", [])))
 
     epochs = int(config["optim"]["epochs"])
@@ -518,6 +521,23 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_contact_use_temporal_velocity=bool(model_cfg.get("hsi_contact_use_temporal_velocity", False)),
         hsi_contact_max_velocity_m=float(model_cfg.get("hsi_contact_max_velocity_m", 0.25)),
         hsi_contact_overwrite_refined=bool(model_cfg.get("hsi_contact_overwrite_refined", True)),
+        enable_hsi_grounding=bool(model_cfg.get("enable_hsi_grounding", False)),
+        hsi_grounding_hidden_dim=int(model_cfg.get("hsi_grounding_hidden_dim", 192)),
+        hsi_grounding_sole_vertices_per_foot=int(model_cfg.get("hsi_grounding_sole_vertices_per_foot", 48)),
+        hsi_grounding_exclusion_vertices=int(model_cfg.get("hsi_grounding_exclusion_vertices", 256)),
+        hsi_grounding_support_window=int(model_cfg.get("hsi_grounding_support_window", 21)),
+        hsi_grounding_support_min_points=int(model_cfg.get("hsi_grounding_support_min_points", 24)),
+        hsi_grounding_support_max_rmse_m=float(model_cfg.get("hsi_grounding_support_max_rmse_m", 0.05)),
+        hsi_grounding_support_max_depth_m=float(model_cfg.get("hsi_grounding_support_max_depth_m", 20.0)),
+        hsi_grounding_support_max_point_depth_delta_m=float(
+            model_cfg.get("hsi_grounding_support_max_point_depth_delta_m", 0.75)
+        ),
+        hsi_grounding_target_clearance_m=float(model_cfg.get("hsi_grounding_target_clearance_m", 0.005)),
+        hsi_grounding_max_root_delta_m=float(model_cfg.get("hsi_grounding_max_root_delta_m", 0.12)),
+        hsi_grounding_gate_threshold=float(model_cfg.get("hsi_grounding_gate_threshold", 0.5)),
+        hsi_grounding_hard_gate_eval=bool(model_cfg.get("hsi_grounding_hard_gate_eval", True)),
+        hsi_grounding_overwrite_refined=bool(model_cfg.get("hsi_grounding_overwrite_refined", True)),
+        hsi_grounding_min_depth_confidence=float(model_cfg.get("hsi_grounding_min_depth_confidence", 0.0)),
         smpl_model_dir=str(config.get("assets", {}).get("smpl_model_dir", "")),
         smpl_provider=str(model_cfg.get("smpl_provider", "internal")),
         nlf_model_path=str(model_cfg.get("nlf_model_path", config.get("checkpoints", {}).get("nlf_smpl", ""))),
@@ -713,6 +733,27 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
             freeze_module(hsi_v4_head)
             unfreeze_module(hsi_v4_head.correction_trunk)
             unfreeze_module(hsi_v4_head.correction_head)
+    hsi_grounding_head = getattr(model, "hsi_grounding_head", None)
+    if hsi_grounding_head is not None:
+        if bool(model_cfg.get("freeze_hsi_grounding", False)):
+            freeze_module(hsi_grounding_head)
+        if bool(model_cfg.get("train_hsi_grounding_only", False)):
+            for module_name in (
+                "aggregator",
+                "camera_head",
+                "dense_head",
+                "smpl_head",
+                "nlf_smpl_provider",
+                "hsi_refinement_head",
+                "hsi_human_scene_align_head",
+                "hsi_translation_refine_v4_head",
+                "hsi_contact_refine_head",
+            ):
+                module = getattr(model, module_name, None)
+                if module is not None:
+                    freeze_module(module)
+            unfreeze_module(hsi_grounding_head)
+            freeze_module(hsi_grounding_head.smpl)
     if not bool(model_cfg.get("freeze_aggregator", False)):
         return
     aggregator = getattr(model, "aggregator", None)
@@ -908,6 +949,36 @@ def validate_required_checkpoint_prefixes(
                 f"missing_or_mismatched={len(missing)}\n{preview}"
             )
         print(f"[ckpt] required prefix loaded: {prefix} tensors={len(expected)}")
+
+
+def load_overlay_checkpoint(
+    model: torch.nn.Module,
+    checkpoint_path: str,
+    device: torch.device,
+    config: dict[str, Any],
+) -> None:
+    """Overlay selected module prefixes without changing epoch or optimizer."""
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    state_dict = extract_state_dict(checkpoint)
+    ckpt_cfg = config.get("checkpoint", {})
+    prefixes = normalize_string_list(ckpt_cfg.get("overlay_prefixes", []))
+    required = normalize_string_list(ckpt_cfg.get("overlay_required_prefixes", prefixes))
+    if not prefixes:
+        raise ValueError("checkpoint.overlay requires checkpoint.overlay_prefixes")
+    state_dict = {
+        key: value
+        for key, value in state_dict.items()
+        if any(key.startswith(prefix) for prefix in prefixes)
+    }
+    model_state = model.state_dict()
+    state_dict, report = make_state_dict_loadable(state_dict, model_state, adapt_query_tensors=False)
+    validate_required_checkpoint_prefixes(checkpoint_path, state_dict, model_state, required)
+    missing, unexpected = model.load_state_dict(state_dict, strict=False)
+    print(f"[ckpt] overlaid modules: {checkpoint_path}")
+    print(
+        f"[ckpt] overlay_tensors={len(state_dict)} missing={len(missing)} "
+        f"unexpected={len(unexpected)} skipped={len(report['skipped'])}"
+    )
 
 
 def hash_model_prefixes(model: torch.nn.Module, prefixes: list[str]) -> dict[str, str]:
@@ -2012,6 +2083,18 @@ def compact_loss_name(key: str) -> str:
         "metric_hsi_contact_swing_displacement_mean_m": "swingDisp",
         "metric_hsi_contact_temporal_velocity_valid_rate": "velValid",
         "metric_hsi_contact_temporal_velocity_median": "velMedian",
+        "loss_hsi_grounding_gate": "groundGate",
+        "metric_hsi_grounding_valid_coverage": "groundValid",
+        "metric_hsi_grounding_apply_target_rate": "groundTarget",
+        "metric_hsi_grounding_gate_mean": "groundProb",
+        "metric_hsi_grounding_gate_accuracy": "groundAcc",
+        "metric_hsi_grounding_base_l2_p95_m": "groundBaseP95",
+        "metric_hsi_grounding_candidate_l2_p95_m": "groundCandP95",
+        "metric_hsi_grounding_refined_l2_p95_m": "groundRefP95",
+        "metric_hsi_grounding_improvement_rate": "groundImprove",
+        "metric_hsi_grounding_float_p95_m": "groundFloatP95",
+        "metric_hsi_grounding_penetration_p95_m": "groundPenP95",
+        "metric_hsi_grounding_clean_displacement_p95_m": "groundCleanP95",
         "loss_transl_refine_delta_reg": "tDeltaReg",
         "loss_local_joints3d": "localJ",
         "loss_local_vertices": "localV",
