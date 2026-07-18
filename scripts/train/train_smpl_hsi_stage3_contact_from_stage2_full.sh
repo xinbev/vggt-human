@@ -23,7 +23,7 @@ export BATCH_SIZE="${BATCH_SIZE:-16}"
 export NUM_WORKERS="${NUM_WORKERS:-12}"
 export NLF_INTERNAL_BATCH_SIZE="${NLF_INTERNAL_BATCH_SIZE:-128}"
 export MAX_HUMANS="${MAX_HUMANS:-20}"
-export NUM_VIEWS="${NUM_VIEWS:-2}"
+export NUM_VIEWS="${NUM_VIEWS:-3}"
 export EPOCHS="${EPOCHS:-3}"
 export LR="${LR:-2e-6}"
 export MAX_STEPS_PER_EPOCH="${MAX_STEPS_PER_EPOCH:-0}"
@@ -91,7 +91,7 @@ export MONITOR="metric_stage3_selection"
 export MONITOR_MODE="min"
 export RESUME_REQUIRED_PREFIXES="hsi_refinement_head.,hsi_human_scene_align_head."
 export FROZEN_HASH_PREFIXES="hsi_refinement_head.,hsi_human_scene_align_head."
-export PROGRESS_LOG_KEYS="loss_total,loss_hsi_contact_refine_plane,loss_hsi_contact_refine_class,loss_hsi_contact_refine_no_worse,loss_hsi_contact_refine_swing_no_pull,metric_hsi_contact_float_p95_m,metric_hsi_contact_penetration_p95_m,metric_hsi_contact_false_pull_rate,metric_hsi_contact_contact_gate_mean,metric_hsi_contact_swing_gate_mean,metric_hsi_transl_l1_delta,metric_hsi_joint_error_delta"
+export PROGRESS_LOG_KEYS="loss_total,loss_hsi_contact_refine_plane,loss_hsi_contact_refine_class,loss_hsi_contact_refine_no_worse,loss_hsi_contact_refine_swing_no_pull,metric_hsi_contact_float_p95_m,metric_hsi_contact_penetration_p95_m,metric_hsi_contact_false_pull_rate,metric_hsi_contact_contact_gate_mean,metric_hsi_contact_swing_gate_mean,metric_hsi_contact_temporal_velocity_valid_rate,metric_hsi_contact_temporal_velocity_median"
 
 [[ -f "${RESUME_CKPT}" ]] || { echo "[ERROR] Missing Stage2 checkpoint: ${RESUME_CKPT}" >&2; exit 1; }
 [[ -f "${TRAIN_CONFIG}" ]] || { echo "[ERROR] Missing train config: ${TRAIN_CONFIG}" >&2; exit 1; }

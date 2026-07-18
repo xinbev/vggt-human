@@ -152,6 +152,8 @@ class VGGTOmega(nn.Module):
         hsi_contact_max_hip_delta_deg: float = 4.0,
         hsi_contact_max_knee_delta_deg: float = 8.0,
         hsi_contact_max_ankle_delta_deg: float = 10.0,
+        hsi_contact_use_temporal_velocity: bool = False,
+        hsi_contact_max_velocity_m: float = 0.25,
         hsi_contact_overwrite_refined: bool = True,
         smpl_model_dir: str = "",
         smpl_provider: str = "internal",
@@ -369,6 +371,8 @@ class VGGTOmega(nn.Module):
                 max_hip_delta_deg=hsi_contact_max_hip_delta_deg,
                 max_knee_delta_deg=hsi_contact_max_knee_delta_deg,
                 max_ankle_delta_deg=hsi_contact_max_ankle_delta_deg,
+                use_temporal_velocity=hsi_contact_use_temporal_velocity,
+                max_velocity_m=hsi_contact_max_velocity_m,
                 overwrite_refined=hsi_contact_overwrite_refined,
                 image_size=image_size,
             )

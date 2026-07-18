@@ -32,6 +32,13 @@ The root-normal branch is trained first. The lower-body pose branch is frozen
 in this first contact-only run. Swing-foot no-pull and contact classification
 losses protect non-contact feet from being pulled toward the support plane.
 
+The contact classifier also uses inference-available temporal features. For
+each foot, the head converts sole centers from camera coordinates to world
+coordinates using the VGGT pose encoding, matches neighboring frames using
+`assigned_track_ids`, and computes the neighboring sole displacement. GT
+`contact_foot_velocity_m` is kept as a teacher diagnostic only and is never
+passed as a model input.
+
 ## Teacher Contract
 
 The data loader must read:
@@ -64,8 +71,8 @@ before and after training.
 
 ## Validation Order
 
-1. Run `scripts/smoke/check_hsi_stage3_contact_from_stage2_full.sh` with 200
-   train steps and 20 validation steps.
+1. Run `scripts/smoke/check_hsi_stage3_contact_from_stage2_full.sh` with three
+   views, 200 train steps, and 20 validation steps.
 2. Confirm non-zero contact teacher counts, finite contact gradients, unchanged
    frozen hashes, and non-zero contact-plane loss.
 3. Inspect the Stage2-vs-contact Viser output on the walking sequence.

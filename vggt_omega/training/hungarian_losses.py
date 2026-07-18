@@ -1764,12 +1764,25 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_contact_swing_displacement_mean_m": zero.detach(),
             "metric_hsi_contact_contact_gate_mean": zero.detach(),
             "metric_hsi_contact_swing_gate_mean": zero.detach(),
+            "metric_hsi_contact_temporal_velocity_valid_rate": zero.detach(),
+            "metric_hsi_contact_temporal_velocity_median": zero.detach(),
             "metric_stage3_selection": zero.detach(),
         }
         if "contact_teacher_valid" not in matched:
             return out
         teacher_valid = matched["contact_teacher_valid"].bool()
         contact_label = matched["contact_label"].bool()
+        predicted_velocity = predictions.get("hsi_contact_foot_velocity_m")
+        predicted_velocity_valid = predictions.get("hsi_contact_foot_velocity_valid")
+        if isinstance(predicted_velocity, torch.Tensor) and isinstance(predicted_velocity_valid, torch.Tensor):
+            flat_velocity = _flatten_prediction(predicted_velocity, unframed_ndim=3)[frame_idx, src_idx]
+            flat_velocity_valid = _flatten_prediction(predicted_velocity_valid, unframed_ndim=3)[frame_idx, src_idx].bool()
+            valid_velocity = flat_velocity_valid[teacher_valid]
+            if valid_velocity.numel() > 0:
+                out["metric_hsi_contact_temporal_velocity_valid_rate"] = valid_velocity.float().mean().detach()
+                velocity_values = flat_velocity[teacher_valid][valid_velocity]
+                if velocity_values.numel() > 0:
+                    out["metric_hsi_contact_temporal_velocity_median"] = velocity_values.median().detach()
         plane_center = matched["contact_plane_center_cam"].to(device=pred_vertices_cam.device, dtype=pred_vertices_cam.dtype)
         plane_normal = matched["contact_plane_normal_cam"].to(device=pred_vertices_cam.device, dtype=pred_vertices_cam.dtype)
         target_signed = matched["contact_signed_distance_m"].to(device=pred_vertices_cam.device, dtype=pred_vertices_cam.dtype)

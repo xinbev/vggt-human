@@ -31,6 +31,8 @@ class HSIContactRefineHead(nn.Module):
         max_hip_delta_deg: float = 4.0,
         max_knee_delta_deg: float = 8.0,
         max_ankle_delta_deg: float = 10.0,
+        use_temporal_velocity: bool = False,
+        max_velocity_m: float = 0.25,
         overwrite_refined: bool = True,
         image_size: int = 518,
     ) -> None:
@@ -45,12 +47,16 @@ class HSIContactRefineHead(nn.Module):
         self.support_max_rmse_m = float(support_max_rmse_m)
         self.support_max_depth_m = float(support_max_depth_m)
         self.max_root_normal_delta_m = float(max_root_normal_delta_m)
+        self.use_temporal_velocity = bool(use_temporal_velocity)
+        self.max_velocity_m = max(float(max_velocity_m), 1e-3)
         self.overwrite_refined = bool(overwrite_refined)
         self.image_size = int(image_size)
         max_degrees = [max_hip_delta_deg, max_hip_delta_deg, max_knee_delta_deg, max_knee_delta_deg, max_ankle_delta_deg, max_ankle_delta_deg]
         self.register_buffer("max_pose_delta_rad", torch.tensor(max_degrees).float() * (math.pi / 180.0), persistent=False)
 
         feature_dim = 3 + 36 + 2 + 2 + 2 + 6 + 2
+        if self.use_temporal_velocity:
+            feature_dim += 2 + 2
         self.mlp = nn.Sequential(
             nn.Linear(feature_dim, hidden_dim),
             nn.GELU(),
@@ -117,19 +123,34 @@ class HSIContactRefineHead(nn.Module):
             max_rmse_m=self.support_max_rmse_m,
             max_depth_m=self.support_max_depth_m,
         )
+        if self.use_temporal_velocity:
+            temporal_velocity, temporal_velocity_valid = _compute_temporal_foot_velocity(
+                sole_cam=sole_cam.reshape(batch_size, num_frames, num_queries, 2, 3),
+                pose_enc=pose_enc,
+                track_ids=predictions.get("assigned_track_ids"),
+                track_mask=predictions.get("assigned_track_mask"),
+            )
+        else:
+            temporal_velocity = sole_cam.new_zeros(batch_size, num_frames, num_queries, 2)
+            temporal_velocity_valid = torch.zeros_like(temporal_velocity, dtype=torch.bool)
         lower_pose = pose6d.reshape(-1, 24, 6)[:, list(LOWER_BODY_JOINTS)].reshape(-1, 36)
-        features = torch.cat(
-            [
-                transl.reshape(-1, 3),
-                lower_pose,
-                planes["signed"],
-                planes["rmse"],
-                planes["valid"].to(dtype=transl.dtype),
-                planes["normal"].reshape(-1, 6),
-                planes["point_count"].to(dtype=transl.dtype).clamp(max=256.0) / 256.0,
-            ],
-            dim=-1,
-        )
+        feature_parts = [
+            transl.reshape(-1, 3),
+            lower_pose,
+            planes["signed"],
+            planes["rmse"],
+            planes["valid"].to(dtype=transl.dtype),
+            planes["normal"].reshape(-1, 6),
+            planes["point_count"].to(dtype=transl.dtype).clamp(max=256.0) / 256.0,
+        ]
+        if self.use_temporal_velocity:
+            feature_parts.extend(
+                [
+                    temporal_velocity.reshape(-1, 2).clamp(max=self.max_velocity_m) / self.max_velocity_m,
+                    temporal_velocity_valid.reshape(-1, 2).to(dtype=transl.dtype),
+                ]
+            )
+        features = torch.cat(feature_parts, dim=-1)
         hidden = self.mlp(features)
         contact_logits = self.contact_head(hidden)
         valid_f = planes["valid"].to(dtype=transl.dtype)
@@ -172,6 +193,8 @@ class HSIContactRefineHead(nn.Module):
             "hsi_contact_support_valid": planes["valid"].reshape(batch_size, num_frames, num_queries, 2),
             "hsi_contact_base_signed_m": planes["signed"].reshape(batch_size, num_frames, num_queries, 2),
             "hsi_contact_refined_signed_m": refined_signed.reshape(batch_size, num_frames, num_queries, 2),
+            "hsi_contact_foot_velocity_m": temporal_velocity,
+            "hsi_contact_foot_velocity_valid": temporal_velocity_valid.to(dtype=transl.dtype),
         }
         if self.overwrite_refined:
             outputs.update(
@@ -197,6 +220,67 @@ def _compose_lower_pose_delta(base_pose6d: torch.Tensor, delta_aa: torch.Tensor)
     indices = torch.tensor(LOWER_BODY_JOINTS, device=base_pose6d.device, dtype=torch.long)
     out[:, indices] = delta_rot @ base_rot[:, indices]
     return out[..., :2, :].reshape(*base_pose6d.shape[:-2], 24, 6)
+
+
+def _compute_temporal_foot_velocity(
+    sole_cam: torch.Tensor,
+    pose_enc: torch.Tensor,
+    track_ids: torch.Tensor | None,
+    track_mask: torch.Tensor | None,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Compute inference-available per-foot velocity in world coordinates.
+
+    Contact teachers use neighboring frames and track-consistent sole motion.
+    This reproduces that observable at inference time without reading GT
+    contact velocity or labels.
+    """
+    if sole_cam.ndim != 5 or sole_cam.shape[-2:] != (2, 3):
+        raise ValueError(f"sole_cam must have shape [B,S,Q,2,3], got {tuple(sole_cam.shape)}")
+    batch_size, num_frames, num_queries = sole_cam.shape[:3]
+    velocity = sole_cam.new_zeros(batch_size, num_frames, num_queries, 2)
+    velocity_count = sole_cam.new_zeros(batch_size, num_frames, num_queries, 2)
+    if num_frames < 2 or not isinstance(track_ids, torch.Tensor):
+        return velocity, velocity_count.bool()
+    if track_ids.shape[:3] != (batch_size, num_frames, num_queries):
+        raise ValueError(
+            f"assigned_track_ids shape must start with {(batch_size, num_frames, num_queries)}, "
+            f"got {tuple(track_ids.shape)}"
+        )
+    ids = track_ids.to(device=sole_cam.device, dtype=torch.long)
+    valid_tracks = ids >= 0
+    if isinstance(track_mask, torch.Tensor):
+        if track_mask.shape[:3] != (batch_size, num_frames, num_queries):
+            raise ValueError(
+                f"assigned_track_mask shape must start with {(batch_size, num_frames, num_queries)}, "
+                f"got {tuple(track_mask.shape)}"
+            )
+        valid_tracks = valid_tracks & track_mask.to(device=sole_cam.device).bool()
+
+    extrinsics, _ = encoding_to_camera(pose_enc, image_size_hw=(1, 1), build_intrinsics=False)
+    rotation = extrinsics[..., :3, :3]
+    translation = extrinsics[..., :3, 3]
+    centered = sole_cam - translation[:, :, None, None, :]
+    sole_world = torch.einsum("bsij,bsqfj->bsqfi", rotation.transpose(-1, -2), centered)
+
+    for frame in range(num_frames):
+        for offset in (-1, 1):
+            neighbor = frame + offset
+            if neighbor < 0 or neighbor >= num_frames:
+                continue
+            matches = ids[:, frame, :, None] == ids[:, neighbor, None, :]
+            matches = matches & valid_tracks[:, frame, :, None] & valid_tracks[:, neighbor, None, :]
+            has_match = matches.any(dim=-1)
+            match_index = matches.to(dtype=torch.int64).argmax(dim=-1)
+            gather_index = match_index[:, :, None, None].expand(-1, -1, 2, 3)
+            neighbor_world = sole_world[:, neighbor].gather(dim=1, index=gather_index)
+            distance = torch.linalg.norm(sole_world[:, frame] - neighbor_world, dim=-1)
+            valid_distance = has_match[:, :, None].expand(-1, -1, 2)
+            velocity = velocity + torch.where(valid_distance, distance, torch.zeros_like(distance))
+            velocity_count = velocity_count + valid_distance.to(dtype=velocity_count.dtype)
+
+    valid = velocity_count > 0.0
+    velocity = velocity / velocity_count.clamp(min=1.0)
+    return velocity.detach(), valid.detach()
 
 
 def _resolve_intrinsics(pose_enc, image_size_hw, batch_size, num_frames, device, dtype, override):
