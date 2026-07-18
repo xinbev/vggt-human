@@ -2,12 +2,12 @@
   "implementation": "g0_teacher_aligned_deadzone_v2",
   "gate": "fail",
   "num_active": 5291,
-  "num_geometry_valid": 5278,
-  "geometry_valid_coverage": 0.9975429773330688,
-  "base_translation_p95_m": 0.12000000476837158,
-  "analytic_candidate_translation_p95_m": 0.048426173627376556,
-  "p95_reduction": 0.5964485691408885,
-  "candidate_improvement_rate": 0.6186055541038513,
+  "num_geometry_valid": 3541,
+  "geometry_valid_coverage": 0.6692496538162231,
+  "base_translation_p95_m": 0.12000001966953278,
+  "analytic_candidate_translation_p95_m": 0.03730642423033714,
+  "p95_reduction": 0.6891131823721776,
+  "candidate_improvement_rate": 0.8729172348976135,
   "clean_candidate_displacement_p95_m": 0.0,
   "online_vs_teacher_signed_error_median_m": 1.825392246246338e-07,
   "online_vs_teacher_signed_error_p95_m": 0.001799176912754774,
@@ -15,60 +15,60 @@
   "online_vs_teacher_normal_cosine_p10": 0.9999933242797852,
   "by_noise_level": {
     "-6cm": {
-      "count": 663,
-      "base_p95_m": 0.06000005453824997,
-      "candidate_p95_m": 0.0599999837577343,
-      "p95_reduction": 1.1796741888892015e-06,
-      "improvement_rate": 0.9351432919502258
+      "count": 616,
+      "base_p95_m": 0.06000005081295967,
+      "candidate_p95_m": 0.04341968148946762,
+      "p95_reduction": 0.27633925469794407,
+      "improvement_rate": 0.9853895902633667
     },
     "-4cm": {
-      "count": 734,
+      "count": 508,
       "base_p95_m": 0.040000054985284805,
-      "candidate_p95_m": 0.040000032633543015,
-      "p95_reduction": 5.587927766059764e-07,
-      "improvement_rate": 0.7261580228805542
+      "candidate_p95_m": 0.03817160800099373,
+      "p95_reduction": 0.04571111177131448,
+      "improvement_rate": 0.960629940032959
     },
     "-2cm": {
-      "count": 599,
-      "base_p95_m": 0.020000049844384193,
-      "candidate_p95_m": 0.022360365837812424,
-      "p95_reduction": -0.11801550555090157,
-      "improvement_rate": 0.3522537648677826
+      "count": 285,
+      "base_p95_m": 0.020000040531158447,
+      "candidate_p95_m": 0.05088083818554878,
+      "p95_reduction": -1.5440367536396011,
+      "improvement_rate": 0.5087719559669495
     },
     "-1cm": {
-      "count": 660,
-      "base_p95_m": 0.010000046342611313,
-      "candidate_p95_m": 0.023258300498127937,
-      "p95_reduction": -1.325819271358946,
+      "count": 171,
+      "base_p95_m": 0.010000050067901611,
+      "candidate_p95_m": 0.03561162203550339,
+      "p95_reduction": -2.561144373647726,
       "improvement_rate": 0.0
     },
     "+2cm": {
-      "count": 669,
+      "count": 154,
       "base_p95_m": 0.020000049844384193,
-      "candidate_p95_m": 0.020000072196125984,
-      "p95_reduction": -1.11758430421105e-06,
-      "improvement_rate": 0.13751868903636932
+      "candidate_p95_m": 0.033730726689100266,
+      "p95_reduction": -0.6865321312472381,
+      "improvement_rate": 0.4025973975658417
     },
     "+5cm": {
-      "count": 645,
-      "base_p95_m": 0.05000005289912224,
-      "candidate_p95_m": 0.05000002682209015,
-      "p95_reduction": 5.215400900038247e-07,
-      "improvement_rate": 0.8093023300170898
+      "count": 520,
+      "base_p95_m": 0.05000004917383194,
+      "candidate_p95_m": 0.03833484649658203,
+      "p95_reduction": 0.23330382409613748,
+      "improvement_rate": 0.9653846025466919
     },
     "+8cm": {
-      "count": 644,
+      "count": 627,
       "base_p95_m": 0.08000004291534424,
-      "candidate_p95_m": 0.05009369179606438,
-      "p95_reduction": 0.3738291884533944,
-      "improvement_rate": 0.9736024737358093
+      "candidate_p95_m": 0.03266087546944618,
+      "p95_reduction": 0.5917392756400418,
+      "improvement_rate": 1.0
     },
     "+12cm": {
-      "count": 664,
+      "count": 660,
       "base_p95_m": 0.12000005692243576,
-      "candidate_p95_m": 0.054053373634815216,
-      "p95_reduction": 0.5495554333798891,
-      "improvement_rate": 0.9939758777618408
+      "candidate_p95_m": 0.03525340557098389,
+      "p95_reduction": 0.7062217595965761,
+      "improvement_rate": 1.0
     }
   },
   "thresholds": {
