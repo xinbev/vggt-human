@@ -158,7 +158,7 @@ class HungarianSMPLLoss(nn.Module):
         hsi_contact_refine_swing_no_pull_weight: float = 0.0,
         hsi_grounding_gate_weight: float = 0.0,
         hsi_grounding_gate_margin_m: float = 0.002,
-        hsi_grounding_target_clearance_m: float = 0.005,
+        hsi_grounding_target_clearance_m: float = 0.0,
         hsi_grounding_active_threshold_m: float = 0.02,
     ) -> None:
         super().__init__()
@@ -2910,16 +2910,17 @@ class HungarianSMPLLoss(nn.Module):
             return empty
         embeds = F.normalize(pred_id_embed[frame_idx[valid], src_idx[valid]].float(), dim=-1)
         ids = matched["person_ids"][valid]
-        positive = ids[:, None] == ids[None, :]
-        diagonal = torch.eye(positive.shape[0], dtype=torch.bool, device=positive.device)
-        positive = positive & ~diagonal
-        negative = (ids[:, None] != ids[None, :]) & ~diagonal
+        diagonal = torch.eye(embeds.shape[0], dtype=torch.bool, device=embeds.device)
+        scopes = matched["identity_batch_idx"][valid]
+        same_scope = scopes[:, None] == scopes[None, :]
+        positive = (ids[:, None] == ids[None, :]) & same_scope & ~diagonal
+        negative = (ids[:, None] != ids[None, :]) & same_scope & ~diagonal
         if not positive.any():
             return empty
 
         similarity = embeds @ embeds.t()
         logits = similarity / max(self.id_temperature, 1e-6)
-        logits = logits.masked_fill(diagonal, float("-inf"))
+        logits = logits.masked_fill(~(same_scope & ~diagonal), float("-inf"))
         log_prob = logits - torch.logsumexp(logits, dim=1, keepdim=True)
         denom = positive.sum(dim=1).clamp(min=1)
         per_anchor = -(log_prob.masked_fill(~positive, 0.0).sum(dim=1) / denom)
@@ -2997,6 +2998,12 @@ def flatten_smpl_targets(batch: dict[str, torch.Tensor], device: torch.device) -
             else:
                 target["person_ids"] = torch.full((int(valid.sum()),), -1, dtype=torch.long, device=device)
                 target["person_id_mask"] = torch.zeros(int(valid.sum()), dtype=torch.bool, device=device)
+            target["identity_batch_idx"] = torch.full(
+                (int(valid.sum()),),
+                batch_idx,
+                dtype=torch.long,
+                device=device,
+            )
             if track_source is not None:
                 target["gt_track_source"] = track_source[batch_idx, frame_idx, valid]
             else:
@@ -3028,6 +3035,7 @@ def _collect_matches(indices, targets: list[dict[str, torch.Tensor]], device: to
         "transl_cam": [],
         "person_ids": [],
         "person_id_mask": [],
+        "identity_batch_idx": [],
         "gt_track_source": [],
         "gt_track_quality": [],
         "contact_plane_center_cam": [],

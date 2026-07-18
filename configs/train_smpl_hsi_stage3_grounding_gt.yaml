@@ -59,13 +59,14 @@ model:
   hsi_geometry_mode: gt_metric
   hsi_grounding_hidden_dim: 192
   hsi_grounding_sole_vertices_per_foot: 48
-  hsi_grounding_exclusion_vertices: 256
-  hsi_grounding_support_window: 21
-  hsi_grounding_support_min_points: 24
+  hsi_grounding_exclusion_vertices: 0
+  hsi_grounding_support_window: 31
+  hsi_grounding_support_min_points: 32
   hsi_grounding_support_max_rmse_m: 0.05
   hsi_grounding_support_max_depth_m: 20.0
   hsi_grounding_support_max_point_depth_delta_m: 0.75
-  hsi_grounding_target_clearance_m: 0.005
+  hsi_grounding_target_clearance_m: 0.0
+  hsi_grounding_clearance_deadzone_m: 0.025
   hsi_grounding_max_root_delta_m: 0.12
   hsi_grounding_gate_threshold: 0.5
   hsi_grounding_hard_gate_eval: true
@@ -173,7 +174,7 @@ loss:
   hsi_transl_clean_identity_weight: 4.0
   hsi_grounding_gate_weight: 2.0
   hsi_grounding_gate_margin_m: 0.002
-  hsi_grounding_target_clearance_m: 0.005
+  hsi_grounding_target_clearance_m: 0.0
   hsi_grounding_active_threshold_m: 0.02
   hsi_contact_refine_plane_weight: 0.0
   hsi_contact_refine_pose_weight: 0.0

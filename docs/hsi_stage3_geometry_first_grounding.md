@@ -33,9 +33,13 @@ The analytic candidate is:
 
 ```text
 support_signed = minimum valid left/right sole signed distance
-delta_scalar = clamp(target_clearance - support_signed, -0.12, 0.12)
+delta_scalar = clamp(-support_signed, -0.12, 0.12)
 candidate_delta = delta_scalar * support_normal
 ```
+
+The strict teacher defines `abs(signed_distance) <= 2.5 cm` as normal contact.
+The online candidate therefore uses the same 2.5 cm deadzone and produces zero
+displacement inside it.
 
 The learned head cannot change candidate direction or magnitude. It predicts
 only whether the candidate should be applied. Its target is positive only when

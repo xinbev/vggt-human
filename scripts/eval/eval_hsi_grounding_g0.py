@@ -34,7 +34,18 @@ def main() -> None:
     load_initial_checkpoint(model, config, device)
     model.eval()
 
-    values: dict[str, list[torch.Tensor]] = {key: [] for key in ("base", "candidate", "clean_delta", "valid")}
+    values: dict[str, list[torch.Tensor]] = {
+        key: []
+        for key in (
+            "base",
+            "candidate",
+            "noise",
+            "clean_delta",
+            "valid",
+            "signed_error",
+            "normal_cosine",
+        )
+    }
     with torch.no_grad():
         for step, batch in enumerate(loader):
             if args.max_batches > 0 and step >= args.max_batches:
@@ -46,13 +57,30 @@ def main() -> None:
             candidate = predictions["hsi_grounding_candidate_pred_transl_cam"].float()
             provider_valid = predictions["gt_smpl_provider_mask"].bool()
             geometry_valid = predictions["hsi_grounding_candidate_valid"][..., 0] > 0.5
-            noise = predictions["contact_noise_signed_m"][..., 0].abs()
+            signed_noise = predictions["contact_noise_signed_m"][..., 0]
+            noise = signed_noise.abs()
             active = provider_valid & (noise > 0.005)
             valid = active & geometry_valid
             values["valid"].append(torch.stack([active.float().sum(), valid.float().sum()]).cpu())
             if valid.any():
                 values["base"].append(torch.linalg.norm(base[valid] - target[valid], dim=-1).cpu())
                 values["candidate"].append(torch.linalg.norm(candidate[valid] - target[valid], dim=-1).cpu())
+                values["noise"].append(signed_noise[valid].cpu())
+            online_valid = predictions["hsi_grounding_support_valid"].bool()
+            teacher_valid = batch["contact_teacher_valid"].bool()
+            plane_compare_valid = online_valid & teacher_valid & provider_valid[..., None]
+            if plane_compare_valid.any():
+                expected_signed = batch["contact_signed_distance_m"].float() + predictions[
+                    "contact_noise_signed_m"
+                ].float()
+                signed_error = (
+                    predictions["hsi_grounding_support_signed_m"].float() - expected_signed
+                ).abs()
+                online_normal = predictions["hsi_grounding_support_normal"].float()
+                teacher_normal = batch["contact_plane_normal_cam"].float()
+                normal_cosine = (online_normal * teacher_normal).sum(dim=-1).clamp(-1.0, 1.0)
+                values["signed_error"].append(signed_error[plane_compare_valid].cpu())
+                values["normal_cosine"].append(normal_cosine[plane_compare_valid].cpu())
             teacher_contact = batch["contact_teacher_valid"].bool() & batch["contact_label"].bool()
             clean = provider_valid & (noise <= 0.005) & teacher_contact.any(dim=-1)
             if clean.any():
@@ -62,7 +90,10 @@ def main() -> None:
 
     base = _cat(values["base"])
     candidate = _cat(values["candidate"])
+    noise = _cat(values["noise"])
     clean_delta = _cat(values["clean_delta"])
+    signed_error = _cat(values["signed_error"])
+    normal_cosine = _cat(values["normal_cosine"])
     counts = torch.stack(values["valid"]).sum(dim=0) if values["valid"] else torch.zeros(2)
     base_p95 = _quantile(base, 0.95)
     candidate_p95 = _quantile(candidate, 0.95)
@@ -85,6 +116,11 @@ def main() -> None:
         "p95_reduction": reduction,
         "candidate_improvement_rate": improvement,
         "clean_candidate_displacement_p95_m": clean_p95,
+        "online_vs_teacher_signed_error_median_m": _quantile(signed_error, 0.50),
+        "online_vs_teacher_signed_error_p95_m": _quantile(signed_error, 0.95),
+        "online_vs_teacher_normal_cosine_median": _quantile(normal_cosine, 0.50),
+        "online_vs_teacher_normal_cosine_p10": _quantile(normal_cosine, 0.10),
+        "by_noise_level": _group_by_noise_level(noise, base, candidate),
         "thresholds": {
             "min_p95_reduction": args.min_p95_reduction,
             "min_valid_coverage": args.min_valid_coverage,
@@ -105,6 +141,27 @@ def _cat(items: list[torch.Tensor]) -> torch.Tensor:
 
 def _quantile(values: torch.Tensor, q: float) -> float:
     return float(torch.quantile(values.float(), q)) if values.numel() else float("inf")
+
+
+def _group_by_noise_level(noise: torch.Tensor, base: torch.Tensor, candidate: torch.Tensor) -> dict[str, dict]:
+    groups = {}
+    if noise.numel() == 0:
+        return groups
+    rounded_cm = (noise.float() * 100.0).round().long()
+    for level in sorted(rounded_cm.unique().tolist()):
+        mask = rounded_cm == int(level)
+        level_base = base[mask]
+        level_candidate = candidate[mask]
+        base_p95 = _quantile(level_base, 0.95)
+        candidate_p95 = _quantile(level_candidate, 0.95)
+        groups[f"{int(level):+d}cm"] = {
+            "count": int(mask.sum()),
+            "base_p95_m": base_p95,
+            "candidate_p95_m": candidate_p95,
+            "p95_reduction": 1.0 - candidate_p95 / max(base_p95, 1e-8),
+            "improvement_rate": float((level_candidate < level_base).float().mean()),
+        }
+    return groups
 
 
 def parse_args() -> argparse.Namespace:

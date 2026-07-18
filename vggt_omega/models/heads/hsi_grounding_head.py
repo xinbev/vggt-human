@@ -27,13 +27,14 @@ class HSIGroundingHead(nn.Module):
         smpl_model_dir: str,
         hidden_dim: int = 192,
         sole_vertices_per_foot: int = 48,
-        exclusion_vertices: int = 256,
-        support_window: int = 21,
-        support_min_points: int = 24,
+        exclusion_vertices: int = 0,
+        support_window: int = 31,
+        support_min_points: int = 32,
         support_max_rmse_m: float = 0.05,
         support_max_depth_m: float = 20.0,
         support_max_point_depth_delta_m: float = 0.75,
-        target_clearance_m: float = 0.005,
+        target_clearance_m: float = 0.0,
+        clearance_deadzone_m: float = 0.025,
         max_root_delta_m: float = 0.12,
         gate_threshold: float = 0.5,
         hard_gate_eval: bool = True,
@@ -50,8 +51,11 @@ class HSIGroundingHead(nn.Module):
         sole = build_sole_vertex_indices(self.smpl.layer.v_template.detach(), sole_vertices_per_foot)
         self.register_buffer("sole_vertex_indices", sole, persistent=False)
         template = self.smpl.layer.v_template.detach().float().reshape(-1, 3)
-        count = min(max(int(exclusion_vertices), 16), int(template.shape[0]))
-        exclusion = torch.linspace(0, template.shape[0] - 1, count).round().long()
+        if int(exclusion_vertices) <= 0 or int(exclusion_vertices) >= int(template.shape[0]):
+            exclusion = torch.arange(template.shape[0], dtype=torch.long)
+        else:
+            count = max(int(exclusion_vertices), 16)
+            exclusion = torch.linspace(0, template.shape[0] - 1, count).round().long()
         self.register_buffer("exclusion_vertex_indices", exclusion, persistent=False)
         self.support_window = int(support_window)
         self.support_min_points = int(support_min_points)
@@ -59,6 +63,7 @@ class HSIGroundingHead(nn.Module):
         self.support_max_depth_m = float(support_max_depth_m)
         self.support_max_point_depth_delta_m = float(support_max_point_depth_delta_m)
         self.target_clearance_m = float(target_clearance_m)
+        self.clearance_deadzone_m = max(float(clearance_deadzone_m), 0.0)
         self.max_root_delta_m = float(max_root_delta_m)
         self.gate_threshold = min(max(float(gate_threshold), 0.05), 0.95)
         self.hard_gate_eval = bool(hard_gate_eval)
@@ -128,6 +133,7 @@ class HSIGroundingHead(nn.Module):
             image_size_hw,
             batch_size * num_frames,
             num_queries,
+            person_valid=(confs[..., 0] > 0.0).reshape(-1),
         )
         frame_idx = torch.arange(batch_size * num_frames, device=base_transl.device).repeat_interleave(num_queries)
         planes = estimate_local_support_planes(
@@ -161,7 +167,13 @@ class HSIGroundingHead(nn.Module):
         selected_normal = planes["normal"].gather(1, support_index[..., None].expand(-1, -1, 3)).squeeze(1)
         selected_normal = torch.nan_to_num(selected_normal, nan=0.0)
         selected_normal = selected_normal * candidate_valid.to(dtype=selected_normal.dtype)
-        delta_scalar = (self.target_clearance_m - support_signed).clamp(-self.max_root_delta_m, self.max_root_delta_m)
+        raw_delta_scalar = self.target_clearance_m - support_signed
+        delta_scalar = raw_delta_scalar.clamp(-self.max_root_delta_m, self.max_root_delta_m)
+        delta_scalar = torch.where(
+            raw_delta_scalar.abs() > self.clearance_deadzone_m,
+            delta_scalar,
+            torch.zeros_like(delta_scalar),
+        )
         delta_scalar = torch.where(candidate_valid, delta_scalar, torch.zeros_like(delta_scalar))
         candidate_delta = delta_scalar * selected_normal
         candidate_transl = base_transl.reshape(-1, 3) + candidate_delta
@@ -257,7 +269,15 @@ def _apply_scene_affine(depth: torch.Tensor, predictions: dict[str, torch.Tensor
     return depth * scale.to(dtype=depth.dtype) + bias.to(dtype=depth.dtype)
 
 
-def _rasterize_exclusion_mask(points, intrinsics, depth_hw, image_size_hw, flat_frames, num_queries):
+def _rasterize_exclusion_mask(
+    points,
+    intrinsics,
+    depth_hw,
+    image_size_hw,
+    flat_frames,
+    num_queries,
+    person_valid,
+):
     height, width = int(depth_hw[0]), int(depth_hw[1])
     image_h, image_w = int(image_size_hw[0]), int(image_size_hw[1])
     points = points.reshape(flat_frames * num_queries, points.shape[1], 3)
@@ -268,6 +288,12 @@ def _rasterize_exclusion_mask(points, intrinsics, depth_hw, image_size_hw, flat_
     x = (x * width / max(image_w, 1)).round().long()
     y = (y * height / max(image_h, 1)).round().long()
     valid = (x >= 0) & (x < width) & (y >= 0) & (y < height) & (points[..., 2] > 1e-6)
+    if person_valid.shape != (flat_frames * num_queries,):
+        raise ValueError(
+            f"Grounding exclusion person_valid shape {tuple(person_valid.shape)} "
+            f"!= {(flat_frames * num_queries,)}"
+        )
+    valid = valid & person_valid.to(device=points.device).bool()[:, None]
     frame = torch.arange(flat_frames, device=points.device).repeat_interleave(num_queries)
     frame = frame[:, None].expand_as(x)
     flat = (frame * height + y.clamp(0, height - 1)) * width + x.clamp(0, width - 1)
