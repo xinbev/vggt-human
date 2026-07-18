@@ -2715,7 +2715,7 @@ class HungarianSMPLLoss(nn.Module):
     ) -> torch.Tensor:
         if self.id_weight == 0.0 or pred_id_embed is None:
             return frame_idx.new_zeros((), dtype=torch.float32).to(device=frame_idx.device)
-        valid = matched["person_id_mask"].bool()
+        valid = matched["person_id_mask"].bool() & (matched["person_ids"] >= 0)
         if valid.sum() < 2:
             return pred_id_embed.sum() * 0.0
         embeds = pred_id_embed[frame_idx[valid], src_idx[valid]]
