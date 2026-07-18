@@ -20,6 +20,7 @@ from vggt_omega.models.heads import (
     HSIRefinementHead,
     HSITranslationRefineV4Head,
     SMPLIdentityHead,
+    SMPLROIIdentityHead,
     TextAlignmentHead,
 )
 from vggt_omega.tracking.smpl_track_assigner import BaseSMPLTrackAssigner
@@ -45,6 +46,7 @@ class VGGTOmega(nn.Module):
         smpl_predict_id_embed: bool = False,
         smpl_id_embed_dim: int = 256,
         smpl_id_hidden_dim: int = 512,
+        smpl_id_feature_mode: str = "query",
         smpl_return_aux: bool = False,
         smpl_translation_output_mode: str = "direct",
         smpl_translation_decode_hidden_dim: int = 512,
@@ -181,6 +183,9 @@ class VGGTOmega(nn.Module):
             raise ValueError(f"Unsupported smpl_provider: {self.smpl_provider}")
         if self.smpl_provider == "nlf" and enable_smpl and not enable_camera:
             raise ValueError("smpl_provider='nlf' requires enable_camera=True")
+        self.smpl_id_feature_mode = str(smpl_id_feature_mode or "query").lower()
+        if self.smpl_id_feature_mode not in {"query", "roi_query"}:
+            raise ValueError(f"Unsupported smpl_id_feature_mode: {self.smpl_id_feature_mode}")
 
         self.aggregator = Aggregator(
             patch_size=patch_size,
@@ -255,10 +260,19 @@ class VGGTOmega(nn.Module):
             else None
         )
         self.nlf_id_head = (
-            SMPLIdentityHead(
-                dim_in=2 * embed_dim,
-                hidden_dim=smpl_id_hidden_dim,
-                id_embed_dim=smpl_id_embed_dim,
+            (
+                SMPLROIIdentityHead(
+                    query_dim=2 * embed_dim,
+                    roi_dim=4 * embed_dim,
+                    hidden_dim=smpl_id_hidden_dim,
+                    id_embed_dim=smpl_id_embed_dim,
+                )
+                if self.smpl_id_feature_mode == "roi_query"
+                else SMPLIdentityHead(
+                    dim_in=2 * embed_dim,
+                    hidden_dim=smpl_id_hidden_dim,
+                    id_embed_dim=smpl_id_embed_dim,
+                )
             )
             if enable_smpl and self.smpl_provider == "nlf" and smpl_predict_id_embed
             else None
@@ -442,7 +456,55 @@ class VGGTOmega(nn.Module):
         with torch.autocast(device_type=images.device.type, enabled=False):
             if self.nlf_id_head is not None:
                 smpl_tokens = final_tokens[:, :, token_layout.smpl_start : token_layout.smpl_end]
-                predictions["pred_id_embed"] = self.nlf_id_head(smpl_tokens)
+                if self.smpl_id_feature_mode == "roi_query":
+                    if smpl_reference_boxes is None:
+                        raise ValueError("ROI identity features require SMPL reference boxes")
+                    batch_size, num_frames, num_queries = smpl_reference_boxes.shape[:3]
+                    patch_tokens = final_tokens[:, :, token_layout.patch_start :]
+                    query_mask = (
+                        torch.ones(
+                            batch_size,
+                            num_frames,
+                            num_queries,
+                            dtype=torch.bool,
+                            device=patch_tokens.device,
+                        )
+                        if smpl_query_boxes_mask is None
+                        else smpl_query_boxes_mask.to(device=patch_tokens.device).bool()
+                    )
+                    flat_patch_masks = None
+                    if smpl_query_patch_masks is not None:
+                        flat_patch_masks = smpl_query_patch_masks.to(device=patch_tokens.device).reshape(
+                            batch_size * num_frames,
+                            num_queries,
+                            -1,
+                        )
+                    pooled_features = self.aggregator._pool_box_patch_tokens(
+                        patch_tokens.reshape(batch_size * num_frames, patch_tokens.shape[2], patch_tokens.shape[3]),
+                        smpl_reference_boxes.to(device=patch_tokens.device, dtype=patch_tokens.dtype).reshape(
+                            batch_size * num_frames,
+                            num_queries,
+                            4,
+                        ),
+                        query_mask.reshape(batch_size * num_frames, num_queries),
+                        image_size_hw[0],
+                        image_size_hw[1],
+                        flat_patch_masks,
+                    )
+                    roi_features = pooled_features[..., : 2 * patch_tokens.shape[-1]].reshape(
+                        batch_size,
+                        num_frames,
+                        num_queries,
+                        -1,
+                    )
+                    predictions["pred_id_embed"] = self.nlf_id_head(smpl_tokens, roi_features)
+                    predictions["pred_id_roi_valid"] = pooled_features[..., -2].reshape(
+                        batch_size,
+                        num_frames,
+                        num_queries,
+                    ) > 0.5
+                else:
+                    predictions["pred_id_embed"] = self.nlf_id_head(smpl_tokens)
 
             if self.camera_head is not None:
                 predictions["pose_enc"] = self.camera_head(

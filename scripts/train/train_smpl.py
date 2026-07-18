@@ -407,6 +407,7 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         smpl_predict_id_embed=bool(model_cfg.get("predict_id_embed", False)),
         smpl_id_embed_dim=int(model_cfg.get("id_embed_dim", 256)),
         smpl_id_hidden_dim=int(model_cfg.get("id_hidden_dim", 512)),
+        smpl_id_feature_mode=str(model_cfg.get("id_feature_mode", "query")),
         smpl_return_aux=bool(model_cfg.get("smpl_return_aux", False)),
         smpl_translation_output_mode=str(model_cfg.get("smpl_translation_output_mode", "direct")),
         smpl_translation_decode_hidden_dim=int(model_cfg.get("smpl_translation_decode_hidden_dim", 512)),

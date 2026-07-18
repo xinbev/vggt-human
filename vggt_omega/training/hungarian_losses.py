@@ -24,6 +24,8 @@ class HungarianSMPLLoss(nn.Module):
         giou_weight: float = 2.0,
         id_weight: float = 0.0,
         id_temperature: float = 0.07,
+        id_hard_negative_weight: float = 0.0,
+        id_margin: float = 0.20,
         conf_loss_type: str = "bce",
         conf_focal_alpha: float = 0.25,
         conf_focal_gamma: float = 2.0,
@@ -165,6 +167,8 @@ class HungarianSMPLLoss(nn.Module):
         self.giou_weight = giou_weight
         self.id_weight = id_weight
         self.id_temperature = id_temperature
+        self.id_hard_negative_weight = float(id_hard_negative_weight)
+        self.id_margin = float(id_margin)
         self.conf_loss_type = conf_loss_type
         self.conf_focal_alpha = conf_focal_alpha
         self.conf_focal_gamma = conf_focal_gamma
@@ -353,6 +357,12 @@ class HungarianSMPLLoss(nn.Module):
                     "loss_betas": zero,
                     "loss_transl_cam": zero,
                     "loss_id": zero,
+                    "loss_id_supcon": zero,
+                    "loss_id_hard_negative": zero,
+                    "metric_id_positive_cosine": zero.detach(),
+                    "metric_id_negative_cosine": zero.detach(),
+                    "metric_id_embedding_margin": zero.detach(),
+                    "metric_id_valid_embeddings": zero.detach(),
                     "loss_joints3d": zero,
                     "loss_local_joints3d": zero,
                     "loss_local_vertices": zero,
@@ -444,7 +454,7 @@ class HungarianSMPLLoss(nn.Module):
                 matched["transl_cam"].to(dtype=pred_transl_cam.dtype),
             )
             losses.update(self._translation_hard_tail_losses(pred_transl_cam, frame_idx, src_idx, matched))
-            losses["loss_id"] = self._identity_loss(flat_id_embed, frame_idx, src_idx, matched)
+            losses.update(self._identity_losses(flat_id_embed, frame_idx, src_idx, matched))
             joint_losses = self._smpl_joint_losses(predictions, batch, pred_betas, pred_transl_cam, frame_idx, src_idx, matched)
             losses.update(joint_losses)
             losses.update(self._smpl_local_losses(predictions, pred_betas, frame_idx, src_idx, matched))
@@ -2719,31 +2729,72 @@ class HungarianSMPLLoss(nn.Module):
             setattr(self, cache_name, cached)
         return cached.to(device=device)
 
-    def _identity_loss(
+    def _identity_losses(
         self,
         pred_id_embed: torch.Tensor | None,
         frame_idx: torch.Tensor,
         src_idx: torch.Tensor,
         matched: dict[str, torch.Tensor],
-    ) -> torch.Tensor:
+    ) -> dict[str, torch.Tensor]:
+        zero = (
+            pred_id_embed.sum() * 0.0
+            if pred_id_embed is not None
+            else frame_idx.new_zeros((), dtype=torch.float32).to(device=frame_idx.device)
+        )
+        empty = {
+            "loss_id": zero,
+            "loss_id_supcon": zero,
+            "loss_id_hard_negative": zero,
+            "metric_id_positive_cosine": zero.detach(),
+            "metric_id_negative_cosine": zero.detach(),
+            "metric_id_embedding_margin": zero.detach(),
+            "metric_id_valid_embeddings": zero.detach(),
+        }
         if self.id_weight == 0.0 or pred_id_embed is None:
-            return frame_idx.new_zeros((), dtype=torch.float32).to(device=frame_idx.device)
+            return empty
         valid = matched["person_id_mask"].bool() & (matched["person_ids"] >= 0)
         if valid.sum() < 2:
-            return pred_id_embed.sum() * 0.0
-        embeds = pred_id_embed[frame_idx[valid], src_idx[valid]]
+            return empty
+        embeds = F.normalize(pred_id_embed[frame_idx[valid], src_idx[valid]].float(), dim=-1)
         ids = matched["person_ids"][valid]
         positive = ids[:, None] == ids[None, :]
-        positive.fill_diagonal_(False)
+        diagonal = torch.eye(positive.shape[0], dtype=torch.bool, device=positive.device)
+        positive = positive & ~diagonal
+        negative = (ids[:, None] != ids[None, :]) & ~diagonal
         if not positive.any():
-            return embeds.sum() * 0.0
-        logits = embeds @ embeds.t() / max(self.id_temperature, 1e-6)
-        logits = logits.masked_fill(torch.eye(logits.shape[0], dtype=torch.bool, device=logits.device), float("-inf"))
+            return empty
+
+        similarity = embeds @ embeds.t()
+        logits = similarity / max(self.id_temperature, 1e-6)
+        logits = logits.masked_fill(diagonal, float("-inf"))
         log_prob = logits - torch.logsumexp(logits, dim=1, keepdim=True)
         denom = positive.sum(dim=1).clamp(min=1)
         per_anchor = -(log_prob.masked_fill(~positive, 0.0).sum(dim=1) / denom)
         active = positive.any(dim=1)
-        return per_anchor[active].mean() if active.any() else embeds.sum() * 0.0
+        supcon = per_anchor[active].mean() if active.any() else zero
+
+        hard_active = positive.any(dim=1) & negative.any(dim=1)
+        if hard_active.any():
+            hardest_positive = similarity.masked_fill(~positive, float("inf")).amin(dim=1)
+            hardest_negative = similarity.masked_fill(~negative, float("-inf")).amax(dim=1)
+            hard_negative = F.relu(
+                hardest_negative[hard_active] - hardest_positive[hard_active] + float(self.id_margin)
+            ).mean()
+        else:
+            hard_negative = zero
+
+        positive_cosine = similarity[positive].mean()
+        negative_cosine = similarity[negative].mean() if negative.any() else zero
+        total = supcon + float(self.id_hard_negative_weight) * hard_negative
+        return {
+            "loss_id": total,
+            "loss_id_supcon": supcon,
+            "loss_id_hard_negative": hard_negative,
+            "metric_id_positive_cosine": positive_cosine.detach(),
+            "metric_id_negative_cosine": negative_cosine.detach(),
+            "metric_id_embedding_margin": (positive_cosine - negative_cosine).detach(),
+            "metric_id_valid_embeddings": embeds.new_tensor(float(embeds.shape[0])).detach(),
+        }
 
 
 def flatten_smpl_targets(batch: dict[str, torch.Tensor], device: torch.device) -> list[dict[str, torch.Tensor]]:

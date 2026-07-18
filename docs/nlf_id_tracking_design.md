@@ -41,3 +41,25 @@ The evaluator reports temporal ID switch rate, majority association accuracy, po
 ## Risks
 
 NLF parameters are frozen, so this experiment cannot repair NLF pose or beta accuracy. BEDLAM IDs are used only as supervision for the embedding branch. The first result should be treated as an association ablation: compare NLF geometry-only assignment against geometry plus the learned embedding, while checking that projection metrics remain unchanged.
+
+## V2 Redesign After Pilot
+
+The first query-only ID head increased both positive and negative cosine similarity and reduced tracking accuracy. It is retained as an ablation, but the recommended method is V2.
+
+V2 pools the final VGGT patch tokens inside each processed-image person box. The ROI feature contains only mean and max appearance pooling; box coordinates, validity, and area are used for pooling validity but are excluded from the identity embedding to prevent a position shortcut. It is fused with the corresponding SMPL query token by `SMPLROIIdentityHead`. The NLF SMPL outputs remain frozen and unchanged.
+
+The V2 identity loss is supervised contrastive loss plus a batch-hard cosine margin term. The training log now exposes positive cosine, negative cosine, and their margin. During association, the embedding weight is reduced to `0.10` and the maximum ID distance is `2.0`, so appearance acts as a soft tie-breaker and cannot reject a geometrically valid match.
+
+V2 pilot commands on GPU5:
+
+```bash
+bash scripts/train/train_nlf_roi_id_tracking_v2_pilot_gpu5.sh
+bash scripts/eval/run_nlf_roi_id_tracking_v2_eval_gpu5.sh \
+  outputs/train/nlf_roi_id_tracking_v2_pilot_gpu5/checkpoint_latest.pt \
+  Training 0.10 2.0 200 pilot_id
+bash scripts/eval/run_nlf_roi_id_tracking_v2_eval_gpu5.sh \
+  outputs/train/nlf_roi_id_tracking_v2_pilot_gpu5/checkpoint_latest.pt \
+  Training 0.0 2.0 200 pilot_geometry
+```
+
+Only after the V2 pilot improves over geometry-only should the full run be started with `bash scripts/train/train_nlf_roi_id_tracking_v2_gpu5.sh`.

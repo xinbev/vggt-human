@@ -47,6 +47,46 @@ class SMPLIdentityHead(nn.Module):
         return F.normalize(self.net(hidden.float()), dim=-1)
 
 
+class SMPLROIIdentityHead(nn.Module):
+    """Fuse person-box appearance features with the corresponding query token."""
+
+    def __init__(
+        self,
+        query_dim: int,
+        roi_dim: int,
+        hidden_dim: int = 512,
+        id_embed_dim: int = 256,
+    ) -> None:
+        super().__init__()
+        self.query_proj = nn.Sequential(
+            nn.LayerNorm(query_dim),
+            nn.Linear(query_dim, hidden_dim),
+            nn.GELU(),
+        )
+        self.roi_proj = nn.Sequential(
+            nn.LayerNorm(roi_dim),
+            nn.Linear(roi_dim, hidden_dim),
+            nn.GELU(),
+        )
+        self.fusion = nn.Sequential(
+            nn.LayerNorm(2 * hidden_dim),
+            nn.Linear(2 * hidden_dim, hidden_dim),
+            nn.GELU(),
+            nn.LayerNorm(hidden_dim),
+            nn.Linear(hidden_dim, id_embed_dim),
+        )
+
+    def forward(self, query_hidden: torch.Tensor, roi_hidden: torch.Tensor) -> torch.Tensor:
+        if query_hidden.shape[:-1] != roi_hidden.shape[:-1]:
+            raise ValueError(
+                "SMPLROIIdentityHead query/ROI leading dimensions must match, got "
+                f"{tuple(query_hidden.shape)} and {tuple(roi_hidden.shape)}"
+            )
+        query_feature = self.query_proj(query_hidden.float())
+        roi_feature = self.roi_proj(roi_hidden.float())
+        return F.normalize(self.fusion(torch.cat([query_feature, roi_feature], dim=-1)), dim=-1)
+
+
 def _get_clones(module: nn.Module, num_layers: int) -> nn.ModuleList:
     return nn.ModuleList([copy.deepcopy(module) for _ in range(num_layers)])
 

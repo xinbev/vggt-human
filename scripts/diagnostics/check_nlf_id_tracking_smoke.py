@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import torch
 
-from vggt_omega.models.heads.smpl_head import SMPLIdentityHead
+from vggt_omega.models.heads.smpl_head import SMPLIdentityHead, SMPLROIIdentityHead
 from vggt_omega.tracking.smpl_track_assigner import BaseSMPLTrackAssigner
 
 
 def main() -> None:
     check_identity_head()
+    check_roi_identity_head()
     check_embedding_aware_assignment()
     print("[ok] NLF ID tracking smoke checks passed")
 
@@ -15,6 +16,13 @@ def main() -> None:
 def check_identity_head() -> None:
     head = SMPLIdentityHead(dim_in=32, hidden_dim=16, id_embed_dim=8)
     output = head(torch.randn(2, 3, 4, 32))
+    assert tuple(output.shape) == (2, 3, 4, 8)
+    assert torch.allclose(torch.linalg.norm(output, dim=-1), torch.ones(2, 3, 4), atol=1e-5)
+
+
+def check_roi_identity_head() -> None:
+    head = SMPLROIIdentityHead(query_dim=32, roi_dim=70, hidden_dim=16, id_embed_dim=8)
+    output = head(torch.randn(2, 3, 4, 32), torch.randn(2, 3, 4, 70))
     assert tuple(output.shape) == (2, 3, 4, 8)
     assert torch.allclose(torch.linalg.norm(output, dim=-1), torch.ones(2, 3, 4), atol=1e-5)
 
