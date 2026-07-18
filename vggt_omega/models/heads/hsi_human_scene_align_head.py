@@ -23,6 +23,8 @@ class HSIHumanSceneAlignHead(nn.Module):
         max_ray_delta_m: float = 0.35,
         max_tangent_delta_m: float = 0.12,
         use_delta_gate: bool = True,
+        gate_application_mode: str = "sigmoid_v1",
+        gate_deadzone: float = 0.50,
         overwrite_refined: bool = True,
         base_source: str = "hsi_refined",
         max_correspondence_distance_m: float = 0.35,
@@ -47,6 +49,10 @@ class HSIHumanSceneAlignHead(nn.Module):
         self.max_ray_delta_m = float(max_ray_delta_m)
         self.max_tangent_delta_m = float(max_tangent_delta_m)
         self.use_delta_gate = bool(use_delta_gate)
+        self.gate_application_mode = str(gate_application_mode or "sigmoid_v1").lower()
+        if self.gate_application_mode not in {"sigmoid_v1", "soft_deadzone_v2"}:
+            raise ValueError(f"Unsupported HSI align gate application mode: {self.gate_application_mode!r}")
+        self.gate_deadzone = min(max(float(gate_deadzone), 0.0), 0.95)
         self.overwrite_refined = bool(overwrite_refined)
         self.base_source = str(base_source or "hsi_refined").lower()
         if self.base_source not in {"pred", "hsi_refined"}:
@@ -236,7 +242,11 @@ class HSIHumanSceneAlignHead(nn.Module):
             dim=-1,
         )
         delta = coeff[..., :1] * ray + coeff[..., 1:2] * tangent_x + coeff[..., 2:3] * tangent_y
-        gate = torch.sigmoid(self.gate_head(hidden))
+        raw_gate = torch.sigmoid(self.gate_head(hidden))
+        if self.gate_application_mode == "soft_deadzone_v2":
+            gate = F.relu(raw_gate - self.gate_deadzone) / max(1.0 - self.gate_deadzone, 1e-6)
+        else:
+            gate = raw_gate
         if not self.use_delta_gate:
             gate = torch.ones_like(gate)
         delta = gate * delta
@@ -254,6 +264,7 @@ class HSIHumanSceneAlignHead(nn.Module):
             "hsi_align_delta_transl_cam": delta,
             "hsi_align_delta_coeff": coeff,
             "hsi_align_gate": gate,
+            "hsi_align_gate_raw": raw_gate,
             "hsi_align_valid_ratio": valid_ratio,
             "hsi_align_depth_is_metric": base_transl.new_tensor(float(depth_is_metric)),
             "hsi_align_base_point_l1": base_loss.detach(),

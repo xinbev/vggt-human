@@ -118,6 +118,8 @@ def check_resolved_config(config: dict, stage: str) -> None:
             expected.update(
                 {
                     "model.hsi_align_feature_version": "robust_basis_v2",
+                    "model.hsi_align_gate_application_mode": "soft_deadzone_v2",
+                    "model.hsi_align_gate_deadzone": 0.50,
                     "loss.hsi_transl_gate_target_mode": "magnitude_v2",
                     "loss.hsi_transl_gate_full_open_m": 0.10,
                 }

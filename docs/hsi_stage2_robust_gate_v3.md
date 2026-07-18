@@ -46,6 +46,16 @@ Clean and perturbed groups contribute equally to the BCE. Clean people also
 receive a direct identity loss. Noise metadata is used only to group losses
 and metrics, never as a model input.
 
+V3 applies the raw sigmoid gate through a differentiable dead-zone:
+
+```text
+effective_gate = relu(raw_gate - 0.5) / 0.5
+```
+
+The raw gate remains supervised. A confidently clean person therefore receives
+exactly zero translation update, while noisy people retain a gradient above the
+threshold. Legacy modes continue to apply the original sigmoid gate directly.
+
 ## Frozen Components
 
 - VGGT aggregator, camera head, and depth head

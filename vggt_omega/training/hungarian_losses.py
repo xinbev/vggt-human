@@ -1356,7 +1356,7 @@ class HungarianSMPLLoss(nn.Module):
         if clean_flat is not None:
             clean_items = clean_flat[frame_idx, src_idx, 0] > 0.5
             noisy_items = ~clean_items
-            align_gate_value = predictions.get("hsi_align_gate")
+            align_gate_value = predictions.get("hsi_align_gate_raw", predictions.get("hsi_align_gate"))
             align_gate_flat = (
                 _flatten_prediction(align_gate_value, unframed_ndim=3)
                 if isinstance(align_gate_value, torch.Tensor)

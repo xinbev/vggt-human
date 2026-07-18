@@ -68,6 +68,8 @@ model:
   hsi_align_max_ray_delta_m: 3.0
   hsi_align_max_tangent_delta_m: 0.12
   hsi_align_use_delta_gate: true
+  hsi_align_gate_application_mode: soft_deadzone_v2
+  hsi_align_gate_deadzone: 0.50
   hsi_align_overwrite_refined: true
   hsi_align_base_source: pred
   hsi_align_max_correspondence_distance_m: 0.75

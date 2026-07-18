@@ -471,6 +471,8 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_align_max_ray_delta_m=float(model_cfg.get("hsi_align_max_ray_delta_m", 0.35)),
         hsi_align_max_tangent_delta_m=float(model_cfg.get("hsi_align_max_tangent_delta_m", 0.12)),
         hsi_align_use_delta_gate=bool(model_cfg.get("hsi_align_use_delta_gate", True)),
+        hsi_align_gate_application_mode=str(model_cfg.get("hsi_align_gate_application_mode", "sigmoid_v1")),
+        hsi_align_gate_deadzone=float(model_cfg.get("hsi_align_gate_deadzone", 0.50)),
         hsi_align_overwrite_refined=bool(model_cfg.get("hsi_align_overwrite_refined", True)),
         hsi_align_base_source=str(model_cfg.get("hsi_align_base_source", "hsi_refined")),
         hsi_align_max_correspondence_distance_m=float(model_cfg.get("hsi_align_max_correspondence_distance_m", 0.35)),
