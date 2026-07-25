@@ -1,10 +1,10 @@
 {
-  "embedding_margin": 0.795380307722174,
-  "id_switch_rate": 0.06731369544242012,
-  "majority_association_accuracy": 0.9376487589255356,
-  "negative_embedding_cosine": 0.1611041734568981,
-  "num_id_switches": 1186,
+  "embedding_margin": 0.786407262973412,
+  "id_switch_rate": 0.06742720926272773,
+  "majority_association_accuracy": 0.9375637538252295,
+  "negative_embedding_cosine": 0.17436961907457096,
+  "num_id_switches": 1188,
   "num_temporal_pairs": 17619,
   "num_valid_assignments": 23528,
-  "positive_embedding_cosine": 0.9564844811790721
+  "positive_embedding_cosine": 0.960776882047983
 }
