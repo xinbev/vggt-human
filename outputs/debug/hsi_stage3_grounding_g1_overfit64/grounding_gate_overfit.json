@@ -1,0 +1,27 @@
+{
+  "gate": "fail",
+  "mode": "overfit",
+  "metrics": {
+    "base_p95_m": 0.1200000224635005,
+    "refined_p95_m": 0.08764159167185426,
+    "refined_over_base_p95": 0.7303464605476347,
+    "geometry_coverage": 0.7846747934818268,
+    "gate_accuracy": 0.8892888650298119,
+    "improvement_rate": 0.7551151216030121,
+    "clean_displacement_p95_m": 0.024975975742563605
+  },
+  "limits": {
+    "ratio": 0.35,
+    "coverage": 0.5,
+    "accuracy": 0.9,
+    "improvement": 0.9,
+    "clean": 0.005
+  },
+  "checks": {
+    "refined_over_base_p95": false,
+    "geometry_coverage": true,
+    "gate_accuracy": false,
+    "improvement_rate": false,
+    "clean_displacement": false
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "monitor": "loss_id",
+  "monitor_mode": "min",
+  "entries": [
+    {
+      "rank": 1,
+      "metric": 1.1507469228245684,
+      "epoch": 14,
+      "source": "train",
+      "path": "outputs/train/nlf_roi_id_tracking_v2_gpu5/checkpoint_top_train_epoch_0014_loss_id_1.150747.pt"
+    },
+    {
+      "rank": 2,
+      "metric": 1.153709353142765,
+      "epoch": 13,
+      "source": "train",
+      "path": "outputs/train/nlf_roi_id_tracking_v2_gpu5/checkpoint_top_train_epoch_0013_loss_id_1.153709.pt"
+    },
+    {
+      "rank": 3,
+      "metric": 1.1570420199420897,
+      "epoch": 12,
+      "source": "train",
+      "path": "outputs/train/nlf_roi_id_tracking_v2_gpu5/checkpoint_top_train_epoch_0012_loss_id_1.157042.pt"
+    }
+  ]
+}
