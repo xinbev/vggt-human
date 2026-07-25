@@ -472,6 +472,9 @@ class HungarianSMPLLoss(nn.Module):
                 }
             )
             losses.update(self._zero_hsi_losses(predictions))
+            intent_logits = predictions.get("hsi_foot_contact_intent_logits")
+            if isinstance(intent_logits, torch.Tensor):
+                losses["loss_hsi_foot_contact_intent"] = intent_logits.sum() * 0.0
         else:
             frame_idx = matched["frame_idx"]
             src_idx = matched["src_idx"]
@@ -502,6 +505,14 @@ class HungarianSMPLLoss(nn.Module):
             projected = self._projected_bbox_losses(predictions, batch, pred_betas, pred_transl_cam, frame_idx, src_idx, target_boxes)
             losses.update(projected)
             losses.update(self._hsi_refined_losses(predictions, batch, frame_idx, src_idx, matched))
+            losses.update(
+                self._hsi_foot_contact_intent_losses(
+                    predictions=predictions,
+                    frame_idx=frame_idx,
+                    src_idx=src_idx,
+                    matched=matched,
+                )
+            )
 
         losses["loss_total"] = (
             self.conf_weight * losses["loss_conf"]
@@ -1746,14 +1757,6 @@ class HungarianSMPLLoss(nn.Module):
             + 2.0 * F.relu(losses["metric_hsi_joint_error_delta"])
         ).detach()
         losses.update(
-            self._hsi_foot_contact_intent_losses(
-                predictions=predictions,
-                frame_idx=frame_idx,
-                src_idx=src_idx,
-                matched=matched,
-            )
-        )
-        losses.update(
             self._hsi_grounding_losses(
                 predictions=predictions,
                 frame_idx=frame_idx,
@@ -2037,7 +2040,12 @@ class HungarianSMPLLoss(nn.Module):
         src_idx: torch.Tensor,
         matched: dict[str, torch.Tensor],
     ) -> dict[str, torch.Tensor]:
-        anchor = _require_prediction(predictions, "pred_transl_cam")
+        logits_value = predictions.get("hsi_foot_contact_intent_logits")
+        anchor = (
+            logits_value
+            if isinstance(logits_value, torch.Tensor)
+            else _require_prediction(predictions, "pred_transl_cam")
+        )
         zero = anchor.sum() * 0.0
         out = {
             "loss_hsi_foot_contact_intent": zero,
@@ -2057,7 +2065,6 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_foot_contact_intent_negative_probability": zero.detach(),
             "metric_hsi_foot_contact_intent_selection": zero.detach(),
         }
-        logits_value = predictions.get("hsi_foot_contact_intent_logits")
         probability_value = predictions.get("hsi_foot_contact_intent_probability")
         if not isinstance(logits_value, torch.Tensor) or not isinstance(probability_value, torch.Tensor):
             return out
