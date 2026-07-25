@@ -8,6 +8,7 @@ from .camera_head import CameraHead
 from .dense_head import DenseHead
 from .hsi_human_scene_align_head import HSIHumanSceneAlignHead
 from .hsi_contact_refine_head import HSIContactRefineHead
+from .hsi_foot_contact_intent_head import HSIFootContactIntentHead
 from .hsi_grounding_head import HSIGroundingHead
 from .hsi_refinement_head import HSIRefinementHead
 from .hsi_translation_refine_v4_head import HSITranslationRefineV4Head
@@ -23,6 +24,7 @@ __all__ = [
     "DenseHead",
     "HSIHumanSceneAlignHead",
     "HSIContactRefineHead",
+    "HSIFootContactIntentHead",
     "HSIGroundingHead",
     "HSIRefinementHead",
     "HSITranslationRefineV4Head",

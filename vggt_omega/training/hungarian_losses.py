@@ -156,6 +156,10 @@ class HungarianSMPLLoss(nn.Module):
         hsi_contact_refine_class_weight: float = 0.0,
         hsi_contact_refine_no_worse_weight: float = 0.0,
         hsi_contact_refine_swing_no_pull_weight: float = 0.0,
+        hsi_foot_contact_intent_weight: float = 0.0,
+        hsi_foot_contact_intent_positive_weight: float = 1.0,
+        hsi_foot_contact_intent_negative_weight: float = 1.0,
+        hsi_foot_contact_intent_decision_threshold: float = 0.5,
         hsi_grounding_gate_weight: float = 0.0,
         hsi_grounding_gate_margin_m: float = 0.002,
         hsi_grounding_gate_target_mode: str = "candidate_better",
@@ -310,6 +314,16 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_contact_refine_class_weight = float(hsi_contact_refine_class_weight)
         self.hsi_contact_refine_no_worse_weight = float(hsi_contact_refine_no_worse_weight)
         self.hsi_contact_refine_swing_no_pull_weight = float(hsi_contact_refine_swing_no_pull_weight)
+        self.hsi_foot_contact_intent_weight = float(hsi_foot_contact_intent_weight)
+        self.hsi_foot_contact_intent_positive_weight = max(
+            float(hsi_foot_contact_intent_positive_weight), 0.0
+        )
+        self.hsi_foot_contact_intent_negative_weight = max(
+            float(hsi_foot_contact_intent_negative_weight), 0.0
+        )
+        self.hsi_foot_contact_intent_decision_threshold = min(
+            max(float(hsi_foot_contact_intent_decision_threshold), 0.0), 1.0
+        )
         self.hsi_grounding_gate_weight = float(hsi_grounding_gate_weight)
         self.hsi_grounding_gate_margin_m = max(float(hsi_grounding_gate_margin_m), 0.0)
         self.hsi_grounding_gate_target_mode = str(hsi_grounding_gate_target_mode or "candidate_better").lower()
@@ -411,6 +425,7 @@ class HungarianSMPLLoss(nn.Module):
                     "loss_hsi_contact_refine_class": zero,
                     "loss_hsi_contact_refine_no_worse": zero,
                     "loss_hsi_contact_refine_swing_no_pull": zero,
+                    "loss_hsi_foot_contact_intent": zero,
                     "metric_joints3d_l1": zero.detach(),
                     "metric_local_joints3d_l1": zero.detach(),
                     "metric_local_vertices_l1": zero.detach(),
@@ -562,6 +577,7 @@ class HungarianSMPLLoss(nn.Module):
             + self.hsi_contact_refine_class_weight * losses["loss_hsi_contact_refine_class"]
             + self.hsi_contact_refine_no_worse_weight * losses["loss_hsi_contact_refine_no_worse"]
             + self.hsi_contact_refine_swing_no_pull_weight * losses["loss_hsi_contact_refine_swing_no_pull"]
+            + self.hsi_foot_contact_intent_weight * losses["loss_hsi_foot_contact_intent"]
             + self.hsi_grounding_gate_weight * losses["loss_hsi_grounding_gate"]
         )
         return losses
@@ -1208,6 +1224,7 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_contact_refine_class": zero,
             "loss_hsi_contact_refine_no_worse": zero,
             "loss_hsi_contact_refine_swing_no_pull": zero,
+            "loss_hsi_foot_contact_intent": zero,
             "loss_hsi_grounding_gate": zero,
             "loss_hsi_joints3d": zero,
             "loss_hsi_vertices": zero,
@@ -1301,6 +1318,21 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_contact_swing_displacement_mean_m": zero.detach(),
             "metric_hsi_contact_contact_gate_mean": zero.detach(),
             "metric_hsi_contact_swing_gate_mean": zero.detach(),
+            "metric_hsi_foot_contact_intent_valid_coverage": zero.detach(),
+            "metric_hsi_foot_contact_intent_temporal_coverage": zero.detach(),
+            "metric_hsi_foot_contact_intent_target_rate": zero.detach(),
+            "metric_hsi_foot_contact_intent_accuracy": zero.detach(),
+            "metric_hsi_foot_contact_intent_recall": zero.detach(),
+            "metric_hsi_foot_contact_intent_precision": zero.detach(),
+            "metric_hsi_foot_contact_intent_false_positive_rate": zero.detach(),
+            "metric_hsi_foot_contact_intent_airborne_false_positive_rate": zero.detach(),
+            "metric_hsi_foot_contact_intent_left_recall": zero.detach(),
+            "metric_hsi_foot_contact_intent_right_recall": zero.detach(),
+            "metric_hsi_foot_contact_intent_left_false_positive_rate": zero.detach(),
+            "metric_hsi_foot_contact_intent_right_false_positive_rate": zero.detach(),
+            "metric_hsi_foot_contact_intent_positive_probability": zero.detach(),
+            "metric_hsi_foot_contact_intent_negative_probability": zero.detach(),
+            "metric_hsi_foot_contact_intent_selection": zero.detach(),
             "metric_hsi_grounding_valid_coverage": zero.detach(),
             "metric_hsi_grounding_apply_target_rate": zero.detach(),
             "metric_hsi_grounding_gate_mean": zero.detach(),
@@ -1714,6 +1746,14 @@ class HungarianSMPLLoss(nn.Module):
             + 2.0 * F.relu(losses["metric_hsi_joint_error_delta"])
         ).detach()
         losses.update(
+            self._hsi_foot_contact_intent_losses(
+                predictions=predictions,
+                frame_idx=frame_idx,
+                src_idx=src_idx,
+                matched=matched,
+            )
+        )
+        losses.update(
             self._hsi_grounding_losses(
                 predictions=predictions,
                 frame_idx=frame_idx,
@@ -1987,6 +2027,110 @@ class HungarianSMPLLoss(nn.Module):
             + 0.20 * out["metric_hsi_grounding_clean_false_apply_rate"]
             + 0.10 * out["metric_hsi_grounding_negative_false_apply_rate"]
             + 5.0 * out["metric_hsi_grounding_clean_displacement_p95_m"]
+        ).detach()
+        return out
+
+    def _hsi_foot_contact_intent_losses(
+        self,
+        predictions: dict[str, torch.Tensor],
+        frame_idx: torch.Tensor,
+        src_idx: torch.Tensor,
+        matched: dict[str, torch.Tensor],
+    ) -> dict[str, torch.Tensor]:
+        anchor = _require_prediction(predictions, "pred_transl_cam")
+        zero = anchor.sum() * 0.0
+        out = {
+            "loss_hsi_foot_contact_intent": zero,
+            "metric_hsi_foot_contact_intent_valid_coverage": zero.detach(),
+            "metric_hsi_foot_contact_intent_temporal_coverage": zero.detach(),
+            "metric_hsi_foot_contact_intent_target_rate": zero.detach(),
+            "metric_hsi_foot_contact_intent_accuracy": zero.detach(),
+            "metric_hsi_foot_contact_intent_recall": zero.detach(),
+            "metric_hsi_foot_contact_intent_precision": zero.detach(),
+            "metric_hsi_foot_contact_intent_false_positive_rate": zero.detach(),
+            "metric_hsi_foot_contact_intent_airborne_false_positive_rate": zero.detach(),
+            "metric_hsi_foot_contact_intent_left_recall": zero.detach(),
+            "metric_hsi_foot_contact_intent_right_recall": zero.detach(),
+            "metric_hsi_foot_contact_intent_left_false_positive_rate": zero.detach(),
+            "metric_hsi_foot_contact_intent_right_false_positive_rate": zero.detach(),
+            "metric_hsi_foot_contact_intent_positive_probability": zero.detach(),
+            "metric_hsi_foot_contact_intent_negative_probability": zero.detach(),
+            "metric_hsi_foot_contact_intent_selection": zero.detach(),
+        }
+        logits_value = predictions.get("hsi_foot_contact_intent_logits")
+        probability_value = predictions.get("hsi_foot_contact_intent_probability")
+        if not isinstance(logits_value, torch.Tensor) or not isinstance(probability_value, torch.Tensor):
+            return out
+        if "contact_teacher_valid" not in matched or "contact_label" not in matched:
+            return out
+
+        logits = _flatten_prediction(logits_value, unframed_ndim=3)[frame_idx, src_idx]
+        probability = _flatten_prediction(probability_value, unframed_ndim=3)[frame_idx, src_idx]
+        teacher_valid = matched["contact_teacher_valid"].to(device=logits.device).bool()
+        labels = matched["contact_label"].to(device=logits.device).bool()
+        valid = teacher_valid & torch.isfinite(logits) & torch.isfinite(probability)
+        out["metric_hsi_foot_contact_intent_valid_coverage"] = valid.float().mean().detach()
+        if not valid.any():
+            return out
+
+        positive = valid & labels
+        negative = valid & ~labels
+        terms = []
+        weights = []
+        if positive.any():
+            terms.append(F.binary_cross_entropy_with_logits(logits[positive], torch.ones_like(logits[positive])))
+            weights.append(self.hsi_foot_contact_intent_positive_weight)
+        if negative.any():
+            terms.append(F.binary_cross_entropy_with_logits(logits[negative], torch.zeros_like(logits[negative])))
+            weights.append(self.hsi_foot_contact_intent_negative_weight)
+        if terms:
+            weight_tensor = logits.new_tensor(weights)
+            if float(weight_tensor.sum().item()) > 0.0:
+                out["loss_hsi_foot_contact_intent"] = (
+                    torch.stack(terms) * weight_tensor
+                ).sum() / weight_tensor.sum()
+
+        predicted = probability >= float(self.hsi_foot_contact_intent_decision_threshold)
+        out["metric_hsi_foot_contact_intent_target_rate"] = labels[valid].float().mean().detach()
+        out["metric_hsi_foot_contact_intent_accuracy"] = (predicted[valid] == labels[valid]).float().mean().detach()
+        if positive.any():
+            out["metric_hsi_foot_contact_intent_recall"] = predicted[positive].float().mean().detach()
+            out["metric_hsi_foot_contact_intent_positive_probability"] = probability[positive].mean().detach()
+        true_positive = (predicted & positive).sum().to(dtype=probability.dtype)
+        predicted_positive = (predicted & valid).sum().to(dtype=probability.dtype)
+        if predicted_positive.item() > 0:
+            out["metric_hsi_foot_contact_intent_precision"] = (true_positive / predicted_positive).detach()
+        if negative.any():
+            out["metric_hsi_foot_contact_intent_false_positive_rate"] = predicted[negative].float().mean().detach()
+            out["metric_hsi_foot_contact_intent_negative_probability"] = probability[negative].mean().detach()
+
+        complete_person = teacher_valid.all(dim=-1)
+        airborne_person = complete_person & ~labels.any(dim=-1)
+        if airborne_person.any():
+            out["metric_hsi_foot_contact_intent_airborne_false_positive_rate"] = (
+                predicted[airborne_person].any(dim=-1).float().mean().detach()
+            )
+        for side, name in ((0, "left"), (1, "right")):
+            side_positive = positive[:, side]
+            side_negative = negative[:, side]
+            if side_positive.any():
+                out[f"metric_hsi_foot_contact_intent_{name}_recall"] = (
+                    predicted[:, side][side_positive].float().mean().detach()
+                )
+            if side_negative.any():
+                out[f"metric_hsi_foot_contact_intent_{name}_false_positive_rate"] = (
+                    predicted[:, side][side_negative].float().mean().detach()
+                )
+
+        temporal_value = predictions.get("hsi_foot_contact_intent_temporal_valid")
+        if isinstance(temporal_value, torch.Tensor):
+            temporal = _flatten_prediction(temporal_value, unframed_ndim=3)[frame_idx, src_idx].bool()
+            out["metric_hsi_foot_contact_intent_temporal_coverage"] = temporal[valid].float().mean().detach()
+        out["metric_hsi_foot_contact_intent_selection"] = (
+            1.0 - out["metric_hsi_foot_contact_intent_recall"]
+            + 0.5 * (1.0 - out["metric_hsi_foot_contact_intent_precision"])
+            + 2.0 * out["metric_hsi_foot_contact_intent_false_positive_rate"]
+            + 2.0 * out["metric_hsi_foot_contact_intent_airborne_false_positive_rate"]
         ).detach()
         return out
 

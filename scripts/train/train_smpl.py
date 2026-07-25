@@ -521,6 +521,20 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_contact_use_temporal_velocity=bool(model_cfg.get("hsi_contact_use_temporal_velocity", False)),
         hsi_contact_max_velocity_m=float(model_cfg.get("hsi_contact_max_velocity_m", 0.25)),
         hsi_contact_overwrite_refined=bool(model_cfg.get("hsi_contact_overwrite_refined", True)),
+        enable_hsi_foot_contact_intent=bool(model_cfg.get("enable_hsi_foot_contact_intent", False)),
+        hsi_foot_contact_intent_hidden_dim=int(model_cfg.get("hsi_foot_contact_intent_hidden_dim", 192)),
+        hsi_foot_contact_intent_sole_vertices_per_foot=int(
+            model_cfg.get("hsi_foot_contact_intent_sole_vertices_per_foot", 48)
+        ),
+        hsi_foot_contact_intent_max_velocity_m=float(
+            model_cfg.get("hsi_foot_contact_intent_max_velocity_m", 0.50)
+        ),
+        hsi_foot_contact_intent_max_acceleration_m=float(
+            model_cfg.get("hsi_foot_contact_intent_max_acceleration_m", 0.50)
+        ),
+        hsi_foot_contact_intent_initial_probability=float(
+            model_cfg.get("hsi_foot_contact_intent_initial_probability", 0.25)
+        ),
         enable_hsi_grounding=bool(model_cfg.get("enable_hsi_grounding", False)),
         hsi_grounding_hidden_dim=int(model_cfg.get("hsi_grounding_hidden_dim", 192)),
         hsi_grounding_sole_vertices_per_foot=int(model_cfg.get("hsi_grounding_sole_vertices_per_foot", 48)),
@@ -759,6 +773,28 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
                     freeze_module(module)
             unfreeze_module(hsi_grounding_head)
             freeze_module(hsi_grounding_head.smpl)
+    hsi_contact_intent_head = getattr(model, "hsi_foot_contact_intent_head", None)
+    if hsi_contact_intent_head is not None:
+        if bool(model_cfg.get("freeze_hsi_foot_contact_intent", False)):
+            freeze_module(hsi_contact_intent_head)
+        if bool(model_cfg.get("train_hsi_foot_contact_intent_only", False)):
+            for module_name in (
+                "aggregator",
+                "camera_head",
+                "dense_head",
+                "smpl_head",
+                "nlf_smpl_provider",
+                "hsi_refinement_head",
+                "hsi_human_scene_align_head",
+                "hsi_translation_refine_v4_head",
+                "hsi_contact_refine_head",
+                "hsi_grounding_head",
+            ):
+                module = getattr(model, module_name, None)
+                if module is not None:
+                    freeze_module(module)
+            unfreeze_module(hsi_contact_intent_head)
+            freeze_module(hsi_contact_intent_head.smpl)
     if not bool(model_cfg.get("freeze_aggregator", False)):
         return
     aggregator = getattr(model, "aggregator", None)
@@ -2088,6 +2124,18 @@ def compact_loss_name(key: str) -> str:
         "metric_hsi_contact_swing_displacement_mean_m": "swingDisp",
         "metric_hsi_contact_temporal_velocity_valid_rate": "velValid",
         "metric_hsi_contact_temporal_velocity_median": "velMedian",
+        "loss_hsi_foot_contact_intent": "intentCls",
+        "metric_hsi_foot_contact_intent_valid_coverage": "intentValid",
+        "metric_hsi_foot_contact_intent_temporal_coverage": "intentTemporal",
+        "metric_hsi_foot_contact_intent_target_rate": "intentTarget",
+        "metric_hsi_foot_contact_intent_accuracy": "intentAcc",
+        "metric_hsi_foot_contact_intent_recall": "intentRecall",
+        "metric_hsi_foot_contact_intent_precision": "intentPrec",
+        "metric_hsi_foot_contact_intent_false_positive_rate": "intentFPR",
+        "metric_hsi_foot_contact_intent_airborne_false_positive_rate": "intentAirFPR",
+        "metric_hsi_foot_contact_intent_positive_probability": "intentPosProb",
+        "metric_hsi_foot_contact_intent_negative_probability": "intentNegProb",
+        "metric_hsi_foot_contact_intent_selection": "intentSelect",
         "loss_hsi_grounding_gate": "groundGate",
         "metric_hsi_grounding_valid_coverage": "groundValid",
         "metric_hsi_grounding_apply_target_rate": "groundTarget",

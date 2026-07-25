@@ -17,6 +17,7 @@ from vggt_omega.models.heads import (
     DenseHead,
     HSIHumanSceneAlignHead,
     HSIContactRefineHead,
+    HSIFootContactIntentHead,
     HSIGroundingHead,
     HSIRefinementHead,
     HSITranslationRefineV4Head,
@@ -158,6 +159,12 @@ class VGGTOmega(nn.Module):
         hsi_contact_use_temporal_velocity: bool = False,
         hsi_contact_max_velocity_m: float = 0.25,
         hsi_contact_overwrite_refined: bool = True,
+        enable_hsi_foot_contact_intent: bool = False,
+        hsi_foot_contact_intent_hidden_dim: int = 192,
+        hsi_foot_contact_intent_sole_vertices_per_foot: int = 48,
+        hsi_foot_contact_intent_max_velocity_m: float = 0.50,
+        hsi_foot_contact_intent_max_acceleration_m: float = 0.50,
+        hsi_foot_contact_intent_initial_probability: float = 0.25,
         enable_hsi_grounding: bool = False,
         hsi_grounding_hidden_dim: int = 192,
         hsi_grounding_sole_vertices_per_foot: int = 48,
@@ -412,6 +419,18 @@ class VGGTOmega(nn.Module):
             if enable_hsi_contact_refine
             else None
         )
+        self.hsi_foot_contact_intent_head = (
+            HSIFootContactIntentHead(
+                smpl_model_dir=smpl_model_dir,
+                hidden_dim=hsi_foot_contact_intent_hidden_dim,
+                sole_vertices_per_foot=hsi_foot_contact_intent_sole_vertices_per_foot,
+                max_velocity_m=hsi_foot_contact_intent_max_velocity_m,
+                max_acceleration_m=hsi_foot_contact_intent_max_acceleration_m,
+                initial_contact_probability=hsi_foot_contact_intent_initial_probability,
+            )
+            if enable_hsi_foot_contact_intent
+            else None
+        )
         self.hsi_grounding_head = (
             HSIGroundingHead(
                 smpl_model_dir=smpl_model_dir,
@@ -443,6 +462,7 @@ class VGGTOmega(nn.Module):
             or self.hsi_human_scene_align_head is not None
             or self.hsi_translation_refine_v4_head is not None
             or self.hsi_contact_refine_head is not None
+            or self.hsi_foot_contact_intent_head is not None
             or self.hsi_grounding_head is not None
         ) and (
             (self.smpl_head is None and self.nlf_smpl_provider is None and not has_runtime_smpl_provider)
@@ -701,6 +721,13 @@ class VGGTOmega(nn.Module):
                         image_size_hw=image_size_hw,
                         intrinsics_override=hsi_intrinsics_override,
                         depth_is_metric=bool(hsi_depth_is_metric),
+                    )
+                )
+            if self.hsi_foot_contact_intent_head is not None:
+                predictions.update(
+                    self.hsi_foot_contact_intent_head(
+                        predictions=predictions,
+                        pose_enc=predictions["pose_enc"],
                     )
                 )
             if self.hsi_grounding_head is not None:
