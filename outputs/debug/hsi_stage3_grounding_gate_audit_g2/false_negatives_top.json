@@ -1,0 +1,5702 @@
+[
+  {
+    "dataset_index": 655,
+    "frame_offset": 0,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000323/rgb/seq_000323_0055.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.057152338325977325,
+      -3.497971773147583
+    ],
+    "support_rmse_m": [
+      0.00022953195730224252,
+      0.0
+    ],
+    "support_point_count": [
+      436,
+      0
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      1.0,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      2.189353108406067e-05,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      false
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.057152338325977325,
+    "gate_probability": 0.0006076188292354345,
+    "base_l2_m": 0.07999997586011887,
+    "candidate_l2_m": 0.02284763567149639,
+    "candidate_delta_m": 0.057152338325977325,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 655,
+    "frame_offset": 1,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000323/rgb/seq_000323_0060.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.066351518034935,
+      -3.583139181137085
+    ],
+    "support_rmse_m": [
+      0.0002276284503750503,
+      0.0
+    ],
+    "support_point_count": [
+      444,
+      0
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      1.0,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      1.586228609085083e-05,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      false
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.066351518034935,
+    "gate_probability": 0.0006777585367672145,
+    "base_l2_m": 0.08000004291534424,
+    "candidate_l2_m": 0.013648484833538532,
+    "candidate_delta_m": 0.06635155528783798,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 457,
+    "frame_offset": 1,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0125.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.083426475524902,
+      0.05439869314432144
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0003509563684929162
+    ],
+    "support_point_count": [
+      0,
+      472
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999999403953552
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      7.893145084381104e-05
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.05439869314432144,
+    "gate_probability": 0.0007493264274671674,
+    "base_l2_m": 0.05000000074505806,
+    "candidate_l2_m": 0.004398772493004799,
+    "candidate_delta_m": 0.054398730397224426,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 457,
+    "frame_offset": 2,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0130.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.083920478820801,
+      0.05281447619199753
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0003495552809908986
+    ],
+    "support_point_count": [
+      0,
+      475
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      4.1447579860687256e-05
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.05281447619199753,
+    "gate_probability": 0.0007516848272643983,
+    "base_l2_m": 0.049999989569187164,
+    "candidate_l2_m": 0.002814528066664934,
+    "candidate_delta_m": 0.05281449481844902,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 456,
+    "frame_offset": 2,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0125.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.082662582397461,
+      0.08419466763734818
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.001597651862539351
+    ],
+    "support_point_count": [
+      0,
+      446
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.00012508779764175415
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.08419466763734818,
+    "gate_probability": 0.0007723678136244416,
+    "base_l2_m": 0.07999998331069946,
+    "candidate_l2_m": 0.0041947453282773495,
+    "candidate_delta_m": 0.08419466763734818,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 457,
+    "frame_offset": 0,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0120.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.084962368011475,
+      0.05451064556837082
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.00028222776018083096
+    ],
+    "support_point_count": [
+      0,
+      485
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999999403953552
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      6.070733070373535e-05
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.05451064556837082,
+    "gate_probability": 0.0007731019286438823,
+    "base_l2_m": 0.049999967217445374,
+    "candidate_l2_m": 0.004510700702667236,
+    "candidate_delta_m": 0.054510653018951416,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 456,
+    "frame_offset": 1,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0120.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.084204196929932,
+      0.08430204540491104
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0016120075015351176
+    ],
+    "support_point_count": [
+      0,
+      452
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.00014788657426834106
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.08430204540491104,
+    "gate_probability": 0.0007973067695274949,
+    "base_l2_m": 0.07999996095895767,
+    "candidate_l2_m": 0.004302169196307659,
+    "candidate_delta_m": 0.08430208265781403,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 449,
+    "frame_offset": 1,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0085.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.085322380065918,
+      0.04965471848845482
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0003739593375939876
+    ],
+    "support_point_count": [
+      0,
+      525
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999999403953552
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.0001291818916797638
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.04965471848845482,
+    "gate_probability": 0.0008098072721622884,
+    "base_l2_m": 0.04999997466802597,
+    "candidate_l2_m": 0.00034632242750376463,
+    "candidate_delta_m": 0.049654699862003326,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 449,
+    "frame_offset": 0,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0080.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.084762096405029,
+      0.04986457899212837
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0003166024689562619
+    ],
+    "support_point_count": [
+      0,
+      531
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      6.65709376335144e-05
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.04986457899212837,
+    "gate_probability": 0.0008100912673398852,
+    "base_l2_m": 0.04999997094273567,
+    "candidate_l2_m": 0.00013584578118752688,
+    "candidate_delta_m": 0.04986461624503136,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 451,
+    "frame_offset": 2,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0100.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.085759162902832,
+      0.04852436110377312
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.00037257454823702574
+    ],
+    "support_point_count": [
+      0,
+      530
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999998807907104
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.0001266077160835266
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.04852436110377312,
+    "gate_probability": 0.0008109222399070859,
+    "base_l2_m": 0.049999989569187164,
+    "candidate_l2_m": 0.0014758654870092869,
+    "candidate_delta_m": 0.04852437600493431,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 817,
+    "frame_offset": 0,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000395/rgb/seq_000395_0065.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -1.8288183212280273,
+      0.056482452899217606
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0003018602728843689
+    ],
+    "support_point_count": [
+      0,
+      104
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      1.74008309841156e-05
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.056482452899217606,
+    "gate_probability": 0.000815229257568717,
+    "base_l2_m": 0.08000005781650543,
+    "candidate_l2_m": 0.023517616093158722,
+    "candidate_delta_m": 0.05648243799805641,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 449,
+    "frame_offset": 2,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0090.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.087368011474609,
+      0.047786690294742584
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0007311749504879117
+    ],
+    "support_point_count": [
+      0,
+      528
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999997615814209
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.00015858188271522522
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.047786690294742584,
+    "gate_probability": 0.0008227123180404305,
+    "base_l2_m": 0.049999963492155075,
+    "candidate_l2_m": 0.0022135498002171516,
+    "candidate_delta_m": 0.047786712646484375,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 451,
+    "frame_offset": 0,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0090.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.087368011474609,
+      0.047786690294742584
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0007311749504879117
+    ],
+    "support_point_count": [
+      0,
+      528
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999997615814209
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.00015858188271522522
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.047786690294742584,
+    "gate_probability": 0.0008227123180404305,
+    "base_l2_m": 0.049999963492155075,
+    "candidate_l2_m": 0.0022135498002171516,
+    "candidate_delta_m": 0.047786712646484375,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 454,
+    "frame_offset": 2,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0115.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.085669994354248,
+      0.07929590344429016
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0010814211564138532
+    ],
+    "support_point_count": [
+      0,
+      448
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999999403953552
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      2.0503997802734375e-05
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.07929590344429016,
+    "gate_probability": 0.0008247838704846799,
+    "base_l2_m": 0.08000002056360245,
+    "candidate_l2_m": 0.0007051340071484447,
+    "candidate_delta_m": 0.07929592579603195,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 456,
+    "frame_offset": 0,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0115.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.085669994354248,
+      0.07929590344429016
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0010814211564138532
+    ],
+    "support_point_count": [
+      0,
+      448
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999999403953552
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      2.0503997802734375e-05
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.07929590344429016,
+    "gate_probability": 0.0008247838704846799,
+    "base_l2_m": 0.08000002056360245,
+    "candidate_l2_m": 0.0007051340071484447,
+    "candidate_delta_m": 0.07929592579603195,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 444,
+    "frame_offset": 1,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0060.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.084296226501465,
+      0.047734618186950684
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0001689475611783564
+    ],
+    "support_point_count": [
+      0,
+      540
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999999403953552
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.0001243799924850464
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.047734618186950684,
+    "gate_probability": 0.0008251603576354682,
+    "base_l2_m": 0.049999989569187164,
+    "candidate_l2_m": 0.0022655478678643703,
+    "candidate_delta_m": 0.04773462191224098,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 444,
+    "frame_offset": 2,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0065.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.086071014404297,
+      0.04395401477813721
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.00016953126760199666
+    ],
+    "support_point_count": [
+      0,
+      529
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      5.91278076171875e-05
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.04395401477813721,
+    "gate_probability": 0.0008275805739685893,
+    "base_l2_m": 0.049999989569187164,
+    "candidate_l2_m": 0.006045980378985405,
+    "candidate_delta_m": 0.04395401477813721,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 454,
+    "frame_offset": 0,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0105.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.084097385406494,
+      0.07858112454414368
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0011296843877062201
+    ],
+    "support_point_count": [
+      0,
+      450
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999998807907104
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      3.2104551792144775e-05
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.07858112454414368,
+    "gate_probability": 0.0008278467576019466,
+    "base_l2_m": 0.08000004291534424,
+    "candidate_l2_m": 0.001419793232344091,
+    "candidate_delta_m": 0.07858111709356308,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 451,
+    "frame_offset": 1,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0095.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.087859630584717,
+      0.046004295349121094
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.00016926198441069573
+    ],
+    "support_point_count": [
+      0,
+      525
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999997615814209
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.00016313046216964722
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.046004295349121094,
+    "gate_probability": 0.0008283426868729293,
+    "base_l2_m": 0.050000037997961044,
+    "candidate_l2_m": 0.003995917737483978,
+    "candidate_delta_m": 0.04600430652499199,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 444,
+    "frame_offset": 0,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0055.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.083531856536865,
+      0.046520333737134933
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0001705135655356571
+    ],
+    "support_point_count": [
+      0,
+      540
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999998807907104
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.0001505054533481598
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.046520333737134933,
+    "gate_probability": 0.0008380352519452572,
+    "base_l2_m": 0.04999997466802597,
+    "candidate_l2_m": 0.003479794831946492,
+    "candidate_delta_m": 0.04652034491300583,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 454,
+    "frame_offset": 1,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0110.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.0858330726623535,
+      0.07810337841510773
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0016302657313644886
+    ],
+    "support_point_count": [
+      0,
+      449
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.00010288506746292114
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.07810337841510773,
+    "gate_probability": 0.0008381274528801441,
+    "base_l2_m": 0.08000001311302185,
+    "candidate_l2_m": 0.0018967585638165474,
+    "candidate_delta_m": 0.07810342311859131,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 443,
+    "frame_offset": 2,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0060.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.083533763885498,
+      0.07756732404232025
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0012014068197458982
+    ],
+    "support_point_count": [
+      0,
+      472
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      4.291534423828125e-05
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.07756732404232025,
+    "gate_probability": 0.0008515578228980303,
+    "base_l2_m": 0.07999999821186066,
+    "candidate_l2_m": 0.0024327838327735662,
+    "candidate_delta_m": 0.07756731659173965,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 446,
+    "frame_offset": 0,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0065.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.085320472717285,
+      0.07377632707357407
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0011344851227477193
+    ],
+    "support_point_count": [
+      0,
+      468
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.00011856108903884888
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.07377632707357407,
+    "gate_probability": 0.0008540135459043086,
+    "base_l2_m": 0.08000001311302185,
+    "candidate_l2_m": 0.006223713513463736,
+    "candidate_delta_m": 0.07377633452415466,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 443,
+    "frame_offset": 1,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0055.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.082765579223633,
+      0.07631190121173859
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.001416473533026874
+    ],
+    "support_point_count": [
+      0,
+      474
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      5.792081356048584e-05
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.07631190121173859,
+    "gate_probability": 0.0008650124655105174,
+    "base_l2_m": 0.08000002801418304,
+    "candidate_l2_m": 0.0036881593987345695,
+    "candidate_delta_m": 0.0763118714094162,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 446,
+    "frame_offset": 1,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0070.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.085437297821045,
+      0.07504960149526596
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0008995137177407742
+    ],
+    "support_point_count": [
+      0,
+      465
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999999403953552
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      2.384185791015625e-06
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.07504960149526596,
+    "gate_probability": 0.0008679268066771328,
+    "base_l2_m": 0.07999998331069946,
+    "candidate_l2_m": 0.004950469359755516,
+    "candidate_delta_m": 0.07504957914352417,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 446,
+    "frame_offset": 2,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0075.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.085937976837158,
+      0.07677281647920609
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0012797535164281726
+    ],
+    "support_point_count": [
+      0,
+      463
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      2.9064714908599854e-05
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.07677281647920609,
+    "gate_probability": 0.00087352329865098,
+    "base_l2_m": 0.07999998331069946,
+    "candidate_l2_m": 0.003227252047508955,
+    "candidate_delta_m": 0.0767727866768837,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 434,
+    "frame_offset": 1,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0010.png",
+    "clean": false,
+    "noise_signed_m": 0.11999999731779099,
+    "noise_level": "+12cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.080681324005127,
+      0.11478805541992188
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0037726154550909996
+    ],
+    "support_point_count": [
+      0,
+      468
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999996423721313
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.0005107298493385315
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.11478805541992188,
+    "gate_probability": 0.0008797131013125181,
+    "base_l2_m": 0.12000001966953278,
+    "candidate_l2_m": 0.005212986841797829,
+    "candidate_delta_m": 0.11478804796934128,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 435,
+    "frame_offset": 0,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0010.png",
+    "clean": false,
+    "noise_signed_m": 0.11999999731779099,
+    "noise_level": "+12cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.080681324005127,
+      0.11478805541992188
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0037726154550909996
+    ],
+    "support_point_count": [
+      0,
+      468
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999996423721313
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.0005107298493385315
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.11478805541992188,
+    "gate_probability": 0.0008797131013125181,
+    "base_l2_m": 0.12000001966953278,
+    "candidate_l2_m": 0.005212986841797829,
+    "candidate_delta_m": 0.11478804796934128,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 434,
+    "frame_offset": 0,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0005.png",
+    "clean": false,
+    "noise_signed_m": 0.11999999731779099,
+    "noise_level": "+12cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.079596996307373,
+      0.11450761556625366
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.003379428992047906
+    ],
+    "support_point_count": [
+      0,
+      461
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999995231628418
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.0003849714994430542
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.11450761556625366,
+    "gate_probability": 0.0008822350646369159,
+    "base_l2_m": 0.11999998986721039,
+    "candidate_l2_m": 0.0054939440451562405,
+    "candidate_delta_m": 0.11450760066509247,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 443,
+    "frame_offset": 0,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0050.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.084903240203857,
+      0.07489588856697083
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0008540546405129135
+    ],
+    "support_point_count": [
+      0,
+      475
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      4.374980926513672e-05
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.07489588856697083,
+    "gate_probability": 0.0008979730773717165,
+    "base_l2_m": 0.07999998331069946,
+    "candidate_l2_m": 0.005104102659970522,
+    "candidate_delta_m": 0.07489588856697083,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 434,
+    "frame_offset": 2,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0015.png",
+    "clean": false,
+    "noise_signed_m": 0.11999999731779099,
+    "noise_level": "+12cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.083194255828857,
+      0.11260481178760529
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.002951526315882802
+    ],
+    "support_point_count": [
+      0,
+      458
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.0004115775227546692
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.11260481178760529,
+    "gate_probability": 0.0009041654411703348,
+    "base_l2_m": 0.12000000476837158,
+    "candidate_l2_m": 0.007395209278911352,
+    "candidate_delta_m": 0.11260484904050827,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 435,
+    "frame_offset": 1,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0015.png",
+    "clean": false,
+    "noise_signed_m": 0.11999999731779099,
+    "noise_level": "+12cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.083194255828857,
+      0.11260481178760529
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.002951526315882802
+    ],
+    "support_point_count": [
+      0,
+      458
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.0004115775227546692
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.11260481178760529,
+    "gate_probability": 0.0009041654411703348,
+    "base_l2_m": 0.12000000476837158,
+    "candidate_l2_m": 0.007395209278911352,
+    "candidate_delta_m": 0.11260484904050827,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 435,
+    "frame_offset": 2,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000238/rgb/seq_000238_0020.png",
+    "clean": false,
+    "noise_signed_m": 0.11999999731779099,
+    "noise_level": "+12cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -4.086822509765625,
+      0.11367619037628174
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0024209057446569204
+    ],
+    "support_point_count": [
+      0,
+      457
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999999403953552
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.00020054727792739868
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.11367619037628174,
+    "gate_probability": 0.0009517064900137484,
+    "base_l2_m": 0.12000002712011337,
+    "candidate_l2_m": 0.006324036978185177,
+    "candidate_delta_m": 0.11367622017860413,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 224,
+    "frame_offset": 0,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000100/rgb/seq_000100_0090.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.040123991668224335,
+      -1.0381313562393188
+    ],
+    "support_rmse_m": [
+      0.0014443211257457733,
+      0.0
+    ],
+    "support_point_count": [
+      501,
+      0
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      0.9999938011169434,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      0.0005693733692169189,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      false
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.040123991668224335,
+    "gate_probability": 0.0011215796694159508,
+    "base_l2_m": 0.05000000819563866,
+    "candidate_l2_m": 0.009877286851406097,
+    "candidate_delta_m": 0.04012399539351463,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 1447,
+    "frame_offset": 1,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000069/rgb/seq_000069_0155.png",
+    "clean": false,
+    "noise_signed_m": 0.11999999731779099,
+    "noise_level": "+12cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.09863190352916718,
+      -1.4040935039520264
+    ],
+    "support_rmse_m": [
+      0.005072062369436026,
+      0.0
+    ],
+    "support_point_count": [
+      605,
+      0
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      0.9998079538345337,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      0.0018169283866882324,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      false
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.09863190352916718,
+    "gate_probability": 0.0011363811790943146,
+    "base_l2_m": 0.12000001966953278,
+    "candidate_l2_m": 0.021474268287420273,
+    "candidate_delta_m": 0.09863188862800598,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 228,
+    "frame_offset": 2,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000100/rgb/seq_000100_0120.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.06852501630783081,
+      -0.9227687120437622
+    ],
+    "support_rmse_m": [
+      0.00243206275627017,
+      0.0
+    ],
+    "support_point_count": [
+      495,
+      0
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      0.9999707341194153,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      0.0011585578322410583,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      false
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.06852501630783081,
+    "gate_probability": 0.0013185304123908281,
+    "base_l2_m": 0.07999996095895767,
+    "candidate_l2_m": 0.011488881893455982,
+    "candidate_delta_m": 0.06852506101131439,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 817,
+    "frame_offset": 2,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000395/rgb/seq_000395_0075.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.061129167675971985,
+      -1.453617811203003
+    ],
+    "support_rmse_m": [
+      0.0003046919882763177,
+      0.0
+    ],
+    "support_point_count": [
+      126,
+      0
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      1.0,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      3.625452518463135e-05,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      false
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.061129167675971985,
+    "gate_probability": 0.0017789757112041116,
+    "base_l2_m": 0.07999996095895767,
+    "candidate_l2_m": 0.01887078955769539,
+    "candidate_delta_m": 0.06112917885184288,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 183,
+    "frame_offset": 0,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000091/rgb/seq_000091_0010.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.057939693331718445,
+      -0.6333375573158264
+    ],
+    "support_rmse_m": [
+      0.0014896249631419778,
+      0.0
+    ],
+    "support_point_count": [
+      432,
+      0
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      0.9999993443489075,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      0.0002620220184326172,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      false
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.057939693331718445,
+    "gate_probability": 0.003179092425853014,
+    "base_l2_m": 0.07999999821186066,
+    "candidate_l2_m": 0.022060425952076912,
+    "candidate_delta_m": 0.05793972313404083,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 141,
+    "frame_offset": 1,
+    "person_slot": 5,
+    "track_id": 1000000005,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045/rgb/seq_000045_0010.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -0.44813522696495056,
+      0.042362675070762634
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.00026582839200273156
+    ],
+    "support_point_count": [
+      0,
+      116
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      7.369741797447205e-05
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.042362675070762634,
+    "gate_probability": 0.003402638016268611,
+    "base_l2_m": 0.04999997094273567,
+    "candidate_l2_m": 0.007637294940650463,
+    "candidate_delta_m": 0.04236269369721413,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 140,
+    "frame_offset": 2,
+    "person_slot": 5,
+    "track_id": 1000000005,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045/rgb/seq_000045_0010.png",
+    "clean": false,
+    "noise_signed_m": 0.11999999731779099,
+    "noise_level": "+12cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -0.44601115584373474,
+      0.11181332916021347
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0009905609767884016
+    ],
+    "support_point_count": [
+      0,
+      139
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999950528144836
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.0006230399012565613
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.11181332916021347,
+    "gate_probability": 0.008313474245369434,
+    "base_l2_m": 0.12000001966953278,
+    "candidate_l2_m": 0.00819475669413805,
+    "candidate_delta_m": 0.11181329935789108,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 924,
+    "frame_offset": 1,
+    "person_slot": 4,
+    "track_id": 1000000004,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000454/rgb/seq_000454_0045.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.04385827109217644,
+      -0.11007720977067947
+    ],
+    "support_rmse_m": [
+      0.0002761362411547452,
+      0.0067025646567344666
+    ],
+    "support_point_count": [
+      202,
+      9
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      1.0,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      3.7107616662979126e-05,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      false
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.04385827109217644,
+    "gate_probability": 0.008399891667068005,
+    "base_l2_m": 0.049999989569187164,
+    "candidate_l2_m": 0.0061417510733008385,
+    "candidate_delta_m": 0.04385824128985405,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 925,
+    "frame_offset": 0,
+    "person_slot": 4,
+    "track_id": 1000000004,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000454/rgb/seq_000454_0045.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.07385239005088806,
+      -0.09068672358989716
+    ],
+    "support_rmse_m": [
+      0.00027189511456526816,
+      2.0583493665071728e-07
+    ],
+    "support_point_count": [
+      226,
+      3
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      1.0,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      3.1225383281707764e-05,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      false
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.07385239005088806,
+    "gate_probability": 0.010035148821771145,
+    "base_l2_m": 0.08000003546476364,
+    "candidate_l2_m": 0.006147659383714199,
+    "candidate_delta_m": 0.07385238260030746,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 925,
+    "frame_offset": 1,
+    "person_slot": 4,
+    "track_id": 1000000004,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000454/rgb/seq_000454_0050.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.06916946172714233,
+      -0.0906749740242958
+    ],
+    "support_rmse_m": [
+      0.00027119863079860806,
+      0.0022653306368738413
+    ],
+    "support_point_count": [
+      228,
+      4
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      1.0,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      2.0071864128112793e-05,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.06916946172714233,
+    "gate_probability": 0.010362179949879646,
+    "base_l2_m": 0.08000001311302185,
+    "candidate_l2_m": 0.010830523446202278,
+    "candidate_delta_m": 0.06916949152946472,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 925,
+    "frame_offset": 2,
+    "person_slot": 4,
+    "track_id": 1000000004,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000454/rgb/seq_000454_0055.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.06651043146848679,
+      -0.09866246581077576
+    ],
+    "support_rmse_m": [
+      0.000272652629064396,
+      2.2197490068265324e-08
+    ],
+    "support_point_count": [
+      236,
+      3
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      1.0,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      1.564621925354004e-05,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      false
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.06651043146848679,
+    "gate_probability": 0.010884484276175499,
+    "base_l2_m": 0.07999999076128006,
+    "candidate_l2_m": 0.013489597477018833,
+    "candidate_delta_m": 0.0665104016661644,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 945,
+    "frame_offset": 2,
+    "person_slot": 6,
+    "track_id": 1000000006,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000459/rgb/seq_000459_0090.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.05775618553161621,
+      0.07106952369213104
+    ],
+    "support_rmse_m": [
+      0.0002476594236213714,
+      1.2604426956386305e-05
+    ],
+    "support_point_count": [
+      83,
+      22
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      0.9999999403953552,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      0.00010133162140846252,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      false
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.05775618553161621,
+    "gate_probability": 0.033728308975696564,
+    "base_l2_m": 0.07999999076128006,
+    "candidate_l2_m": 0.022243784740567207,
+    "candidate_delta_m": 0.057756222784519196,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 948,
+    "frame_offset": 0,
+    "person_slot": 6,
+    "track_id": 1000000006,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000459/rgb/seq_000459_0095.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.05891907960176468,
+      0.056807298213243484
+    ],
+    "support_rmse_m": [
+      0.0002457867667544633,
+      1.2899702596769203e-05
+    ],
+    "support_point_count": [
+      83,
+      21
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      1.0,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      3.139674663543701e-05,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      false
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.05891907960176468,
+    "gate_probability": 0.03463276848196983,
+    "base_l2_m": 0.08000001311302185,
+    "candidate_l2_m": 0.021080901846289635,
+    "candidate_delta_m": 0.05891910940408707,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 948,
+    "frame_offset": 1,
+    "person_slot": 6,
+    "track_id": 1000000006,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000459/rgb/seq_000459_0100.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.05855850130319595,
+      0.054828353226184845
+    ],
+    "support_rmse_m": [
+      0.00024558836594223976,
+      1.3025618500250857e-05
+    ],
+    "support_point_count": [
+      73,
+      19
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      0.9999998807907104,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      0.00010249018669128418,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      false
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.05855850130319595,
+    "gate_probability": 0.03495083749294281,
+    "base_l2_m": 0.08000004291534424,
+    "candidate_l2_m": 0.02144155092537403,
+    "candidate_delta_m": 0.05855851620435715,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 200,
+    "frame_offset": 1,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000091/rgb/seq_000091_0100.png",
+    "clean": false,
+    "noise_signed_m": 0.11999999731779099,
+    "noise_level": "+12cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.10174372792243958,
+      -0.266020268201828
+    ],
+    "support_rmse_m": [
+      0.004578583408147097,
+      0.0
+    ],
+    "support_point_count": [
+      402,
+      0
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      0.9998242855072021,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      0.0018996894359588623,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.10174372792243958,
+    "gate_probability": 0.037752702832221985,
+    "base_l2_m": 0.11999998241662979,
+    "candidate_l2_m": 0.01837342604994774,
+    "candidate_delta_m": 0.10174373537302017,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 948,
+    "frame_offset": 2,
+    "person_slot": 6,
+    "track_id": 1000000006,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000459/rgb/seq_000459_0105.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.05895776301622391,
+      0.05511927604675293
+    ],
+    "support_rmse_m": [
+      0.00024675767053849995,
+      1.2696031262748875e-05
+    ],
+    "support_point_count": [
+      74,
+      20
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      1.0,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      1.0695308446884155e-05,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      false
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.05895776301622391,
+    "gate_probability": 0.039158549159765244,
+    "base_l2_m": 0.07999997586011887,
+    "candidate_l2_m": 0.021042227745056152,
+    "candidate_delta_m": 0.058957744389772415,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 1241,
+    "frame_offset": 1,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000006/rgb/seq_000006_0030.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.02562042698264122,
+      0.059133823961019516
+    ],
+    "support_rmse_m": [
+      0.03841329365968704,
+      0.00322792143560946
+    ],
+    "support_point_count": [
+      261,
+      625
+    ],
+    "support_normal_cosine": 0.5153250098228455,
+    "online_teacher_normal_cosine": [
+      0.9926308393478394,
+      0.9999976754188538
+    ],
+    "online_teacher_signed_error_m": [
+      0.11379784345626831,
+      9.630247950553894e-05
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.04237712547183037,
+    "gate_probability": 0.055184975266456604,
+    "base_l2_m": 0.08000002801418304,
+    "candidate_l2_m": 0.0478438138961792,
+    "candidate_delta_m": 0.04237712174654007,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 228,
+    "frame_offset": 1,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000100/rgb/seq_000100_0115.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.06361547857522964,
+      0.050209105014801025
+    ],
+    "support_rmse_m": [
+      0.002836650237441063,
+      0.0060229008086025715
+    ],
+    "support_point_count": [
+      468,
+      23
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      0.9999556541442871,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      0.0015529245138168335,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.06361547857522964,
+    "gate_probability": 0.06159081682562828,
+    "base_l2_m": 0.07999996840953827,
+    "candidate_l2_m": 0.016398273408412933,
+    "candidate_delta_m": 0.06361547857522964,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 1241,
+    "frame_offset": 2,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000006/rgb/seq_000006_0035.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.029052048921585083,
+      0.06024687737226486
+    ],
+    "support_rmse_m": [
+      0.03786707669496536,
+      0.002450929256156087
+    ],
+    "support_point_count": [
+      258,
+      623
+    ],
+    "support_normal_cosine": 0.47226548194885254,
+    "online_teacher_normal_cosine": [
+      0.9854217171669006,
+      0.9999976754188538
+    ],
+    "online_teacher_signed_error_m": [
+      0.13581421971321106,
+      1.7434358596801758e-06
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.04464946314692497,
+    "gate_probability": 0.06229216605424881,
+    "base_l2_m": 0.07999998331069946,
+    "candidate_l2_m": 0.047507863491773605,
+    "candidate_delta_m": 0.044649481773376465,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 1188,
+    "frame_offset": 2,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sample_path": "Training/20221014_3_250_batch01hand_orbit_archVizUI3_time15_seq_000179/rgb/seq_000179_0060.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -0.41618311405181885,
+      0.044437870383262634
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.00012572648120112717
+    ],
+    "support_point_count": [
+      0,
+      692
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      6.021931767463684e-05
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.044437870383262634,
+    "gate_probability": 0.06612914055585861,
+    "base_l2_m": 0.05000004544854164,
+    "candidate_l2_m": 0.005562228616327047,
+    "candidate_delta_m": 0.04443786293268204,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 9,
+    "frame_offset": 0,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0060.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      0.033148009330034256,
+      0.04940325766801834
+    ],
+    "support_rmse_m": [
+      0.002466338686645031,
+      0.0014878215733915567
+    ],
+    "support_point_count": [
+      31,
+      114
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999948143959045
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.0012667179107666016
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.04940325766801834,
+    "gate_probability": 0.06678560376167297,
+    "base_l2_m": 0.05000006780028343,
+    "candidate_l2_m": 0.0006181210046634078,
+    "candidate_delta_m": 0.049403320997953415,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 829,
+    "frame_offset": 2,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000411/rgb/seq_000411_0040.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.15214844048023224,
+      0.06651978194713593
+    ],
+    "support_rmse_m": [
+      0.004869985394179821,
+      0.0070794727653265
+    ],
+    "support_point_count": [
+      225,
+      17
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      0.9783138632774353,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      0.026724055409431458,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.11999999731779099,
+    "gate_probability": 0.06767299771308899,
+    "base_l2_m": 0.07999999821186066,
+    "candidate_l2_m": 0.051480796188116074,
+    "candidate_delta_m": 0.12000003457069397,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 822,
+    "frame_offset": 0,
+    "person_slot": 6,
+    "track_id": 1000000006,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000395/rgb/seq_000395_0090.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.04038373380899429,
+      0.04859903082251549
+    ],
+    "support_rmse_m": [
+      0.00018286507111042738,
+      0.0009558352176100016
+    ],
+    "support_point_count": [
+      403,
+      453
+    ],
+    "support_normal_cosine": 0.9999998807907104,
+    "online_teacher_normal_cosine": [
+      0.9999999403953552,
+      0.9999994039535522
+    ],
+    "online_teacher_signed_error_m": [
+      2.2463500499725342e-05,
+      0.00013408437371253967
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      true,
+      true
+    ],
+    "delta_scalar_m": -0.04449138045310974,
+    "gate_probability": 0.06793884932994843,
+    "base_l2_m": 0.05000000074505806,
+    "candidate_l2_m": 0.005508748814463615,
+    "candidate_delta_m": 0.04449135437607765,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 831,
+    "frame_offset": 2,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000411/rgb/seq_000411_0050.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.11196057498455048,
+      0.03678474575281143
+    ],
+    "support_rmse_m": [
+      0.00947666633874178,
+      0.007635287940502167
+    ],
+    "support_point_count": [
+      261,
+      34
+    ],
+    "support_normal_cosine": 0.9797418713569641,
+    "online_teacher_normal_cosine": [
+      0.9896075129508972,
+      0.9962971210479736
+    ],
+    "online_teacher_signed_error_m": [
+      0.0199461430311203,
+      0.0038442760705947876
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.07437266409397125,
+    "gate_probability": 0.06955694407224655,
+    "base_l2_m": 0.04999999701976776,
+    "candidate_l2_m": 0.026446690782904625,
+    "candidate_delta_m": 0.07437263429164886,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 330,
+    "frame_offset": 0,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000140/rgb/seq_000140_0075.png",
+    "clean": false,
+    "noise_signed_m": 0.11999999731779099,
+    "noise_level": "+12cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.09945052117109299,
+      -0.197811096906662
+    ],
+    "support_rmse_m": [
+      0.005645517725497484,
+      0.010598268359899521
+    ],
+    "support_point_count": [
+      177,
+      28
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      0.9999816417694092,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      0.0010114982724189758,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      false
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.09945052117109299,
+    "gate_probability": 0.07057825475931168,
+    "base_l2_m": 0.12000000476837158,
+    "candidate_l2_m": 0.02056012488901615,
+    "candidate_delta_m": 0.09945056587457657,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 831,
+    "frame_offset": 1,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000411/rgb/seq_000411_0045.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.10632878541946411,
+      0.03292145952582359
+    ],
+    "support_rmse_m": [
+      0.012662861496210098,
+      0.008228616788983345
+    ],
+    "support_point_count": [
+      265,
+      40
+    ],
+    "support_normal_cosine": 0.9826321005821228,
+    "online_teacher_normal_cosine": [
+      0.9954251646995544,
+      0.9965561628341675
+    ],
+    "online_teacher_signed_error_m": [
+      0.012655854225158691,
+      0.0025858841836452484
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.069625124335289,
+    "gate_probability": 0.07095364481210709,
+    "base_l2_m": 0.04999999701976776,
+    "candidate_l2_m": 0.02168041281402111,
+    "candidate_delta_m": 0.06962516158819199,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 50,
+    "frame_offset": 2,
+    "person_slot": 4,
+    "track_id": 1000000004,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000012/rgb/seq_000012_0045.png",
+    "clean": false,
+    "noise_signed_m": 0.11999999731779099,
+    "noise_level": "+12cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.09801781177520752,
+      0.09375720471143723
+    ],
+    "support_rmse_m": [
+      0.002969919703900814,
+      9.215278140572991e-08
+    ],
+    "support_point_count": [
+      362,
+      4
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      0.9999561309814453,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      0.001441851258277893,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      false
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.09801781177520752,
+    "gate_probability": 0.07132498174905777,
+    "base_l2_m": 0.1199999675154686,
+    "candidate_l2_m": 0.022005686536431313,
+    "candidate_delta_m": 0.09801781177520752,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 52,
+    "frame_offset": 0,
+    "person_slot": 4,
+    "track_id": 1000000004,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000012/rgb/seq_000012_0045.png",
+    "clean": false,
+    "noise_signed_m": 0.11999999731779099,
+    "noise_level": "+12cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.09801781177520752,
+      0.09375720471143723
+    ],
+    "support_rmse_m": [
+      0.002969919703900814,
+      9.215278140572991e-08
+    ],
+    "support_point_count": [
+      362,
+      4
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      0.9999561309814453,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      0.001441851258277893,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      false
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.09801781177520752,
+    "gate_probability": 0.07132498174905777,
+    "base_l2_m": 0.1199999675154686,
+    "candidate_l2_m": 0.022005686536431313,
+    "candidate_delta_m": 0.09801781177520752,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 818,
+    "frame_offset": 1,
+    "person_slot": 6,
+    "track_id": 1000000006,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000395/rgb/seq_000395_0075.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.03883408382534981,
+      0.058922313153743744
+    ],
+    "support_rmse_m": [
+      0.00018278276547789574,
+      0.0012451772345229983
+    ],
+    "support_point_count": [
+      409,
+      443
+    ],
+    "support_normal_cosine": 0.9999993443489075,
+    "online_teacher_normal_cosine": [
+      1.0,
+      0.9999999403953552
+    ],
+    "online_teacher_signed_error_m": [
+      2.4013221263885498e-05,
+      4.10228967666626e-05
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      true,
+      true
+    ],
+    "delta_scalar_m": -0.048878200352191925,
+    "gate_probability": 0.07289443910121918,
+    "base_l2_m": 0.05000003054738045,
+    "candidate_l2_m": 0.0011218503350391984,
+    "candidate_delta_m": 0.04887818545103073,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 9,
+    "frame_offset": 1,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0065.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.03453430160880089,
+      0.04994957521557808
+    ],
+    "support_rmse_m": [
+      0.0023728092201054096,
+      0.001456228899769485
+    ],
+    "support_point_count": [
+      37,
+      122
+    ],
+    "support_normal_cosine": 0.9999858140945435,
+    "online_teacher_normal_cosine": [
+      null,
+      0.999996542930603
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.0010541640222072601
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.042241938412189484,
+    "gate_probability": 0.0804714784026146,
+    "base_l2_m": 0.05000011995434761,
+    "candidate_l2_m": 0.007761392742395401,
+    "candidate_delta_m": 0.04224196448922157,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 242,
+    "frame_offset": 2,
+    "person_slot": 8,
+    "track_id": 1000000008,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000101/rgb/seq_000101_0065.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.09325331449508667,
+      0.04615957662463188
+    ],
+    "support_rmse_m": [
+      0.0005391074228100479,
+      0.00034980999771505594
+    ],
+    "support_point_count": [
+      426,
+      487
+    ],
+    "support_normal_cosine": 0.9999997019767761,
+    "online_teacher_normal_cosine": [
+      0.9999996423721313,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      0.00011873245239257812,
+      2.8770416975021362e-05
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.06970644742250443,
+    "gate_probability": 0.08114193379878998,
+    "base_l2_m": 0.04999997466802597,
+    "candidate_l2_m": 0.01970653049647808,
+    "candidate_delta_m": 0.06970648467540741,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 9,
+    "frame_offset": 2,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0070.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.03460926190018654,
+      0.04916633665561676
+    ],
+    "support_rmse_m": [
+      0.0025977983605116606,
+      0.0016141404630616307
+    ],
+    "support_point_count": [
+      41,
+      125
+    ],
+    "support_normal_cosine": 0.9999911785125732,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999952912330627
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.001201622188091278
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.0418877974152565,
+    "gate_probability": 0.082786925137043,
+    "base_l2_m": 0.04999995231628418,
+    "candidate_l2_m": 0.008115003816783428,
+    "candidate_delta_m": 0.04188774526119232,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 831,
+    "frame_offset": 0,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000411/rgb/seq_000411_0040.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.11439882218837738,
+      0.03828735277056694
+    ],
+    "support_rmse_m": [
+      0.00940787699073553,
+      0.007704843766987324
+    ],
+    "support_point_count": [
+      262,
+      34
+    ],
+    "support_normal_cosine": 0.9794909954071045,
+    "online_teacher_normal_cosine": [
+      0.9900609850883484,
+      0.9957142472267151
+    ],
+    "online_teacher_signed_error_m": [
+      0.0189744234085083,
+      0.0048150792717933655
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.07634308934211731,
+    "gate_probability": 0.08390237390995026,
+    "base_l2_m": 0.05000000819563866,
+    "candidate_l2_m": 0.02849080227315426,
+    "candidate_delta_m": 0.07634308189153671,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 330,
+    "frame_offset": 1,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000140/rgb/seq_000140_0080.png",
+    "clean": false,
+    "noise_signed_m": 0.11999999731779099,
+    "noise_level": "+12cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.0997428447008133,
+      -0.2012760043144226
+    ],
+    "support_rmse_m": [
+      0.00541643425822258,
+      0.01015848945826292
+    ],
+    "support_point_count": [
+      180,
+      24
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      0.9999756217002869,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      0.001164361834526062,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      false
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.0997428447008133,
+    "gate_probability": 0.08566323667764664,
+    "base_l2_m": 0.12000002712011337,
+    "candidate_l2_m": 0.020271699875593185,
+    "candidate_delta_m": 0.09974280744791031,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 242,
+    "frame_offset": 0,
+    "person_slot": 8,
+    "track_id": 1000000008,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000101/rgb/seq_000101_0055.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.09223100543022156,
+      0.046364374458789825
+    ],
+    "support_rmse_m": [
+      0.0006111197872087359,
+      0.0007585343555547297
+    ],
+    "support_point_count": [
+      429,
+      491
+    ],
+    "support_normal_cosine": 1.0,
+    "online_teacher_normal_cosine": [
+      0.9999994039535522,
+      0.9999998807907104
+    ],
+    "online_teacher_signed_error_m": [
+      0.00015191733837127686,
+      0.0001126900315284729
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.0692976862192154,
+    "gate_probability": 0.08646939694881439,
+    "base_l2_m": 0.04999995976686478,
+    "candidate_l2_m": 0.01929783821105957,
+    "candidate_delta_m": 0.06929771602153778,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 382,
+    "frame_offset": 2,
+    "person_slot": 8,
+    "track_id": 1000000008,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000177/rgb/seq_000177_0030.png",
+    "clean": false,
+    "noise_signed_m": 0.11999999731779099,
+    "noise_level": "+12cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      0.040654659271240234,
+      0.14429353177547455
+    ],
+    "support_rmse_m": [
+      0.0,
+      0.0002530828060116619
+    ],
+    "support_point_count": [
+      1,
+      115
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      2.7865171432495117e-06
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.11999999731779099,
+    "gate_probability": 0.08712077140808105,
+    "base_l2_m": 0.12000004202127457,
+    "candidate_l2_m": 6.743495760019869e-06,
+    "candidate_delta_m": 0.1199999451637268,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 665,
+    "frame_offset": 2,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000337/rgb/seq_000337_0035.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.048875827342271805,
+      0.07725971192121506
+    ],
+    "support_rmse_m": [
+      0.0002750976418610662,
+      0.00027159915771335363
+    ],
+    "support_point_count": [
+      252,
+      278
+    ],
+    "support_normal_cosine": 1.0,
+    "online_teacher_normal_cosine": [
+      0.9999999403953552,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      0.00010656192898750305,
+      0.00010598450899124146
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.06306777149438858,
+    "gate_probability": 0.08754338324069977,
+    "base_l2_m": 0.07999999076128006,
+    "candidate_l2_m": 0.01693221926689148,
+    "candidate_delta_m": 0.06306777149438858,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 665,
+    "frame_offset": 0,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000337/rgb/seq_000337_0025.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.04885183647274971,
+      0.07697882503271103
+    ],
+    "support_rmse_m": [
+      0.00027485060854814947,
+      0.0002710985136218369
+    ],
+    "support_point_count": [
+      251,
+      276
+    ],
+    "support_normal_cosine": 0.9999999403953552,
+    "online_teacher_normal_cosine": [
+      1.0,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      9.533017873764038e-05,
+      0.00011608749628067017
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.06291533261537552,
+    "gate_probability": 0.08783499151468277,
+    "base_l2_m": 0.07999999821186066,
+    "candidate_l2_m": 0.017084676772356033,
+    "candidate_delta_m": 0.06291532516479492,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 818,
+    "frame_offset": 0,
+    "person_slot": 6,
+    "track_id": 1000000006,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000395/rgb/seq_000395_0070.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.03197571635246277,
+      0.05728423595428467
+    ],
+    "support_rmse_m": [
+      0.00017941315309144557,
+      0.0010793755063787103
+    ],
+    "support_point_count": [
+      430,
+      442
+    ],
+    "support_normal_cosine": 0.9999996423721313,
+    "online_teacher_normal_cosine": [
+      0.9999999403953552,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      1.1309981346130371e-05,
+      3.814697265625e-05
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      true,
+      true
+    ],
+    "delta_scalar_m": -0.04462997615337372,
+    "gate_probability": 0.08783555030822754,
+    "base_l2_m": 0.05000000074505806,
+    "candidate_l2_m": 0.005370030179619789,
+    "candidate_delta_m": 0.04462997242808342,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 242,
+    "frame_offset": 1,
+    "person_slot": 8,
+    "track_id": 1000000008,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000101/rgb/seq_000101_0060.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.09167720377445221,
+      0.04506421089172363
+    ],
+    "support_rmse_m": [
+      0.0006035008118487895,
+      0.0002514796797186136
+    ],
+    "support_point_count": [
+      427,
+      487
+    ],
+    "support_normal_cosine": 0.9999995827674866,
+    "online_teacher_normal_cosine": [
+      0.9999995231628418,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      0.00012865662574768066,
+      1.1861324310302734e-05
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.06837070733308792,
+    "gate_probability": 0.08875840902328491,
+    "base_l2_m": 0.049999967217445374,
+    "candidate_l2_m": 0.018370812758803368,
+    "candidate_delta_m": 0.0683707520365715,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 660,
+    "frame_offset": 0,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000337/rgb/seq_000337_0000.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.04909135773777962,
+      0.07729801535606384
+    ],
+    "support_rmse_m": [
+      0.00027485060854814947,
+      0.000272076518740505
+    ],
+    "support_point_count": [
+      251,
+      277
+    ],
+    "support_normal_cosine": 1.0,
+    "online_teacher_normal_cosine": [
+      1.0,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      9.550899267196655e-05,
+      0.00011393427848815918
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.06319468468427658,
+    "gate_probability": 0.08900577574968338,
+    "base_l2_m": 0.07999999821186066,
+    "candidate_l2_m": 0.016805356368422508,
+    "candidate_delta_m": 0.0631946474313736,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 665,
+    "frame_offset": 1,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000337/rgb/seq_000337_0030.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.04907001182436943,
+      0.07729773968458176
+    ],
+    "support_rmse_m": [
+      0.0002750976418610662,
+      0.00027230099658481777
+    ],
+    "support_point_count": [
+      252,
+      278
+    ],
+    "support_normal_cosine": 1.0,
+    "online_teacher_normal_cosine": [
+      1.0,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      9.709596633911133e-05,
+      0.00011135637760162354
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.06318387389183044,
+    "gate_probability": 0.08919597417116165,
+    "base_l2_m": 0.07999999821186066,
+    "candidate_l2_m": 0.016816116869449615,
+    "candidate_delta_m": 0.06318388879299164,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 660,
+    "frame_offset": 1,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000337/rgb/seq_000337_0005.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.049063995480537415,
+      0.07739715278148651
+    ],
+    "support_rmse_m": [
+      0.0002750976418610662,
+      0.00027230099658481777
+    ],
+    "support_point_count": [
+      252,
+      278
+    ],
+    "support_normal_cosine": 1.0,
+    "online_teacher_normal_cosine": [
+      1.0,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      9.735673666000366e-05,
+      0.00011166185140609741
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.06323057413101196,
+    "gate_probability": 0.09035014361143112,
+    "base_l2_m": 0.07999999821186066,
+    "candidate_l2_m": 0.01676943525671959,
+    "candidate_delta_m": 0.06323056668043137,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 673,
+    "frame_offset": 0,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000337/rgb/seq_000337_0065.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.04896023869514465,
+      0.07749530673027039
+    ],
+    "support_rmse_m": [
+      0.0002750976418610662,
+      0.00027230099658481777
+    ],
+    "support_point_count": [
+      252,
+      278
+    ],
+    "support_normal_cosine": 1.0,
+    "online_teacher_normal_cosine": [
+      1.0,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      9.685009717941284e-05,
+      0.0001112818717956543
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.06322777271270752,
+    "gate_probability": 0.091212198138237,
+    "base_l2_m": 0.07999999821186066,
+    "candidate_l2_m": 0.016772214323282242,
+    "candidate_delta_m": 0.06322778761386871,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 673,
+    "frame_offset": 1,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000337/rgb/seq_000337_0070.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.049044787883758545,
+      0.07750646024942398
+    ],
+    "support_rmse_m": [
+      0.0002750976418610662,
+      0.00027230099658481777
+    ],
+    "support_point_count": [
+      252,
+      278
+    ],
+    "support_normal_cosine": 1.0,
+    "online_teacher_normal_cosine": [
+      1.0,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      9.685754776000977e-05,
+      0.0001114383339881897
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.06327562034130096,
+    "gate_probability": 0.09198158979415894,
+    "base_l2_m": 0.07999999821186066,
+    "candidate_l2_m": 0.01672440953552723,
+    "candidate_delta_m": 0.06327559798955917,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 673,
+    "frame_offset": 2,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000337/rgb/seq_000337_0075.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.0494171679019928,
+      0.07793861627578735
+    ],
+    "support_rmse_m": [
+      0.0002750976418610662,
+      0.00027253778534941375
+    ],
+    "support_point_count": [
+      252,
+      279
+    ],
+    "support_normal_cosine": 0.9999999403953552,
+    "online_teacher_normal_cosine": [
+      1.0,
+      0.9999999403953552
+    ],
+    "online_teacher_signed_error_m": [
+      9.681284427642822e-05,
+      0.00010954588651657104
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.06367789208889008,
+    "gate_probability": 0.0921868234872818,
+    "base_l2_m": 0.07999999821186066,
+    "candidate_l2_m": 0.01632206328213215,
+    "candidate_delta_m": 0.06367794424295425,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 2397,
+    "frame_offset": 2,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000630/rgb/seq_000630_0100.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.055644690990448,
+      0.056525103747844696
+    ],
+    "support_rmse_m": [
+      0.0019195328932255507,
+      0.002554914215579629
+    ],
+    "support_point_count": [
+      392,
+      651
+    ],
+    "support_normal_cosine": 0.9999929666519165,
+    "online_teacher_normal_cosine": [
+      0.9999979138374329,
+      0.9999934434890747
+    ],
+    "online_teacher_signed_error_m": [
+      7.193535566329956e-06,
+      0.00047434866428375244
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      true,
+      true
+    ],
+    "delta_scalar_m": -0.05608489736914635,
+    "gate_probability": 0.09258566796779633,
+    "base_l2_m": 0.08000002056360245,
+    "candidate_l2_m": 0.02391558140516281,
+    "candidate_delta_m": 0.056084875017404556,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 660,
+    "frame_offset": 2,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000337/rgb/seq_000337_0010.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.0491618737578392,
+      0.07761947065591812
+    ],
+    "support_rmse_m": [
+      0.0002750976418610662,
+      0.00027253778534941375
+    ],
+    "support_point_count": [
+      252,
+      279
+    ],
+    "support_normal_cosine": 0.9999999403953552,
+    "online_teacher_normal_cosine": [
+      1.0,
+      0.9999999403953552
+    ],
+    "online_teacher_signed_error_m": [
+      9.669363498687744e-05,
+      0.00010959059000015259
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.06339067220687866,
+    "gate_probability": 0.094330333173275,
+    "base_l2_m": 0.07999999821186066,
+    "candidate_l2_m": 0.016609350219368935,
+    "candidate_delta_m": 0.06339065730571747,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 828,
+    "frame_offset": 2,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000411/rgb/seq_000411_0035.png",
+    "clean": false,
+    "noise_signed_m": 0.11999999731779099,
+    "noise_level": "+12cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.1581282764673233,
+      -0.09558676183223724
+    ],
+    "support_rmse_m": [
+      0.024906247854232788,
+      0.004839454311877489
+    ],
+    "support_point_count": [
+      176,
+      18
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      0.9977800250053406,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      0.010825887322425842,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.11999999731779099,
+    "gate_probability": 0.10404225438833237,
+    "base_l2_m": 0.1199999749660492,
+    "candidate_l2_m": 0.01792232133448124,
+    "candidate_delta_m": 0.12000003457069397,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 822,
+    "frame_offset": 1,
+    "person_slot": 6,
+    "track_id": 1000000006,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000395/rgb/seq_000395_0095.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.04017554968595505,
+      0.046395443379879
+    ],
+    "support_rmse_m": [
+      0.00018261096556670964,
+      0.000919423415325582
+    ],
+    "support_point_count": [
+      399,
+      477
+    ],
+    "support_normal_cosine": 0.9999998807907104,
+    "online_teacher_normal_cosine": [
+      1.0,
+      0.9999997615814209
+    ],
+    "online_teacher_signed_error_m": [
+      8.825212717056274e-06,
+      8.285045623779297e-05
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      true,
+      true
+    ],
+    "delta_scalar_m": -0.04328549653291702,
+    "gate_probability": 0.10845345258712769,
+    "base_l2_m": 0.04999997466802597,
+    "candidate_l2_m": 0.006714514456689358,
+    "candidate_delta_m": 0.04328549653291702,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 17,
+    "frame_offset": 2,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0110.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      0.0672520250082016,
+      0.07923498749732971
+    ],
+    "support_rmse_m": [
+      0.00010042926442110911,
+      0.0002632231917232275
+    ],
+    "support_point_count": [
+      29,
+      128
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999991655349731
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.0004495084285736084
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.07923498749732971,
+    "gate_probability": 0.11069828271865845,
+    "base_l2_m": 0.07999999076128006,
+    "candidate_l2_m": 0.0007730021025054157,
+    "candidate_delta_m": 0.07923511415719986,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 829,
+    "frame_offset": 1,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000411/rgb/seq_000411_0035.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.1490541398525238,
+      0.06817230582237244
+    ],
+    "support_rmse_m": [
+      0.008717777207493782,
+      0.007120196707546711
+    ],
+    "support_point_count": [
+      219,
+      18
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      0.987013041973114,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      0.020099982619285583,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.11999999731779099,
+    "gate_probability": 0.11107166111469269,
+    "base_l2_m": 0.07999996840953827,
+    "candidate_l2_m": 0.04891357943415642,
+    "candidate_delta_m": 0.12000005692243576,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 2179,
+    "frame_offset": 2,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000403/rgb/seq_000403_0085.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      0.09704064577817917,
+      0.04775848239660263
+    ],
+    "support_rmse_m": [
+      0.011718177236616611,
+      0.01627270132303238
+    ],
+    "support_point_count": [
+      112,
+      250
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.7205293774604797
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.033364295959472656
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.04775848239660263,
+    "gate_probability": 0.11839259415864944,
+    "base_l2_m": 0.08000002801418304,
+    "candidate_l2_m": 0.03328211233019829,
+    "candidate_delta_m": 0.04775841906666756,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 1734,
+    "frame_offset": 2,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000165/rgb/seq_000165_0030.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      -0.05737088620662689,
+      0.041301704943180084
+    ],
+    "support_rmse_m": [
+      0.014823440462350845,
+      0.00010855935397557914
+    ],
+    "support_point_count": [
+      86,
+      623
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999998807907104
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      3.014504909515381e-05
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.041301704943180084,
+    "gate_probability": 0.11869999021291733,
+    "base_l2_m": 0.049999985843896866,
+    "candidate_l2_m": 0.00869833305478096,
+    "candidate_delta_m": 0.0413016714155674,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 16,
+    "frame_offset": 2,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0105.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      0.06755852699279785,
+      0.07956192642450333
+    ],
+    "support_rmse_m": [
+      0.00010203599958913401,
+      0.00026350028929300606
+    ],
+    "support_point_count": [
+      34,
+      135
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999991655349731
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.0004581436514854431
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.07956192642450333,
+    "gate_probability": 0.11889366060495377,
+    "base_l2_m": 0.07999997586011887,
+    "candidate_l2_m": 0.0004521302180364728,
+    "candidate_delta_m": 0.07956194877624512,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 17,
+    "frame_offset": 1,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0105.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      0.06755852699279785,
+      0.07956192642450333
+    ],
+    "support_rmse_m": [
+      0.00010203599958913401,
+      0.00026350028929300606
+    ],
+    "support_point_count": [
+      34,
+      135
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999991655349731
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.0004581436514854431
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.07956192642450333,
+    "gate_probability": 0.11889366060495377,
+    "base_l2_m": 0.07999997586011887,
+    "candidate_l2_m": 0.0004521302180364728,
+    "candidate_delta_m": 0.07956194877624512,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 16,
+    "frame_offset": 1,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0100.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      0.06860223412513733,
+      0.0802294984459877
+    ],
+    "support_rmse_m": [
+      0.00010211447806796059,
+      0.0002606047783046961
+    ],
+    "support_point_count": [
+      39,
+      140
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999992251396179
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.00040343403816223145
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.0802294984459877,
+    "gate_probability": 0.1285950392484665,
+    "base_l2_m": 0.07999997586011887,
+    "candidate_l2_m": 0.0002517710963729769,
+    "candidate_delta_m": 0.0802294909954071,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 17,
+    "frame_offset": 0,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0100.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      0.06860223412513733,
+      0.0802294984459877
+    ],
+    "support_rmse_m": [
+      0.00010211447806796059,
+      0.0002606047783046961
+    ],
+    "support_point_count": [
+      39,
+      140
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999992251396179
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.00040343403816223145
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.0802294984459877,
+    "gate_probability": 0.1285950392484665,
+    "base_l2_m": 0.07999997586011887,
+    "candidate_l2_m": 0.0002517710963729769,
+    "candidate_delta_m": 0.0802294909954071,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 828,
+    "frame_offset": 1,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000411/rgb/seq_000411_0030.png",
+    "clean": false,
+    "noise_signed_m": 0.11999999731779099,
+    "noise_level": "+12cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.15095368027687073,
+      -0.09854461997747421
+    ],
+    "support_rmse_m": [
+      0.029281584545969963,
+      0.004441524855792522
+    ],
+    "support_point_count": [
+      178,
+      19
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      0.9940946102142334,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      0.019744038581848145,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.11999999731779099,
+    "gate_probability": 0.1290871500968933,
+    "base_l2_m": 0.12000002712011337,
+    "candidate_l2_m": 0.01660631224513054,
+    "candidate_delta_m": 0.1199999451637268,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 829,
+    "frame_offset": 0,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000411/rgb/seq_000411_0030.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      false
+    ],
+    "support_signed_m": [
+      0.15038670599460602,
+      0.07261739671230316
+    ],
+    "support_rmse_m": [
+      0.00823118630796671,
+      0.006818279158324003
+    ],
+    "support_point_count": [
+      189,
+      18
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      0.9876813888549805,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      0.01968899369239807,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.11999999731779099,
+    "gate_probability": 0.12965288758277893,
+    "base_l2_m": 0.07999996095895767,
+    "candidate_l2_m": 0.04859547317028046,
+    "candidate_delta_m": 0.12000001966953278,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 247,
+    "frame_offset": 0,
+    "person_slot": 8,
+    "track_id": 1000000008,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000101/rgb/seq_000101_0080.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.1018177717924118,
+      0.050432946532964706
+    ],
+    "support_rmse_m": [
+      0.0007819750462658703,
+      0.0008663379703648388
+    ],
+    "support_point_count": [
+      402,
+      492
+    ],
+    "support_normal_cosine": 0.9999994039535522,
+    "online_teacher_normal_cosine": [
+      0.999998927116394,
+      1.0
+    ],
+    "online_teacher_signed_error_m": [
+      0.00020970404148101807,
+      0.00010309740900993347
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.0761253610253334,
+    "gate_probability": 0.14387646317481995,
+    "base_l2_m": 0.05000000074505806,
+    "candidate_l2_m": 0.026125410571694374,
+    "candidate_delta_m": 0.07612535357475281,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 2,
+    "frame_offset": 1,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0030.png",
+    "clean": false,
+    "noise_signed_m": 0.11999999731779099,
+    "noise_level": "+12cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      0.08429907262325287,
+      0.11646659672260284
+    ],
+    "support_rmse_m": [
+      0.004087912384420633,
+      0.0012115867575630546
+    ],
+    "support_point_count": [
+      56,
+      178
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999963045120239
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.0011397823691368103
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.11646659672260284,
+    "gate_probability": 0.14904993772506714,
+    "base_l2_m": 0.1199999451637268,
+    "candidate_l2_m": 0.0035484833642840385,
+    "candidate_delta_m": 0.11646649241447449,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 16,
+    "frame_offset": 0,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0095.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.06449773162603378,
+      0.07937213033437729
+    ],
+    "support_rmse_m": [
+      0.0024624818470329046,
+      0.0014903106493875384
+    ],
+    "support_point_count": [
+      48,
+      149
+    ],
+    "support_normal_cosine": 0.9999815225601196,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999973773956299
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.0009055882692337036
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.07193493098020554,
+    "gate_probability": 0.15014463663101196,
+    "base_l2_m": 0.08000001311302185,
+    "candidate_l2_m": 0.008075179532170296,
+    "candidate_delta_m": 0.07193503528833389,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 2,
+    "frame_offset": 2,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0035.png",
+    "clean": false,
+    "noise_signed_m": 0.11999999731779099,
+    "noise_level": "+12cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      0.09045552462339401,
+      0.11710387468338013
+    ],
+    "support_rmse_m": [
+      0.00010251390631310642,
+      0.00025152417947538197
+    ],
+    "support_point_count": [
+      46,
+      164
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999971389770508
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.0012875795364379883
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.11710387468338013,
+    "gate_probability": 0.1525914967060089,
+    "base_l2_m": 0.11999998986721039,
+    "candidate_l2_m": 0.0029105045832693577,
+    "candidate_delta_m": 0.11710377782583237,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 5,
+    "frame_offset": 0,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0040.png",
+    "clean": false,
+    "noise_signed_m": 0.11999999731779099,
+    "noise_level": "+12cm",
+    "candidate_valid": true,
+    "valid_foot_count": 1,
+    "geometry_pattern": "one_foot",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      false,
+      true
+    ],
+    "support_signed_m": [
+      0.09090421348810196,
+      0.11577696353197098
+    ],
+    "support_rmse_m": [
+      0.00010234244837192819,
+      0.0002607234928291291
+    ],
+    "support_point_count": [
+      46,
+      156
+    ],
+    "support_normal_cosine": null,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999973773956299
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      0.0011766254901885986
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.11577696353197098,
+    "gate_probability": 0.15440531075000763,
+    "base_l2_m": 0.12000011652708054,
+    "candidate_l2_m": 0.004231820814311504,
+    "candidate_delta_m": 0.11577701568603516,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 928,
+    "frame_offset": 2,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000454/rgb/seq_000454_0070.png",
+    "clean": false,
+    "noise_signed_m": 0.05000000074505806,
+    "noise_level": "+5cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.04855414107441902,
+      0.047929562628269196
+    ],
+    "support_rmse_m": [
+      0.0001753681426635012,
+      0.00017421669326722622
+    ],
+    "support_point_count": [
+      228,
+      358
+    ],
+    "support_normal_cosine": 0.9999998211860657,
+    "online_teacher_normal_cosine": [
+      null,
+      0.9999999403953552
+    ],
+    "online_teacher_signed_error_m": [
+      null,
+      4.789978265762329e-05
+    ],
+    "teacher_valid": [
+      false,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      true
+    ],
+    "delta_scalar_m": -0.04824185371398926,
+    "gate_probability": 0.16592584550380707,
+    "base_l2_m": 0.04999997466802597,
+    "candidate_l2_m": 0.0017580894054844975,
+    "candidate_delta_m": 0.04824189096689224,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  },
+  {
+    "dataset_index": 776,
+    "frame_offset": 1,
+    "person_slot": 7,
+    "track_id": 1000000007,
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000365/rgb/seq_000365_0085.png",
+    "clean": false,
+    "noise_signed_m": 0.07999999821186066,
+    "noise_level": "+8cm",
+    "candidate_valid": true,
+    "valid_foot_count": 2,
+    "geometry_pattern": "two_common_float",
+    "common_positive": true,
+    "common_negative": false,
+    "support_valid": [
+      true,
+      true
+    ],
+    "support_signed_m": [
+      0.06627199053764343,
+      0.0884469598531723
+    ],
+    "support_rmse_m": [
+      0.005725847091525793,
+      0.005605422891676426
+    ],
+    "support_point_count": [
+      511,
+      392
+    ],
+    "support_normal_cosine": 0.999991774559021,
+    "online_teacher_normal_cosine": [
+      0.9998453259468079,
+      null
+    ],
+    "online_teacher_signed_error_m": [
+      0.005199730396270752,
+      null
+    ],
+    "teacher_valid": [
+      true,
+      false
+    ],
+    "teacher_contact": [
+      true,
+      false
+    ],
+    "delta_scalar_m": -0.07735947519540787,
+    "gate_probability": 0.19810499250888824,
+    "base_l2_m": 0.07999999076128006,
+    "candidate_l2_m": 0.00291844573803246,
+    "candidate_delta_m": 0.07735943794250488,
+    "candidate_better": true,
+    "severe_float": true,
+    "apply_target": true,
+    "negative_reason": "positive"
+  }
+]
