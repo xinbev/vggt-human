@@ -126,3 +126,17 @@ bash scripts/train/train_smpl_hsi_stage3_grounding_severe_float_gt.sh
 This phase requires the passing G1 report and `checkpoint_top01.pt`, loads every
 Grounding tensor by prefix, and writes to the separate
 `outputs/debug/hsi_stage3_grounding_g2_severe_float_gate500` directory.
+
+If the full-distribution gate fails, do not tune the threshold or continue
+training blindly. Run the read-only per-person audit:
+
+```bash
+CUDA_VISIBLE_DEVICES_VALUE=7 \
+bash scripts/eval/eval_hsi_grounding_gate_audit.sh
+```
+
+The audit writes a threshold sweep, TP/FN/FP/TN-compatible per-person rows,
+one-foot/two-foot groups, noise-level groups, and the highest-confidence false
+positive/negative examples under
+`outputs/debug/hsi_stage3_grounding_gate_audit_g2`. It does not modify model
+weights or existing experiment outputs.
