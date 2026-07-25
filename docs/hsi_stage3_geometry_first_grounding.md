@@ -44,8 +44,10 @@ valid feet agree on the signed direction; a normal support foot plus a swing
 foot is left unchanged.
 
 The learned head cannot change candidate direction or magnitude. It predicts
-only whether the candidate should be applied. Its target is positive only when
-the candidate is measurably closer to GT translation than the base.
+only whether the candidate should be applied. The current severe-float Gate
+uses a positive target only when the valid analytic displacement is downward
+by at least 4 cm and the candidate is measurably closer to GT translation than
+the base. Clean, small-float, and all penetration cases are Gate negatives.
 
 ## Tensor Shapes
 
@@ -81,8 +83,11 @@ their Y component is negative. Camera intrinsics are never scaled with depth.
    online/teacher plane signed error p95 <= 5 mm, +8/+12 cm float improvement
    rate >= 95%, and p95 reduction >= 50%/60% respectively. Small penetration
    and deadzone samples are learned gate negatives rather than analytic gates.
-2. G1 fixed-64 gate overfit: gate accuracy and improvement rate >= 90%, refined
-   p95 <= 35% of base, clean displacement p95 <= 5 mm.
+2. G1 fixed-64 severe-float Gate overfit: severe-float recall >= 95%, clean
+   false-apply rate <= 1%, all-negative false-apply rate <= 2%, refined severe
+   p95 within 5 mm of the analytic candidate, and clean displacement p95 <= 1
+   mm. G1 uses hard Gate behavior in both training and validation and optimizes
+   only class-balanced Gate BCE.
 3. G2 full-distribution 500-step gate: refined p95 <= 60% of base and no clean
    regression.
 4. G3 real 500-step bridge: real validation refined p95 improves by at least
@@ -90,3 +95,23 @@ their Y component is negative. Camera intrinsics are never scaled with depth.
 
 Each shell script runs its metric checker and exits non-zero on failure, so a
 failed gate cannot silently proceed to the next phase.
+
+## Severe-Float G1 Commands
+
+Run the two-step interface and gradient smoke first:
+
+```bash
+PHASE=smoke CUDA_VISIBLE_DEVICES_VALUE=7 \
+bash scripts/train/train_smpl_hsi_stage3_grounding_severe_float_gt.sh
+```
+
+Only after that script prints `severe_float_smoke` with `gate=pass`, run the
+fixed-64 overfit from scratch:
+
+```bash
+PHASE=overfit CUDA_VISIBLE_DEVICES_VALUE=7 \
+bash scripts/train/train_smpl_hsi_stage3_grounding_severe_float_gt.sh
+```
+
+These runs write to new `hsi_stage3_grounding_g1_severe_float_*` directories.
+They never resume from or overwrite the failed broad-target G1 checkpoint.

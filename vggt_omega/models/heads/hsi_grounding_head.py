@@ -37,7 +37,9 @@ class HSIGroundingHead(nn.Module):
         clearance_deadzone_m: float = 0.025,
         max_root_delta_m: float = 0.12,
         gate_threshold: float = 0.5,
+        hard_gate_train: bool = False,
         hard_gate_eval: bool = True,
+        initial_gate_probability: float = 0.5,
         overwrite_refined: bool = True,
         image_size: int = 518,
         min_depth_confidence: float = 0.0,
@@ -66,6 +68,7 @@ class HSIGroundingHead(nn.Module):
         self.clearance_deadzone_m = max(float(clearance_deadzone_m), 0.0)
         self.max_root_delta_m = float(max_root_delta_m)
         self.gate_threshold = min(max(float(gate_threshold), 0.05), 0.95)
+        self.hard_gate_train = bool(hard_gate_train)
         self.hard_gate_eval = bool(hard_gate_eval)
         self.overwrite_refined = bool(overwrite_refined)
         self.image_size = int(image_size)
@@ -82,8 +85,10 @@ class HSIGroundingHead(nn.Module):
             nn.LayerNorm(hidden_dim),
         )
         self.gate_head = nn.Sequential(nn.Linear(hidden_dim, hidden_dim), nn.GELU(), nn.Linear(hidden_dim, 1))
+        initial_probability = min(max(float(initial_gate_probability), 1e-4), 1.0 - 1e-4)
+        initial_bias = torch.log(torch.tensor(initial_probability / (1.0 - initial_probability))).item()
         nn.init.zeros_(self.gate_head[-1].weight)
-        nn.init.constant_(self.gate_head[-1].bias, 0.0)
+        nn.init.constant_(self.gate_head[-1].bias, initial_bias)
 
     def forward(
         self,
@@ -217,17 +222,20 @@ class HSIGroundingHead(nn.Module):
                 f"configured width {self.gate_mlp[0].in_features}"
             )
         hidden = self.gate_mlp(torch.nan_to_num(features, nan=0.0, posinf=0.0, neginf=0.0))
-        probability = torch.sigmoid(self.gate_head(hidden)) * candidate_valid.to(dtype=base_transl.dtype)
-        if self.training or not self.hard_gate_eval:
-            apply_gate = probability
-        else:
+        gate_logits = self.gate_head(hidden)
+        probability = torch.sigmoid(gate_logits) * candidate_valid.to(dtype=base_transl.dtype)
+        use_hard_gate = (self.training and self.hard_gate_train) or (not self.training and self.hard_gate_eval)
+        if use_hard_gate:
             apply_gate = (probability >= self.gate_threshold).to(dtype=probability.dtype)
+        else:
+            apply_gate = probability
         refined_transl = base_transl.reshape(-1, 3) + apply_gate * candidate_delta
         refined_signed = signed + (
             apply_gate.unsqueeze(-1) * candidate_delta[:, None, :] * planes["normal"]
         ).sum(dim=-1)
         expected_flat = batch_size * num_frames * num_queries
         _require_shape(candidate_delta, (expected_flat, 3), "candidate_delta")
+        _require_shape(gate_logits, (expected_flat, 1), "gate_logits")
         _require_shape(probability, (expected_flat, 1), "gate_probability")
         _require_shape(refined_transl, (expected_flat, 3), "refined_transl")
         _require_shape(refined_signed, (expected_flat, 2), "refined_signed")
@@ -235,7 +243,10 @@ class HSIGroundingHead(nn.Module):
             "hsi_grounding_base_pred_transl_cam": base_transl,
             "hsi_grounding_candidate_pred_transl_cam": candidate_transl.reshape(batch_size, num_frames, num_queries, 3),
             "hsi_grounding_candidate_delta": candidate_delta.reshape(batch_size, num_frames, num_queries, 3),
+            "hsi_grounding_delta_scalar": delta_scalar.reshape(batch_size, num_frames, num_queries, 1),
+            "hsi_grounding_selected_normal": selected_normal.reshape(batch_size, num_frames, num_queries, 3),
             "hsi_grounding_refined_pred_transl_cam": refined_transl.reshape(batch_size, num_frames, num_queries, 3),
+            "hsi_grounding_gate_logits": gate_logits.reshape(batch_size, num_frames, num_queries, 1),
             "hsi_grounding_gate_probability": probability.reshape(batch_size, num_frames, num_queries, 1),
             "hsi_grounding_gate": apply_gate.reshape(batch_size, num_frames, num_queries, 1),
             "hsi_grounding_support_signed_m": signed.reshape(batch_size, num_frames, num_queries, 2),
