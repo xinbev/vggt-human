@@ -155,7 +155,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", required=True)
     parser.add_argument(
         "--mode",
-        choices=("overfit", "distribution", "real", "severe_float_smoke", "severe_float_overfit"),
+        choices=(
+            "overfit",
+            "distribution",
+            "real",
+            "severe_float_smoke",
+            "severe_float_overfit",
+            "severe_float_distribution",
+        ),
         required=True,
     )
     return parser.parse_args()

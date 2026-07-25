@@ -115,3 +115,14 @@ bash scripts/train/train_smpl_hsi_stage3_grounding_severe_float_gt.sh
 
 These runs write to new `hsi_stage3_grounding_g1_severe_float_*` directories.
 They never resume from or overwrite the failed broad-target G1 checkpoint.
+
+After G1 passes, run the sequence-disjoint full-distribution 500-step gate:
+
+```bash
+PHASE=gate500 CUDA_VISIBLE_DEVICES_VALUE=7 \
+bash scripts/train/train_smpl_hsi_stage3_grounding_severe_float_gt.sh
+```
+
+This phase requires the passing G1 report and `checkpoint_top01.pt`, loads every
+Grounding tensor by prefix, and writes to the separate
+`outputs/debug/hsi_stage3_grounding_g2_severe_float_gate500` directory.

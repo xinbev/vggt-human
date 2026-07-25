@@ -81,6 +81,8 @@ checkpoint:
   resume: ""
   resume_strict: false
   resume_optimizer: false
+  resume_required_prefixes:
+    - hsi_grounding_head.
   reset_epoch: true
   save_scope: hsi
   save_prefixes:
