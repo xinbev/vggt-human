@@ -1,0 +1,48 @@
+{
+  "gate": "pass",
+  "mode": "severe_float_overfit",
+  "metrics": {
+    "loss": 0.028646185528486967,
+    "target_rate": 0.07999779749661684,
+    "coverage": 0.8680914640426636,
+    "recall": 1.0,
+    "clean_false_apply": 0.0,
+    "negative_false_apply": 0.010702779982239008,
+    "positive_probability": 0.9883143827319145,
+    "negative_probability": 0.025480491225607693,
+    "base_p95_m": 0.12000002898275852,
+    "candidate_p95_m": 0.02877927804365754,
+    "refined_p95_m": 0.02877927804365754,
+    "improvement_rate": 1.0,
+    "clean_displacement_p95_m": 0.0
+  },
+  "limits": {
+    "coverage": 0.5,
+    "recall": 0.95,
+    "clean_false_apply": 0.01,
+    "negative_false_apply": 0.02,
+    "candidate_over_base": 0.5,
+    "refined_candidate_margin_m": 0.005,
+    "improvement_rate": 0.95,
+    "clean_displacement_m": 0.001
+  },
+  "checks": {
+    "target_mode": true,
+    "hard_gate_train": true,
+    "hard_gate_eval": true,
+    "matching_thresholds": true,
+    "gate_only_loss": true,
+    "finite": true,
+    "positive_targets_present": true,
+    "geometry_coverage": true,
+    "severe_float_recall": true,
+    "clean_false_apply": true,
+    "negative_false_apply": true,
+    "probability_separation": true,
+    "candidate_reduces_tail": true,
+    "refined_tracks_candidate": true,
+    "improvement_rate": true,
+    "clean_displacement": true
+  },
+  "conflicting_loss_weights": {}
+}

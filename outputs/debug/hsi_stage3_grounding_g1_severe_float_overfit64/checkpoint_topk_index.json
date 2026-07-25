@@ -1,0 +1,13 @@
+{
+  "monitor": "metric_hsi_grounding_severe_selection",
+  "monitor_mode": "min",
+  "entries": [
+    {
+      "rank": 1,
+      "metric": 0.029849556041881442,
+      "epoch": 1,
+      "source": "val",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/debug/hsi_stage3_grounding_g1_severe_float_overfit64/checkpoint_top_val_epoch_0001_metric_hsi_grounding_severe_selection_0.029850.pt"
+    }
+  ]
+}
