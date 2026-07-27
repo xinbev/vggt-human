@@ -1,0 +1,45 @@
+{
+  "gate": "fail",
+  "mode": "distribution",
+  "metrics": {
+    "loss": 0.594797418564558,
+    "valid_coverage": 0.4175491922907531,
+    "temporal_coverage": 0.9699999970197678,
+    "target_rate": 0.5620446706563235,
+    "accuracy": 0.6175129170715808,
+    "recall": 0.5522444928437471,
+    "precision": 0.6774552325904369,
+    "false_positive_rate": 0.24069172598421573,
+    "airborne_false_positive_rate": 0.24069172598421573,
+    "positive_probability": 0.5231633406877517,
+    "negative_probability": 0.34926189988851547,
+    "speed_error_median_m": 1.725398760754615e-07,
+    "speed_error_p95_m": 6.154863898188978e-07,
+    "static_negative_false_positive_rate": 0.3464541967958212
+  },
+  "aggregation_audit": {
+    "empty_denominator_adjusted": false,
+    "raw_recall": 0.5522444928437471,
+    "raw_precision": 0.6774552325904369
+  },
+  "limits": {
+    "recall": 0.9,
+    "precision": 0.8,
+    "fpr": 0.05,
+    "airborne_fpr": 0.03,
+    "static_negative_fpr": 0.1
+  },
+  "checks": {
+    "finite": true,
+    "teacher_coverage": true,
+    "temporal_features_present": true,
+    "positive_and_negative_targets": true,
+    "teacher_speed_contract": true,
+    "contact_recall": false,
+    "contact_precision": false,
+    "negative_false_positive_rate": false,
+    "airborne_false_positive_rate": false,
+    "static_negative_false_positive_rate": false,
+    "probability_separation": true
+  }
+}
