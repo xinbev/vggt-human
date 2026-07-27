@@ -1,0 +1,28 @@
+{
+  "gate": "pass",
+  "mode": "smoke",
+  "metrics": {
+    "loss": 0.8334368467330933,
+    "valid_coverage": 0.40416666865348816,
+    "temporal_coverage": 1.0,
+    "target_rate": 0.4838588833808899,
+    "accuracy": 0.5161411613225937,
+    "recall": 0.0,
+    "precision": 0.0,
+    "false_positive_rate": 0.0,
+    "airborne_false_positive_rate": 0.0,
+    "positive_probability": 0.2526727020740509,
+    "negative_probability": 0.25264374911785126,
+    "speed_error_median_m": 1.9968138076364994e-07,
+    "speed_error_p95_m": 6.882621050863236e-07,
+    "static_negative_false_positive_rate": 0.0
+  },
+  "limits": {},
+  "checks": {
+    "finite": true,
+    "teacher_coverage": true,
+    "temporal_features_present": true,
+    "positive_and_negative_targets": true,
+    "teacher_speed_contract": true
+  }
+}
