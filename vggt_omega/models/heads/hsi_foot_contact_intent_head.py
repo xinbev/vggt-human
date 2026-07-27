@@ -38,23 +38,30 @@ class HSIFootContactIntentHead(nn.Module):
         self.max_velocity_m = max(float(max_velocity_m), 1e-3)
         self.max_acceleration_m = max(float(max_acceleration_m), 1e-3)
         self.feature_version = str(feature_version or "world_v1").lower()
-        if self.feature_version not in {"world_v1", "camera_motion_v2"}:
+        if self.feature_version not in {"world_v1", "camera_motion_v2", "camera_motion_v3_joint5"}:
             raise ValueError(f"Unsupported contact-intent feature version: {self.feature_version!r}")
 
-        # V2 adds exact mean step distances used by the contact teacher.
-        feature_dim = 87 if self.feature_version == "world_v1" else 90
-        self.classifier = nn.Sequential(
-            nn.Linear(feature_dim, hidden_dim),
-            nn.GELU(),
-            nn.LayerNorm(hidden_dim),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.GELU(),
-            nn.LayerNorm(hidden_dim),
-            nn.Linear(hidden_dim, 1),
-        )
         probability = min(max(float(initial_contact_probability), 1e-4), 1.0 - 1e-4)
-        nn.init.zeros_(self.classifier[-1].weight)
-        nn.init.constant_(self.classifier[-1].bias, math.log(probability / (1.0 - probability)))
+        if self.feature_version == "camera_motion_v3_joint5":
+            self.classifier = _JointTemporalSupportClassifier(
+                feature_dim=90,
+                hidden_dim=hidden_dim,
+                initial_probability=probability,
+            )
+        else:
+            # V2 adds exact mean step distances used by the contact teacher.
+            feature_dim = 87 if self.feature_version == "world_v1" else 90
+            self.classifier = nn.Sequential(
+                nn.Linear(feature_dim, hidden_dim),
+                nn.GELU(),
+                nn.LayerNorm(hidden_dim),
+                nn.Linear(hidden_dim, hidden_dim),
+                nn.GELU(),
+                nn.LayerNorm(hidden_dim),
+                nn.Linear(hidden_dim, 1),
+            )
+            nn.init.zeros_(self.classifier[-1].weight)
+            nn.init.constant_(self.classifier[-1].bias, math.log(probability / (1.0 - probability)))
 
     def forward(
         self,
@@ -115,6 +122,66 @@ class HSIFootContactIntentHead(nn.Module):
         )
         leg_pose = lower_pose[:, leg_positions].reshape(flat_count, 2, 18)
         root_pose = pose6d.reshape(flat_count, 24, 6)[:, 0]
+
+        if self.feature_version == "camera_motion_v3_joint5":
+            joint_features = torch.cat(
+                [
+                    root_pose.reshape(batch_size, num_frames, num_queries, 6),
+                    lower_pose.reshape(batch_size, num_frames, num_queries, 36),
+                    local_sole.reshape(batch_size, num_frames, num_queries, 6),
+                    _bounded(root_velocity, self.max_velocity_m),
+                    _bounded(root_accel, self.max_acceleration_m),
+                    _bounded(foot_velocity, self.max_velocity_m).reshape(
+                        batch_size, num_frames, num_queries, 6
+                    ),
+                    _bounded(foot_accel, self.max_acceleration_m).reshape(
+                        batch_size, num_frames, num_queries, 6
+                    ),
+                    _bounded(local_velocity, self.max_velocity_m).reshape(
+                        batch_size, num_frames, num_queries, 6
+                    ),
+                    _bounded(local_accel, self.max_acceleration_m).reshape(
+                        batch_size, num_frames, num_queries, 6
+                    ),
+                    root_step_distance[..., None].clamp(max=self.max_velocity_m) / self.max_velocity_m,
+                    foot_step_distance.clamp(max=self.max_velocity_m) / self.max_velocity_m,
+                    local_step_distance.clamp(max=self.max_velocity_m) / self.max_velocity_m,
+                    root_velocity_valid[..., None].to(dtype=pose6d.dtype),
+                    root_accel_valid[..., None].to(dtype=pose6d.dtype),
+                    foot_velocity_valid[..., None].to(dtype=pose6d.dtype),
+                    foot_accel_valid[..., None].to(dtype=pose6d.dtype),
+                    local_velocity_valid[..., None].to(dtype=pose6d.dtype),
+                    local_accel_valid[..., None].to(dtype=pose6d.dtype),
+                ],
+                dim=-1,
+            )
+            if joint_features.shape[-1] != 89:
+                raise RuntimeError(f"Unexpected V3 person feature shape: {tuple(joint_features.shape)}")
+            context, context_valid = _track_aligned_context(joint_features, track_ids, track_mask)
+            context = torch.cat([context, context_valid[..., None].to(dtype=context.dtype)], dim=-1)
+            person_logits = self.classifier(context)
+            person_probability = torch.sigmoid(person_logits)
+            minimum_context = min(3, num_frames)
+            person_temporal_valid = context_valid.sum(dim=-1) >= minimum_context
+            # Keep the legacy per-foot keys shape-compatible; V3 supervision reads the person keys below.
+            logits = person_logits[..., None].expand(-1, -1, -1, 2)
+            probability = person_probability[..., None].expand_as(logits)
+            return {
+                "hsi_foot_contact_intent_logits": logits,
+                "hsi_foot_contact_intent_probability": probability,
+                "hsi_foot_contact_intent_temporal_valid": person_temporal_valid[..., None]
+                .expand_as(logits)
+                .to(dtype=pose6d.dtype),
+                "hsi_person_support_intent_logits": person_logits,
+                "hsi_person_support_intent_probability": person_probability,
+                "hsi_person_support_intent_temporal_valid": person_temporal_valid.to(dtype=pose6d.dtype),
+                "hsi_foot_contact_intent_root_velocity_m": root_velocity,
+                "hsi_foot_contact_intent_root_acceleration_m": root_accel,
+                "hsi_foot_contact_intent_foot_velocity_m": foot_velocity,
+                "hsi_foot_contact_intent_foot_acceleration_m": foot_accel,
+                "hsi_foot_contact_intent_foot_step_distance_m": foot_step_distance,
+                "hsi_foot_contact_intent_motion_mode_id": person_logits.new_tensor(3.0),
+            }
 
         root_velocity_raw = root_velocity
         root_accel_raw = root_accel
@@ -199,6 +266,106 @@ def _camera_points_to_world(
     root_world = torch.einsum("bsij,bsqj->bsqi", rotation.transpose(-1, -2), root_centered)
     feet_world = torch.einsum("bsij,bsqfj->bsqfi", rotation.transpose(-1, -2), feet_centered)
     return root_world, feet_world
+
+
+class _JointTemporalSupportClassifier(nn.Module):
+    def __init__(self, feature_dim: int, hidden_dim: int, initial_probability: float) -> None:
+        super().__init__()
+        if hidden_dim < 2 or hidden_dim % 2 != 0:
+            raise ValueError(f"hidden_dim must be an even integer >= 2, got {hidden_dim}")
+        self.frame_encoder = nn.Sequential(
+            nn.Linear(feature_dim, hidden_dim),
+            nn.GELU(),
+            nn.LayerNorm(hidden_dim),
+        )
+        self.temporal_encoder = nn.GRU(
+            input_size=hidden_dim,
+            hidden_size=hidden_dim // 2,
+            batch_first=True,
+            bidirectional=True,
+        )
+        self.output = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.GELU(),
+            nn.LayerNorm(hidden_dim),
+            nn.Linear(hidden_dim, 1),
+        )
+        nn.init.zeros_(self.output[-1].weight)
+        nn.init.constant_(
+            self.output[-1].bias,
+            math.log(initial_probability / (1.0 - initial_probability)),
+        )
+
+    def forward(self, context: torch.Tensor) -> torch.Tensor:
+        if context.ndim != 5:
+            raise ValueError(f"Expected temporal context [B,S,Q,S,F], got {tuple(context.shape)}")
+        batch_size, num_frames, num_queries, context_frames, feature_dim = context.shape
+        if context_frames != num_frames:
+            raise ValueError(
+                f"Anchor/context frame counts differ: anchors={num_frames}, context={context_frames}"
+            )
+        flat = context.reshape(batch_size * num_frames * num_queries, context_frames, feature_dim)
+        encoded = self.frame_encoder(flat)
+        encoded, _ = self.temporal_encoder(encoded)
+        anchor = (
+            torch.arange(num_frames, device=context.device)
+            .view(1, num_frames, 1)
+            .expand(batch_size, num_frames, num_queries)
+            .reshape(-1)
+        )
+        selected = encoded[torch.arange(encoded.shape[0], device=context.device), anchor]
+        return self.output(selected).reshape(batch_size, num_frames, num_queries)
+
+
+def _track_aligned_context(
+    features: torch.Tensor,
+    track_ids: torch.Tensor | None,
+    track_mask: torch.Tensor | None,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Gather each person's full clip in temporal order for every anchor frame."""
+    batch_size, num_frames, num_queries, feature_dim = features.shape
+    context = features.new_zeros(batch_size, num_frames, num_queries, num_frames, feature_dim)
+    valid = torch.zeros(
+        batch_size,
+        num_frames,
+        num_queries,
+        num_frames,
+        dtype=torch.bool,
+        device=features.device,
+    )
+    if not isinstance(track_ids, torch.Tensor):
+        shared = features.permute(0, 2, 1, 3)[:, None].expand(-1, num_frames, -1, -1, -1)
+        if isinstance(track_mask, torch.Tensor):
+            shared_valid = track_mask.to(device=features.device).bool().permute(0, 2, 1)
+            shared_valid = shared_valid[:, None].expand(-1, num_frames, -1, -1)
+        else:
+            shared_valid = torch.ones_like(valid)
+        return shared, shared_valid
+    if track_ids.shape[:3] != (batch_size, num_frames, num_queries):
+        raise ValueError(
+            f"assigned_track_ids shape must start with {(batch_size, num_frames, num_queries)}, "
+            f"got {tuple(track_ids.shape)}"
+        )
+    ids = track_ids.to(device=features.device, dtype=torch.long)
+    active = ids >= 0
+    if isinstance(track_mask, torch.Tensor):
+        if track_mask.shape[:3] != (batch_size, num_frames, num_queries):
+            raise ValueError(
+                f"assigned_track_mask shape must start with {(batch_size, num_frames, num_queries)}, "
+                f"got {tuple(track_mask.shape)}"
+            )
+        active &= track_mask.to(device=features.device).bool()
+    for anchor in range(num_frames):
+        for frame in range(num_frames):
+            matches = ids[:, anchor, :, None] == ids[:, frame, None, :]
+            matches &= active[:, anchor, :, None] & active[:, frame, None, :]
+            has_match = matches.any(dim=-1)
+            match_index = matches.to(dtype=torch.int64).argmax(dim=-1)
+            gather_index = match_index[..., None].expand(batch_size, num_queries, feature_dim)
+            gathered = features[:, frame].gather(dim=1, index=gather_index)
+            context[:, anchor, :, frame] = torch.where(has_match[..., None], gathered, 0.0)
+            valid[:, anchor, :, frame] = has_match
+    return context, valid
 
 
 def _track_temporal_differences(

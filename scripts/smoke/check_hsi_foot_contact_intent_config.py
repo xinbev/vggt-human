@@ -21,8 +21,10 @@ def main() -> None:
         "grounding_disabled": model.get("enable_hsi_grounding") is False,
         "legacy_contact_disabled": model.get("enable_hsi_contact_refine") is False,
         "gt_provider": model.get("smpl_provider") == "gt_perturbed",
-        "three_frame_clip": int(data.get("sequence_length", 0)) >= 3,
-        "teacher_aligned_motion": model.get("hsi_foot_contact_intent_feature_version") == "camera_motion_v2",
+        "five_frame_clip": int(data.get("sequence_length", 0)) >= 5,
+        "joint_temporal_support": (
+            model.get("hsi_foot_contact_intent_feature_version") == "camera_motion_v3_joint5"
+        ),
         "center_frame_supervision": loss.get("hsi_foot_contact_intent_center_frame_only") is True,
         "full_window_distribution": not data.get("train_contact_only") and not data.get("val_contact_only"),
         "clean_smpl": (

@@ -3,7 +3,7 @@ set -euo pipefail
 
 REPO_ROOT="${REPO_ROOT:-/home/zhw/lab_users/xyb/home/projects/vggt-human}"
 PHASE="${PHASE:-smoke}"
-TRAIN_CONFIG="${TRAIN_CONFIG:-${REPO_ROOT}/configs/train_smpl_hsi_stage3_foot_contact_intent_gt.yaml}"
+TRAIN_CONFIG="${TRAIN_CONFIG:-${REPO_ROOT}/configs/train_smpl_hsi_stage3_person_support_intent_gt.yaml}"
 BEDLAM_ROOT="${BEDLAM_ROOT:-/home/zhw/xyb_space/bedlam/processed_bedlam}"
 BOXES_ROOT="${BOXES_ROOT:-${REPO_ROOT}/outputs/preprocess/bedlam_boxes}"
 CONTACT_TEACHER_ROOT="${CONTACT_TEACHER_ROOT:-${REPO_ROOT}/outputs/preprocess/hsi_contact_teachers_v3_strict}"
@@ -11,13 +11,22 @@ SPLIT_ROOT="${SPLIT_ROOT:-${REPO_ROOT}/outputs/preprocess/hsi_sequence_split_v2}
 TRAIN_SEQUENCE_MANIFEST="${TRAIN_SEQUENCE_MANIFEST:-${SPLIT_ROOT}/train_sequences.txt}"
 VAL_SEQUENCE_MANIFEST="${VAL_SEQUENCE_MANIFEST:-${SPLIT_ROOT}/val_sequences.txt}"
 OVERFIT_SUBSET="${OVERFIT_SUBSET:-${SPLIT_ROOT}/overfit64_indices.csv}"
-SMOKE_OUTPUT_DIR="${SMOKE_OUTPUT_DIR:-${REPO_ROOT}/outputs/debug/hsi_stage3_contact_intent_ci_a_v2_smoke}"
-OVERFIT_OUTPUT_DIR="${OVERFIT_OUTPUT_DIR:-${REPO_ROOT}/outputs/debug/hsi_stage3_contact_intent_ci_a_v2_overfit64}"
-GATE_OUTPUT_DIR="${GATE_OUTPUT_DIR:-${REPO_ROOT}/outputs/debug/hsi_stage3_contact_intent_ci_a_v2_gate500_fresh}"
+SMOKE_OUTPUT_DIR="${SMOKE_OUTPUT_DIR:-${REPO_ROOT}/outputs/debug/hsi_stage3_contact_intent_ci_a_v3_joint5_smoke}"
+OVERFIT_OUTPUT_DIR="${OVERFIT_OUTPUT_DIR:-${REPO_ROOT}/outputs/debug/hsi_stage3_contact_intent_ci_a_v3_joint5_overfit64}"
+GATE_OUTPUT_DIR="${GATE_OUTPUT_DIR:-${REPO_ROOT}/outputs/debug/hsi_stage3_contact_intent_ci_a_v3_joint5_gate500}"
 CUDA_VISIBLE_DEVICES_VALUE="${CUDA_VISIBLE_DEVICES_VALUE:-7}"
 NUM_WORKERS="${NUM_WORKERS:-8}"
-BATCH_SIZE="${BATCH_SIZE:-24}"
+BATCH_SIZE="${BATCH_SIZE:-12}"
 ALLOW_EXISTING_OUTPUT="${ALLOW_EXISTING_OUTPUT:-false}"
+
+if [[ "${PHASE}" == "pipeline" ]]; then
+  echo "========== HSI contact-intent V3 gated pipeline =========="
+  PHASE=smoke bash "${BASH_SOURCE[0]}"
+  PHASE=overfit bash "${BASH_SOURCE[0]}"
+  PHASE=gate500 bash "${BASH_SOURCE[0]}"
+  echo "========== HSI contact-intent V3 pipeline passed =========="
+  exit 0
+fi
 
 case "${PHASE}" in
   smoke)
@@ -63,7 +72,7 @@ case "${PHASE}" in
       --output-dir "${OVERFIT_OUTPUT_DIR}" --mode overfit
     ;;
   *)
-    echo "[ERROR] PHASE must be smoke, overfit, or gate500" >&2
+    echo "[ERROR] PHASE must be pipeline, smoke, overfit, or gate500" >&2
     exit 1
     ;;
 esac
@@ -93,10 +102,10 @@ mkdir -p "${OUTPUT_DIR}"
 
 echo "========== HSI foot contact intent CI-A: ${PHASE} =========="
 echo "Output          : ${OUTPUT_DIR}"
-echo "Input           : clean GT SMPL pose + teacher-aligned camera-space 3-frame motion"
+echo "Input           : clean GT SMPL + joint two-foot teacher-aligned 5-frame motion"
 echo "Teacher         : existing V3 strict per-foot contact labels"
 echo "Translation     : read for temporal differences only; never modified"
-echo "Supervision     : center frame only (same two-sided context as teacher)"
+echo "Supervision     : person support intent on center frame only"
 echo "Trainable       : hsi_foot_contact_intent_head only"
 echo "Resume          : ${RESUME_CKPT:-none}"
 echo "Learning rate   : ${LR}"

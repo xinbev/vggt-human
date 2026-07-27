@@ -2049,6 +2049,8 @@ class HungarianSMPLLoss(nn.Module):
         src_idx: torch.Tensor,
         matched: dict[str, torch.Tensor],
     ) -> dict[str, torch.Tensor]:
+        if isinstance(predictions.get("hsi_person_support_intent_logits"), torch.Tensor):
+            return self._hsi_person_support_intent_losses(predictions, frame_idx, src_idx, matched)
         logits_value = predictions.get("hsi_foot_contact_intent_logits")
         anchor = (
             logits_value
@@ -2175,6 +2177,135 @@ class HungarianSMPLLoss(nn.Module):
                 ).to(dtype=probability.dtype).detach()
             static_negative = negative & (
                 matched_velocity <= float(self.hsi_foot_contact_intent_teacher_velocity_threshold_m)
+            )
+            if static_negative.any():
+                out["metric_hsi_foot_contact_intent_static_negative_false_positive_rate"] = (
+                    predicted[static_negative].float().mean().detach()
+                )
+        out["metric_hsi_foot_contact_intent_selection"] = (
+            1.0 - out["metric_hsi_foot_contact_intent_recall"]
+            + 0.5 * (1.0 - out["metric_hsi_foot_contact_intent_precision"])
+            + 2.0 * out["metric_hsi_foot_contact_intent_false_positive_rate"]
+            + 2.0 * out["metric_hsi_foot_contact_intent_airborne_false_positive_rate"]
+            + out["metric_hsi_foot_contact_intent_static_negative_false_positive_rate"]
+        ).detach()
+        return out
+
+    def _hsi_person_support_intent_losses(
+        self,
+        predictions: dict[str, torch.Tensor],
+        frame_idx: torch.Tensor,
+        src_idx: torch.Tensor,
+        matched: dict[str, torch.Tensor],
+    ) -> dict[str, torch.Tensor]:
+        logits_value = _require_prediction(predictions, "hsi_person_support_intent_logits")
+        probability_value = _require_prediction(predictions, "hsi_person_support_intent_probability")
+        zero = logits_value.sum() * 0.0
+        out = {
+            "loss_hsi_foot_contact_intent": zero,
+            "metric_hsi_foot_contact_intent_valid_coverage": zero.detach(),
+            "metric_hsi_foot_contact_intent_temporal_coverage": zero.detach(),
+            "metric_hsi_foot_contact_intent_target_rate": zero.detach(),
+            "metric_hsi_foot_contact_intent_accuracy": zero.detach(),
+            "metric_hsi_foot_contact_intent_recall": zero.detach(),
+            "metric_hsi_foot_contact_intent_precision": zero.detach(),
+            "metric_hsi_foot_contact_intent_false_positive_rate": zero.detach(),
+            "metric_hsi_foot_contact_intent_airborne_false_positive_rate": zero.detach(),
+            "metric_hsi_foot_contact_intent_left_recall": zero.detach(),
+            "metric_hsi_foot_contact_intent_right_recall": zero.detach(),
+            "metric_hsi_foot_contact_intent_left_false_positive_rate": zero.detach(),
+            "metric_hsi_foot_contact_intent_right_false_positive_rate": zero.detach(),
+            "metric_hsi_foot_contact_intent_positive_probability": zero.detach(),
+            "metric_hsi_foot_contact_intent_negative_probability": zero.detach(),
+            "metric_hsi_foot_contact_intent_speed_error_median_m": zero.detach(),
+            "metric_hsi_foot_contact_intent_speed_error_p95_m": zero.detach(),
+            "metric_hsi_foot_contact_intent_static_negative_false_positive_rate": zero.detach(),
+            "metric_hsi_foot_contact_intent_selection": zero.detach(),
+        }
+        if "contact_teacher_valid" not in matched or "contact_label" not in matched:
+            return out
+
+        logits = _flatten_prediction(logits_value, unframed_ndim=2)[frame_idx, src_idx]
+        probability = _flatten_prediction(probability_value, unframed_ndim=2)[frame_idx, src_idx]
+        teacher_valid = matched["contact_teacher_valid"].to(device=logits.device).bool()
+        foot_labels = matched["contact_label"].to(device=logits.device).bool()
+        matched_velocity = matched.get("contact_foot_velocity_m")
+        if isinstance(matched_velocity, torch.Tensor):
+            matched_velocity = matched_velocity.to(device=logits.device)
+        if self.hsi_foot_contact_intent_center_frame_only:
+            num_frames = int(logits_value.shape[1]) if logits_value.ndim >= 3 else 1
+            center_rows = (frame_idx % max(num_frames, 1)) == (num_frames // 2)
+            logits = logits[center_rows]
+            probability = probability[center_rows]
+            teacher_valid = teacher_valid[center_rows]
+            foot_labels = foot_labels[center_rows]
+            if isinstance(matched_velocity, torch.Tensor):
+                matched_velocity = matched_velocity[center_rows]
+
+        positive_label = (teacher_valid & foot_labels).any(dim=-1)
+        reliable_airborne = teacher_valid.all(dim=-1) & ~foot_labels.any(dim=-1)
+        valid = (positive_label | reliable_airborne) & torch.isfinite(logits) & torch.isfinite(probability)
+        out["metric_hsi_foot_contact_intent_valid_coverage"] = valid.float().mean().detach()
+        if not valid.any():
+            return out
+
+        positive = valid & positive_label
+        negative = valid & ~positive_label
+        terms = []
+        weights = []
+        if positive.any():
+            terms.append(F.binary_cross_entropy_with_logits(logits[positive], torch.ones_like(logits[positive])))
+            weights.append(self.hsi_foot_contact_intent_positive_weight)
+        if negative.any():
+            terms.append(F.binary_cross_entropy_with_logits(logits[negative], torch.zeros_like(logits[negative])))
+            weights.append(self.hsi_foot_contact_intent_negative_weight)
+        if terms:
+            weight_tensor = logits.new_tensor(weights)
+            if float(weight_tensor.sum().item()) > 0.0:
+                out["loss_hsi_foot_contact_intent"] = (
+                    torch.stack(terms) * weight_tensor
+                ).sum() / weight_tensor.sum()
+
+        predicted = probability >= float(self.hsi_foot_contact_intent_decision_threshold)
+        out["metric_hsi_foot_contact_intent_target_rate"] = positive_label[valid].float().mean().detach()
+        out["metric_hsi_foot_contact_intent_accuracy"] = (
+            predicted[valid] == positive_label[valid]
+        ).float().mean().detach()
+        if positive.any():
+            out["metric_hsi_foot_contact_intent_recall"] = predicted[positive].float().mean().detach()
+            out["metric_hsi_foot_contact_intent_positive_probability"] = probability[positive].mean().detach()
+        predicted_positive = (predicted & valid).sum().to(dtype=probability.dtype)
+        if predicted_positive.item() > 0:
+            true_positive = (predicted & positive).sum().to(dtype=probability.dtype)
+            out["metric_hsi_foot_contact_intent_precision"] = (true_positive / predicted_positive).detach()
+        if negative.any():
+            false_positive_rate = predicted[negative].float().mean().detach()
+            out["metric_hsi_foot_contact_intent_false_positive_rate"] = false_positive_rate
+            out["metric_hsi_foot_contact_intent_airborne_false_positive_rate"] = false_positive_rate
+            out["metric_hsi_foot_contact_intent_negative_probability"] = probability[negative].mean().detach()
+
+        temporal_value = predictions.get("hsi_person_support_intent_temporal_valid")
+        if isinstance(temporal_value, torch.Tensor):
+            temporal = _flatten_prediction(temporal_value, unframed_ndim=2)[frame_idx, src_idx].bool()
+            if self.hsi_foot_contact_intent_center_frame_only:
+                temporal = temporal[center_rows]
+            out["metric_hsi_foot_contact_intent_temporal_coverage"] = temporal[valid].float().mean().detach()
+
+        online_speed_value = predictions.get("hsi_foot_contact_intent_foot_step_distance_m")
+        if isinstance(online_speed_value, torch.Tensor) and isinstance(matched_velocity, torch.Tensor):
+            online_speed = _flatten_prediction(online_speed_value, unframed_ndim=3)[frame_idx, src_idx]
+            if self.hsi_foot_contact_intent_center_frame_only:
+                online_speed = online_speed[center_rows]
+            speed_valid = teacher_valid & torch.isfinite(online_speed) & torch.isfinite(matched_velocity)
+            if speed_valid.any():
+                speed_error = (online_speed[speed_valid] - matched_velocity[speed_valid]).abs()
+                out["metric_hsi_foot_contact_intent_speed_error_median_m"] = speed_error.median().detach()
+                out["metric_hsi_foot_contact_intent_speed_error_p95_m"] = torch.quantile(
+                    speed_error.float(), 0.95
+                ).to(dtype=probability.dtype).detach()
+            static_negative = negative & (
+                matched_velocity.max(dim=-1).values
+                <= float(self.hsi_foot_contact_intent_teacher_velocity_threshold_m)
             )
             if static_negative.any():
                 out["metric_hsi_foot_contact_intent_static_negative_false_positive_rate"] = (
