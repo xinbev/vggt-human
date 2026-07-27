@@ -535,6 +535,9 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_foot_contact_intent_initial_probability=float(
             model_cfg.get("hsi_foot_contact_intent_initial_probability", 0.25)
         ),
+        hsi_foot_contact_intent_feature_version=str(
+            model_cfg.get("hsi_foot_contact_intent_feature_version", "world_v1")
+        ),
         enable_hsi_grounding=bool(model_cfg.get("enable_hsi_grounding", False)),
         hsi_grounding_hidden_dim=int(model_cfg.get("hsi_grounding_hidden_dim", 192)),
         hsi_grounding_sole_vertices_per_foot=int(model_cfg.get("hsi_grounding_sole_vertices_per_foot", 48)),
@@ -2135,6 +2138,9 @@ def compact_loss_name(key: str) -> str:
         "metric_hsi_foot_contact_intent_airborne_false_positive_rate": "intentAirFPR",
         "metric_hsi_foot_contact_intent_positive_probability": "intentPosProb",
         "metric_hsi_foot_contact_intent_negative_probability": "intentNegProb",
+        "metric_hsi_foot_contact_intent_speed_error_median_m": "intentSpeedMed",
+        "metric_hsi_foot_contact_intent_speed_error_p95_m": "intentSpeedP95",
+        "metric_hsi_foot_contact_intent_static_negative_false_positive_rate": "intentStaticFPR",
         "metric_hsi_foot_contact_intent_selection": "intentSelect",
         "loss_hsi_grounding_gate": "groundGate",
         "metric_hsi_grounding_valid_coverage": "groundValid",

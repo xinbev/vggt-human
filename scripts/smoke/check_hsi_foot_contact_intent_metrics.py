@@ -31,18 +31,40 @@ def main() -> None:
         "negative_probability": float(
             metrics.get("metric_hsi_foot_contact_intent_negative_probability", 1.0)
         ),
+        "speed_error_median_m": float(
+            metrics.get("metric_hsi_foot_contact_intent_speed_error_median_m", float("inf"))
+        ),
+        "speed_error_p95_m": float(
+            metrics.get("metric_hsi_foot_contact_intent_speed_error_p95_m", float("inf"))
+        ),
+        "static_negative_false_positive_rate": float(
+            metrics.get("metric_hsi_foot_contact_intent_static_negative_false_positive_rate", 1.0)
+        ),
     }
     checks = {
         "finite": all(math.isfinite(value) for value in values.values()),
         "teacher_coverage": values["valid_coverage"] > 0.05,
         "temporal_features_present": values["temporal_coverage"] > 0.25,
         "positive_and_negative_targets": 0.0 < values["target_rate"] < 1.0,
+        "teacher_speed_contract": values["speed_error_p95_m"] <= 0.005,
     }
     limits: dict[str, float] = {}
     if args.mode == "overfit":
-        limits = {"recall": 0.98, "precision": 0.95, "fpr": 0.02, "airborne_fpr": 0.02}
+        limits = {
+            "recall": 0.98,
+            "precision": 0.95,
+            "fpr": 0.02,
+            "airborne_fpr": 0.02,
+            "static_negative_fpr": 0.05,
+        }
     elif args.mode == "distribution":
-        limits = {"recall": 0.90, "precision": 0.80, "fpr": 0.05, "airborne_fpr": 0.03}
+        limits = {
+            "recall": 0.90,
+            "precision": 0.80,
+            "fpr": 0.05,
+            "airborne_fpr": 0.03,
+            "static_negative_fpr": 0.10,
+        }
     if limits:
         checks.update(
             {
@@ -51,6 +73,9 @@ def main() -> None:
                 "negative_false_positive_rate": values["false_positive_rate"] <= limits["fpr"],
                 "airborne_false_positive_rate": (
                     values["airborne_false_positive_rate"] <= limits["airborne_fpr"]
+                ),
+                "static_negative_false_positive_rate": (
+                    values["static_negative_false_positive_rate"] <= limits["static_negative_fpr"]
                 ),
                 "probability_separation": values["positive_probability"] > values["negative_probability"],
             }

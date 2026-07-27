@@ -27,6 +27,7 @@ class HSIFootContactIntentHead(nn.Module):
         max_velocity_m: float = 0.50,
         max_acceleration_m: float = 0.50,
         initial_contact_probability: float = 0.25,
+        feature_version: str = "world_v1",
     ) -> None:
         super().__init__()
         self.smpl = SMPLLayer(smpl_model_dir).eval()
@@ -36,9 +37,12 @@ class HSIFootContactIntentHead(nn.Module):
         self.register_buffer("sole_vertex_indices", sole, persistent=False)
         self.max_velocity_m = max(float(max_velocity_m), 1e-3)
         self.max_acceleration_m = max(float(max_acceleration_m), 1e-3)
+        self.feature_version = str(feature_version or "world_v1").lower()
+        if self.feature_version not in {"world_v1", "camera_motion_v2"}:
+            raise ValueError(f"Unsupported contact-intent feature version: {self.feature_version!r}")
 
-        # 50 shared body features + 37 side-specific leg/foot features.
-        feature_dim = 87
+        # V2 adds exact mean step distances used by the contact teacher.
+        feature_dim = 87 if self.feature_version == "world_v1" else 90
         self.classifier = nn.Sequential(
             nn.Linear(feature_dim, hidden_dim),
             nn.GELU(),
@@ -77,19 +81,33 @@ class HSIFootContactIntentHead(nn.Module):
             local_sole = vertices[:, self.sole_vertex_indices].mean(dim=-2).to(dtype=pose6d.dtype)
             local_sole = local_sole.reshape(batch_size, num_frames, num_queries, 2, 3)
             sole_cam = local_sole + transl[..., None, :]
-            root_world, sole_world = _camera_points_to_world(transl, sole_cam, pose_enc)
-
             track_ids = predictions.get("assigned_track_ids")
             track_mask = predictions.get("assigned_track_mask")
-            root_velocity, root_velocity_valid, root_accel, root_accel_valid = _track_temporal_differences(
-                root_world, track_ids, track_mask
-            )
-            local_velocity, local_velocity_valid, local_accel, local_accel_valid = _track_temporal_differences(
-                local_sole, track_ids, track_mask
-            )
-            world_foot_velocity, world_foot_velocity_valid, world_foot_accel, world_foot_accel_valid = (
-                _track_temporal_differences(sole_world, track_ids, track_mask)
-            )
+            (
+                local_velocity,
+                local_velocity_valid,
+                local_accel,
+                local_accel_valid,
+                local_step_distance,
+            ) = _track_temporal_differences(local_sole, track_ids, track_mask)
+            if self.feature_version == "world_v1":
+                root_motion, foot_motion = _camera_points_to_world(transl, sole_cam, pose_enc)
+            else:
+                root_motion, foot_motion = transl, sole_cam
+            (
+                root_velocity,
+                root_velocity_valid,
+                root_accel,
+                root_accel_valid,
+                root_step_distance,
+            ) = _track_temporal_differences(root_motion, track_ids, track_mask)
+            (
+                foot_velocity,
+                foot_velocity_valid,
+                foot_accel,
+                foot_accel_valid,
+                foot_step_distance,
+            ) = _track_temporal_differences(foot_motion, track_ids, track_mask)
 
         lower_pose = pose6d.reshape(flat_count, 24, 6)[:, list(LOWER_BODY_JOINTS)]
         leg_positions = torch.tensor(
@@ -102,46 +120,56 @@ class HSIFootContactIntentHead(nn.Module):
         root_accel_raw = root_accel
         root_velocity_feature = _bounded(root_velocity.reshape(flat_count, 3), self.max_velocity_m)
         root_accel_feature = _bounded(root_accel.reshape(flat_count, 3), self.max_acceleration_m)
-        shared = torch.cat(
-            [
-                root_pose,
-                lower_pose.reshape(flat_count, 36),
-                root_velocity_feature,
-                root_accel_feature,
-                root_velocity_valid.reshape(flat_count, 1).to(dtype=pose6d.dtype),
-                root_accel_valid.reshape(flat_count, 1).to(dtype=pose6d.dtype),
-            ],
-            dim=-1,
-        ).unsqueeze(1).expand(-1, 2, -1)
+        shared_parts = [
+            root_pose,
+            lower_pose.reshape(flat_count, 36),
+            root_velocity_feature,
+            root_accel_feature,
+            root_velocity_valid.reshape(flat_count, 1).to(dtype=pose6d.dtype),
+            root_accel_valid.reshape(flat_count, 1).to(dtype=pose6d.dtype),
+        ]
+        if self.feature_version == "camera_motion_v2":
+            shared_parts.append(
+                root_step_distance.reshape(flat_count, 1).clamp(max=self.max_velocity_m) / self.max_velocity_m
+            )
+        shared = torch.cat(shared_parts, dim=-1).unsqueeze(1).expand(-1, 2, -1)
 
-        foot_velocity_valid_lr = world_foot_velocity_valid[..., None].expand(-1, -1, -1, 2)
-        foot_accel_valid_lr = world_foot_accel_valid[..., None].expand(-1, -1, -1, 2)
+        foot_velocity_valid_lr = foot_velocity_valid[..., None].expand(-1, -1, -1, 2)
+        foot_accel_valid_lr = foot_accel_valid[..., None].expand(-1, -1, -1, 2)
         local_velocity_valid_lr = local_velocity_valid[..., None].expand(-1, -1, -1, 2)
         local_accel_valid_lr = local_accel_valid[..., None].expand(-1, -1, -1, 2)
-        side_specific = torch.cat(
-            [
-                leg_pose,
-                local_sole.reshape(flat_count, 2, 3),
-                _bounded(local_velocity.reshape(flat_count, 2, 3), self.max_velocity_m),
-                _bounded(local_accel.reshape(flat_count, 2, 3), self.max_acceleration_m),
-                _bounded(world_foot_velocity.reshape(flat_count, 2, 3), self.max_velocity_m),
-                _bounded(world_foot_accel.reshape(flat_count, 2, 3), self.max_acceleration_m),
-                local_velocity_valid_lr.reshape(flat_count, 2, 1).to(dtype=pose6d.dtype),
-                local_accel_valid_lr.reshape(flat_count, 2, 1).to(dtype=pose6d.dtype),
-                foot_velocity_valid_lr.reshape(flat_count, 2, 1).to(dtype=pose6d.dtype),
-                foot_accel_valid_lr.reshape(flat_count, 2, 1).to(dtype=pose6d.dtype),
-            ],
-            dim=-1,
-        )
+        side_parts = [
+            leg_pose,
+            local_sole.reshape(flat_count, 2, 3),
+            _bounded(local_velocity.reshape(flat_count, 2, 3), self.max_velocity_m),
+            _bounded(local_accel.reshape(flat_count, 2, 3), self.max_acceleration_m),
+            _bounded(foot_velocity.reshape(flat_count, 2, 3), self.max_velocity_m),
+            _bounded(foot_accel.reshape(flat_count, 2, 3), self.max_acceleration_m),
+            local_velocity_valid_lr.reshape(flat_count, 2, 1).to(dtype=pose6d.dtype),
+            local_accel_valid_lr.reshape(flat_count, 2, 1).to(dtype=pose6d.dtype),
+            foot_velocity_valid_lr.reshape(flat_count, 2, 1).to(dtype=pose6d.dtype),
+            foot_accel_valid_lr.reshape(flat_count, 2, 1).to(dtype=pose6d.dtype),
+        ]
+        if self.feature_version == "camera_motion_v2":
+            side_parts.extend(
+                [
+                    local_step_distance.reshape(flat_count, 2, 1).clamp(max=self.max_velocity_m)
+                    / self.max_velocity_m,
+                    foot_step_distance.reshape(flat_count, 2, 1).clamp(max=self.max_velocity_m)
+                    / self.max_velocity_m,
+                ]
+            )
+        side_specific = torch.cat(side_parts, dim=-1)
         features = torch.cat([shared, side_specific], dim=-1)
-        if features.shape != (flat_count, 2, 87):
+        expected_feature_dim = 87 if self.feature_version == "world_v1" else 90
+        if features.shape != (flat_count, 2, expected_feature_dim):
             raise RuntimeError(f"Unexpected contact-intent feature shape: {tuple(features.shape)}")
         logits = self.classifier(features).squeeze(-1).reshape(batch_size, num_frames, num_queries, 2)
         probability = torch.sigmoid(logits)
         temporal_valid = (
             root_velocity_valid[..., None]
             & local_velocity_valid[..., None]
-            & world_foot_velocity_valid[..., None]
+            & foot_velocity_valid[..., None]
         ).expand(-1, -1, -1, 2)
         return {
             "hsi_foot_contact_intent_logits": logits,
@@ -149,8 +177,12 @@ class HSIFootContactIntentHead(nn.Module):
             "hsi_foot_contact_intent_temporal_valid": temporal_valid.to(dtype=pose6d.dtype),
             "hsi_foot_contact_intent_root_velocity_m": root_velocity_raw,
             "hsi_foot_contact_intent_root_acceleration_m": root_accel_raw,
-            "hsi_foot_contact_intent_foot_velocity_m": world_foot_velocity,
-            "hsi_foot_contact_intent_foot_acceleration_m": world_foot_accel,
+            "hsi_foot_contact_intent_foot_velocity_m": foot_velocity,
+            "hsi_foot_contact_intent_foot_acceleration_m": foot_accel,
+            "hsi_foot_contact_intent_foot_step_distance_m": foot_step_distance,
+            "hsi_foot_contact_intent_motion_mode_id": logits.new_tensor(
+                2.0 if self.feature_version == "camera_motion_v2" else 1.0
+            ),
         }
 
 
@@ -173,15 +205,16 @@ def _track_temporal_differences(
     values: torch.Tensor,
     track_ids: torch.Tensor | None,
     track_mask: torch.Tensor | None,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """Return forward-oriented velocity and centered acceleration for tracked values."""
     batch_size, num_frames, num_queries = values.shape[:3]
     velocity = torch.zeros_like(values)
     acceleration = torch.zeros_like(values)
+    mean_step_distance = torch.zeros_like(values[..., 0])
     velocity_valid = torch.zeros(batch_size, num_frames, num_queries, dtype=torch.bool, device=values.device)
     acceleration_valid = torch.zeros_like(velocity_valid)
     if num_frames < 2 or not isinstance(track_ids, torch.Tensor):
-        return velocity, velocity_valid, acceleration, acceleration_valid
+        return velocity, velocity_valid, acceleration, acceleration_valid, mean_step_distance
     if track_ids.shape[:3] != (batch_size, num_frames, num_queries):
         raise ValueError(
             f"assigned_track_ids shape must start with {(batch_size, num_frames, num_queries)}, "
@@ -229,12 +262,18 @@ def _track_temporal_differences(
         if deltas:
             count = values.new_zeros(batch_size, num_queries)
             total = torch.zeros_like(values[:, frame])
+            total_distance = torch.zeros_like(values[:, frame, ..., 0])
             for delta, mask in zip(deltas, masks):
                 expanded_mask = mask.reshape(batch_size, num_queries, *((1,) * (values.ndim - 3)))
                 total += torch.where(expanded_mask, delta, torch.zeros_like(delta))
+                distance_mask = mask.reshape(batch_size, num_queries, *((1,) * (values.ndim - 4)))
+                distance = torch.linalg.norm(delta, dim=-1)
+                total_distance += torch.where(distance_mask, distance, torch.zeros_like(distance))
                 count += mask.to(dtype=count.dtype)
-            velocity[:, frame] = total / count.clamp(min=1.0).reshape(
-                batch_size, num_queries, *((1,) * (values.ndim - 3))
+            safe_count = count.clamp(min=1.0)
+            velocity[:, frame] = total / safe_count.reshape(batch_size, num_queries, *((1,) * (values.ndim - 3)))
+            mean_step_distance[:, frame] = total_distance / safe_count.reshape(
+                batch_size, num_queries, *((1,) * (values.ndim - 4))
             )
             velocity_valid[:, frame] = count > 0.0
         if prev_values[frame] is not None and next_values[frame] is not None:
@@ -243,7 +282,13 @@ def _track_temporal_differences(
             centered = next_values[frame] - 2.0 * values[:, frame] + prev_values[frame]
             acceleration[:, frame] = torch.where(expanded_valid, centered, torch.zeros_like(centered))
             acceleration_valid[:, frame] = valid
-    return velocity.detach(), velocity_valid.detach(), acceleration.detach(), acceleration_valid.detach()
+    return (
+        velocity.detach(),
+        velocity_valid.detach(),
+        acceleration.detach(),
+        acceleration_valid.detach(),
+        mean_step_distance.detach(),
+    )
 
 
 def _bounded(value: torch.Tensor, maximum: float) -> torch.Tensor:

@@ -63,6 +63,7 @@ model:
   hsi_foot_contact_intent_max_velocity_m: 0.50
   hsi_foot_contact_intent_max_acceleration_m: 0.50
   hsi_foot_contact_intent_initial_probability: 0.25
+  hsi_foot_contact_intent_feature_version: camera_motion_v2
 
 checkpoint:
   load_vggt_baseline: true
@@ -107,6 +108,7 @@ optim:
     - metric_hsi_foot_contact_intent_precision
     - metric_hsi_foot_contact_intent_false_positive_rate
     - metric_hsi_foot_contact_intent_airborne_false_positive_rate
+    - metric_hsi_foot_contact_intent_speed_error_p95_m
   val_log_keys:
     - loss_total
     - loss_hsi_foot_contact_intent
@@ -120,6 +122,9 @@ optim:
     - metric_hsi_foot_contact_intent_airborne_false_positive_rate
     - metric_hsi_foot_contact_intent_positive_probability
     - metric_hsi_foot_contact_intent_negative_probability
+    - metric_hsi_foot_contact_intent_speed_error_median_m
+    - metric_hsi_foot_contact_intent_speed_error_p95_m
+    - metric_hsi_foot_contact_intent_static_negative_false_positive_rate
     - metric_hsi_foot_contact_intent_selection
   val_interval: 1
   allowed_trainable_prefixes:
@@ -173,6 +178,8 @@ loss:
   hsi_foot_contact_intent_positive_weight: 1.0
   hsi_foot_contact_intent_negative_weight: 1.0
   hsi_foot_contact_intent_decision_threshold: 0.5
+  hsi_foot_contact_intent_center_frame_only: true
+  hsi_foot_contact_intent_teacher_velocity_threshold_m: 0.04
 
 matching:
   enabled: true

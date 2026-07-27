@@ -165,6 +165,7 @@ class VGGTOmega(nn.Module):
         hsi_foot_contact_intent_max_velocity_m: float = 0.50,
         hsi_foot_contact_intent_max_acceleration_m: float = 0.50,
         hsi_foot_contact_intent_initial_probability: float = 0.25,
+        hsi_foot_contact_intent_feature_version: str = "world_v1",
         enable_hsi_grounding: bool = False,
         hsi_grounding_hidden_dim: int = 192,
         hsi_grounding_sole_vertices_per_foot: int = 48,
@@ -427,6 +428,7 @@ class VGGTOmega(nn.Module):
                 max_velocity_m=hsi_foot_contact_intent_max_velocity_m,
                 max_acceleration_m=hsi_foot_contact_intent_max_acceleration_m,
                 initial_contact_probability=hsi_foot_contact_intent_initial_probability,
+                feature_version=hsi_foot_contact_intent_feature_version,
             )
             if enable_hsi_foot_contact_intent
             else None

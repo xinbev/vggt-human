@@ -22,6 +22,8 @@ def main() -> None:
         "legacy_contact_disabled": model.get("enable_hsi_contact_refine") is False,
         "gt_provider": model.get("smpl_provider") == "gt_perturbed",
         "three_frame_clip": int(data.get("sequence_length", 0)) >= 3,
+        "teacher_aligned_motion": model.get("hsi_foot_contact_intent_feature_version") == "camera_motion_v2",
+        "center_frame_supervision": loss.get("hsi_foot_contact_intent_center_frame_only") is True,
         "full_window_distribution": not data.get("train_contact_only") and not data.get("val_contact_only"),
         "clean_smpl": (
             prior.get("smpl_perturb_mode") == "translation"

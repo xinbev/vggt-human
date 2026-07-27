@@ -12,10 +12,11 @@ The previous grounding Gate could not separate a true global root-translation fl
 - All sequence windows are loaded. Contact-only filtering must remain disabled so jumping and other no-contact states are present as hard negatives.
 - Clean GT SMPL is used. Translation perturbation is disabled in CI-A.
 - Sequence length is three and GT track IDs provide clip-consistent temporal association.
+- Classification is supervised only on the center frame, matching the teacher's two-sided temporal context. Sliding windows still cover almost all physical frames.
 
 ## Inputs and outputs
 
-The head uses lower-body pose, root-relative sole locations, and track-aligned root/foot velocities and accelerations. Camera-to-world differencing keeps whole-body jump motion while avoiding absolute translation as a shortcut. It outputs two logits and probabilities, one for each foot.
+The `camera_motion_v2` head uses lower-body pose, root-relative sole locations, and track-aligned camera-space root/foot velocities, accelerations, and mean step distances. Camera-space mean step distance exactly matches the V3 teacher's velocity contract while temporal differences avoid absolute translation as a shortcut. The legacy `world_v1` feature path remains available only for checkpoint compatibility.
 
 Checkpoint scope is exactly `hsi_foot_contact_intent_head.`. Existing Stage1, Stage2, G1, G2, and audit checkpoints are neither loaded nor overwritten.
 

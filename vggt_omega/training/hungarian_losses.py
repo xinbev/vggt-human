@@ -160,6 +160,8 @@ class HungarianSMPLLoss(nn.Module):
         hsi_foot_contact_intent_positive_weight: float = 1.0,
         hsi_foot_contact_intent_negative_weight: float = 1.0,
         hsi_foot_contact_intent_decision_threshold: float = 0.5,
+        hsi_foot_contact_intent_center_frame_only: bool = False,
+        hsi_foot_contact_intent_teacher_velocity_threshold_m: float = 0.04,
         hsi_grounding_gate_weight: float = 0.0,
         hsi_grounding_gate_margin_m: float = 0.002,
         hsi_grounding_gate_target_mode: str = "candidate_better",
@@ -323,6 +325,10 @@ class HungarianSMPLLoss(nn.Module):
         )
         self.hsi_foot_contact_intent_decision_threshold = min(
             max(float(hsi_foot_contact_intent_decision_threshold), 0.0), 1.0
+        )
+        self.hsi_foot_contact_intent_center_frame_only = bool(hsi_foot_contact_intent_center_frame_only)
+        self.hsi_foot_contact_intent_teacher_velocity_threshold_m = max(
+            float(hsi_foot_contact_intent_teacher_velocity_threshold_m), 0.0
         )
         self.hsi_grounding_gate_weight = float(hsi_grounding_gate_weight)
         self.hsi_grounding_gate_margin_m = max(float(hsi_grounding_gate_margin_m), 0.0)
@@ -1343,6 +1349,9 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_foot_contact_intent_right_false_positive_rate": zero.detach(),
             "metric_hsi_foot_contact_intent_positive_probability": zero.detach(),
             "metric_hsi_foot_contact_intent_negative_probability": zero.detach(),
+            "metric_hsi_foot_contact_intent_speed_error_median_m": zero.detach(),
+            "metric_hsi_foot_contact_intent_speed_error_p95_m": zero.detach(),
+            "metric_hsi_foot_contact_intent_static_negative_false_positive_rate": zero.detach(),
             "metric_hsi_foot_contact_intent_selection": zero.detach(),
             "metric_hsi_grounding_valid_coverage": zero.detach(),
             "metric_hsi_grounding_apply_target_rate": zero.detach(),
@@ -2063,6 +2072,9 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_foot_contact_intent_right_false_positive_rate": zero.detach(),
             "metric_hsi_foot_contact_intent_positive_probability": zero.detach(),
             "metric_hsi_foot_contact_intent_negative_probability": zero.detach(),
+            "metric_hsi_foot_contact_intent_speed_error_median_m": zero.detach(),
+            "metric_hsi_foot_contact_intent_speed_error_p95_m": zero.detach(),
+            "metric_hsi_foot_contact_intent_static_negative_false_positive_rate": zero.detach(),
             "metric_hsi_foot_contact_intent_selection": zero.detach(),
         }
         probability_value = predictions.get("hsi_foot_contact_intent_probability")
@@ -2075,6 +2087,20 @@ class HungarianSMPLLoss(nn.Module):
         probability = _flatten_prediction(probability_value, unframed_ndim=3)[frame_idx, src_idx]
         teacher_valid = matched["contact_teacher_valid"].to(device=logits.device).bool()
         labels = matched["contact_label"].to(device=logits.device).bool()
+        if self.hsi_foot_contact_intent_center_frame_only:
+            num_frames = int(logits_value.shape[1]) if logits_value.ndim >= 4 else 1
+            center_rows = (frame_idx % max(num_frames, 1)) == (num_frames // 2)
+            logits = logits[center_rows]
+            probability = probability[center_rows]
+            teacher_valid = teacher_valid[center_rows]
+            labels = labels[center_rows]
+            matched_velocity = matched.get("contact_foot_velocity_m")
+            if isinstance(matched_velocity, torch.Tensor):
+                matched_velocity = matched_velocity.to(device=logits.device)[center_rows]
+        else:
+            matched_velocity = matched.get("contact_foot_velocity_m")
+            if isinstance(matched_velocity, torch.Tensor):
+                matched_velocity = matched_velocity.to(device=logits.device)
         valid = teacher_valid & torch.isfinite(logits) & torch.isfinite(probability)
         out["metric_hsi_foot_contact_intent_valid_coverage"] = valid.float().mean().detach()
         if not valid.any():
@@ -2132,12 +2158,34 @@ class HungarianSMPLLoss(nn.Module):
         temporal_value = predictions.get("hsi_foot_contact_intent_temporal_valid")
         if isinstance(temporal_value, torch.Tensor):
             temporal = _flatten_prediction(temporal_value, unframed_ndim=3)[frame_idx, src_idx].bool()
+            if self.hsi_foot_contact_intent_center_frame_only:
+                temporal = temporal[center_rows]
             out["metric_hsi_foot_contact_intent_temporal_coverage"] = temporal[valid].float().mean().detach()
+        online_speed_value = predictions.get("hsi_foot_contact_intent_foot_step_distance_m")
+        if isinstance(online_speed_value, torch.Tensor) and isinstance(matched_velocity, torch.Tensor):
+            online_speed = _flatten_prediction(online_speed_value, unframed_ndim=3)[frame_idx, src_idx]
+            if self.hsi_foot_contact_intent_center_frame_only:
+                online_speed = online_speed[center_rows]
+            speed_valid = valid & torch.isfinite(online_speed) & torch.isfinite(matched_velocity)
+            if speed_valid.any():
+                speed_error = (online_speed[speed_valid] - matched_velocity[speed_valid]).abs()
+                out["metric_hsi_foot_contact_intent_speed_error_median_m"] = speed_error.median().detach()
+                out["metric_hsi_foot_contact_intent_speed_error_p95_m"] = torch.quantile(
+                    speed_error.float(), 0.95
+                ).to(dtype=probability.dtype).detach()
+            static_negative = negative & (
+                matched_velocity <= float(self.hsi_foot_contact_intent_teacher_velocity_threshold_m)
+            )
+            if static_negative.any():
+                out["metric_hsi_foot_contact_intent_static_negative_false_positive_rate"] = (
+                    predicted[static_negative].float().mean().detach()
+                )
         out["metric_hsi_foot_contact_intent_selection"] = (
             1.0 - out["metric_hsi_foot_contact_intent_recall"]
             + 0.5 * (1.0 - out["metric_hsi_foot_contact_intent_precision"])
             + 2.0 * out["metric_hsi_foot_contact_intent_false_positive_rate"]
             + 2.0 * out["metric_hsi_foot_contact_intent_airborne_false_positive_rate"]
+            + out["metric_hsi_foot_contact_intent_static_negative_false_positive_rate"]
         ).detach()
         return out
 
