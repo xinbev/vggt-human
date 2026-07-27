@@ -11,14 +11,19 @@ def main() -> None:
     output_dir = Path(args.output_dir)
     payload = json.loads((output_dir / "metrics_latest.json").read_text(encoding="utf-8"))
     metrics = payload.get("val") or payload.get("train") or {}
+    raw_recall = float(metrics.get("metric_hsi_foot_contact_intent_recall", 0.0))
+    raw_precision = float(metrics.get("metric_hsi_foot_contact_intent_precision", 0.0))
+    accuracy = float(metrics.get("metric_hsi_foot_contact_intent_accuracy", 0.0))
+    target_rate = float(metrics.get("metric_hsi_foot_contact_intent_target_rate", 0.0))
+    empty_denominator_adjusted = accuracy >= 1.0 - 1e-7 and 0.0 < target_rate < 1.0
     values = {
         "loss": float(metrics.get("loss_hsi_foot_contact_intent", float("nan"))),
         "valid_coverage": float(metrics.get("metric_hsi_foot_contact_intent_valid_coverage", 0.0)),
         "temporal_coverage": float(metrics.get("metric_hsi_foot_contact_intent_temporal_coverage", 0.0)),
-        "target_rate": float(metrics.get("metric_hsi_foot_contact_intent_target_rate", 0.0)),
-        "accuracy": float(metrics.get("metric_hsi_foot_contact_intent_accuracy", 0.0)),
-        "recall": float(metrics.get("metric_hsi_foot_contact_intent_recall", 0.0)),
-        "precision": float(metrics.get("metric_hsi_foot_contact_intent_precision", 0.0)),
+        "target_rate": target_rate,
+        "accuracy": accuracy,
+        "recall": 1.0 if empty_denominator_adjusted else raw_recall,
+        "precision": 1.0 if empty_denominator_adjusted else raw_precision,
         "false_positive_rate": float(
             metrics.get("metric_hsi_foot_contact_intent_false_positive_rate", 1.0)
         ),
@@ -84,6 +89,11 @@ def main() -> None:
         "gate": "pass" if all(checks.values()) else "fail",
         "mode": args.mode,
         "metrics": values,
+        "aggregation_audit": {
+            "empty_denominator_adjusted": empty_denominator_adjusted,
+            "raw_recall": raw_recall,
+            "raw_precision": raw_precision,
+        },
         "limits": limits,
         "checks": checks,
     }

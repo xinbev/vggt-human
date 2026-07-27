@@ -2131,10 +2131,15 @@ class HungarianSMPLLoss(nn.Module):
         if positive.any():
             out["metric_hsi_foot_contact_intent_recall"] = predicted[positive].float().mean().detach()
             out["metric_hsi_foot_contact_intent_positive_probability"] = probability[positive].mean().detach()
+        else:
+            out["metric_hsi_foot_contact_intent_recall"] = probability.new_ones(()).detach()
+            out["metric_hsi_foot_contact_intent_positive_probability"] = probability.new_ones(()).detach()
         true_positive = (predicted & positive).sum().to(dtype=probability.dtype)
         predicted_positive = (predicted & valid).sum().to(dtype=probability.dtype)
         if predicted_positive.item() > 0:
             out["metric_hsi_foot_contact_intent_precision"] = (true_positive / predicted_positive).detach()
+        elif not positive.any():
+            out["metric_hsi_foot_contact_intent_precision"] = probability.new_ones(()).detach()
         if negative.any():
             out["metric_hsi_foot_contact_intent_false_positive_rate"] = predicted[negative].float().mean().detach()
             out["metric_hsi_foot_contact_intent_negative_probability"] = probability[negative].mean().detach()
@@ -2274,10 +2279,15 @@ class HungarianSMPLLoss(nn.Module):
         if positive.any():
             out["metric_hsi_foot_contact_intent_recall"] = predicted[positive].float().mean().detach()
             out["metric_hsi_foot_contact_intent_positive_probability"] = probability[positive].mean().detach()
+        else:
+            out["metric_hsi_foot_contact_intent_recall"] = probability.new_ones(()).detach()
+            out["metric_hsi_foot_contact_intent_positive_probability"] = probability.new_ones(()).detach()
         predicted_positive = (predicted & valid).sum().to(dtype=probability.dtype)
         if predicted_positive.item() > 0:
             true_positive = (predicted & positive).sum().to(dtype=probability.dtype)
             out["metric_hsi_foot_contact_intent_precision"] = (true_positive / predicted_positive).detach()
+        elif not positive.any():
+            out["metric_hsi_foot_contact_intent_precision"] = probability.new_ones(()).detach()
         if negative.any():
             false_positive_rate = predicted[negative].float().mean().detach()
             out["metric_hsi_foot_contact_intent_false_positive_rate"] = false_positive_rate
