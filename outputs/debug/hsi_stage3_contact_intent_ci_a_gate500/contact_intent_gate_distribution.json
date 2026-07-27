@@ -1,0 +1,34 @@
+{
+  "gate": "fail",
+  "mode": "distribution",
+  "metrics": {
+    "loss": 0.6464149171113968,
+    "valid_coverage": 0.4907593585550785,
+    "temporal_coverage": 0.9886972296237946,
+    "target_rate": 0.2100535180652514,
+    "accuracy": 0.6764062102138996,
+    "recall": 0.37353735307231545,
+    "precision": 0.2609661394171417,
+    "false_positive_rate": 0.3171811046358198,
+    "airborne_false_positive_rate": 0.46040338192135094,
+    "positive_probability": 0.35502894341945646,
+    "negative_probability": 0.428218033015728
+  },
+  "limits": {
+    "recall": 0.9,
+    "precision": 0.8,
+    "fpr": 0.05,
+    "airborne_fpr": 0.03
+  },
+  "checks": {
+    "finite": true,
+    "teacher_coverage": true,
+    "temporal_features_present": true,
+    "positive_and_negative_targets": true,
+    "contact_recall": false,
+    "contact_precision": false,
+    "negative_false_positive_rate": false,
+    "airborne_false_positive_rate": false,
+    "probability_separation": false
+  }
+}

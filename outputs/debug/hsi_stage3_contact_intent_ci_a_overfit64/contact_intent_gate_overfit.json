@@ -1,0 +1,34 @@
+{
+  "gate": "pass",
+  "mode": "overfit",
+  "metrics": {
+    "loss": 0.01587066682986915,
+    "valid_coverage": 0.37669170275330544,
+    "temporal_coverage": 0.9962493106722832,
+    "target_rate": 0.4080748278647661,
+    "accuracy": 0.9988762065768242,
+    "recall": 1.0,
+    "precision": 0.9966196268796921,
+    "false_positive_rate": 0.0017022800457198173,
+    "airborne_false_positive_rate": 0.0,
+    "positive_probability": 0.985990583896637,
+    "negative_probability": 0.01592267959495075
+  },
+  "limits": {
+    "recall": 0.98,
+    "precision": 0.95,
+    "fpr": 0.02,
+    "airborne_fpr": 0.02
+  },
+  "checks": {
+    "finite": true,
+    "teacher_coverage": true,
+    "temporal_features_present": true,
+    "positive_and_negative_targets": true,
+    "contact_recall": true,
+    "contact_precision": true,
+    "negative_false_positive_rate": true,
+    "airborne_false_positive_rate": true,
+    "probability_separation": true
+  }
+}
