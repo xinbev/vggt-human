@@ -166,6 +166,7 @@ class VGGTOmega(nn.Module):
         hsi_foot_contact_intent_max_acceleration_m: float = 0.50,
         hsi_foot_contact_intent_initial_probability: float = 0.25,
         hsi_foot_contact_intent_feature_version: str = "world_v1",
+        hsi_foot_contact_intent_fast_gt: bool = False,
         enable_hsi_grounding: bool = False,
         hsi_grounding_hidden_dim: int = 192,
         hsi_grounding_sole_vertices_per_foot: int = 48,
@@ -433,6 +434,7 @@ class VGGTOmega(nn.Module):
             if enable_hsi_foot_contact_intent
             else None
         )
+        self.hsi_foot_contact_intent_fast_gt = bool(hsi_foot_contact_intent_fast_gt)
         self.hsi_grounding_head = (
             HSIGroundingHead(
                 smpl_model_dir=smpl_model_dir,
@@ -492,6 +494,43 @@ class VGGTOmega(nn.Module):
     ) -> dict[str, torch.Tensor]:
         if len(images.shape) == 4:
             images = images.unsqueeze(0)
+        if self.hsi_foot_contact_intent_fast_gt:
+            if self.hsi_foot_contact_intent_head is None or smpl_override_outputs is None:
+                raise ValueError("HSI contact-intent fast GT path requires its head and SMPL override outputs")
+            if any(
+                head is not None
+                for head in (
+                    self.hsi_refinement_head,
+                    self.hsi_human_scene_align_head,
+                    self.hsi_translation_refine_v4_head,
+                    self.hsi_contact_refine_head,
+                    self.hsi_grounding_head,
+                )
+            ):
+                raise ValueError("HSI contact-intent fast GT path cannot run with another HSI geometry head")
+            predictions = dict(smpl_override_outputs)
+            predictions.update(
+                self._assign_smpl_tracks(
+                    predictions=predictions,
+                    reference_boxes=smpl_query_boxes,
+                    query_mask=smpl_query_boxes_mask,
+                    smpl_track_ids=smpl_track_ids,
+                    smpl_track_mask=smpl_track_mask,
+                    external_track_ids=external_track_ids,
+                    external_track_mask=external_track_mask,
+                    external_track_confidence=external_track_confidence,
+                )
+            )
+            predictions.update(
+                self.hsi_foot_contact_intent_head(
+                    predictions=predictions,
+                    pose_enc=None,
+                )
+            )
+            predictions["hsi_foot_contact_intent_fast_path_active"] = predictions[
+                "pred_transl_cam"
+            ].new_ones(())
+            return predictions
         image_size_hw = (int(images.shape[-2]), int(images.shape[-1]))
 
         amp_enabled = images.device.type == "cuda"

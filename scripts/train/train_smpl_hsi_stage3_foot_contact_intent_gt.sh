@@ -14,6 +14,8 @@ OVERFIT_SUBSET="${OVERFIT_SUBSET:-${SPLIT_ROOT}/overfit64_indices.csv}"
 SMOKE_OUTPUT_DIR="${SMOKE_OUTPUT_DIR:-${REPO_ROOT}/outputs/debug/hsi_stage3_contact_intent_ci_a_v3_joint5_smoke}"
 OVERFIT_OUTPUT_DIR="${OVERFIT_OUTPUT_DIR:-${REPO_ROOT}/outputs/debug/hsi_stage3_contact_intent_ci_a_v3_joint5_overfit64}"
 GATE_OUTPUT_DIR="${GATE_OUTPUT_DIR:-${REPO_ROOT}/outputs/debug/hsi_stage3_contact_intent_ci_a_v3_joint5_gate500}"
+FAST_SMOKE_OUTPUT_DIR="${FAST_SMOKE_OUTPUT_DIR:-${REPO_ROOT}/outputs/debug/hsi_stage3_person_support_intent_v3_fast_smoke}"
+FULL_OUTPUT_DIR="${FULL_OUTPUT_DIR:-${REPO_ROOT}/outputs/train/hsi_stage3_person_support_intent_v3_joint5_full}"
 CUDA_VISIBLE_DEVICES_VALUE="${CUDA_VISIBLE_DEVICES_VALUE:-7}"
 NUM_WORKERS="${NUM_WORKERS:-8}"
 BATCH_SIZE="${BATCH_SIZE:-12}"
@@ -25,6 +27,13 @@ if [[ "${PHASE}" == "pipeline" ]]; then
   PHASE=overfit bash "${BASH_SOURCE[0]}"
   PHASE=gate500 bash "${BASH_SOURCE[0]}"
   echo "========== HSI contact-intent V3 pipeline passed =========="
+  exit 0
+fi
+if [[ "${PHASE}" == "full_pipeline" ]]; then
+  echo "========== HSI contact-intent V3 full pipeline =========="
+  PHASE=fast_smoke bash "${BASH_SOURCE[0]}"
+  PHASE=full bash "${BASH_SOURCE[0]}"
+  echo "========== HSI contact-intent V3 full pipeline passed =========="
   exit 0
 fi
 
@@ -71,8 +80,34 @@ case "${PHASE}" in
     python "${REPO_ROOT}/scripts/smoke/check_hsi_foot_contact_intent_metrics.py" \
       --output-dir "${OVERFIT_OUTPUT_DIR}" --mode overfit
     ;;
+  fast_smoke)
+    OUTPUT_DIR="${OUTPUT_DIR:-${FAST_SMOKE_OUTPUT_DIR}}"
+    MAX_STEPS_PER_EPOCH="${MAX_STEPS_PER_EPOCH:-2}"
+    MAX_VAL_STEPS="${MAX_VAL_STEPS:-2}"
+    SUBSET_REPEAT="${SUBSET_REPEAT:-2}"
+    SUBSET_INDICES_CSV="${OVERFIT_SUBSET}"
+    SUBSET_APPLY_TO_VAL=true
+    ACTIVE_VAL_MANIFEST="${TRAIN_SEQUENCE_MANIFEST}"
+    RESUME_CKPT="${RESUME_CKPT:-${GATE_OUTPUT_DIR}/checkpoint_top01.pt}"
+    LR="${LR:-2e-5}"
+    CHECK_MODE=fast
+    ;;
+  full)
+    OUTPUT_DIR="${OUTPUT_DIR:-${FULL_OUTPUT_DIR}}"
+    MAX_STEPS_PER_EPOCH="${MAX_STEPS_PER_EPOCH:-0}"
+    MAX_VAL_STEPS="${MAX_VAL_STEPS:-0}"
+    SUBSET_REPEAT=1
+    SUBSET_INDICES_CSV=""
+    SUBSET_APPLY_TO_VAL=false
+    ACTIVE_VAL_MANIFEST="${VAL_SEQUENCE_MANIFEST}"
+    RESUME_CKPT="${RESUME_CKPT:-${GATE_OUTPUT_DIR}/checkpoint_top01.pt}"
+    LR="${LR:-2e-5}"
+    CHECK_MODE=distribution
+    python "${REPO_ROOT}/scripts/smoke/check_hsi_foot_contact_intent_metrics.py" \
+      --output-dir "${OVERFIT_OUTPUT_DIR}" --mode overfit
+    ;;
   *)
-    echo "[ERROR] PHASE must be pipeline, smoke, overfit, or gate500" >&2
+    echo "[ERROR] PHASE must be pipeline, full_pipeline, smoke, overfit, gate500, fast_smoke, or full" >&2
     exit 1
     ;;
 esac

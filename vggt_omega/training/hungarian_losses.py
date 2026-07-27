@@ -520,6 +520,12 @@ class HungarianSMPLLoss(nn.Module):
                 )
             )
 
+        fast_path = predictions.get("hsi_foot_contact_intent_fast_path_active")
+        losses["metric_hsi_foot_contact_intent_fast_path_active"] = (
+            fast_path.detach()
+            if isinstance(fast_path, torch.Tensor)
+            else losses["loss_hsi_foot_contact_intent"].detach().new_zeros(())
+        )
         losses["loss_total"] = (
             self.conf_weight * losses["loss_conf"]
             + self.bbox_weight * losses["loss_bbox"]
@@ -2226,6 +2232,14 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_foot_contact_intent_speed_error_p95_m": zero.detach(),
             "metric_hsi_foot_contact_intent_static_negative_false_positive_rate": zero.detach(),
             "metric_hsi_foot_contact_intent_selection": zero.detach(),
+            "metric_hsi_foot_contact_intent_tp_count": zero.detach(),
+            "metric_hsi_foot_contact_intent_fp_count": zero.detach(),
+            "metric_hsi_foot_contact_intent_fn_count": zero.detach(),
+            "metric_hsi_foot_contact_intent_tn_count": zero.detach(),
+            "metric_hsi_foot_contact_intent_static_fp_count": zero.detach(),
+            "metric_hsi_foot_contact_intent_static_negative_count": zero.detach(),
+            "metric_hsi_foot_contact_intent_positive_probability_sum": zero.detach(),
+            "metric_hsi_foot_contact_intent_negative_probability_sum": zero.detach(),
         }
         if "contact_teacher_valid" not in matched or "contact_label" not in matched:
             return out
@@ -2272,6 +2286,16 @@ class HungarianSMPLLoss(nn.Module):
                 ).sum() / weight_tensor.sum()
 
         predicted = probability >= float(self.hsi_foot_contact_intent_decision_threshold)
+        true_positive = (predicted & positive).sum().to(dtype=probability.dtype)
+        false_positive = (predicted & negative).sum().to(dtype=probability.dtype)
+        false_negative = ((~predicted) & positive).sum().to(dtype=probability.dtype)
+        true_negative = ((~predicted) & negative).sum().to(dtype=probability.dtype)
+        out["metric_hsi_foot_contact_intent_tp_count"] = true_positive.detach()
+        out["metric_hsi_foot_contact_intent_fp_count"] = false_positive.detach()
+        out["metric_hsi_foot_contact_intent_fn_count"] = false_negative.detach()
+        out["metric_hsi_foot_contact_intent_tn_count"] = true_negative.detach()
+        out["metric_hsi_foot_contact_intent_positive_probability_sum"] = probability[positive].sum().detach()
+        out["metric_hsi_foot_contact_intent_negative_probability_sum"] = probability[negative].sum().detach()
         out["metric_hsi_foot_contact_intent_target_rate"] = positive_label[valid].float().mean().detach()
         out["metric_hsi_foot_contact_intent_accuracy"] = (
             predicted[valid] == positive_label[valid]
@@ -2284,7 +2308,6 @@ class HungarianSMPLLoss(nn.Module):
             out["metric_hsi_foot_contact_intent_positive_probability"] = probability.new_ones(()).detach()
         predicted_positive = (predicted & valid).sum().to(dtype=probability.dtype)
         if predicted_positive.item() > 0:
-            true_positive = (predicted & positive).sum().to(dtype=probability.dtype)
             out["metric_hsi_foot_contact_intent_precision"] = (true_positive / predicted_positive).detach()
         elif not positive.any():
             out["metric_hsi_foot_contact_intent_precision"] = probability.new_ones(()).detach()
@@ -2318,6 +2341,12 @@ class HungarianSMPLLoss(nn.Module):
                 <= float(self.hsi_foot_contact_intent_teacher_velocity_threshold_m)
             )
             if static_negative.any():
+                out["metric_hsi_foot_contact_intent_static_fp_count"] = (
+                    predicted[static_negative].sum().to(dtype=probability.dtype).detach()
+                )
+                out["metric_hsi_foot_contact_intent_static_negative_count"] = (
+                    static_negative.sum().to(dtype=probability.dtype).detach()
+                )
                 out["metric_hsi_foot_contact_intent_static_negative_false_positive_rate"] = (
                     predicted[static_negative].float().mean().detach()
                 )

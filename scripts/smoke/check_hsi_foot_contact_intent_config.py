@@ -25,6 +25,7 @@ def main() -> None:
         "joint_temporal_support": (
             model.get("hsi_foot_contact_intent_feature_version") == "camera_motion_v3_joint5"
         ),
+        "fast_gt_path": model.get("hsi_foot_contact_intent_fast_gt") is True,
         "center_frame_supervision": loss.get("hsi_foot_contact_intent_center_frame_only") is True,
         "full_window_distribution": not data.get("train_contact_only") and not data.get("val_contact_only"),
         "clean_smpl": (

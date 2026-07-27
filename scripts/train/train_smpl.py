@@ -538,6 +538,9 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_foot_contact_intent_feature_version=str(
             model_cfg.get("hsi_foot_contact_intent_feature_version", "world_v1")
         ),
+        hsi_foot_contact_intent_fast_gt=bool(
+            model_cfg.get("hsi_foot_contact_intent_fast_gt", False)
+        ),
         enable_hsi_grounding=bool(model_cfg.get("enable_hsi_grounding", False)),
         hsi_grounding_hidden_dim=int(model_cfg.get("hsi_grounding_hidden_dim", 192)),
         hsi_grounding_sole_vertices_per_foot=int(model_cfg.get("hsi_grounding_sole_vertices_per_foot", 48)),
@@ -1145,7 +1148,7 @@ def train_one_epoch(
     totals: dict[str, float] = {}
     count = 0
     for step, batch in enumerate(loader):
-        batch = move_to_device(batch, device)
+        batch = move_to_device(batch, device, config=config)
         optimizer.zero_grad(set_to_none=True)
         predictions = forward_model(model, batch, config, epoch=epoch)
         if teacher_model is not None:
@@ -1192,6 +1195,7 @@ def train_one_epoch(
     if log_style == "progress":
         print("", flush=True)
     averaged = {key: value / max(count, 1) for key, value in totals.items()}
+    reduce_contact_intent_epoch_metrics(averaged)
     if averaged:
         print(format_epoch_summary("train-epoch", epoch, averaged, config), flush=True)
     return global_step, averaged
@@ -1217,7 +1221,7 @@ def validate(
         if max_val_steps > 0 and batch_idx >= max_val_steps:
             print(f"[val] max_val_steps reached: {max_val_steps}")
             break
-        batch = move_to_device(batch, device)
+        batch = move_to_device(batch, device, config=config)
         predictions = forward_model(model, batch, config, epoch=epoch)
         if teacher_model is not None:
             attach_teacher_predictions(predictions, forward_teacher_model(teacher_model, batch, config))
@@ -1242,6 +1246,7 @@ def validate(
                 )
         count += 1
     averaged = {key: value / max(count, 1) for key, value in totals.items()}
+    reduce_contact_intent_epoch_metrics(averaged)
     if v4_records:
         v4_metrics = reduce_hsi_v4_validation_records(v4_records, config)
         averaged.update(v4_metrics)
@@ -1264,6 +1269,45 @@ def validate(
         Path(config["experiment"]["output_dir"]) / f"val_worst_samples_epoch_{epoch + 1:04d}.json",
     )
     return averaged
+
+
+def reduce_contact_intent_epoch_metrics(metrics: dict[str, float]) -> None:
+    prefix = "metric_hsi_foot_contact_intent_"
+    required = ("tp_count", "fp_count", "fn_count", "tn_count")
+    if not all(prefix + key in metrics for key in required):
+        return
+    tp = float(metrics[prefix + "tp_count"])
+    fp = float(metrics[prefix + "fp_count"])
+    fn = float(metrics[prefix + "fn_count"])
+    tn = float(metrics[prefix + "tn_count"])
+    positive = tp + fn
+    negative = fp + tn
+    predicted_positive = tp + fp
+    valid = positive + negative
+    metrics[prefix + "target_rate"] = positive / valid if valid > 0.0 else 0.0
+    metrics[prefix + "accuracy"] = (tp + tn) / valid if valid > 0.0 else 0.0
+    metrics[prefix + "recall"] = tp / positive if positive > 0.0 else 1.0
+    metrics[prefix + "precision"] = (
+        tp / predicted_positive if predicted_positive > 0.0 else (1.0 if positive <= 0.0 else 0.0)
+    )
+    metrics[prefix + "false_positive_rate"] = fp / negative if negative > 0.0 else 0.0
+    metrics[prefix + "airborne_false_positive_rate"] = metrics[prefix + "false_positive_rate"]
+    positive_sum = float(metrics.get(prefix + "positive_probability_sum", 0.0))
+    negative_sum = float(metrics.get(prefix + "negative_probability_sum", 0.0))
+    metrics[prefix + "positive_probability"] = positive_sum / positive if positive > 0.0 else 1.0
+    metrics[prefix + "negative_probability"] = negative_sum / negative if negative > 0.0 else 0.0
+    static_count = float(metrics.get(prefix + "static_negative_count", 0.0))
+    static_fp = float(metrics.get(prefix + "static_fp_count", 0.0))
+    metrics[prefix + "static_negative_false_positive_rate"] = (
+        static_fp / static_count if static_count > 0.0 else 0.0
+    )
+    metrics[prefix + "selection"] = (
+        1.0 - metrics[prefix + "recall"]
+        + 0.5 * (1.0 - metrics[prefix + "precision"])
+        + 2.0 * metrics[prefix + "false_positive_rate"]
+        + 2.0 * metrics[prefix + "airborne_false_positive_rate"]
+        + metrics[prefix + "static_negative_false_positive_rate"]
+    )
 
 
 def collect_hsi_v4_validation_records(
@@ -1420,8 +1464,19 @@ def resolve_dataset_sample_path(dataset: Any, dataset_index: int) -> str:
     return f"{split}/{Path(seq_dir).name}/rgb/{frame_ids[start_idx]}.png"
 
 
-def move_to_device(batch: dict[str, torch.Tensor], device: torch.device) -> dict[str, torch.Tensor]:
-    return {key: value.to(device, non_blocking=True) for key, value in batch.items()}
+def move_to_device(
+    batch: dict[str, torch.Tensor],
+    device: torch.device,
+    config: dict[str, Any] | None = None,
+) -> dict[str, torch.Tensor]:
+    fast_intent = bool(
+        (config or {}).get("model", {}).get("hsi_foot_contact_intent_fast_gt", False)
+    )
+    cpu_only = {"images", "gt_depth", "K_scal3r"} if fast_intent else set()
+    return {
+        key: value if key in cpu_only else value.to(device, non_blocking=True)
+        for key, value in batch.items()
+    }
 
 
 def forward_model(
@@ -1452,10 +1507,15 @@ def forward_model(
         if should_use_gt_smpl_override(model, config, epoch=epoch)
         else None
     )
-    geometry = resolve_hsi_geometry_inputs(
-        batch,
-        config,
-        using_gt_override=smpl_override_outputs is not None,
+    fast_intent = bool(model_cfg.get("hsi_foot_contact_intent_fast_gt", False))
+    geometry = (
+        {"intrinsics": None, "depth": None, "depth_is_metric": True, "mode": "gt_metric"}
+        if fast_intent
+        else resolve_hsi_geometry_inputs(
+            batch,
+            config,
+            using_gt_override=smpl_override_outputs is not None,
+        )
     )
     predictions = model(
         batch["images"],
@@ -1474,7 +1534,7 @@ def forward_model(
         hsi_geometry_mode=geometry["mode"],
     )
     if smpl_override_outputs is not None:
-        predictions["stage2_gt_override_active"] = torch.ones((), device=batch["images"].device)
+        predictions["stage2_gt_override_active"] = predictions["pred_transl_cam"].new_ones(())
     return predictions
 
 
@@ -2141,6 +2201,7 @@ def compact_loss_name(key: str) -> str:
         "metric_hsi_foot_contact_intent_speed_error_median_m": "intentSpeedMed",
         "metric_hsi_foot_contact_intent_speed_error_p95_m": "intentSpeedP95",
         "metric_hsi_foot_contact_intent_static_negative_false_positive_rate": "intentStaticFPR",
+        "metric_hsi_foot_contact_intent_fast_path_active": "intentFast",
         "metric_hsi_foot_contact_intent_selection": "intentSelect",
         "loss_hsi_grounding_gate": "groundGate",
         "metric_hsi_grounding_valid_coverage": "groundValid",

@@ -64,6 +64,7 @@ model:
   hsi_foot_contact_intent_max_acceleration_m: 0.50
   hsi_foot_contact_intent_initial_probability: 0.25
   hsi_foot_contact_intent_feature_version: camera_motion_v3_joint5
+  hsi_foot_contact_intent_fast_gt: true
 
 checkpoint:
   load_vggt_baseline: true
@@ -109,6 +110,7 @@ optim:
     - metric_hsi_foot_contact_intent_false_positive_rate
     - metric_hsi_foot_contact_intent_airborne_false_positive_rate
     - metric_hsi_foot_contact_intent_speed_error_p95_m
+    - metric_hsi_foot_contact_intent_fast_path_active
   val_log_keys:
     - loss_total
     - loss_hsi_foot_contact_intent
@@ -125,6 +127,7 @@ optim:
     - metric_hsi_foot_contact_intent_speed_error_median_m
     - metric_hsi_foot_contact_intent_speed_error_p95_m
     - metric_hsi_foot_contact_intent_static_negative_false_positive_rate
+    - metric_hsi_foot_contact_intent_fast_path_active
     - metric_hsi_foot_contact_intent_selection
   val_interval: 1
   allowed_trainable_prefixes:

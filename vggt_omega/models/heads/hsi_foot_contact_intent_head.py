@@ -66,7 +66,7 @@ class HSIFootContactIntentHead(nn.Module):
     def forward(
         self,
         predictions: dict[str, torch.Tensor],
-        pose_enc: torch.Tensor,
+        pose_enc: torch.Tensor | None,
     ) -> dict[str, torch.Tensor]:
         pose6d = predictions.get("hsi_refined_pred_pose_6d", predictions.get("pred_pose_6d"))
         betas = predictions.get("hsi_refined_pred_betas", predictions.get("pred_betas"))
@@ -98,6 +98,8 @@ class HSIFootContactIntentHead(nn.Module):
                 local_step_distance,
             ) = _track_temporal_differences(local_sole, track_ids, track_mask)
             if self.feature_version == "world_v1":
+                if pose_enc is None:
+                    raise ValueError("world_v1 contact intent requires pose_enc")
                 root_motion, foot_motion = _camera_points_to_world(transl, sole_cam, pose_enc)
             else:
                 root_motion, foot_motion = transl, sole_cam

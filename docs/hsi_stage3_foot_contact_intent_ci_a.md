@@ -31,3 +31,5 @@ Checkpoint scope is exactly `hsi_foot_contact_intent_head.`. Existing Stage1, St
 Translation grounding remains disabled until all CI-A gates pass. CI-B will combine the frozen intent probability with the analytic two-foot severe-float candidate.
 
 Use `PHASE=pipeline` to run smoke, fixed-64 overfit, and the fresh full-distribution gate in order. The launcher stops at the first failed gate and never reuses a fixed-subset checkpoint as the distribution initializer.
+
+`PHASE=full` continues from the full-distribution gate500 checkpoint, trains one complete shuffled training epoch at a reduced learning rate, and evaluates the complete validation manifest. CI-A enables an explicit GT-only fast path in this phase: RGB transfer, VGGT aggregation, camera prediction, and depth prediction are bypassed because none is an input to the support-intent classifier. The emitted `intentFast` metric must equal one. This optimization is training-only; real CI-B inference keeps the normal NLF/VGGT path. Use `PHASE=full_pipeline` to run the isolated fast-path smoke before the full phase automatically.

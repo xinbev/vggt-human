@@ -45,6 +45,9 @@ def main() -> None:
         "static_negative_false_positive_rate": float(
             metrics.get("metric_hsi_foot_contact_intent_static_negative_false_positive_rate", 1.0)
         ),
+        "fast_path_active": float(
+            metrics.get("metric_hsi_foot_contact_intent_fast_path_active", 0.0)
+        ),
     }
     checks = {
         "finite": all(math.isfinite(value) for value in values.values()),
@@ -85,6 +88,8 @@ def main() -> None:
                 "probability_separation": values["positive_probability"] > values["negative_probability"],
             }
         )
+    if args.mode in {"fast", "distribution"}:
+        checks["fast_gt_path_active"] = values["fast_path_active"] >= 0.99
     report = {
         "gate": "pass" if all(checks.values()) else "fail",
         "mode": args.mode,
@@ -107,7 +112,7 @@ def main() -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", required=True)
-    parser.add_argument("--mode", choices=("smoke", "overfit", "distribution"), required=True)
+    parser.add_argument("--mode", choices=("smoke", "fast", "overfit", "distribution"), required=True)
     return parser.parse_args()
 
 
