@@ -24,6 +24,6 @@ Checkpoint scope is exactly `hsi_foot_contact_intent_head.`. Existing Stage1, St
 
 1. `smoke`: two train and two validation batches; validates interfaces, target presence, temporal features, gradients, and trainable prefixes.
 2. `overfit`: fixed 64-window subset; requires recall >= 98%, precision >= 95%, negative FPR <= 2%, and airborne FPR <= 2%.
-3. `gate500`: 500 full-distribution steps and 100 validation batches; requires recall >= 90%, precision >= 80%, negative FPR <= 5%, and airborne FPR <= 3%.
+3. `gate500`: a freshly initialized head runs for 500 full-distribution steps and 100 validation batches. The fixed-64 checkpoint is deliberately not used as initialization because it contains a memorized decision surface. This gate requires recall >= 90%, precision >= 80%, negative FPR <= 5%, and airborne FPR <= 3%.
 
 Translation grounding remains disabled until all CI-A gates pass. CI-B will combine the frozen intent probability with the analytic two-foot severe-float candidate.

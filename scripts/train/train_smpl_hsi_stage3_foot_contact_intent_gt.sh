@@ -13,7 +13,7 @@ VAL_SEQUENCE_MANIFEST="${VAL_SEQUENCE_MANIFEST:-${SPLIT_ROOT}/val_sequences.txt}
 OVERFIT_SUBSET="${OVERFIT_SUBSET:-${SPLIT_ROOT}/overfit64_indices.csv}"
 SMOKE_OUTPUT_DIR="${SMOKE_OUTPUT_DIR:-${REPO_ROOT}/outputs/debug/hsi_stage3_contact_intent_ci_a_v2_smoke}"
 OVERFIT_OUTPUT_DIR="${OVERFIT_OUTPUT_DIR:-${REPO_ROOT}/outputs/debug/hsi_stage3_contact_intent_ci_a_v2_overfit64}"
-GATE_OUTPUT_DIR="${GATE_OUTPUT_DIR:-${REPO_ROOT}/outputs/debug/hsi_stage3_contact_intent_ci_a_v2_gate500}"
+GATE_OUTPUT_DIR="${GATE_OUTPUT_DIR:-${REPO_ROOT}/outputs/debug/hsi_stage3_contact_intent_ci_a_v2_gate500_fresh}"
 CUDA_VISIBLE_DEVICES_VALUE="${CUDA_VISIBLE_DEVICES_VALUE:-7}"
 NUM_WORKERS="${NUM_WORKERS:-8}"
 BATCH_SIZE="${BATCH_SIZE:-24}"
@@ -54,8 +54,10 @@ case "${PHASE}" in
     SUBSET_INDICES_CSV=""
     SUBSET_APPLY_TO_VAL=false
     ACTIVE_VAL_MANIFEST="${VAL_SEQUENCE_MANIFEST}"
-    RESUME_CKPT="${RESUME_CKPT:-${OVERFIT_OUTPUT_DIR}/checkpoint_top01.pt}"
-    LR="${LR:-1e-5}"
+    # The fixed-64 checkpoint is a capability gate, not a production initializer.
+    # Starting fresh avoids carrying its memorized, over-confident decision surface.
+    RESUME_CKPT=""
+    LR="${LR:-5e-5}"
     CHECK_MODE=distribution
     python "${REPO_ROOT}/scripts/smoke/check_hsi_foot_contact_intent_metrics.py" \
       --output-dir "${OVERFIT_OUTPUT_DIR}" --mode overfit
@@ -97,6 +99,7 @@ echo "Translation     : read for temporal differences only; never modified"
 echo "Supervision     : center frame only (same two-sided context as teacher)"
 echo "Trainable       : hsi_foot_contact_intent_head only"
 echo "Resume          : ${RESUME_CKPT:-none}"
+echo "Learning rate   : ${LR}"
 echo "GPU/batch       : ${CUDA_VISIBLE_DEVICES_VALUE} / ${BATCH_SIZE}"
 echo "Steps/val steps : ${MAX_STEPS_PER_EPOCH} / ${MAX_VAL_STEPS}"
 
