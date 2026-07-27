@@ -1,0 +1,40 @@
+{
+  "gate": "pass",
+  "mode": "overfit",
+  "metrics": {
+    "loss": 0.014441595354583114,
+    "valid_coverage": 0.3759470097720623,
+    "temporal_coverage": 0.9999999925494194,
+    "target_rate": 0.4064241982996464,
+    "accuracy": 0.9999999925494194,
+    "recall": 0.9999999925494194,
+    "precision": 1.0,
+    "false_positive_rate": 0.0,
+    "airborne_false_positive_rate": 0.0,
+    "positive_probability": 0.9855147898197174,
+    "negative_probability": 0.012901924666948617,
+    "speed_error_median_m": 1.9628350855782628e-07,
+    "speed_error_p95_m": 6.860516919005022e-07,
+    "static_negative_false_positive_rate": 0.0
+  },
+  "limits": {
+    "recall": 0.98,
+    "precision": 0.95,
+    "fpr": 0.02,
+    "airborne_fpr": 0.02,
+    "static_negative_fpr": 0.05
+  },
+  "checks": {
+    "finite": true,
+    "teacher_coverage": true,
+    "temporal_features_present": true,
+    "positive_and_negative_targets": true,
+    "teacher_speed_contract": true,
+    "contact_recall": true,
+    "contact_precision": true,
+    "negative_false_positive_rate": true,
+    "airborne_false_positive_rate": true,
+    "static_negative_false_positive_rate": true,
+    "probability_separation": true
+  }
+}
