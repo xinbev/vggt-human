@@ -1,0 +1,47 @@
+{
+  "gate": "fail",
+  "mode": "distribution",
+  "metrics": {
+    "loss": 0.4940358237579985,
+    "valid_coverage": 0.3804750214709879,
+    "temporal_coverage": 0.8604651158458965,
+    "target_rate": 0.44891997167138814,
+    "accuracy": 0.7012216713881021,
+    "recall": 0.6870439755472294,
+    "precision": 0.6608497723823975,
+    "false_positive_rate": 0.28722891566265063,
+    "airborne_false_positive_rate": 0.28722891566265063,
+    "positive_probability": 0.596597088976528,
+    "negative_probability": 0.3567982399637201,
+    "speed_error_median_m": 1.0482894097993606e-07,
+    "speed_error_p95_m": 3.679041724808981e-07,
+    "static_negative_false_positive_rate": 0.48040945993646317,
+    "fast_path_active": 1.0
+  },
+  "aggregation_audit": {
+    "empty_denominator_adjusted": false,
+    "raw_recall": 0.6870439755472294,
+    "raw_precision": 0.6608497723823975
+  },
+  "limits": {
+    "recall": 0.9,
+    "precision": 0.8,
+    "fpr": 0.05,
+    "airborne_fpr": 0.03,
+    "static_negative_fpr": 0.1
+  },
+  "checks": {
+    "finite": true,
+    "teacher_coverage": true,
+    "temporal_features_present": true,
+    "positive_and_negative_targets": true,
+    "teacher_speed_contract": true,
+    "contact_recall": false,
+    "contact_precision": false,
+    "negative_false_positive_rate": false,
+    "airborne_false_positive_rate": false,
+    "static_negative_false_positive_rate": false,
+    "probability_separation": true,
+    "fast_gt_path_active": true
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "gate": "pass",
+  "mode": "fast",
+  "metrics": {
+    "loss": 0.47214871644973755,
+    "valid_coverage": 0.2201923206448555,
+    "temporal_coverage": 1.0,
+    "target_rate": 0.7142857142857143,
+    "accuracy": 0.8163265306122449,
+    "recall": 0.7714285714285715,
+    "precision": 0.9642857142857143,
+    "false_positive_rate": 0.07142857142857142,
+    "airborne_false_positive_rate": 0.07142857142857142,
+    "positive_probability": 0.5758329391479492,
+    "negative_probability": 0.29167055232184275,
+    "speed_error_median_m": 2.2317544789984822e-07,
+    "speed_error_p95_m": 6.56832469303481e-07,
+    "static_negative_false_positive_rate": 0.0,
+    "fast_path_active": 1.0
+  },
+  "aggregation_audit": {
+    "empty_denominator_adjusted": false,
+    "raw_recall": 0.7714285714285715,
+    "raw_precision": 0.9642857142857143
+  },
+  "limits": {},
+  "checks": {
+    "finite": true,
+    "teacher_coverage": true,
+    "temporal_features_present": true,
+    "positive_and_negative_targets": true,
+    "teacher_speed_contract": true,
+    "fast_gt_path_active": true
+  }
+}

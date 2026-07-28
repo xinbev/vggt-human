@@ -15,7 +15,8 @@
     "negative_probability": 0.0016145666886586696,
     "speed_error_median_m": 1.9398976291995496e-07,
     "speed_error_p95_m": 6.340033991136806e-07,
-    "static_negative_false_positive_rate": 0.0
+    "static_negative_false_positive_rate": 0.0,
+    "fast_path_active": 0.0
   },
   "aggregation_audit": {
     "empty_denominator_adjusted": true,

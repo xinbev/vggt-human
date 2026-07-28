@@ -1,0 +1,305 @@
+{
+  "epoch": 1,
+  "worst_samples": [
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3516,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000299/rgb/seq_000299_0045.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3517,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000299/rgb/seq_000299_0050.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3518,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000299/rgb/seq_000299_0055.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3519,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000299/rgb/seq_000299_0060.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3520,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000299/rgb/seq_000299_0065.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3521,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000299/rgb/seq_000299_0070.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3522,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000299/rgb/seq_000299_0075.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3523,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000299/rgb/seq_000299_0080.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3524,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000299/rgb/seq_000299_0085.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3525,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000299/rgb/seq_000299_0090.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3526,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000299/rgb/seq_000299_0095.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3527,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000313/rgb/seq_000313_0000.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3876,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000403/rgb/seq_000403_0070.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3877,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000403/rgb/seq_000403_0075.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3878,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000403/rgb/seq_000403_0080.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3879,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000403/rgb/seq_000403_0085.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3880,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000403/rgb/seq_000403_0090.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3881,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000403/rgb/seq_000403_0095.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3882,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000403/rgb/seq_000403_0100.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3883,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000403/rgb/seq_000403_0105.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3884,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000403/rgb/seq_000403_0110.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3885,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000403/rgb/seq_000403_0115.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3886,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000403/rgb/seq_000403_0120.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3887,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000403/rgb/seq_000403_0125.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3924,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000415/rgb/seq_000415_0055.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3925,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000415/rgb/seq_000415_0060.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3926,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000415/rgb/seq_000415_0065.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3927,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000415/rgb/seq_000415_0070.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3928,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000415/rgb/seq_000415_0075.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3929,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000415/rgb/seq_000415_0080.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3930,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000415/rgb/seq_000415_0085.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3931,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000415/rgb/seq_000415_0090.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3932,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000415/rgb/seq_000415_0095.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3933,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000415/rgb/seq_000415_0100.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3934,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000415/rgb/seq_000415_0105.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.5,
+      "dataset_index": 3935,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000415/rgb/seq_000415_0110.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.175000190734863,
+      "dataset_index": 4992,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0040.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.175000190734863,
+      "dataset_index": 4993,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0045.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.175000190734863,
+      "dataset_index": 4994,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0050.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.175000190734863,
+      "dataset_index": 4995,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0055.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.175000190734863,
+      "dataset_index": 4996,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0060.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.175000190734863,
+      "dataset_index": 4997,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0065.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.175000190734863,
+      "dataset_index": 4998,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0070.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.175000190734863,
+      "dataset_index": 4999,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0075.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.175000190734863,
+      "dataset_index": 5000,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0080.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.175000190734863,
+      "dataset_index": 5001,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0085.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.175000190734863,
+      "dataset_index": 5002,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0090.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 6.175000190734863,
+      "dataset_index": 5003,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0095.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 5.988889217376709,
+      "dataset_index": 3144,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000154/rgb/seq_000154_0030.png"
+    },
+    {
+      "selection_metric": "metric_hsi_foot_contact_intent_selection",
+      "selection_value": 5.988889217376709,
+      "dataset_index": 3145,
+      "sample_path": "Training/20221017_3_1000_batch01hand_seq_000154/rgb/seq_000154_0035.png"
+    }
+  ]
+}

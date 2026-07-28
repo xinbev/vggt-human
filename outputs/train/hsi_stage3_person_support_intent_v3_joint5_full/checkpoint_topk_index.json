@@ -1,0 +1,13 @@
+{
+  "monitor": "metric_hsi_foot_contact_intent_selection",
+  "monitor_mode": "min",
+  "entries": [
+    {
+      "rank": 1,
+      "metric": 2.1118562608486373,
+      "epoch": 1,
+      "source": "val",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/hsi_stage3_person_support_intent_v3_joint5_full/checkpoint_top_val_epoch_0001_metric_hsi_foot_contact_intent_selection_2.111856.pt"
+    }
+  ]
+}
