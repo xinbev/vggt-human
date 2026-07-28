@@ -33,3 +33,16 @@ Translation grounding remains disabled until all CI-A gates pass. CI-B will comb
 Use `PHASE=pipeline` to run smoke, fixed-64 overfit, and the fresh full-distribution gate in order. The launcher stops at the first failed gate and never reuses a fixed-subset checkpoint as the distribution initializer.
 
 `PHASE=full` continues from the full-distribution gate500 checkpoint, trains one complete shuffled training epoch at a reduced learning rate, and evaluates the complete validation manifest. CI-A enables an explicit GT-only fast path in this phase: RGB transfer, VGGT aggregation, camera prediction, and depth prediction are bypassed because none is an input to the support-intent classifier. The emitted `intentFast` metric must equal one. This optimization is training-only; real CI-B inference keeps the normal NLF/VGGT path. Use `PHASE=full_pipeline` to run the isolated fast-path smoke before the full phase automatically.
+
+## V3 full-distribution decision
+
+The complete one-epoch V3 run finished all 6101 steps, with the fast path active, but failed the distribution gate. Full-validation recall was 0.6870, precision 0.6608, negative FPR 0.2872, and static-negative FPR 0.4804. Positive and negative probabilities separated on average (0.5966 versus 0.3568), but their overlap remained too large for a 0.5 decision threshold. This result rules out insufficient optimization as the primary failure mode.
+
+The remaining ambiguity is structural: pose and camera-space kinematics do not uniquely identify scene support. A standing contact frame and a static seated, lying, elevated, or airborne frame can expose similar low-velocity lower-body features while having different contact labels. CI-A must therefore not independently apply grounding.
+
+Before CI-B integration, run `scripts/eval/eval_hsi_person_support_intent_audit.sh` once on the complete validation manifest. The audit searches every distinct executable probability threshold while requiring complete temporal context. A threshold is usable only if it reaches precision >= 0.90, negative FPR <= 0.03, static-negative FPR <= 0.05, and recall >= 0.20.
+
+- If the audit passes, freeze V3 and use its selected threshold only as a conservative permission prior. Analytic scene geometry still owns the correction vector, and temporal continuity must approve the correction.
+- If the audit fails, stop training CI-A and remove it from the required application path. Keep its score only for diagnostics; use analytic geometry plus deterministic temporal continuity and support constraints.
+
+No additional contact-teacher preprocessing or V3 training is authorized by this decision gate.
