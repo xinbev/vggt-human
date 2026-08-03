@@ -15,6 +15,7 @@ MAX_FRAMES="${MAX_FRAMES:-64}"
 
 echo "========== Early Stage2 Viser + post-HSI ID overlay =========="
 echo "Geometry checkpoint: ${CHECKPOINT}"
+echo "Align compatibility : legacy_scale_bias_v0 (25 input features)"
 echo "Tracking effect    : display IDs/colors only"
 echo "Output             : ${OUTPUT_DIR}"
 
@@ -34,6 +35,7 @@ CONF_THRESHOLD=0.05 \
 DEPTH_POINT_STRIDE=2 \
 MAX_SCENE_DEPTH=80 \
 POINT_SIZE=0.006 \
+HSI_ALIGN_FEATURE_VERSION=legacy_scale_bias_v0 \
 TRACKING_OVERLAY=base_smpl \
 TRACK_MAX_AGE=90 \
 TRACK_MIN_QUALITY=0.25 \

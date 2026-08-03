@@ -35,6 +35,7 @@ DEVICE="${DEVICE:-cuda}"
 CHECKPOINT="${CHECKPOINT:-}"
 BASELINE_CHECKPOINT="${BASELINE_CHECKPOINT:-}"
 SMPL_MODEL_DIR="${SMPL_MODEL_DIR:-}"
+HSI_ALIGN_FEATURE_VERSION="${HSI_ALIGN_FEATURE_VERSION:-}"
 SMOKE_ONLY="${SMOKE_ONLY:-false}"
 
 cd "${REPO_ROOT}"
@@ -61,6 +62,7 @@ echo "Output      : ${OUTPUT_DIR}"
 echo "Port        : ${PORT}"
 echo "Max frames  : ${MAX_FRAMES}"
 echo "ID overlay  : ${TRACKING_OVERLAY} (post-HSI display only)"
+echo "Align compat: ${HSI_ALIGN_FEATURE_VERSION:-<config default>}"
 echo "Depth stride: ${DEPTH_POINT_STRIDE} (can be changed in Viser GUI)"
 echo "Max depth   : ${MAX_SCENE_DEPTH} (0 disables clipping; GUI adjustable)"
 echo "Point size  : ${POINT_SIZE}"
@@ -105,6 +107,9 @@ if [[ -n "${BASELINE_CHECKPOINT}" ]]; then
 fi
 if [[ -n "${SMPL_MODEL_DIR}" ]]; then
   ARGS+=(--smpl-model-dir "${SMPL_MODEL_DIR}")
+fi
+if [[ -n "${HSI_ALIGN_FEATURE_VERSION}" ]]; then
+  ARGS+=(--override "model.hsi_align_feature_version=${HSI_ALIGN_FEATURE_VERSION}")
 fi
 if [[ "${SMOKE_ONLY}" == "1" || "${SMOKE_ONLY}" == "true" || "${SMOKE_ONLY}" == "TRUE" ]]; then
   ARGS+=(--smoke-only)
