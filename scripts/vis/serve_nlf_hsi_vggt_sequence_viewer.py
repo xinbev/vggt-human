@@ -689,7 +689,14 @@ def select_frame_people(
     args: argparse.Namespace,
 ) -> list[dict[str, Any]]:
     confs = predictions["pred_confs"][0, frame_index, :, 0].detach().float().cpu()
-    if priors is not None:
+    assigned_ids = predictions.get("assigned_track_ids")
+    assigned_mask = predictions.get("assigned_track_mask")
+    assigned_quality = predictions.get("assigned_track_quality")
+    assigned_source = predictions.get("assigned_track_source")
+    if isinstance(assigned_ids, torch.Tensor) and isinstance(assigned_mask, torch.Tensor):
+        valid = assigned_mask[0, frame_index].detach().cpu().bool()
+        track_ids = assigned_ids[0, frame_index].detach().cpu().long()
+    elif priors is not None:
         valid = priors["smpl_query_boxes_mask"][0, frame_index].detach().cpu().bool()
         track_ids = priors["smpl_track_ids"][0, frame_index].detach().cpu().long()
     else:
@@ -709,6 +716,10 @@ def select_frame_people(
             "color": color,
             "faces": faces,
         }
+        if isinstance(assigned_quality, torch.Tensor):
+            item["track_quality"] = float(assigned_quality[0, frame_index, query_idx].detach().float().cpu())
+        if isinstance(assigned_source, torch.Tensor):
+            item["track_source"] = int(assigned_source[0, frame_index, query_idx].detach().cpu())
         for prefix in ("base", "hsi"):
             key = f"{prefix}_vertices_cam"
             if key in decoded:
@@ -883,6 +894,7 @@ class SequenceViewer:
             print("[viewer] stopped", flush=True)
 
     def _build_scene(self) -> None:
+        tracking_only = bool(getattr(self.args, "tracking_only", False))
         for frame in self.scene["frames"]:
             idx = int(frame["frame_index"])
             frame_handles: dict[str, Any] = {
@@ -890,15 +902,17 @@ class SequenceViewer:
                 "hsi": [],
                 "base_humans": [],
                 "hsi_humans": [],
+                "track_labels": [],
                 "cameras_raw": [],
                 "cameras_hsi": [],
             }
             frame_handles["raw"].append(
                 add_point_cloud(self.server, f"/frames/{idx:04d}/points_raw_depth", frame["raw_points"], frame["raw_colors"], self.point_size_value)
             )
-            frame_handles["hsi"].append(
-                add_point_cloud(self.server, f"/frames/{idx:04d}/points_hsi_depth", frame["hsi_points"], frame["hsi_colors"], self.point_size_value)
-            )
+            if not tracking_only:
+                frame_handles["hsi"].append(
+                    add_point_cloud(self.server, f"/frames/{idx:04d}/points_hsi_depth", frame["hsi_points"], frame["hsi_colors"], self.point_size_value)
+                )
             for person in frame["people"]:
                 color = tuple(int(v) for v in person["color"])
                 track_id = int(person["track_id"])
@@ -911,8 +925,19 @@ class SequenceViewer:
                     frame_handles["hsi_humans"].append(
                         add_mesh(self.server, f"/frames/{idx:04d}/human_hsi_t{track_id}_q{query_idx}", person["hsi_vertices"], person["faces"], color, self.smpl_opacity_value)
                     )
+                label_vertices = person.get("hsi_vertices", person.get("base_vertices"))
+                if label_vertices is not None:
+                    vertices = np.asarray(label_vertices, dtype=np.float32)
+                    label_position = vertices[int(np.argmin(vertices[:, 1]))].copy()
+                    label_position[1] -= 0.12
+                    quality = person.get("track_quality")
+                    label_text = f"ID {track_id}" if quality is None else f"ID {track_id}  {float(quality):.2f}"
+                    frame_handles["track_labels"].append(
+                        add_label(self.server, f"/frames/{idx:04d}/track_label_t{track_id}_q{query_idx}", label_text, label_position)
+                    )
             frame_handles["cameras_raw"].append(add_camera(self.server, self.transforms, f"/frames/{idx:04d}/camera_raw_vggt", frame["raw_camera"], self.camera_scale_value, (255, 255, 255)))
-            frame_handles["cameras_hsi"].append(add_camera(self.server, self.transforms, f"/frames/{idx:04d}/camera_hsi_scaled", frame["hsi_camera"], self.camera_scale_value, (255, 176, 0)))
+            if not tracking_only:
+                frame_handles["cameras_hsi"].append(add_camera(self.server, self.transforms, f"/frames/{idx:04d}/camera_hsi_scaled", frame["hsi_camera"], self.camera_scale_value, (255, 176, 0)))
             self.handles.append(frame_handles)
         raw_trajectory = np.asarray(self.scene.get("camera_trajectory_raw", np.zeros((0, 3), dtype=np.float32)), dtype=np.float32)
         hsi_trajectory = np.asarray(self.scene.get("camera_trajectory_hsi", np.zeros((0, 3), dtype=np.float32)), dtype=np.float32)
@@ -920,7 +945,7 @@ class SequenceViewer:
             self.global_handles["camera_trajectory_raw"] = [
                 add_point_cloud(self.server, "/camera_trajectory/raw_vggt_centers", raw_trajectory, camera_trajectory_colors(raw_trajectory.shape[0]), max(self.point_size_value * 2.5, 0.01))
             ]
-        if hsi_trajectory.shape[0] > 0:
+        if not tracking_only and hsi_trajectory.shape[0] > 0:
             self.global_handles["camera_trajectory_hsi"] = [
                 add_point_cloud(self.server, "/camera_trajectory/hsi_scaled_centers", hsi_trajectory, camera_trajectory_colors(hsi_trajectory.shape[0]), max(self.point_size_value * 3.5, 0.012))
             ]
@@ -936,14 +961,16 @@ class SequenceViewer:
         self.fps = add_slider(self.server, "FPS", 1, 30, 1, 6)
         self.fps_buttons = add_button_group(self.server, "FPS Preset", ("5", "10", "20", "30"))
         self.mode = add_dropdown(self.server, "Mode", ["4D current frame", "3D accumulate", "Hybrid"], "4D current frame")
-        self.depth_source = add_dropdown(self.server, "Depth Source", ["hsi_depth", "raw_depth", "both"], "hsi_depth")
+        tracking_only = bool(getattr(self.args, "tracking_only", False))
+        self.depth_source = add_dropdown(self.server, "Depth Source", ["hsi_depth", "raw_depth", "both"], "raw_depth" if tracking_only else "hsi_depth")
         self.point_size = add_slider(self.server, "Point Size", 0.0005, 0.08, 0.0005, self.point_size_value)
         self.density_preset = add_dropdown(self.server, "Point Density Preset", ["custom", "dense stride 1", "balanced stride 2", "fast stride 4", "full sequence stride 6"], "custom")
         self.depth_point_stride = add_slider(self.server, "Depth Point Stride", 1, 64, 1, self.depth_point_stride_value)
         self.max_scene_depth = add_slider(self.server, "Max Scene Depth", 0.0, 200.0, 1.0, max(0.0, self.max_scene_depth_value))
         self.camera_size = add_slider(self.server, "Camera Size", 0.01, 1.00, 0.01, self.camera_scale_value)
-        self.show_hsi = add_checkbox(self.server, "Show HSI SMPL", True)
-        self.show_base = add_checkbox(self.server, "Show Base SMPL", False)
+        self.show_hsi = add_checkbox(self.server, "Show HSI SMPL", not tracking_only)
+        self.show_base = add_checkbox(self.server, "Show Base SMPL", tracking_only)
+        self.show_track_ids = add_checkbox(self.server, "Show Track IDs", True)
         self.smpl_opacity = add_slider(self.server, "SMPL Opacity", 0.05, 1.00, 0.05, self.smpl_opacity_value)
         self.smpl_downsample = add_slider(self.server, "SMPL Downsample", 1, max(1, len(self.scene["frames"])), 1, 1)
         self.show_cameras = add_checkbox(self.server, "Show Cameras", True)
@@ -957,6 +984,7 @@ class SequenceViewer:
             self.depth_source,
             self.show_hsi,
             self.show_base,
+            self.show_track_ids,
             self.smpl_downsample,
             self.show_cameras,
             self.camera_source,
@@ -1039,25 +1067,26 @@ class SequenceViewer:
                     depth_point_stride=self.depth_point_stride_value,
                     max_scene_depth=self.max_scene_depth_value,
                 )
-                hsi_points, hsi_colors = rebuild_depth_points_for_frame(
-                    frame,
-                    depth_key="hsi_depth_map",
-                    extrinsic_key="hsi_extrinsic",
-                    depth_point_stride=self.depth_point_stride_value,
-                    max_scene_depth=self.max_scene_depth_value,
-                )
                 frame["raw_points"] = raw_points
                 frame["raw_colors"] = raw_colors
-                frame["hsi_points"] = hsi_points
-                frame["hsi_colors"] = hsi_colors
                 frame["depth_point_stride"] = int(self.depth_point_stride_value)
                 frame["max_scene_depth"] = float(self.max_scene_depth_value)
                 frame_handles["raw"] = [
                     add_point_cloud(self.server, f"/frames/{idx:04d}/points_raw_depth", raw_points, raw_colors, self.point_size_value)
                 ]
-                frame_handles["hsi"] = [
-                    add_point_cloud(self.server, f"/frames/{idx:04d}/points_hsi_depth", hsi_points, hsi_colors, self.point_size_value)
-                ]
+                if not bool(getattr(self.args, "tracking_only", False)):
+                    hsi_points, hsi_colors = rebuild_depth_points_for_frame(
+                        frame,
+                        depth_key="hsi_depth_map",
+                        extrinsic_key="hsi_extrinsic",
+                        depth_point_stride=self.depth_point_stride_value,
+                        max_scene_depth=self.max_scene_depth_value,
+                    )
+                    frame["hsi_points"] = hsi_points
+                    frame["hsi_colors"] = hsi_colors
+                    frame_handles["hsi"] = [
+                        add_point_cloud(self.server, f"/frames/{idx:04d}/points_hsi_depth", hsi_points, hsi_colors, self.point_size_value)
+                    ]
         finally:
             self._rebuilding_points = False
         self._update_visibility()
@@ -1094,11 +1123,14 @@ class SequenceViewer:
             set_group_visible(frame_handles["hsi"], show_points and depth_source in {"hsi_depth", "both"})
             set_group_visible(frame_handles["base_humans"], show_humans and show_decimated_smpl and bool(self.show_base.value))
             set_group_visible(frame_handles["hsi_humans"], show_humans and show_decimated_smpl and bool(self.show_hsi.value))
+            set_group_visible(frame_handles["track_labels"], show_humans and show_decimated_smpl and bool(self.show_track_ids.value))
             set_group_visible(frame_handles["cameras_raw"], bool(self.show_cameras.value) and show_raw_camera and show_camera_frame and show_decimated_camera)
             set_group_visible(frame_handles["cameras_hsi"], bool(self.show_cameras.value) and show_hsi_camera and show_camera_frame and show_decimated_camera)
         self._update_info_text(current)
 
     def _camera_visibility_for_depth(self, depth_source: str) -> tuple[bool, bool]:
+        if bool(getattr(self.args, "tracking_only", False)):
+            return True, False
         camera_source = str(self.camera_source.value)
         if camera_source == "raw_vggt":
             return True, False
@@ -1126,7 +1158,8 @@ class SequenceViewer:
                 f"maxD={float(frame.get('max_scene_depth', self.max_scene_depth_value)):.1f} "
                 f"scale={frame['hsi_scene_scale']:.4g} bias={frame['hsi_scene_depth_bias']:.4g} "
                 f"rawCam=({raw_cam_pos[0]:.3f},{raw_cam_pos[1]:.3f},{raw_cam_pos[2]:.3f}) "
-                f"hsiCam=({hsi_cam_pos[0]:.3f},{hsi_cam_pos[1]:.3f},{hsi_cam_pos[2]:.3f})"
+                f"hsiCam=({hsi_cam_pos[0]:.3f},{hsi_cam_pos[1]:.3f},{hsi_cam_pos[2]:.3f}) "
+                f"IDs={[int(person['track_id']) for person in frame['people']]}"
             ),
         )
         align = frame.get("depth_alignment", {})
@@ -1232,6 +1265,14 @@ def add_mesh(server: Any, name: str, vertices: np.ndarray, faces: np.ndarray, co
         except Exception:
             pass
         return handle
+
+
+def add_label(server: Any, name: str, text: str, position: np.ndarray) -> Any:
+    api = scene_api(server)
+    try:
+        return api.add_label(name=name, text=text, position=position)
+    except TypeError:
+        return api.add_label(name, text, position)
 
 
 def add_camera(server: Any, transforms: Any, name: str, camera: dict[str, Any], scale: float, color: tuple[int, int, int] = (255, 255, 255)) -> Any:

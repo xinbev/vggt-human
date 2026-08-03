@@ -63,3 +63,17 @@ bash scripts/eval/run_nlf_roi_id_tracking_v2_eval_gpu5.sh \
 ```
 
 Only after the V2 pilot improves over geometry-only should the full run be started with `bash scripts/train/train_nlf_roi_id_tracking_v2_gpu5.sh`.
+
+## Epoch 14 Viser Check
+
+The dedicated V2 viewer loads the VGGT baseline first and then the partial epoch 14 ID-head checkpoint. BEDLAM sidecar boxes are used as NLF person proposals, but sidecar identity labels are deliberately not passed into the model. `BaseSMPLTrackAssigner` therefore produces every displayed track ID from bbox, `transl_cam`, beta, confidence, and the learned ROI identity embedding.
+
+Server command:
+
+```bash
+bash scripts/vis/serve_nlf_roi_id_tracking_v2_viewer_gpu5.sh
+```
+
+The default run uses physical GPU5, 32 frames, `ID_WEIGHT=0.10`, `MAX_ID_DISTANCE=2.0`, and checkpoint `outputs/train/nlf_roi_id_tracking_v2_gpu5/checkpoint_epoch_0014.pt`. Viser displays a stable color and an `ID n` label for each assigned track. The run summary is written under `outputs/vis/nlf_roi_id_tracking_v2_gpu5/`.
+
+This check measures identity association with known person boxes. It does not yet validate a detector-to-ID end-to-end pipeline on arbitrary video, because the V2 ROI head was trained with BEDLAM box proposals.
