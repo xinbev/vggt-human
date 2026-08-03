@@ -40,6 +40,7 @@ from vggt_omega.data.geometry import (  # noqa: E402
     transform_xyxy_to_normalized_cxcywh,
 )
 from vggt_omega.models.smpl_layer import SMPLLayer  # noqa: E402
+from vggt_omega.tracking.smpl_track_assigner import BaseSMPLTrackAssigner  # noqa: E402
 from vggt_omega.tracking.io import IMAGE_EXTENSIONS, iter_image_files  # noqa: E402
 from vggt_omega.training.config import deep_update, require_path  # noqa: E402
 from vggt_omega.utils.pose_enc import encoding_to_camera  # noqa: E402
@@ -91,6 +92,9 @@ def main() -> None:
     image_sequence = images.unsqueeze(0).to(device)
     with torch.inference_mode():
         predictions = run_model(model, image_sequence, priors)
+    geometry_snapshot = snapshot_viewer_geometry(predictions)
+    apply_posthoc_tracking_overlay(predictions, args)
+    assert_viewer_geometry_unchanged(predictions, geometry_snapshot, args)
 
     scene = build_scene_data(
         frame_paths=frame_paths,
@@ -137,6 +141,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-frames", type=int, default=32)
     parser.add_argument("--max-humans", type=int, default=20)
     parser.add_argument("--conf-threshold", type=float, default=0.10)
+    parser.add_argument("--tracking-overlay", choices=["none", "base_smpl"], default="none")
+    parser.add_argument("--track-max-age", type=int, default=90)
+    parser.add_argument("--track-min-quality", type=float, default=0.25)
+    parser.add_argument("--track-max-center-distance", type=float, default=0.25)
+    parser.add_argument("--track-max-transl-distance", type=float, default=1.50)
+    parser.add_argument("--track-max-beta-l1", type=float, default=0.30)
     parser.add_argument("--depth-point-stride", type=int, default=4, help="Initial Viser point-cloud sampling stride. This can be changed live in the GUI.")
     parser.add_argument("--max-scene-depth", type=float, default=30.0, help="Initial far-depth clipping in meters. Set 0 to disable; this can be changed live in the GUI.")
     parser.add_argument("--point-size", type=float, default=0.012)
@@ -383,6 +393,90 @@ def run_model(
     predictions = model(images, **kwargs)
     predictions["images"] = images
     return predictions
+
+
+def apply_posthoc_tracking_overlay(
+    predictions: dict[str, torch.Tensor],
+    args: argparse.Namespace,
+) -> None:
+    """Attach display-only IDs after HSI inference so geometry stays unchanged."""
+    if str(args.tracking_overlay) == "none":
+        return
+    required = {
+        "pred_boxes": predictions.get("pred_boxes"),
+        "pred_betas": predictions.get("hsi_refined_pred_betas", predictions.get("pred_betas")),
+        "pred_transl_cam": predictions.get(
+            "hsi_refined_pred_transl_cam", predictions.get("pred_transl_cam")
+        ),
+        "pred_confs": predictions.get("pred_confs"),
+    }
+    missing = [name for name, value in required.items() if not isinstance(value, torch.Tensor)]
+    if missing:
+        raise RuntimeError(f"Post-HSI tracking overlay is missing predictions: {missing}")
+    boxes = required["pred_boxes"]
+    confs = required["pred_confs"]
+    confidence = confs.detach().float()
+    while confidence.ndim > 3:
+        confidence = confidence.mean(dim=-1)
+    query_mask = confidence >= float(args.conf_threshold)
+    query_mask &= torch.isfinite(boxes).all(dim=-1)
+    query_mask &= boxes[..., 2:].gt(0.0).all(dim=-1)
+    assigner = BaseSMPLTrackAssigner(
+        max_age=int(args.track_max_age),
+        min_track_quality=float(args.track_min_quality),
+        max_center_distance_norm=float(args.track_max_center_distance),
+        max_transl_distance_m=float(args.track_max_transl_distance),
+        max_beta_l1=float(args.track_max_beta_l1),
+        id_weight=0.0,
+    )
+    predictions.update(
+        assigner.assign(
+            boxes=boxes,
+            pred_betas=required["pred_betas"],
+            pred_transl_cam=required["pred_transl_cam"],
+            pred_confs=confs,
+            query_mask=query_mask,
+        )
+    )
+    predictions["viewer_tracking_overlay_active"] = boxes.new_ones(())
+
+
+def snapshot_viewer_geometry(predictions: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
+    keys = (
+        "hsi_scene_scale",
+        "hsi_scene_depth_bias",
+        "pred_poses",
+        "pred_betas",
+        "pred_transl_cam",
+        "hsi_refined_pred_poses",
+        "hsi_refined_pred_betas",
+        "hsi_refined_pred_transl_cam",
+    )
+    return {
+        key: predictions[key].detach().clone()
+        for key in keys
+        if isinstance(predictions.get(key), torch.Tensor)
+    }
+
+
+def assert_viewer_geometry_unchanged(
+    predictions: dict[str, torch.Tensor],
+    snapshot: dict[str, torch.Tensor],
+    args: argparse.Namespace,
+) -> None:
+    if str(args.tracking_overlay) == "none":
+        return
+    changed = [
+        key
+        for key, before in snapshot.items()
+        if not isinstance(predictions.get(key), torch.Tensor)
+        or not torch.equal(before, predictions[key])
+    ]
+    if changed:
+        raise RuntimeError(f"Display-only tracking modified Stage2 geometry tensors: {changed}")
+    reference = predictions.get("pred_transl_cam")
+    if isinstance(reference, torch.Tensor):
+        predictions["viewer_tracking_geometry_unchanged"] = reference.new_ones(())
 
 
 def build_scene_data(
@@ -693,7 +787,11 @@ def select_frame_people(
     assigned_mask = predictions.get("assigned_track_mask")
     assigned_quality = predictions.get("assigned_track_quality")
     assigned_source = predictions.get("assigned_track_source")
-    if isinstance(assigned_ids, torch.Tensor) and isinstance(assigned_mask, torch.Tensor):
+    if (
+        isinstance(assigned_ids, torch.Tensor)
+        and isinstance(assigned_mask, torch.Tensor)
+        and bool(assigned_mask[0, frame_index].any())
+    ):
         valid = assigned_mask[0, frame_index].detach().cpu().bool()
         track_ids = assigned_ids[0, frame_index].detach().cpu().long()
     elif priors is not None:
@@ -789,6 +887,11 @@ def build_summary(
         "num_frames": len(frame_paths),
         "checkpoint": str(checkpoint),
         "query_source": str(args.query_source),
+        "tracking_overlay": str(args.tracking_overlay),
+        "tracking": summarize_tracking(predictions),
+        "tracking_geometry_unchanged": bool(
+            predictions.get("viewer_tracking_geometry_unchanged", images.new_zeros(())).detach().cpu() > 0.5
+        ),
         "image_shape": list(images.shape),
         "nlf_image_hw": [int(v) for v in predictions.get("nlf_image_hw", torch.tensor([], device=images.device)).detach().cpu().reshape(-1).tolist()],
         "point_counts_hsi": [int(frame["hsi_points"].shape[0]) for frame in scene["frames"]],
@@ -803,6 +906,25 @@ def build_summary(
         "depth_alignment_overall": summarize_depth_alignment(scene),
         "depth_alignment_by_frame": [frame["depth_alignment"] for frame in scene["frames"]],
         "output_dir": str(output_dir),
+    }
+
+
+def summarize_tracking(predictions: dict[str, torch.Tensor]) -> dict[str, Any]:
+    ids = predictions.get("assigned_track_ids")
+    mask = predictions.get("assigned_track_mask")
+    quality = predictions.get("assigned_track_quality")
+    if not isinstance(ids, torch.Tensor) or not isinstance(mask, torch.Tensor):
+        return {"active": False, "unique_track_ids": [], "track_ids_by_frame": []}
+    ids_cpu = ids.detach().cpu().long()
+    mask_cpu = mask.detach().cpu().bool()
+    quality_mean = None
+    if isinstance(quality, torch.Tensor) and bool(mask.any()):
+        quality_mean = float(quality.detach().float()[mask].mean().cpu())
+    return {
+        "active": bool(mask_cpu.any()),
+        "unique_track_ids": sorted({int(value) for value in ids_cpu[mask_cpu].tolist()}),
+        "track_ids_by_frame": [ids_cpu[0, frame][mask_cpu[0, frame]].tolist() for frame in range(ids_cpu.shape[1])],
+        "mean_track_quality": quality_mean,
     }
 
 
