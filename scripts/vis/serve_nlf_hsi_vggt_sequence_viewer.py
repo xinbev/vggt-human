@@ -152,7 +152,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--viewer-mode", choices=["4D current frame", "3D accumulate", "Hybrid"], default="4D current frame", help="Initial Viser playback mode.")
     parser.add_argument("--environment-display", choices=["points", "mesh", "both"], default="points", help="Initial environment rendering mode. The Viser GUI can still toggle this live.")
     parser.add_argument("--env-mesh-depth-edge-rtol", type=float, default=0.15, help="Relative depth discontinuity threshold for environment surface mesh faces.")
-    parser.add_argument("--env-mesh-color-groups", type=int, default=64, help="Maximum color buckets used to approximate RGB environment mesh color with Viser simple meshes.")
+    parser.add_argument("--env-mesh-color-groups", type=int, default=216, help="Maximum color buckets used to approximate RGB environment mesh face color with Viser simple meshes.")
     parser.add_argument("--smpl-edit-output", default="", help="Optional JSON path for viewer-only SMPL translation edits. Defaults to <output-dir>/smpl_edit_offsets.json.")
     parser.add_argument("--show-track-ids", action=argparse.BooleanOptionalAction, default=True, help="Initial visibility for SMPL track ID labels. The Viser GUI can still toggle this live.")
     parser.add_argument("--point-size", type=float, default=0.012)
@@ -1002,7 +1002,7 @@ class SequenceViewer:
         self.depth_point_stride_value = max(1, int(args.depth_point_stride))
         self.max_scene_depth_value = float(args.max_scene_depth)
         self.env_mesh_depth_edge_rtol = float(getattr(args, "env_mesh_depth_edge_rtol", 0.08))
-        self.env_mesh_color_groups = max(1, int(getattr(args, "env_mesh_color_groups", 64)))
+        self.env_mesh_color_groups = max(1, int(getattr(args, "env_mesh_color_groups", 216)))
         self._rebuilding_points = False
         self.global_handles: dict[str, list[Any]] = {}
         self.human_entries: list[dict[str, Any]] = []
@@ -1514,7 +1514,7 @@ class SequenceViewer:
 
     def _ensure_depth_meshes_for_frame(self, frame: dict[str, Any], frame_handles: dict[str, Any], idx: int, depth_source: str) -> None:
         if depth_source in {"raw_depth", "both"} and not frame_handles.get("raw_mesh"):
-            raw_mesh_vertices, raw_mesh_colors, raw_mesh_faces = build_depth_mesh_for_frame(
+            raw_mesh_vertices, raw_mesh_colors, raw_mesh_faces, raw_mesh_face_colors = build_depth_mesh_for_frame(
                 frame,
                 depth_key="raw_depth_map",
                 extrinsic_key="raw_extrinsic",
@@ -1525,19 +1525,21 @@ class SequenceViewer:
             frame["raw_mesh_vertices"] = raw_mesh_vertices
             frame["raw_mesh_colors"] = raw_mesh_colors
             frame["raw_mesh_faces"] = raw_mesh_faces
+            frame["raw_mesh_face_colors"] = raw_mesh_face_colors
             frame_handles["raw_mesh"] = add_vertex_color_mesh(
                 self.server,
                 f"/frames/{idx:04d}/mesh_raw_depth",
                 raw_mesh_vertices,
                 raw_mesh_faces,
                 raw_mesh_colors,
+                face_colors=raw_mesh_face_colors,
                 opacity=0.82,
                 max_color_groups=self.env_mesh_color_groups,
             )
         if bool(getattr(self.args, "tracking_only", False)):
             return
         if depth_source in {"hsi_depth", "both"} and not frame_handles.get("hsi_mesh"):
-            hsi_mesh_vertices, hsi_mesh_colors, hsi_mesh_faces = build_depth_mesh_for_frame(
+            hsi_mesh_vertices, hsi_mesh_colors, hsi_mesh_faces, hsi_mesh_face_colors = build_depth_mesh_for_frame(
                 frame,
                 depth_key="hsi_depth_map",
                 extrinsic_key="hsi_extrinsic",
@@ -1548,12 +1550,14 @@ class SequenceViewer:
             frame["hsi_mesh_vertices"] = hsi_mesh_vertices
             frame["hsi_mesh_colors"] = hsi_mesh_colors
             frame["hsi_mesh_faces"] = hsi_mesh_faces
+            frame["hsi_mesh_face_colors"] = hsi_mesh_face_colors
             frame_handles["hsi_mesh"] = add_vertex_color_mesh(
                 self.server,
                 f"/frames/{idx:04d}/mesh_hsi_depth",
                 hsi_mesh_vertices,
                 hsi_mesh_faces,
                 hsi_mesh_colors,
+                face_colors=hsi_mesh_face_colors,
                 opacity=0.82,
                 max_color_groups=self.env_mesh_color_groups,
             )
@@ -1683,7 +1687,7 @@ def build_depth_mesh_for_frame(
     depth_point_stride: int,
     max_scene_depth: float,
     depth_edge_rtol: float,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     depth = torch.from_numpy(np.asarray(frame[depth_key], dtype=np.float32))
     rgb = torch.from_numpy(np.asarray(frame["rgb_chw"], dtype=np.float32))
     intrinsic = np.asarray(frame["intrinsic"], dtype=np.float32)
@@ -1707,7 +1711,7 @@ def depth_to_world_surface_mesh_with_limits(
     depth_point_stride: int,
     max_scene_depth: float,
     depth_edge_rtol: float,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     depth = depth.detach().float()
     height, width = int(depth.shape[-2]), int(depth.shape[-1])
     step = max(1, int(depth_point_stride))
@@ -1735,7 +1739,7 @@ def depth_to_world_surface_mesh_with_limits(
     colors_np = colors.detach().cpu().numpy().astype(np.uint8, copy=False)
     depth_np = z.detach().cpu().numpy().astype(np.float32, copy=False)
     valid_np = valid.detach().cpu().numpy().astype(bool, copy=False)
-    vertices_cam, vertex_colors, faces = depth_sample_grid_to_surface_mesh(
+    vertices_cam, vertex_colors, faces, face_colors = depth_sample_grid_to_surface_mesh(
         points_np,
         colors_np,
         depth_np,
@@ -1743,7 +1747,7 @@ def depth_to_world_surface_mesh_with_limits(
         depth_edge_rtol=float(depth_edge_rtol),
     )
     vertices_world = camera_points_to_world_np(vertices_cam, extrinsic) if vertices_cam.size else vertices_cam
-    return vertices_world, vertex_colors, faces
+    return vertices_world, vertex_colors, faces, face_colors
 
 
 def depth_sample_grid_to_surface_mesh(
@@ -1752,14 +1756,14 @@ def depth_sample_grid_to_surface_mesh(
     depth: np.ndarray,
     valid: np.ndarray,
     depth_edge_rtol: float,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     rows, cols = depth.shape
     index_map = -np.ones((rows, cols), dtype=np.int64)
     index_map[valid] = np.arange(int(valid.sum()), dtype=np.int64)
     vertices = np.asarray(points[valid], dtype=np.float32).reshape(-1, 3)
     vertex_colors = np.asarray(colors[valid], dtype=np.uint8).reshape(-1, 3)
     if rows < 2 or cols < 2 or vertices.shape[0] == 0:
-        return vertices, vertex_colors, np.empty((0, 3), dtype=np.int64)
+        return vertices, vertex_colors, np.empty((0, 3), dtype=np.int64), np.empty((0, 3), dtype=np.uint8)
 
     cell_mask = valid[:-1, :-1] & valid[:-1, 1:] & valid[1:, :-1] & valid[1:, 1:]
     d00 = depth[:-1, :-1]
@@ -1773,20 +1777,24 @@ def depth_sample_grid_to_surface_mesh(
 
     ys, xs = np.nonzero(cell_mask)
     if ys.size == 0:
-        return vertices, vertex_colors, np.empty((0, 3), dtype=np.int64)
+        return vertices, vertex_colors, np.empty((0, 3), dtype=np.int64), np.empty((0, 3), dtype=np.uint8)
     i00 = index_map[ys, xs]
     i01 = index_map[ys, xs + 1]
     i10 = index_map[ys + 1, xs]
     i11 = index_map[ys + 1, xs + 1]
+    c00 = colors[ys, xs]
+    c11 = colors[ys + 1, xs + 1]
     faces = np.concatenate(
         [
-            np.stack([i00, i10, i01], axis=1),
-            np.stack([i10, i11, i01], axis=1),
+            np.stack([i00, i01, i10], axis=1),
+            np.stack([i10, i01, i00], axis=1),
+            np.stack([i01, i10, i11], axis=1),
+            np.stack([i11, i10, i01], axis=1),
         ],
         axis=0,
     )
-    faces = np.concatenate([faces, faces[:, ::-1]], axis=0)
-    return vertices, vertex_colors, faces.astype(np.int64, copy=False)
+    face_colors = np.concatenate([c00, c00, c11, c11], axis=0)
+    return vertices, vertex_colors, faces.astype(np.int64, copy=False), face_colors.astype(np.uint8, copy=False)
 
 
 def remove_handle(handle: Any) -> None:
@@ -1801,16 +1809,28 @@ def remove_handle(handle: Any) -> None:
 
 def add_mesh(server: Any, name: str, vertices: np.ndarray, faces: np.ndarray, color: tuple[int, int, int], opacity: float = 1.0) -> Any:
     api = scene_api(server)
-    color_float = tuple(float(v) / 255.0 for v in color)
+    color_int = tuple(int(np.clip(v, 0, 255)) for v in color)
+    color_float = tuple(float(v) / 255.0 for v in color_int)
     try:
-        return api.add_mesh_simple(name=name, vertices=vertices, faces=faces, color=color_float, opacity=float(opacity))
+        return api.add_mesh_simple(name=name, vertices=vertices, faces=faces, color=color_int, opacity=float(opacity))
     except TypeError:
-        handle = api.add_mesh_simple(name, vertices, faces, color=color_float)
         try:
-            handle.opacity = float(opacity)
-        except Exception:
-            pass
-        return handle
+            handle = api.add_mesh_simple(name, vertices, faces, color=color_int)
+            try:
+                handle.opacity = float(opacity)
+            except Exception:
+                pass
+            return handle
+        except TypeError:
+            try:
+                return api.add_mesh_simple(name=name, vertices=vertices, faces=faces, color=color_float, opacity=float(opacity))
+            except TypeError:
+                handle = api.add_mesh_simple(name, vertices, faces, color=color_float)
+                try:
+                    handle.opacity = float(opacity)
+                except Exception:
+                    pass
+                return handle
 
 
 def add_vertex_color_mesh(
@@ -1819,21 +1839,27 @@ def add_vertex_color_mesh(
     vertices: np.ndarray,
     faces: np.ndarray,
     colors: np.ndarray,
+    face_colors: np.ndarray | None = None,
     opacity: float = 1.0,
     max_color_groups: int = 64,
 ) -> list[Any]:
     vertices = np.asarray(vertices, dtype=np.float32).reshape(-1, 3)
     faces = np.asarray(faces, dtype=np.int64).reshape(-1, 3)
     colors = np.asarray(colors, dtype=np.uint8).reshape(-1, 3)
+    face_colors_arr = None if face_colors is None else np.asarray(face_colors, dtype=np.uint8).reshape(-1, 3)
     if colors.shape[0] != vertices.shape[0]:
         colors = np.full((vertices.shape[0], 3), 160, dtype=np.uint8)
     valid_faces = np.all((faces >= 0) & (faces < vertices.shape[0]), axis=1)
+    if face_colors_arr is not None and face_colors_arr.shape[0] == faces.shape[0]:
+        face_colors_arr = face_colors_arr[valid_faces]
+    else:
+        face_colors_arr = None
     faces = faces[valid_faces]
     if vertices.shape[0] == 0 or faces.shape[0] == 0:
         return []
     max_color_groups = max(1, int(max_color_groups))
-    face_colors = colors[faces].astype(np.float32).mean(axis=1)
-    if max_color_groups <= 1 or face_colors.shape[0] == 0:
+    face_colors_float = face_colors_arr.astype(np.float32) if face_colors_arr is not None else colors[faces].astype(np.float32).mean(axis=1)
+    if max_color_groups <= 1 or face_colors_float.shape[0] == 0:
         median_color = np.median(colors, axis=0).astype(np.uint8).tolist() if colors.size else [160, 160, 160]
         return [add_mesh(server, name, vertices, faces, tuple(int(v) for v in median_color), opacity=opacity)]
 
@@ -1841,7 +1867,7 @@ def add_vertex_color_mesh(
     if levels < 2:
         median_color = np.median(colors, axis=0).astype(np.uint8).tolist() if colors.size else [160, 160, 160]
         return [add_mesh(server, name, vertices, faces, tuple(int(v) for v in median_color), opacity=opacity)]
-    bins = np.clip((face_colors * float(levels) / 256.0).astype(np.int64), 0, levels - 1)
+    bins = np.clip((face_colors_float * float(levels) / 256.0).astype(np.int64), 0, levels - 1)
     bucket_ids = bins[:, 0] * levels * levels + bins[:, 1] * levels + bins[:, 2]
     handles: list[Any] = []
     for bucket_id in np.unique(bucket_ids):
@@ -1852,7 +1878,7 @@ def add_vertex_color_mesh(
         used_vertices, remapped = np.unique(bucket_faces.reshape(-1), return_inverse=True)
         compact_faces = remapped.reshape(-1, 3).astype(np.int64, copy=False)
         compact_vertices = vertices[used_vertices]
-        bucket_color = np.mean(face_colors[mask], axis=0).clip(0.0, 255.0).astype(np.uint8)
+        bucket_color = np.mean(face_colors_float[mask], axis=0).clip(0.0, 255.0).astype(np.uint8)
         color = tuple(int(v) for v in bucket_color.tolist())
         handles.append(
             add_mesh(
