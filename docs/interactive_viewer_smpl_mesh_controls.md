@@ -31,6 +31,8 @@ The viewer now adds:
   runtime stability;
 - SMPL click/dropdown selection with `SMPL dX`, `SMPL dY`, and `SMPL dZ`
   viewer-only translation offsets;
+- `Show Track IDs` controls ID label visibility in the GUI, and
+  `SHOW_TRACK_IDS=true/false` controls its initial state from shell scripts;
 - optional Viser transform controls when the installed Viser version supports
   `add_transform_controls`;
 - edit scope: selected frame only or same track across all frames;
@@ -74,6 +76,12 @@ bash scripts/vis/serve_stage2_human_scene_align_walking_id_overlay.sh
 Outputs remain under the configured `outputs/vis/...` directory. Saved manual
 SMPL offsets default to `smpl_edit_offsets.json` in that viewer output folder.
 
+To start with ID labels hidden:
+
+```bash
+SHOW_TRACK_IDS=false bash scripts/vis/serve_stage2_human_scene_align_walking_id_overlay.sh
+```
+
 This Stage2 wrapper forwards the aligned viewer settings to
 `scripts/vis/serve_nlf_hsi_vggt_sequence_viewer.sh`:
 
@@ -81,6 +89,7 @@ This Stage2 wrapper forwards the aligned viewer settings to
 - `TRAIN_CONFIG=configs/train_smpl_hsi_nlf_stage2_human_scene_align.yaml`
 - `CHECKPOINT=outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt`
 - `TRACKING_OVERLAY=base_smpl`
+- `SHOW_TRACK_IDS=true` by default
 - `HSI_ALIGN_FEATURE_VERSION=legacy_scale_bias_v0`
 - `MAX_HUMANS=8`
 - `DEPTH_POINT_STRIDE=2`

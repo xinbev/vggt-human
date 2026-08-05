@@ -25,6 +25,7 @@ TRACK_MIN_QUALITY="${TRACK_MIN_QUALITY:-0.25}"
 TRACK_MAX_CENTER_DISTANCE="${TRACK_MAX_CENTER_DISTANCE:-0.25}"
 TRACK_MAX_TRANSL_DISTANCE="${TRACK_MAX_TRANSL_DISTANCE:-1.50}"
 TRACK_MAX_BETA_L1="${TRACK_MAX_BETA_L1:-0.30}"
+SHOW_TRACK_IDS="${SHOW_TRACK_IDS:-true}"
 DEPTH_POINT_STRIDE="${DEPTH_POINT_STRIDE:-4}"
 MAX_SCENE_DEPTH="${MAX_SCENE_DEPTH:-30.0}"
 ENV_MESH_DEPTH_EDGE_RTOL="${ENV_MESH_DEPTH_EDGE_RTOL:-0.08}"
@@ -64,6 +65,7 @@ echo "Output      : ${OUTPUT_DIR}"
 echo "Port        : ${PORT}"
 echo "Max frames  : ${MAX_FRAMES}"
 echo "ID overlay  : ${TRACKING_OVERLAY} (post-HSI display only)"
+echo "Show IDs    : ${SHOW_TRACK_IDS} (initial GUI state)"
 echo "Align compat: ${HSI_ALIGN_FEATURE_VERSION:-<config default>}"
 echo "Depth stride: ${DEPTH_POINT_STRIDE} (can be changed in Viser GUI)"
 echo "Max depth   : ${MAX_SCENE_DEPTH} (0 disables clipping; GUI adjustable)"
@@ -103,6 +105,15 @@ ARGS=(
   --alignment-vertex-stride "${ALIGNMENT_VERTEX_STRIDE}"
   --image-size "${IMAGE_SIZE}"
 )
+
+case "${SHOW_TRACK_IDS}" in
+  0|false|FALSE|False|no|NO|No|off|OFF|Off)
+    ARGS+=(--no-show-track-ids)
+    ;;
+  *)
+    ARGS+=(--show-track-ids)
+    ;;
+esac
 
 if [[ -n "${CHECKPOINT}" ]]; then
   ARGS+=(--checkpoint "${CHECKPOINT}")
