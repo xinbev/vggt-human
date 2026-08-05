@@ -39,7 +39,8 @@ The calibrated depth is:
 hsi_depth = raw_depth * hsi_scene_scale + hsi_scene_depth_bias
 ```
 
-The GUI `HSI Scale` field displays:
+The GUI has a dedicated, expanded `HSI Scale Controls` folder with separate
+read-only rows for:
 
 - the configured strategy;
 - the current model scale and bias actually used by geometry;
@@ -49,9 +50,9 @@ The GUI `HSI Scale` field displays:
 
 ## Manual Visualization Scale
 
-`HSI Visual Scale Multiplier` defaults to `1.0`. Change it and click
-`Apply HSI Visual Scale` to update the complete HSI point sequence. Reset sets
-it back to `1.0`.
+The numeric `Visual Scale Multiplier` input defaults to `1.0`. Enter a value and
+click `Apply Scale` to update the complete HSI point sequence. `Reset Scale to
+1.0` restores the model visualization.
 
 The multiplier scales HSI environment world points, HSI camera positions, and
 the HSI camera trajectory about the shared world origin. It does not edit model

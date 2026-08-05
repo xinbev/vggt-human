@@ -13,6 +13,7 @@ import json
 import pickle
 import sys
 import time
+from contextlib import nullcontext
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -1161,7 +1162,6 @@ class SequenceViewer:
 
     def _build_gui(self) -> None:
         self.frame_info = add_text(self.server, "Frame Info", "")
-        self.hsi_scale_info = add_text(self.server, "HSI Scale", "")
         self.alignment_info = add_text(self.server, "Depth Align", "")
         self.camera_motion_info = add_text(self.server, "Camera Motion", format_camera_motion_short(self.scene))
         self.timestep = add_slider(self.server, "Timestep", 0, len(self.scene["frames"]) - 1, 1, 0)
@@ -1179,9 +1179,30 @@ class SequenceViewer:
             ["points", "mesh", "both"],
             str(getattr(self.args, "environment_display", "points")),
         )
-        self.hsi_visual_scale = add_slider(self.server, "HSI Visual Scale Multiplier", 0.01, 5.0, 0.01, self.hsi_visual_scale_value)
-        self.apply_hsi_visual_scale = add_button(self.server, "Apply HSI Visual Scale")
-        self.reset_hsi_visual_scale = add_button(self.server, "Reset HSI Visual Scale")
+        with add_folder(self.server, "HSI Scale Controls"):
+            self.hsi_scale_strategy_info = add_text(self.server, "Strategy", "")
+            self.hsi_model_scale_info = add_text(self.server, "Current Model Scale / Bias", "")
+            self.hsi_raw_scale_info = add_text(self.server, "Raw Frame Scale / Bias", "")
+            self.hsi_scale_range_info = add_text(self.server, "Sequence Scale Min / Median / Max", "")
+            self.hsi_visual_result_info = add_text(self.server, "Applied / Effective", "")
+            for handle in (
+                self.hsi_scale_strategy_info,
+                self.hsi_model_scale_info,
+                self.hsi_raw_scale_info,
+                self.hsi_scale_range_info,
+                self.hsi_visual_result_info,
+            ):
+                set_handle_disabled(handle, True)
+            self.hsi_visual_scale = add_number(
+                self.server,
+                "Visual Scale Multiplier",
+                0.01,
+                5.0,
+                0.01,
+                self.hsi_visual_scale_value,
+            )
+            self.apply_hsi_visual_scale = add_button(self.server, "Apply Scale")
+            self.reset_hsi_visual_scale = add_button(self.server, "Reset Scale to 1.0")
         self.point_size = add_slider(self.server, "Point Size", 0.0005, 0.08, 0.0005, self.point_size_value)
         self.density_preset = add_dropdown(self.server, "Point Density Preset", ["custom", "dense stride 1", "balanced stride 2", "fast stride 4", "full sequence stride 6"], "custom")
         self.depth_point_stride = add_slider(self.server, "Depth Point Stride", 1, 64, 1, self.depth_point_stride_value)
@@ -1749,17 +1770,23 @@ class SequenceViewer:
         raw_range = "unavailable"
         if raw_scales.size > 0:
             raw_range = f"{raw_scales.min():.5g}/{np.median(raw_scales):.5g}/{raw_scales.max():.5g}"
+        set_text_value(self.hsi_scale_strategy_info, strategy)
+        set_text_value(self.hsi_model_scale_info, f"scale={model_scale:.6g}, bias={model_bias:.6g}")
+        set_text_value(self.hsi_raw_scale_info, raw_text)
         set_text_value(
-            self.hsi_scale_info,
+            self.hsi_scale_range_info,
             (
-                f"{strategy} | current model scale={model_scale:.5g}, bias={model_bias:.5g}; "
-                f"raw frame {raw_text} | model sequence min/median/max="
-                f"{model_scales.min():.5g}/{np.median(model_scales):.5g}/{model_scales.max():.5g}; "
-                f"raw sequence={raw_range} | applied visual x{applied:.3f} -> "
-                f"effective scale={model_scale * applied:.5g}, bias={model_bias * applied:.5g}"
-                + (f" | pending x{pending:.3f}, click Apply" if abs(pending - applied) > 1e-7 else "")
+                f"model={model_scales.min():.5g} / {np.median(model_scales):.5g} / {model_scales.max():.5g} | "
+                f"raw={raw_range}"
             ),
         )
+        visual_result = (
+            f"x{applied:.3f} | effective scale={model_scale * applied:.6g}, "
+            f"bias={model_bias * applied:.6g}"
+        )
+        if abs(pending - applied) > 1e-7:
+            visual_result += f" | pending x{pending:.3f}: click Apply Scale"
+        set_text_value(self.hsi_visual_result_info, visual_result)
 
     def _set_handle_attr(self, groups: list[str], attr: str, value: float) -> None:
         for frame_handles in self.handles:
@@ -2099,6 +2126,23 @@ def add_slider(server: Any, name: str, min_value: float, max_value: float, step:
         return server.add_gui_slider(name, min=min_value, max=max_value, step=step, initial_value=initial)
 
 
+def add_number(server: Any, name: str, min_value: float, max_value: float, step: float, initial: float) -> Any:
+    api = gui_api(server)
+    try:
+        return api.add_number(name, min=min_value, max=max_value, step=step, initial_value=initial)
+    except AttributeError:
+        return server.add_gui_number(name, min=min_value, max=max_value, step=step, initial_value=initial)
+
+
+def add_folder(server: Any, name: str) -> Any:
+    api = gui_api(server)
+    if hasattr(api, "add_folder"):
+        return api.add_folder(name, expand_by_default=True)
+    if hasattr(server, "add_gui_folder"):
+        return server.add_gui_folder(name)
+    return nullcontext()
+
+
 def add_checkbox(server: Any, name: str, initial: bool) -> Any:
     api = gui_api(server)
     try:
@@ -2157,6 +2201,15 @@ def set_text_value(handle: Any, value: str) -> None:
         return
     try:
         handle.value = value
+    except Exception:
+        pass
+
+
+def set_handle_disabled(handle: Any, disabled: bool) -> None:
+    if handle is None:
+        return
+    try:
+        handle.disabled = bool(disabled)
     except Exception:
         pass
 
