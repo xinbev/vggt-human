@@ -149,7 +149,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--track-max-beta-l1", type=float, default=0.30)
     parser.add_argument("--depth-point-stride", type=int, default=4, help="Initial Viser point-cloud sampling stride. This can be changed live in the GUI.")
     parser.add_argument("--max-scene-depth", type=float, default=30.0, help="Initial far-depth clipping in meters. Set 0 to disable; this can be changed live in the GUI.")
-    parser.add_argument("--env-mesh-depth-edge-rtol", type=float, default=0.08, help="Relative depth discontinuity threshold for environment surface mesh faces.")
+    parser.add_argument("--environment-display", choices=["points", "mesh", "both"], default="points", help="Initial environment rendering mode. The Viser GUI can still toggle this live.")
+    parser.add_argument("--env-mesh-depth-edge-rtol", type=float, default=0.15, help="Relative depth discontinuity threshold for environment surface mesh faces.")
     parser.add_argument("--smpl-edit-output", default="", help="Optional JSON path for viewer-only SMPL translation edits. Defaults to <output-dir>/smpl_edit_offsets.json.")
     parser.add_argument("--show-track-ids", action=argparse.BooleanOptionalAction, default=True, help="Initial visibility for SMPL track ID labels. The Viser GUI can still toggle this live.")
     parser.add_argument("--point-size", type=float, default=0.012)
@@ -1124,7 +1125,12 @@ class SequenceViewer:
         self.mode = add_dropdown(self.server, "Mode", ["4D current frame", "3D accumulate", "Hybrid"], "4D current frame")
         tracking_only = bool(getattr(self.args, "tracking_only", False))
         self.depth_source = add_dropdown(self.server, "Depth Source", ["hsi_depth", "raw_depth", "both"], "raw_depth" if tracking_only else "hsi_depth")
-        self.environment_display = add_dropdown(self.server, "Environment Display", ["points", "mesh", "both"], "points")
+        self.environment_display = add_dropdown(
+            self.server,
+            "Environment Display",
+            ["points", "mesh", "both"],
+            str(getattr(self.args, "environment_display", "points")),
+        )
         self.point_size = add_slider(self.server, "Point Size", 0.0005, 0.08, 0.0005, self.point_size_value)
         self.density_preset = add_dropdown(self.server, "Point Density Preset", ["custom", "dense stride 1", "balanced stride 2", "fast stride 4", "full sequence stride 6"], "custom")
         self.depth_point_stride = add_slider(self.server, "Depth Point Stride", 1, 64, 1, self.depth_point_stride_value)
@@ -1557,12 +1563,15 @@ class SequenceViewer:
         frame = self.scene["frames"][int(frame_index)]
         raw_cam_pos = np.asarray(frame["raw_camera"]["position"], dtype=np.float32)
         hsi_cam_pos = np.asarray(frame["hsi_camera"]["position"], dtype=np.float32)
+        raw_mesh_faces = int(np.asarray(frame.get("raw_mesh_faces", np.empty((0, 3), dtype=np.int64))).reshape(-1, 3).shape[0])
+        hsi_mesh_faces = int(np.asarray(frame.get("hsi_mesh_faces", np.empty((0, 3), dtype=np.int64))).reshape(-1, 3).shape[0])
         set_text_value(
             self.frame_info,
             (
                 f"{int(frame_index) + 1}/{len(self.scene['frames'])} "
                 f"{frame['frame_id']} | raw_pts={int(frame['raw_points'].shape[0])} "
                 f"hsi_pts={int(frame['hsi_points'].shape[0])} people={len(frame['people'])} "
+                f"meshFaces(raw/hsi)={raw_mesh_faces}/{hsi_mesh_faces} "
                 f"stride={int(frame.get('depth_point_stride', self.depth_point_stride_value))} "
                 f"maxD={float(frame.get('max_scene_depth', self.max_scene_depth_value)):.1f} "
                 f"scale={frame['hsi_scene_scale']:.4g} bias={frame['hsi_scene_depth_bias']:.4g} "

@@ -28,7 +28,8 @@ TRACK_MAX_BETA_L1="${TRACK_MAX_BETA_L1:-0.30}"
 SHOW_TRACK_IDS="${SHOW_TRACK_IDS:-true}"
 DEPTH_POINT_STRIDE="${DEPTH_POINT_STRIDE:-4}"
 MAX_SCENE_DEPTH="${MAX_SCENE_DEPTH:-30.0}"
-ENV_MESH_DEPTH_EDGE_RTOL="${ENV_MESH_DEPTH_EDGE_RTOL:-0.08}"
+ENVIRONMENT_DISPLAY="${ENVIRONMENT_DISPLAY:-points}"
+ENV_MESH_DEPTH_EDGE_RTOL="${ENV_MESH_DEPTH_EDGE_RTOL:-0.15}"
 POINT_SIZE="${POINT_SIZE:-0.012}"
 CAMERA_FRUSTUM_SCALE="${CAMERA_FRUSTUM_SCALE:-0.20}"
 ALIGNMENT_VERTEX_STRIDE="${ALIGNMENT_VERTEX_STRIDE:-16}"
@@ -48,6 +49,10 @@ mkdir -p "${OUTPUT_DIR}"
 [[ -f "${TRAIN_CONFIG}" ]] || { echo "[ERROR] Missing train config: ${TRAIN_CONFIG}" >&2; exit 1; }
 [[ -d "${FRAMES_DIR}" ]] || { echo "[ERROR] Missing frames dir: ${FRAMES_DIR}" >&2; exit 1; }
 [[ -d "${STAGE2_DIR}" ]] || { echo "[ERROR] Missing stage2 dir: ${STAGE2_DIR}" >&2; exit 1; }
+case "${ENVIRONMENT_DISPLAY}" in
+  points|mesh|both) ;;
+  *) echo "[ERROR] ENVIRONMENT_DISPLAY must be one of: points, mesh, both. Got: ${ENVIRONMENT_DISPLAY}" >&2; exit 1 ;;
+esac
 if [[ "${QUERY_SOURCE}" == "bedlam_sidecar" ]]; then
   [[ -d "${BEDLAM_ROOT}" ]] || { echo "[ERROR] Missing BEDLAM root: ${BEDLAM_ROOT}" >&2; exit 1; }
   [[ -d "${PREPROCESSED_ROOT}" ]] || { echo "[ERROR] Missing preprocessed sidecars: ${PREPROCESSED_ROOT}" >&2; exit 1; }
@@ -69,6 +74,7 @@ echo "Show IDs    : ${SHOW_TRACK_IDS} (initial GUI state)"
 echo "Align compat: ${HSI_ALIGN_FEATURE_VERSION:-<config default>}"
 echo "Depth stride: ${DEPTH_POINT_STRIDE} (can be changed in Viser GUI)"
 echo "Max depth   : ${MAX_SCENE_DEPTH} (0 disables clipping; GUI adjustable)"
+echo "Env display : ${ENVIRONMENT_DISPLAY} (points|mesh|both; GUI adjustable)"
 echo "Mesh edge   : ${ENV_MESH_DEPTH_EDGE_RTOL} (relative depth jump cutoff)"
 echo "Point size  : ${POINT_SIZE}"
 echo "SMPL edits  : ${SMPL_EDIT_OUTPUT:-${OUTPUT_DIR}/smpl_edit_offsets.json}"
@@ -99,6 +105,7 @@ ARGS=(
   --track-max-beta-l1 "${TRACK_MAX_BETA_L1}"
   --depth-point-stride "${DEPTH_POINT_STRIDE}"
   --max-scene-depth "${MAX_SCENE_DEPTH}"
+  --environment-display "${ENVIRONMENT_DISPLAY}"
   --env-mesh-depth-edge-rtol "${ENV_MESH_DEPTH_EDGE_RTOL}"
   --point-size "${POINT_SIZE}"
   --camera-frustum-scale "${CAMERA_FRUSTUM_SCALE}"

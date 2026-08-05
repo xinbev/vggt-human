@@ -23,6 +23,9 @@ viewer.
 The viewer now adds:
 
 - `Environment Display`: `points`, `mesh`, or `both`;
+- `ENVIRONMENT_DISPLAY=points/mesh/both` controls the initial environment
+  rendering mode from shell scripts; the Stage2 walking wrapper defaults to
+  `mesh`;
 - depth-grid surface mesh construction for raw and HSI depth, using
   `--env-mesh-depth-edge-rtol` to break faces across depth discontinuities;
 - environment mesh nodes are built lazily when `mesh` or `both` is selected,
@@ -94,6 +97,7 @@ This Stage2 wrapper forwards the aligned viewer settings to
 - `MAX_HUMANS=8`
 - `DEPTH_POINT_STRIDE=2`
 - `MAX_SCENE_DEPTH=80`
+- `ENVIRONMENT_DISPLAY=mesh` by default
 - `POINT_SIZE=0.006`
 
 ## Validation
