@@ -1042,37 +1042,9 @@ class SequenceViewer:
             frame_handles["raw"].append(
                 add_point_cloud(self.server, f"/frames/{idx:04d}/points_raw_depth", frame["raw_points"], frame["raw_colors"], self.point_size_value)
             )
-            raw_mesh_vertices, raw_mesh_colors, raw_mesh_faces = build_depth_mesh_for_frame(
-                frame,
-                depth_key="raw_depth_map",
-                extrinsic_key="raw_extrinsic",
-                depth_point_stride=self.depth_point_stride_value,
-                max_scene_depth=self.max_scene_depth_value,
-                depth_edge_rtol=self.env_mesh_depth_edge_rtol,
-            )
-            frame["raw_mesh_vertices"] = raw_mesh_vertices
-            frame["raw_mesh_colors"] = raw_mesh_colors
-            frame["raw_mesh_faces"] = raw_mesh_faces
-            frame_handles["raw_mesh"].append(
-                add_vertex_color_mesh(self.server, f"/frames/{idx:04d}/mesh_raw_depth", raw_mesh_vertices, raw_mesh_faces, raw_mesh_colors, opacity=0.82)
-            )
             if not tracking_only:
                 frame_handles["hsi"].append(
                     add_point_cloud(self.server, f"/frames/{idx:04d}/points_hsi_depth", frame["hsi_points"], frame["hsi_colors"], self.point_size_value)
-                )
-                hsi_mesh_vertices, hsi_mesh_colors, hsi_mesh_faces = build_depth_mesh_for_frame(
-                    frame,
-                    depth_key="hsi_depth_map",
-                    extrinsic_key="hsi_extrinsic",
-                    depth_point_stride=self.depth_point_stride_value,
-                    max_scene_depth=self.max_scene_depth_value,
-                    depth_edge_rtol=self.env_mesh_depth_edge_rtol,
-                )
-                frame["hsi_mesh_vertices"] = hsi_mesh_vertices
-                frame["hsi_mesh_colors"] = hsi_mesh_colors
-                frame["hsi_mesh_faces"] = hsi_mesh_faces
-                frame_handles["hsi_mesh"].append(
-                    add_vertex_color_mesh(self.server, f"/frames/{idx:04d}/mesh_hsi_depth", hsi_mesh_vertices, hsi_mesh_faces, hsi_mesh_colors, opacity=0.82)
                 )
             for person in frame["people"]:
                 color = tuple(int(v) for v in person["color"])
@@ -1464,23 +1436,10 @@ class SequenceViewer:
                 frame["raw_colors"] = raw_colors
                 frame["depth_point_stride"] = int(self.depth_point_stride_value)
                 frame["max_scene_depth"] = float(self.max_scene_depth_value)
-                raw_mesh_vertices, raw_mesh_colors, raw_mesh_faces = build_depth_mesh_for_frame(
-                    frame,
-                    depth_key="raw_depth_map",
-                    extrinsic_key="raw_extrinsic",
-                    depth_point_stride=self.depth_point_stride_value,
-                    max_scene_depth=self.max_scene_depth_value,
-                    depth_edge_rtol=self.env_mesh_depth_edge_rtol,
-                )
-                frame["raw_mesh_vertices"] = raw_mesh_vertices
-                frame["raw_mesh_colors"] = raw_mesh_colors
-                frame["raw_mesh_faces"] = raw_mesh_faces
                 frame_handles["raw"] = [
                     add_point_cloud(self.server, f"/frames/{idx:04d}/points_raw_depth", raw_points, raw_colors, self.point_size_value)
                 ]
-                frame_handles["raw_mesh"] = [
-                    add_vertex_color_mesh(self.server, f"/frames/{idx:04d}/mesh_raw_depth", raw_mesh_vertices, raw_mesh_faces, raw_mesh_colors, opacity=0.82)
-                ]
+                frame_handles["raw_mesh"] = []
                 if not bool(getattr(self.args, "tracking_only", False)):
                     hsi_points, hsi_colors = rebuild_depth_points_for_frame(
                         frame,
@@ -1494,20 +1453,7 @@ class SequenceViewer:
                     frame_handles["hsi"] = [
                         add_point_cloud(self.server, f"/frames/{idx:04d}/points_hsi_depth", hsi_points, hsi_colors, self.point_size_value)
                     ]
-                    hsi_mesh_vertices, hsi_mesh_colors, hsi_mesh_faces = build_depth_mesh_for_frame(
-                        frame,
-                        depth_key="hsi_depth_map",
-                        extrinsic_key="hsi_extrinsic",
-                        depth_point_stride=self.depth_point_stride_value,
-                        max_scene_depth=self.max_scene_depth_value,
-                        depth_edge_rtol=self.env_mesh_depth_edge_rtol,
-                    )
-                    frame["hsi_mesh_vertices"] = hsi_mesh_vertices
-                    frame["hsi_mesh_colors"] = hsi_mesh_colors
-                    frame["hsi_mesh_faces"] = hsi_mesh_faces
-                    frame_handles["hsi_mesh"] = [
-                        add_vertex_color_mesh(self.server, f"/frames/{idx:04d}/mesh_hsi_depth", hsi_mesh_vertices, hsi_mesh_faces, hsi_mesh_colors, opacity=0.82)
-                    ]
+                    frame_handles["hsi_mesh"] = []
         finally:
             self._rebuilding_points = False
         self._update_visibility()
@@ -1543,6 +1489,8 @@ class SequenceViewer:
             show_decimated_camera = idx == current or (idx % camera_stride == 0)
             show_camera_frame = (idx <= current if mode != "4D current frame" else idx == current)
             show_raw_camera, show_hsi_camera = self._camera_visibility_for_depth(depth_source)
+            if show_points and show_env_mesh:
+                self._ensure_depth_meshes_for_frame(frame=self.scene["frames"][idx], frame_handles=frame_handles, idx=idx, depth_source=depth_source)
             set_group_visible(frame_handles["raw"], show_points and show_env_points and depth_source in {"raw_depth", "both"})
             set_group_visible(frame_handles["hsi"], show_points and show_env_points and depth_source in {"hsi_depth", "both"})
             set_group_visible(frame_handles["raw_mesh"], show_points and show_env_mesh and depth_source in {"raw_depth", "both"})
@@ -1553,6 +1501,40 @@ class SequenceViewer:
             set_group_visible(frame_handles["cameras_raw"], bool(self.show_cameras.value) and show_raw_camera and show_camera_frame and show_decimated_camera)
             set_group_visible(frame_handles["cameras_hsi"], bool(self.show_cameras.value) and show_hsi_camera and show_camera_frame and show_decimated_camera)
         self._update_info_text(current)
+
+    def _ensure_depth_meshes_for_frame(self, frame: dict[str, Any], frame_handles: dict[str, Any], idx: int, depth_source: str) -> None:
+        if depth_source in {"raw_depth", "both"} and not frame_handles.get("raw_mesh"):
+            raw_mesh_vertices, raw_mesh_colors, raw_mesh_faces = build_depth_mesh_for_frame(
+                frame,
+                depth_key="raw_depth_map",
+                extrinsic_key="raw_extrinsic",
+                depth_point_stride=self.depth_point_stride_value,
+                max_scene_depth=self.max_scene_depth_value,
+                depth_edge_rtol=self.env_mesh_depth_edge_rtol,
+            )
+            frame["raw_mesh_vertices"] = raw_mesh_vertices
+            frame["raw_mesh_colors"] = raw_mesh_colors
+            frame["raw_mesh_faces"] = raw_mesh_faces
+            frame_handles["raw_mesh"] = [
+                add_vertex_color_mesh(self.server, f"/frames/{idx:04d}/mesh_raw_depth", raw_mesh_vertices, raw_mesh_faces, raw_mesh_colors, opacity=0.82)
+            ]
+        if bool(getattr(self.args, "tracking_only", False)):
+            return
+        if depth_source in {"hsi_depth", "both"} and not frame_handles.get("hsi_mesh"):
+            hsi_mesh_vertices, hsi_mesh_colors, hsi_mesh_faces = build_depth_mesh_for_frame(
+                frame,
+                depth_key="hsi_depth_map",
+                extrinsic_key="hsi_extrinsic",
+                depth_point_stride=self.depth_point_stride_value,
+                max_scene_depth=self.max_scene_depth_value,
+                depth_edge_rtol=self.env_mesh_depth_edge_rtol,
+            )
+            frame["hsi_mesh_vertices"] = hsi_mesh_vertices
+            frame["hsi_mesh_colors"] = hsi_mesh_colors
+            frame["hsi_mesh_faces"] = hsi_mesh_faces
+            frame_handles["hsi_mesh"] = [
+                add_vertex_color_mesh(self.server, f"/frames/{idx:04d}/mesh_hsi_depth", hsi_mesh_vertices, hsi_mesh_faces, hsi_mesh_colors, opacity=0.82)
+            ]
 
     def _camera_visibility_for_depth(self, depth_source: str) -> tuple[bool, bool]:
         if bool(getattr(self.args, "tracking_only", False)):
@@ -1825,22 +1807,17 @@ def add_vertex_color_mesh(
             point_size=0.001,
         )
     api = scene_api(server)
+    median_color = np.median(colors, axis=0).astype(np.uint8).tolist() if colors.size else [160, 160, 160]
+    color_float = tuple(float(v) / 255.0 for v in median_color)
     try:
-        import trimesh  # noqa: PLC0415
-
-        mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_colors=colors, process=False)
+        return api.add_mesh_simple(name=name, vertices=vertices, faces=faces, color=color_float, opacity=float(opacity))
+    except TypeError:
+        handle = api.add_mesh_simple(name, vertices, faces, color=color_float)
         try:
-            return api.add_mesh_trimesh(name=name, mesh=mesh, opacity=float(opacity))
-        except TypeError:
-            handle = api.add_mesh_trimesh(name=name, mesh=mesh)
-            try:
-                handle.opacity = float(opacity)
-            except Exception:
-                pass
-            return handle
-    except Exception:
-        median_color = np.median(colors, axis=0).astype(np.uint8).tolist() if colors.size else [160, 160, 160]
-        return add_mesh(server, name, vertices, faces, tuple(int(v) for v in median_color), opacity=opacity)
+            handle.opacity = float(opacity)
+        except Exception:
+            pass
+        return handle
 
 
 def add_label(server: Any, name: str, text: str, position: np.ndarray) -> Any:

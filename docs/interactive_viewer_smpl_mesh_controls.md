@@ -25,6 +25,10 @@ The viewer now adds:
 - `Environment Display`: `points`, `mesh`, or `both`;
 - depth-grid surface mesh construction for raw and HSI depth, using
   `--env-mesh-depth-edge-rtol` to break faces across depth discontinuities;
+- environment mesh nodes are built lazily when `mesh` or `both` is selected,
+  so the viewer starts with the baseline point-cloud load;
+- environment mesh uses Viser simple mesh nodes with a representative color for
+  runtime stability;
 - SMPL click/dropdown selection with `SMPL dX`, `SMPL dY`, and `SMPL dZ`
   viewer-only translation offsets;
 - optional Viser transform controls when the installed Viser version supports
