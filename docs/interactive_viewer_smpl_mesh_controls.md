@@ -77,18 +77,29 @@ per person and per frame as follows:
 1. Project valid HSI SMPL vertices into the depth image.
 2. Rasterize every valid SMPL triangle to obtain the actual projected body
    silhouette rather than a coarse bounding box or convex hull.
-3. Dilate the silhouette by `12` pixels to cover projection and boundary error.
+3. Dilate the silhouette by the applied pixel radius (`12` pixels by default)
+   to cover projection and boundary error.
 4. Remove every sampled depth point covered by the dilated silhouette. No depth
    distance condition is applied.
 
-`HUMAN_MASK_DILATION_PX` exposes the boundary expansion. `run_summary.json`
-records the method, dilation, full point counts, and removed HSI point counts.
+`HUMAN_MASK_DILATION_PX` sets the initial boundary expansion. The startup
+`run_summary.json` records the method, initial dilation, full point counts, and
+removed HSI point counts.
 
 The Viser `Filter Human Points` checkbox switches both raw and HSI point clouds
 between the cached filtered and complete versions without rerunning inference.
 It defaults to enabled and can also be initialized with
 `FILTER_HUMAN_POINTS=true/false`. Single-frame scale calibration temporarily
 forces filtering off, then restores the previous checkbox state when closed.
+
+`Human Filter Dilation (px)` adjusts the projected silhouette expansion from
+`0` to `32` pixels in one-pixel steps. `0` uses the exact rasterized SMPL
+silhouette; larger values remove a wider boundary around it. Moving the slider
+only marks the value as pending. Click `Apply Human Filter Size` to rebuild the
+filtered raw and HSI point caches for the sequence, or use
+`Reset Human Filter Size to 12 px` to restore the default. The complete point
+cloud caches are unchanged. Calibration mode disables these controls while it
+is active.
 
 The multiplier scales HSI environment world points, HSI camera positions, and
 the HSI camera trajectory about the shared world origin. It does not edit model

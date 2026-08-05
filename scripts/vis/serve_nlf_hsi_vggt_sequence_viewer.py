@@ -62,6 +62,9 @@ PALETTE: list[tuple[int, int, int]] = [
 
 HSI_VISUAL_SCALE_MIN = 0.5
 HSI_VISUAL_SCALE_MAX = 2.0
+HUMAN_MASK_DILATION_MIN_PX = 0
+HUMAN_MASK_DILATION_MAX_PX = 32
+HUMAN_MASK_DILATION_DEFAULT_PX = 12
 
 
 def main() -> None:
@@ -71,8 +74,12 @@ def main() -> None:
             f"--hsi-visual-scale must be finite and within "
             f"[{HSI_VISUAL_SCALE_MIN}, {HSI_VISUAL_SCALE_MAX}], got {args.hsi_visual_scale}"
         )
-    if int(args.human_mask_dilation_px) < 0:
-        raise ValueError(f"--human-mask-dilation-px must be >= 0, got {args.human_mask_dilation_px}")
+    if not HUMAN_MASK_DILATION_MIN_PX <= int(args.human_mask_dilation_px) <= HUMAN_MASK_DILATION_MAX_PX:
+        raise ValueError(
+            f"--human-mask-dilation-px must be within "
+            f"[{HUMAN_MASK_DILATION_MIN_PX}, {HUMAN_MASK_DILATION_MAX_PX}], "
+            f"got {args.human_mask_dilation_px}"
+        )
     ensure_viser_available()
     import viser  # noqa: PLC0415
     import viser.transforms as vtf  # noqa: PLC0415
@@ -670,11 +677,15 @@ def projected_human_exclusion_mask(
     intrinsic: np.ndarray,
     vertex_key: str,
     args: argparse.Namespace,
+    dilation_px_override: int | None = None,
 ) -> np.ndarray:
     depth_np = depth.detach().float().cpu().numpy().astype(np.float32, copy=False)
     height, width = depth_np.shape[-2:]
     exclusion = np.zeros((height, width), dtype=bool)
-    dilation_px = max(0, int(args.human_mask_dilation_px))
+    dilation_px = max(
+        0,
+        int(args.human_mask_dilation_px if dilation_px_override is None else dilation_px_override),
+    )
     fx = max(float(intrinsic[0, 0]), 1e-6)
     fy = max(float(intrinsic[1, 1]), 1e-6)
     cx = float(intrinsic[0, 2])
@@ -1171,6 +1182,7 @@ class SequenceViewer:
         self.depth_point_stride_value = max(1, int(args.depth_point_stride))
         self.max_scene_depth_value = float(args.max_scene_depth)
         self.filter_human_points_value = bool(args.filter_human_points)
+        self.human_mask_dilation_px_value = int(args.human_mask_dilation_px)
         self.env_mesh_depth_edge_rtol = float(getattr(args, "env_mesh_depth_edge_rtol", 0.08))
         self.env_mesh_color_groups = max(1, int(getattr(args, "env_mesh_color_groups", 216)))
         self.env_mesh_color_mode = str(getattr(args, "env_mesh_color_mode", "point_overlay"))
@@ -1359,9 +1371,23 @@ class SequenceViewer:
             ["points", "mesh", "both"],
             str(getattr(self.args, "environment_display", "points")),
         )
-        self.filter_human_points = add_checkbox(self.server, "Filter Human Points", self.filter_human_points_value)
-        self.human_point_filter_info = add_text(self.server, "Human Point Filter", "")
-        set_handle_disabled(self.human_point_filter_info, True)
+        with add_folder(self.server, "Human Point Filter Controls"):
+            self.filter_human_points = add_checkbox(self.server, "Filter Human Points", self.filter_human_points_value)
+            self.human_filter_dilation = add_slider(
+                self.server,
+                "Human Filter Dilation (px)",
+                HUMAN_MASK_DILATION_MIN_PX,
+                HUMAN_MASK_DILATION_MAX_PX,
+                1,
+                self.human_mask_dilation_px_value,
+            )
+            self.apply_human_filter_dilation = add_button(self.server, "Apply Human Filter Size")
+            self.reset_human_filter_dilation = add_button(
+                self.server,
+                f"Reset Human Filter Size to {HUMAN_MASK_DILATION_DEFAULT_PX} px",
+            )
+            self.human_point_filter_info = add_text(self.server, "Human Point Filter", "")
+            set_handle_disabled(self.human_point_filter_info, True)
         with add_folder(self.server, "HSI Scale Controls"):
             self.hsi_calibration_mode = add_checkbox(self.server, "Single-Frame Scale Calibration", False)
             self.hsi_calibration_info = add_text(self.server, "Calibration Status", "Off")
@@ -1444,6 +1470,7 @@ class SequenceViewer:
         bind_update(self.hsi_visual_scale, self._on_hsi_visual_scale_pending)
         bind_update(self.hsi_calibration_mode, self._on_hsi_calibration_mode_update)
         bind_update(self.filter_human_points, self._on_filter_human_points_update)
+        bind_update(self.human_filter_dilation, self._on_human_filter_dilation_pending)
         bind_update(self.camera_size, self._on_camera_size_update)
         bind_update(self.smpl_opacity, self._on_smpl_opacity_update)
         bind_update(self.selected_smpl, self._on_selected_smpl_update)
@@ -1459,6 +1486,8 @@ class SequenceViewer:
         bind_click(self.save_smpl_edits, self._save_smpl_edit_offsets)
         bind_click(self.apply_hsi_visual_scale, self._apply_hsi_visual_scale)
         bind_click(self.reset_hsi_visual_scale, self._reset_hsi_visual_scale)
+        bind_click(self.apply_human_filter_dilation, self._apply_human_filter_dilation)
+        bind_click(self.reset_human_filter_dilation, self._reset_human_filter_dilation)
 
     def _register_clients(self) -> None:
         if hasattr(self.server, "on_client_connect"):
@@ -1698,6 +1727,74 @@ class SequenceViewer:
         self.filter_human_points_value = requested
         self._rebuild_environment_point_handles()
 
+    def _requested_human_filter_dilation(self) -> int:
+        return min(
+            HUMAN_MASK_DILATION_MAX_PX,
+            max(HUMAN_MASK_DILATION_MIN_PX, int(round(float(self.human_filter_dilation.value)))),
+        )
+
+    def _on_human_filter_dilation_pending(self, _: Any = None) -> None:
+        self._update_info_text(int(self.timestep.value))
+
+    def _apply_human_filter_dilation(self, _: Any = None) -> None:
+        if self._rebuilding_points or self.hsi_calibration_active:
+            return
+        requested = self._requested_human_filter_dilation()
+        if requested == self.human_mask_dilation_px_value:
+            self._update_info_text(int(self.timestep.value))
+            return
+        self.human_mask_dilation_px_value = requested
+        self._rebuild_human_filter_masks_and_points()
+
+    def _reset_human_filter_dilation(self, _: Any = None) -> None:
+        if self.hsi_calibration_active:
+            return
+        self.human_filter_dilation.value = HUMAN_MASK_DILATION_DEFAULT_PX
+        self._apply_human_filter_dilation()
+
+    def _rebuild_human_filter_masks_and_points(self) -> None:
+        self._rebuilding_points = True
+        try:
+            for frame in self.scene["frames"]:
+                intrinsic = np.asarray(frame["intrinsic"], dtype=np.float32)
+                raw_depth = torch.from_numpy(np.asarray(frame["raw_depth_map"], dtype=np.float32))
+                hsi_depth = torch.from_numpy(np.asarray(frame["hsi_depth_map"], dtype=np.float32))
+                frame["raw_human_exclusion_mask"] = projected_human_exclusion_mask(
+                    raw_depth,
+                    frame["people"],
+                    intrinsic,
+                    "base_vertices_cam",
+                    self.args,
+                    dilation_px_override=self.human_mask_dilation_px_value,
+                )
+                frame["hsi_human_exclusion_mask"] = projected_human_exclusion_mask(
+                    hsi_depth,
+                    frame["people"],
+                    intrinsic,
+                    "hsi_vertices_cam",
+                    self.args,
+                    dilation_px_override=self.human_mask_dilation_px_value,
+                )
+                frame["raw_points"], frame["raw_colors"] = rebuild_depth_points_for_frame(
+                    frame,
+                    depth_key="raw_depth_map",
+                    extrinsic_key="raw_extrinsic",
+                    depth_point_stride=self.depth_point_stride_value,
+                    max_scene_depth=self.max_scene_depth_value,
+                    exclude_mask_key="raw_human_exclusion_mask",
+                )
+                frame["hsi_points"], frame["hsi_colors"] = rebuild_depth_points_for_frame(
+                    frame,
+                    depth_key="hsi_depth_map",
+                    extrinsic_key="hsi_extrinsic",
+                    depth_point_stride=self.depth_point_stride_value,
+                    max_scene_depth=self.max_scene_depth_value,
+                    exclude_mask_key="hsi_human_exclusion_mask",
+                )
+        finally:
+            self._rebuilding_points = False
+        self._rebuild_environment_point_handles()
+
     def _rebuild_environment_point_handles(self) -> None:
         tracking_only = bool(getattr(self.args, "tracking_only", False))
         for frame, frame_handles in zip(self.scene["frames"], self.handles, strict=True):
@@ -1802,6 +1899,9 @@ class SequenceViewer:
             for handle in controls.values():
                 set_handle_disabled(handle, True)
             set_handle_disabled(self.apply_hsi_visual_scale, True)
+            set_handle_disabled(self.human_filter_dilation, True)
+            set_handle_disabled(self.apply_human_filter_dilation, True)
+            set_handle_disabled(self.reset_human_filter_dilation, True)
         finally:
             self._switching_hsi_calibration = False
         self.current_step = int(self.timestep.value)
@@ -1836,6 +1936,9 @@ class SequenceViewer:
             self.play.value = False
             self.filter_human_points_value = bool(restore_state.get("filter_human_points", True))
             set_handle_disabled(self.apply_hsi_visual_scale, False)
+            set_handle_disabled(self.human_filter_dilation, False)
+            set_handle_disabled(self.apply_human_filter_dilation, False)
+            set_handle_disabled(self.reset_human_filter_dilation, False)
         finally:
             self._switching_hsi_calibration = False
         self._rebuild_hsi_visual_geometry()
@@ -2121,11 +2224,23 @@ class SequenceViewer:
             ),
         )
         if self.hsi_calibration_active:
-            filter_text = "OFF (forced by single-frame scale calibration)"
+            filter_text = (
+                "OFF (forced by single-frame scale calibration) "
+                f"| applied dilation={self.human_mask_dilation_px_value} px"
+            )
         elif self.filter_human_points_value:
-            filter_text = f"ON | current frame removes {hsi_full_count - hsi_filtered_count} points"
+            filter_text = (
+                f"ON | applied dilation={self.human_mask_dilation_px_value} px "
+                f"| current frame removes {hsi_full_count - hsi_filtered_count} points"
+            )
         else:
-            filter_text = "OFF | displaying complete raw and HSI point clouds"
+            filter_text = (
+                "OFF | displaying complete raw and HSI point clouds "
+                f"| applied dilation={self.human_mask_dilation_px_value} px"
+            )
+        requested_dilation = self._requested_human_filter_dilation()
+        if requested_dilation != self.human_mask_dilation_px_value:
+            filter_text += f" | pending={requested_dilation} px (click Apply)"
         set_text_value(self.human_point_filter_info, filter_text)
         self._update_hsi_scale_info(frame_index)
         align = frame.get("depth_alignment", {})
