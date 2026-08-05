@@ -84,6 +84,12 @@ per person and per frame as follows:
 `HUMAN_MASK_DILATION_PX` exposes the boundary expansion. `run_summary.json`
 records the method, dilation, full point counts, and removed HSI point counts.
 
+The Viser `Filter Human Points` checkbox switches both raw and HSI point clouds
+between the cached filtered and complete versions without rerunning inference.
+It defaults to enabled and can also be initialized with
+`FILTER_HUMAN_POINTS=true/false`. Single-frame scale calibration temporarily
+forces filtering off, then restores the previous checkbox state when closed.
+
 The multiplier scales HSI environment world points, HSI camera positions, and
 the HSI camera trajectory about the shared world origin. It does not edit model
 outputs, the checkpoint, raw VGGT points, HSI SMPL vertices, or saved alignment

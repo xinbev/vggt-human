@@ -32,6 +32,7 @@ VIEWER_MODE="${VIEWER_MODE:-4d}"
 ENVIRONMENT_DISPLAY="${ENVIRONMENT_DISPLAY:-points}"
 HSI_VISUAL_SCALE="${HSI_VISUAL_SCALE:-1.0}"
 HUMAN_MASK_DILATION_PX="${HUMAN_MASK_DILATION_PX:-12}"
+FILTER_HUMAN_POINTS="${FILTER_HUMAN_POINTS:-true}"
 ENV_MESH_DEPTH_EDGE_RTOL="${ENV_MESH_DEPTH_EDGE_RTOL:-0.15}"
 ENV_MESH_COLOR_GROUPS="${ENV_MESH_COLOR_GROUPS:-216}"
 ENV_MESH_COLOR_MODE="${ENV_MESH_COLOR_MODE:-point_overlay}"
@@ -90,6 +91,7 @@ echo "Viewer mode : ${VIEWER_MODE_ARG} (initial GUI state)"
 echo "Env display : ${ENVIRONMENT_DISPLAY} (points|mesh|both; GUI adjustable)"
 echo "HSI vis scale: ${HSI_VISUAL_SCALE} (viewer-only; GUI adjustable)"
 echo "Human mask  : projected SMPL triangles + ${HUMAN_MASK_DILATION_PX}px dilation (unconditional removal)"
+echo "Filter human: ${FILTER_HUMAN_POINTS} (initial GUI state)"
 if [[ "${ENVIRONMENT_DISPLAY}" != "points" ]]; then
   echo "Mesh edge   : ${ENV_MESH_DEPTH_EDGE_RTOL} (relative depth jump cutoff)"
   echo "Mesh colors : ${ENV_MESH_COLOR_GROUPS} simple-mesh color groups"
@@ -144,6 +146,15 @@ case "${SHOW_TRACK_IDS}" in
     ;;
   *)
     ARGS+=(--show-track-ids)
+    ;;
+esac
+
+case "${FILTER_HUMAN_POINTS}" in
+  0|false|FALSE|False|no|NO|No|off|OFF|Off)
+    ARGS+=(--no-filter-human-points)
+    ;;
+  *)
+    ARGS+=(--filter-human-points)
     ;;
 esac
 
