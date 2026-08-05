@@ -28,8 +28,10 @@ TRACK_MAX_BETA_L1="${TRACK_MAX_BETA_L1:-0.30}"
 SHOW_TRACK_IDS="${SHOW_TRACK_IDS:-true}"
 DEPTH_POINT_STRIDE="${DEPTH_POINT_STRIDE:-4}"
 MAX_SCENE_DEPTH="${MAX_SCENE_DEPTH:-30.0}"
+VIEWER_MODE="${VIEWER_MODE:-4d}"
 ENVIRONMENT_DISPLAY="${ENVIRONMENT_DISPLAY:-points}"
 ENV_MESH_DEPTH_EDGE_RTOL="${ENV_MESH_DEPTH_EDGE_RTOL:-0.15}"
+ENV_MESH_COLOR_GROUPS="${ENV_MESH_COLOR_GROUPS:-64}"
 POINT_SIZE="${POINT_SIZE:-0.012}"
 CAMERA_FRUSTUM_SCALE="${CAMERA_FRUSTUM_SCALE:-0.20}"
 ALIGNMENT_VERTEX_STRIDE="${ALIGNMENT_VERTEX_STRIDE:-16}"
@@ -53,6 +55,12 @@ case "${ENVIRONMENT_DISPLAY}" in
   points|mesh|both) ;;
   *) echo "[ERROR] ENVIRONMENT_DISPLAY must be one of: points, mesh, both. Got: ${ENVIRONMENT_DISPLAY}" >&2; exit 1 ;;
 esac
+case "${VIEWER_MODE}" in
+  4d|"4D current frame") VIEWER_MODE_ARG="4D current frame" ;;
+  3d|"3D accumulate") VIEWER_MODE_ARG="3D accumulate" ;;
+  hybrid|Hybrid) VIEWER_MODE_ARG="Hybrid" ;;
+  *) echo "[ERROR] VIEWER_MODE must be one of: 4d, 3d, hybrid. Got: ${VIEWER_MODE}" >&2; exit 1 ;;
+esac
 if [[ "${QUERY_SOURCE}" == "bedlam_sidecar" ]]; then
   [[ -d "${BEDLAM_ROOT}" ]] || { echo "[ERROR] Missing BEDLAM root: ${BEDLAM_ROOT}" >&2; exit 1; }
   [[ -d "${PREPROCESSED_ROOT}" ]] || { echo "[ERROR] Missing preprocessed sidecars: ${PREPROCESSED_ROOT}" >&2; exit 1; }
@@ -74,8 +82,10 @@ echo "Show IDs    : ${SHOW_TRACK_IDS} (initial GUI state)"
 echo "Align compat: ${HSI_ALIGN_FEATURE_VERSION:-<config default>}"
 echo "Depth stride: ${DEPTH_POINT_STRIDE} (can be changed in Viser GUI)"
 echo "Max depth   : ${MAX_SCENE_DEPTH} (0 disables clipping; GUI adjustable)"
+echo "Viewer mode : ${VIEWER_MODE_ARG} (initial GUI state)"
 echo "Env display : ${ENVIRONMENT_DISPLAY} (points|mesh|both; GUI adjustable)"
 echo "Mesh edge   : ${ENV_MESH_DEPTH_EDGE_RTOL} (relative depth jump cutoff)"
+echo "Mesh colors : ${ENV_MESH_COLOR_GROUPS} simple-mesh color groups"
 echo "Point size  : ${POINT_SIZE}"
 echo "SMPL edits  : ${SMPL_EDIT_OUTPUT:-${OUTPUT_DIR}/smpl_edit_offsets.json}"
 echo "GPU visible : ${CUDA_VISIBLE_DEVICES_VALUE}"
@@ -105,8 +115,10 @@ ARGS=(
   --track-max-beta-l1 "${TRACK_MAX_BETA_L1}"
   --depth-point-stride "${DEPTH_POINT_STRIDE}"
   --max-scene-depth "${MAX_SCENE_DEPTH}"
+  --viewer-mode "${VIEWER_MODE_ARG}"
   --environment-display "${ENVIRONMENT_DISPLAY}"
   --env-mesh-depth-edge-rtol "${ENV_MESH_DEPTH_EDGE_RTOL}"
+  --env-mesh-color-groups "${ENV_MESH_COLOR_GROUPS}"
   --point-size "${POINT_SIZE}"
   --camera-frustum-scale "${CAMERA_FRUSTUM_SCALE}"
   --alignment-vertex-stride "${ALIGNMENT_VERTEX_STRIDE}"

@@ -149,8 +149,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--track-max-beta-l1", type=float, default=0.30)
     parser.add_argument("--depth-point-stride", type=int, default=4, help="Initial Viser point-cloud sampling stride. This can be changed live in the GUI.")
     parser.add_argument("--max-scene-depth", type=float, default=30.0, help="Initial far-depth clipping in meters. Set 0 to disable; this can be changed live in the GUI.")
+    parser.add_argument("--viewer-mode", choices=["4D current frame", "3D accumulate", "Hybrid"], default="4D current frame", help="Initial Viser playback mode.")
     parser.add_argument("--environment-display", choices=["points", "mesh", "both"], default="points", help="Initial environment rendering mode. The Viser GUI can still toggle this live.")
     parser.add_argument("--env-mesh-depth-edge-rtol", type=float, default=0.15, help="Relative depth discontinuity threshold for environment surface mesh faces.")
+    parser.add_argument("--env-mesh-color-groups", type=int, default=64, help="Maximum color buckets used to approximate RGB environment mesh color with Viser simple meshes.")
     parser.add_argument("--smpl-edit-output", default="", help="Optional JSON path for viewer-only SMPL translation edits. Defaults to <output-dir>/smpl_edit_offsets.json.")
     parser.add_argument("--show-track-ids", action=argparse.BooleanOptionalAction, default=True, help="Initial visibility for SMPL track ID labels. The Viser GUI can still toggle this live.")
     parser.add_argument("--point-size", type=float, default=0.012)
@@ -1000,6 +1002,7 @@ class SequenceViewer:
         self.depth_point_stride_value = max(1, int(args.depth_point_stride))
         self.max_scene_depth_value = float(args.max_scene_depth)
         self.env_mesh_depth_edge_rtol = float(getattr(args, "env_mesh_depth_edge_rtol", 0.08))
+        self.env_mesh_color_groups = max(1, int(getattr(args, "env_mesh_color_groups", 64)))
         self._rebuilding_points = False
         self.global_handles: dict[str, list[Any]] = {}
         self.human_entries: list[dict[str, Any]] = []
@@ -1122,7 +1125,7 @@ class SequenceViewer:
         self.play = add_checkbox(self.server, "Playing", False)
         self.fps = add_slider(self.server, "FPS", 1, 30, 1, 6)
         self.fps_buttons = add_button_group(self.server, "FPS Preset", ("5", "10", "20", "30"))
-        self.mode = add_dropdown(self.server, "Mode", ["4D current frame", "3D accumulate", "Hybrid"], "4D current frame")
+        self.mode = add_dropdown(self.server, "Mode", ["4D current frame", "3D accumulate", "Hybrid"], str(getattr(self.args, "viewer_mode", "4D current frame")))
         tracking_only = bool(getattr(self.args, "tracking_only", False))
         self.depth_source = add_dropdown(self.server, "Depth Source", ["hsi_depth", "raw_depth", "both"], "raw_depth" if tracking_only else "hsi_depth")
         self.environment_display = add_dropdown(
@@ -1522,9 +1525,15 @@ class SequenceViewer:
             frame["raw_mesh_vertices"] = raw_mesh_vertices
             frame["raw_mesh_colors"] = raw_mesh_colors
             frame["raw_mesh_faces"] = raw_mesh_faces
-            frame_handles["raw_mesh"] = [
-                add_vertex_color_mesh(self.server, f"/frames/{idx:04d}/mesh_raw_depth", raw_mesh_vertices, raw_mesh_faces, raw_mesh_colors, opacity=0.82)
-            ]
+            frame_handles["raw_mesh"] = add_vertex_color_mesh(
+                self.server,
+                f"/frames/{idx:04d}/mesh_raw_depth",
+                raw_mesh_vertices,
+                raw_mesh_faces,
+                raw_mesh_colors,
+                opacity=0.82,
+                max_color_groups=self.env_mesh_color_groups,
+            )
         if bool(getattr(self.args, "tracking_only", False)):
             return
         if depth_source in {"hsi_depth", "both"} and not frame_handles.get("hsi_mesh"):
@@ -1539,9 +1548,15 @@ class SequenceViewer:
             frame["hsi_mesh_vertices"] = hsi_mesh_vertices
             frame["hsi_mesh_colors"] = hsi_mesh_colors
             frame["hsi_mesh_faces"] = hsi_mesh_faces
-            frame_handles["hsi_mesh"] = [
-                add_vertex_color_mesh(self.server, f"/frames/{idx:04d}/mesh_hsi_depth", hsi_mesh_vertices, hsi_mesh_faces, hsi_mesh_colors, opacity=0.82)
-            ]
+            frame_handles["hsi_mesh"] = add_vertex_color_mesh(
+                self.server,
+                f"/frames/{idx:04d}/mesh_hsi_depth",
+                hsi_mesh_vertices,
+                hsi_mesh_faces,
+                hsi_mesh_colors,
+                opacity=0.82,
+                max_color_groups=self.env_mesh_color_groups,
+            )
 
     def _camera_visibility_for_depth(self, depth_source: str) -> tuple[bool, bool]:
         if bool(getattr(self.args, "tracking_only", False)):
@@ -1770,6 +1785,7 @@ def depth_sample_grid_to_surface_mesh(
         ],
         axis=0,
     )
+    faces = np.concatenate([faces, faces[:, ::-1]], axis=0)
     return vertices, vertex_colors, faces.astype(np.int64, copy=False)
 
 
@@ -1804,30 +1820,51 @@ def add_vertex_color_mesh(
     faces: np.ndarray,
     colors: np.ndarray,
     opacity: float = 1.0,
-) -> Any:
+    max_color_groups: int = 64,
+) -> list[Any]:
     vertices = np.asarray(vertices, dtype=np.float32).reshape(-1, 3)
     faces = np.asarray(faces, dtype=np.int64).reshape(-1, 3)
     colors = np.asarray(colors, dtype=np.uint8).reshape(-1, 3)
+    if colors.shape[0] != vertices.shape[0]:
+        colors = np.full((vertices.shape[0], 3), 160, dtype=np.uint8)
+    valid_faces = np.all((faces >= 0) & (faces < vertices.shape[0]), axis=1)
+    faces = faces[valid_faces]
     if vertices.shape[0] == 0 or faces.shape[0] == 0:
-        return add_point_cloud(
-            server,
-            name,
-            np.zeros((0, 3), dtype=np.float32),
-            np.zeros((0, 3), dtype=np.uint8),
-            point_size=0.001,
+        return []
+    max_color_groups = max(1, int(max_color_groups))
+    face_colors = colors[faces].astype(np.float32).mean(axis=1)
+    if max_color_groups <= 1 or face_colors.shape[0] == 0:
+        median_color = np.median(colors, axis=0).astype(np.uint8).tolist() if colors.size else [160, 160, 160]
+        return [add_mesh(server, name, vertices, faces, tuple(int(v) for v in median_color), opacity=opacity)]
+
+    levels = int(np.floor(max_color_groups ** (1.0 / 3.0)))
+    if levels < 2:
+        median_color = np.median(colors, axis=0).astype(np.uint8).tolist() if colors.size else [160, 160, 160]
+        return [add_mesh(server, name, vertices, faces, tuple(int(v) for v in median_color), opacity=opacity)]
+    bins = np.clip((face_colors * float(levels) / 256.0).astype(np.int64), 0, levels - 1)
+    bucket_ids = bins[:, 0] * levels * levels + bins[:, 1] * levels + bins[:, 2]
+    handles: list[Any] = []
+    for bucket_id in np.unique(bucket_ids):
+        mask = bucket_ids == int(bucket_id)
+        bucket_faces = faces[mask]
+        if bucket_faces.size == 0:
+            continue
+        used_vertices, remapped = np.unique(bucket_faces.reshape(-1), return_inverse=True)
+        compact_faces = remapped.reshape(-1, 3).astype(np.int64, copy=False)
+        compact_vertices = vertices[used_vertices]
+        bucket_color = np.mean(face_colors[mask], axis=0).clip(0.0, 255.0).astype(np.uint8)
+        color = tuple(int(v) for v in bucket_color.tolist())
+        handles.append(
+            add_mesh(
+                server,
+                f"{name}/color_{int(bucket_id):03d}",
+                compact_vertices,
+                compact_faces,
+                color,
+                opacity=opacity,
+            )
         )
-    api = scene_api(server)
-    median_color = np.median(colors, axis=0).astype(np.uint8).tolist() if colors.size else [160, 160, 160]
-    color_float = tuple(float(v) / 255.0 for v in median_color)
-    try:
-        return api.add_mesh_simple(name=name, vertices=vertices, faces=faces, color=color_float, opacity=float(opacity))
-    except TypeError:
-        handle = api.add_mesh_simple(name, vertices, faces, color=color_float)
-        try:
-            handle.opacity = float(opacity)
-        except Exception:
-            pass
-        return handle
+    return handles
 
 
 def add_label(server: Any, name: str, text: str, position: np.ndarray) -> Any:

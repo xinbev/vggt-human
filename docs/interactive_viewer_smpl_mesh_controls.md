@@ -30,8 +30,14 @@ The viewer now adds:
   `--env-mesh-depth-edge-rtol` to break faces across depth discontinuities;
 - environment mesh nodes are built lazily when `mesh` or `both` is selected,
   so the viewer starts with the baseline point-cloud load;
-- environment mesh uses Viser simple mesh nodes with a representative color for
-  runtime stability;
+- environment mesh approximates per-face RGB by grouping faces into
+  `--env-mesh-color-groups` Viser simple mesh nodes, avoiding the previous
+  `trimesh/add_mesh_trimesh` path that could segfault in the server runtime;
+- mesh faces include reversed copies, following the Human3R mesh export idea,
+  to reduce view-dependent one-sided flicker;
+- `VIEWER_MODE=4d/3d/hybrid` controls the initial playback mode; the Stage2
+  walking wrapper defaults to `hybrid`, so the environment accumulates while
+  SMPL bodies remain current-frame;
 - SMPL click/dropdown selection with `SMPL dX`, `SMPL dY`, and `SMPL dZ`
   viewer-only translation offsets;
 - `Show Track IDs` controls ID label visibility in the GUI, and
@@ -51,6 +57,9 @@ The viewer now adds:
   max-depth clipping used by point clouds.
 - Faces are generated on the sampled depth grid; cells with large relative
   depth jumps are skipped.
+- Environment mesh colors come from the sampled RGB image. Because the current
+  stable Viser path only supports one color per simple mesh node, faces are
+  quantized into a bounded number of color buckets.
 
 ## Server Usage
 
@@ -97,7 +106,9 @@ This Stage2 wrapper forwards the aligned viewer settings to
 - `MAX_HUMANS=8`
 - `DEPTH_POINT_STRIDE=2`
 - `MAX_SCENE_DEPTH=80`
+- `VIEWER_MODE=hybrid` by default
 - `ENVIRONMENT_DISPLAY=mesh` by default
+- `ENV_MESH_COLOR_GROUPS=64` by default
 - `POINT_SIZE=0.006`
 
 ## Validation
