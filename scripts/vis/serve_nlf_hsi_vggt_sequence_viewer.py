@@ -149,6 +149,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--track-max-beta-l1", type=float, default=0.30)
     parser.add_argument("--depth-point-stride", type=int, default=4, help="Initial Viser point-cloud sampling stride. This can be changed live in the GUI.")
     parser.add_argument("--max-scene-depth", type=float, default=30.0, help="Initial far-depth clipping in meters. Set 0 to disable; this can be changed live in the GUI.")
+    parser.add_argument("--env-mesh-depth-edge-rtol", type=float, default=0.08, help="Relative depth discontinuity threshold for environment surface mesh faces.")
+    parser.add_argument("--smpl-edit-output", default="", help="Optional JSON path for viewer-only SMPL translation edits. Defaults to <output-dir>/smpl_edit_offsets.json.")
     parser.add_argument("--point-size", type=float, default=0.012)
     parser.add_argument("--camera-frustum-scale", type=float, default=0.20)
     parser.add_argument("--alignment-vertex-stride", type=int, default=16)
@@ -995,8 +997,15 @@ class SequenceViewer:
         self.smpl_opacity_value = 1.0
         self.depth_point_stride_value = max(1, int(args.depth_point_stride))
         self.max_scene_depth_value = float(args.max_scene_depth)
+        self.env_mesh_depth_edge_rtol = float(getattr(args, "env_mesh_depth_edge_rtol", 0.08))
         self._rebuilding_points = False
         self.global_handles: dict[str, list[Any]] = {}
+        self.human_entries: list[dict[str, Any]] = []
+        self.human_entry_by_key: dict[str, dict[str, Any]] = {}
+        self.selected_human_key = "none"
+        self._syncing_smpl_controls = False
+        self.smpl_edit_output = resolve_smpl_edit_output(args)
+        self.transform_controls = None
         self._build_scene()
         self._build_gui()
         self._register_clients()
@@ -1022,6 +1031,8 @@ class SequenceViewer:
             frame_handles: dict[str, Any] = {
                 "raw": [],
                 "hsi": [],
+                "raw_mesh": [],
+                "hsi_mesh": [],
                 "base_humans": [],
                 "hsi_humans": [],
                 "track_labels": [],
@@ -1031,21 +1042,72 @@ class SequenceViewer:
             frame_handles["raw"].append(
                 add_point_cloud(self.server, f"/frames/{idx:04d}/points_raw_depth", frame["raw_points"], frame["raw_colors"], self.point_size_value)
             )
+            raw_mesh_vertices, raw_mesh_colors, raw_mesh_faces = build_depth_mesh_for_frame(
+                frame,
+                depth_key="raw_depth_map",
+                extrinsic_key="raw_extrinsic",
+                depth_point_stride=self.depth_point_stride_value,
+                max_scene_depth=self.max_scene_depth_value,
+                depth_edge_rtol=self.env_mesh_depth_edge_rtol,
+            )
+            frame["raw_mesh_vertices"] = raw_mesh_vertices
+            frame["raw_mesh_colors"] = raw_mesh_colors
+            frame["raw_mesh_faces"] = raw_mesh_faces
+            frame_handles["raw_mesh"].append(
+                add_vertex_color_mesh(self.server, f"/frames/{idx:04d}/mesh_raw_depth", raw_mesh_vertices, raw_mesh_faces, raw_mesh_colors, opacity=0.82)
+            )
             if not tracking_only:
                 frame_handles["hsi"].append(
                     add_point_cloud(self.server, f"/frames/{idx:04d}/points_hsi_depth", frame["hsi_points"], frame["hsi_colors"], self.point_size_value)
+                )
+                hsi_mesh_vertices, hsi_mesh_colors, hsi_mesh_faces = build_depth_mesh_for_frame(
+                    frame,
+                    depth_key="hsi_depth_map",
+                    extrinsic_key="hsi_extrinsic",
+                    depth_point_stride=self.depth_point_stride_value,
+                    max_scene_depth=self.max_scene_depth_value,
+                    depth_edge_rtol=self.env_mesh_depth_edge_rtol,
+                )
+                frame["hsi_mesh_vertices"] = hsi_mesh_vertices
+                frame["hsi_mesh_colors"] = hsi_mesh_colors
+                frame["hsi_mesh_faces"] = hsi_mesh_faces
+                frame_handles["hsi_mesh"].append(
+                    add_vertex_color_mesh(self.server, f"/frames/{idx:04d}/mesh_hsi_depth", hsi_mesh_vertices, hsi_mesh_faces, hsi_mesh_colors, opacity=0.82)
                 )
             for person in frame["people"]:
                 color = tuple(int(v) for v in person["color"])
                 track_id = int(person["track_id"])
                 query_idx = int(person["query_index"])
+                label_handle = None
                 if "base_vertices" in person:
-                    frame_handles["base_humans"].append(
-                        add_mesh(self.server, f"/frames/{idx:04d}/human_base_t{track_id}_q{query_idx}", person["base_vertices"], person["faces"], color, self.smpl_opacity_value)
+                    handle = add_mesh(self.server, f"/frames/{idx:04d}/human_base_t{track_id}_q{query_idx}", person["base_vertices"], person["faces"], color, self.smpl_opacity_value)
+                    frame_handles["base_humans"].append(handle)
+                    self._register_human_entry(
+                        frame_index=idx,
+                        frame_id=str(frame["frame_id"]),
+                        kind="base",
+                        track_id=track_id,
+                        query_idx=query_idx,
+                        handle=handle,
+                        vertices=person["base_vertices"],
+                        label_handle=None,
+                        label_base_position=None,
+                        color=color,
                     )
                 if "hsi_vertices" in person:
-                    frame_handles["hsi_humans"].append(
-                        add_mesh(self.server, f"/frames/{idx:04d}/human_hsi_t{track_id}_q{query_idx}", person["hsi_vertices"], person["faces"], color, self.smpl_opacity_value)
+                    handle = add_mesh(self.server, f"/frames/{idx:04d}/human_hsi_t{track_id}_q{query_idx}", person["hsi_vertices"], person["faces"], color, self.smpl_opacity_value)
+                    frame_handles["hsi_humans"].append(handle)
+                    self._register_human_entry(
+                        frame_index=idx,
+                        frame_id=str(frame["frame_id"]),
+                        kind="hsi",
+                        track_id=track_id,
+                        query_idx=query_idx,
+                        handle=handle,
+                        vertices=person["hsi_vertices"],
+                        label_handle=None,
+                        label_base_position=None,
+                        color=color,
                     )
                 label_vertices = person.get("hsi_vertices", person.get("base_vertices"))
                 if label_vertices is not None:
@@ -1054,9 +1116,13 @@ class SequenceViewer:
                     label_position[1] -= 0.12
                     quality = person.get("track_quality")
                     label_text = f"ID {track_id}" if quality is None else f"ID {track_id}  {float(quality):.2f}"
-                    frame_handles["track_labels"].append(
-                        add_label(self.server, f"/frames/{idx:04d}/track_label_t{track_id}_q{query_idx}", label_text, label_position)
-                    )
+                    label_handle = add_label(self.server, f"/frames/{idx:04d}/track_label_t{track_id}_q{query_idx}", label_text, label_position)
+                    frame_handles["track_labels"].append(label_handle)
+                    for kind in ("base", "hsi"):
+                        entry = self.human_entry_by_key.get(human_entry_key(idx, kind, track_id, query_idx))
+                        if entry is not None:
+                            entry["label_handle"] = label_handle
+                            entry["label_base_position"] = label_position.astype(np.float32, copy=False)
             frame_handles["cameras_raw"].append(add_camera(self.server, self.transforms, f"/frames/{idx:04d}/camera_raw_vggt", frame["raw_camera"], self.camera_scale_value, (255, 255, 255)))
             if not tracking_only:
                 frame_handles["cameras_hsi"].append(add_camera(self.server, self.transforms, f"/frames/{idx:04d}/camera_hsi_scaled", frame["hsi_camera"], self.camera_scale_value, (255, 176, 0)))
@@ -1085,6 +1151,7 @@ class SequenceViewer:
         self.mode = add_dropdown(self.server, "Mode", ["4D current frame", "3D accumulate", "Hybrid"], "4D current frame")
         tracking_only = bool(getattr(self.args, "tracking_only", False))
         self.depth_source = add_dropdown(self.server, "Depth Source", ["hsi_depth", "raw_depth", "both"], "raw_depth" if tracking_only else "hsi_depth")
+        self.environment_display = add_dropdown(self.server, "Environment Display", ["points", "mesh", "both"], "points")
         self.point_size = add_slider(self.server, "Point Size", 0.0005, 0.08, 0.0005, self.point_size_value)
         self.density_preset = add_dropdown(self.server, "Point Density Preset", ["custom", "dense stride 1", "balanced stride 2", "fast stride 4", "full sequence stride 6"], "custom")
         self.depth_point_stride = add_slider(self.server, "Depth Point Stride", 1, 64, 1, self.depth_point_stride_value)
@@ -1100,10 +1167,26 @@ class SequenceViewer:
         self.show_camera_trajectory = add_checkbox(self.server, "Show Camera Trajectory", True)
         self.camera_downsample = add_slider(self.server, "Camera Downsample", 1, max(1, len(self.scene["frames"])), 1, 1)
         self.follow_camera = add_checkbox(self.server, "Follow Pred Camera", False)
+        self.smpl_edit_info = add_text(self.server, "SMPL Edit", "Select or click an SMPL mesh to edit viewer-only translation.")
+        self.selected_smpl = add_dropdown(self.server, "Selected SMPL", self._human_dropdown_options(), "none")
+        self.smpl_edit_scope = add_dropdown(self.server, "SMPL Edit Scope", ["selected frame", "same track all frames"], "selected frame")
+        self.smpl_edit_dx = add_slider(self.server, "SMPL dX", -5.0, 5.0, 0.01, 0.0)
+        self.smpl_edit_dy = add_slider(self.server, "SMPL dY", -5.0, 5.0, 0.01, 0.0)
+        self.smpl_edit_dz = add_slider(self.server, "SMPL dZ", -5.0, 5.0, 0.01, 0.0)
+        self.reset_smpl_edit = add_button(self.server, "Reset SMPL Offset")
+        self.save_smpl_edits = add_button(self.server, "Save SMPL Offsets")
+        self.transform_controls = add_transform_controls(
+            self.server,
+            "/viewer_controls/selected_smpl_translation",
+            position=np.zeros(3, dtype=np.float32),
+            scale=0.35,
+            visible=False,
+        )
         for handle in [
             self.timestep,
             self.mode,
             self.depth_source,
+            self.environment_display,
             self.show_hsi,
             self.show_base,
             self.show_track_ids,
@@ -1121,15 +1204,198 @@ class SequenceViewer:
         bind_update(self.max_scene_depth, self._on_depth_sampling_update)
         bind_update(self.camera_size, self._on_camera_size_update)
         bind_update(self.smpl_opacity, self._on_smpl_opacity_update)
+        bind_update(self.selected_smpl, self._on_selected_smpl_update)
+        bind_update(self.smpl_edit_scope, self._on_smpl_offset_slider_update)
+        bind_update(self.smpl_edit_dx, self._on_smpl_offset_slider_update)
+        bind_update(self.smpl_edit_dy, self._on_smpl_offset_slider_update)
+        bind_update(self.smpl_edit_dz, self._on_smpl_offset_slider_update)
+        bind_update(self.transform_controls, self._on_transform_controls_update)
         bind_click(self.prev_button, self._prev_frame)
         bind_click(self.next_button, self._next_frame)
         bind_click(self.fps_buttons, self._set_fps_preset)
+        bind_click(self.reset_smpl_edit, self._reset_selected_smpl_offset)
+        bind_click(self.save_smpl_edits, self._save_smpl_edit_offsets)
 
     def _register_clients(self) -> None:
         if hasattr(self.server, "on_client_connect"):
             @self.server.on_client_connect
             def _on_connect(client: Any) -> None:
                 self.clients[int(getattr(client, "client_id", len(self.clients)))] = client
+
+    def _register_human_entry(
+        self,
+        frame_index: int,
+        frame_id: str,
+        kind: str,
+        track_id: int,
+        query_idx: int,
+        handle: Any,
+        vertices: np.ndarray,
+        label_handle: Any,
+        label_base_position: np.ndarray | None,
+        color: tuple[int, int, int],
+    ) -> None:
+        key = human_entry_key(frame_index, kind, track_id, query_idx)
+        vertices_np = np.asarray(vertices, dtype=np.float32).reshape(-1, 3)
+        finite = np.isfinite(vertices_np).all(axis=1)
+        anchor = vertices_np[finite].mean(axis=0) if bool(finite.any()) else np.zeros(3, dtype=np.float32)
+        entry = {
+            "key": key,
+            "frame_index": int(frame_index),
+            "frame_id": str(frame_id),
+            "kind": str(kind),
+            "track_id": int(track_id),
+            "query_index": int(query_idx),
+            "handle": handle,
+            "label_handle": label_handle,
+            "label_base_position": label_base_position,
+            "anchor_position": np.asarray(anchor, dtype=np.float32),
+            "offset": np.zeros(3, dtype=np.float32),
+            "color": tuple(int(v) for v in color),
+        }
+        self.human_entries.append(entry)
+        self.human_entry_by_key[key] = entry
+        bind_click(handle, lambda *_, selected_key=key: self._select_human(selected_key, sync_timestep=True))
+
+    def _human_dropdown_options(self) -> list[str]:
+        return ["none"] + [str(entry["key"]) for entry in self.human_entries]
+
+    def _select_human(self, key: str, sync_timestep: bool = False) -> None:
+        if key not in self.human_entry_by_key:
+            key = "none"
+        self.selected_human_key = key
+        if hasattr(self, "selected_smpl"):
+            try:
+                if str(self.selected_smpl.value) != key:
+                    self.selected_smpl.value = key
+            except Exception:
+                pass
+        if sync_timestep and key != "none":
+            entry = self.human_entry_by_key[key]
+            try:
+                self.timestep.value = int(entry["frame_index"])
+            except Exception:
+                pass
+        self._sync_smpl_edit_controls_from_selection()
+        self._update_visibility()
+
+    def _on_selected_smpl_update(self, _: Any = None) -> None:
+        self._select_human(str(self.selected_smpl.value), sync_timestep=True)
+
+    def _sync_smpl_edit_controls_from_selection(self) -> None:
+        entry = self.human_entry_by_key.get(self.selected_human_key)
+        self._syncing_smpl_controls = True
+        try:
+            if entry is None:
+                offset = np.zeros(3, dtype=np.float32)
+                set_text_value(self.smpl_edit_info, "No SMPL selected.")
+                set_handle_visible(self.transform_controls, False)
+            else:
+                offset = np.asarray(entry["offset"], dtype=np.float32)
+                set_text_value(
+                    self.smpl_edit_info,
+                    (
+                        f"{entry['key']} | frame={entry['frame_id']} "
+                        f"offset=({offset[0]:.3f},{offset[1]:.3f},{offset[2]:.3f})"
+                    ),
+                )
+                if self.transform_controls is not None:
+                    set_handle_visible(self.transform_controls, True)
+                    set_handle_position(self.transform_controls, np.asarray(entry["anchor_position"], dtype=np.float32) + offset)
+            self.smpl_edit_dx.value = float(offset[0])
+            self.smpl_edit_dy.value = float(offset[1])
+            self.smpl_edit_dz.value = float(offset[2])
+        finally:
+            self._syncing_smpl_controls = False
+
+    def _on_smpl_offset_slider_update(self, _: Any = None) -> None:
+        if self._syncing_smpl_controls:
+            return
+        entry = self.human_entry_by_key.get(self.selected_human_key)
+        if entry is None:
+            return
+        offset = np.asarray(
+            [float(self.smpl_edit_dx.value), float(self.smpl_edit_dy.value), float(self.smpl_edit_dz.value)],
+            dtype=np.float32,
+        )
+        self._apply_smpl_offset(entry, offset, scope=str(self.smpl_edit_scope.value))
+        self._sync_transform_controls_to_entry(entry)
+        self._sync_smpl_edit_controls_from_selection()
+
+    def _on_transform_controls_update(self, _: Any = None) -> None:
+        if self._syncing_smpl_controls:
+            return
+        entry = self.human_entry_by_key.get(self.selected_human_key)
+        if entry is None or self.transform_controls is None:
+            return
+        position = get_handle_position(self.transform_controls)
+        if position is None:
+            return
+        offset = np.asarray(position, dtype=np.float32) - np.asarray(entry["anchor_position"], dtype=np.float32)
+        self._syncing_smpl_controls = True
+        try:
+            self.smpl_edit_dx.value = float(offset[0])
+            self.smpl_edit_dy.value = float(offset[1])
+            self.smpl_edit_dz.value = float(offset[2])
+        finally:
+            self._syncing_smpl_controls = False
+        self._apply_smpl_offset(entry, offset, scope=str(self.smpl_edit_scope.value))
+        self._sync_smpl_edit_controls_from_selection()
+
+    def _apply_smpl_offset(self, selected_entry: dict[str, Any], offset: np.ndarray, scope: str) -> None:
+        offset_np = np.asarray(offset, dtype=np.float32).reshape(3)
+        entries = [selected_entry]
+        if scope == "same track all frames":
+            entries = [
+                entry
+                for entry in self.human_entries
+                if int(entry["track_id"]) == int(selected_entry["track_id"]) and str(entry["kind"]) == str(selected_entry["kind"])
+            ]
+        for entry in entries:
+            entry["offset"] = offset_np.copy()
+            set_handle_position(entry["handle"], offset_np)
+            label_handle = entry.get("label_handle")
+            label_base = entry.get("label_base_position")
+            if label_handle is not None and label_base is not None:
+                set_handle_position(label_handle, np.asarray(label_base, dtype=np.float32) + offset_np)
+
+    def _sync_transform_controls_to_entry(self, entry: dict[str, Any]) -> None:
+        if self.transform_controls is None:
+            return
+        position = np.asarray(entry["anchor_position"], dtype=np.float32) + np.asarray(entry["offset"], dtype=np.float32)
+        set_handle_position(self.transform_controls, position)
+
+    def _reset_selected_smpl_offset(self, _: Any = None) -> None:
+        entry = self.human_entry_by_key.get(self.selected_human_key)
+        if entry is None:
+            return
+        self._apply_smpl_offset(entry, np.zeros(3, dtype=np.float32), scope=str(self.smpl_edit_scope.value))
+        self._sync_smpl_edit_controls_from_selection()
+
+    def _save_smpl_edit_offsets(self, _: Any = None) -> None:
+        rows = []
+        for entry in self.human_entries:
+            offset = np.asarray(entry["offset"], dtype=np.float32)
+            if not bool(np.any(np.abs(offset) > 1e-7)):
+                continue
+            rows.append(
+                {
+                    "key": str(entry["key"]),
+                    "frame_index": int(entry["frame_index"]),
+                    "frame_id": str(entry["frame_id"]),
+                    "kind": str(entry["kind"]),
+                    "track_id": int(entry["track_id"]),
+                    "query_index": int(entry["query_index"]),
+                    "offset_world_xyz": [float(v) for v in offset.tolist()],
+                }
+            )
+        payload = {
+            "note": "Viewer-only SMPL translation offsets. Model predictions and saved run_summary geometry are unchanged.",
+            "offsets": rows,
+        }
+        self.smpl_edit_output.parent.mkdir(parents=True, exist_ok=True)
+        self.smpl_edit_output.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        set_text_value(self.smpl_edit_info, f"Saved {len(rows)} SMPL offset(s) to {self.smpl_edit_output}")
 
     def _on_gui_update(self, _: Any = None) -> None:
         self.current_step = int(self.timestep.value)
@@ -1179,7 +1445,12 @@ class SequenceViewer:
         try:
             for frame, frame_handles in zip(self.scene["frames"], self.handles, strict=True):
                 idx = int(frame["frame_index"])
-                for handle in frame_handles.get("raw", []) + frame_handles.get("hsi", []):
+                for handle in (
+                    frame_handles.get("raw", [])
+                    + frame_handles.get("hsi", [])
+                    + frame_handles.get("raw_mesh", [])
+                    + frame_handles.get("hsi_mesh", [])
+                ):
                     remove_handle(handle)
 
                 raw_points, raw_colors = rebuild_depth_points_for_frame(
@@ -1193,8 +1464,22 @@ class SequenceViewer:
                 frame["raw_colors"] = raw_colors
                 frame["depth_point_stride"] = int(self.depth_point_stride_value)
                 frame["max_scene_depth"] = float(self.max_scene_depth_value)
+                raw_mesh_vertices, raw_mesh_colors, raw_mesh_faces = build_depth_mesh_for_frame(
+                    frame,
+                    depth_key="raw_depth_map",
+                    extrinsic_key="raw_extrinsic",
+                    depth_point_stride=self.depth_point_stride_value,
+                    max_scene_depth=self.max_scene_depth_value,
+                    depth_edge_rtol=self.env_mesh_depth_edge_rtol,
+                )
+                frame["raw_mesh_vertices"] = raw_mesh_vertices
+                frame["raw_mesh_colors"] = raw_mesh_colors
+                frame["raw_mesh_faces"] = raw_mesh_faces
                 frame_handles["raw"] = [
                     add_point_cloud(self.server, f"/frames/{idx:04d}/points_raw_depth", raw_points, raw_colors, self.point_size_value)
+                ]
+                frame_handles["raw_mesh"] = [
+                    add_vertex_color_mesh(self.server, f"/frames/{idx:04d}/mesh_raw_depth", raw_mesh_vertices, raw_mesh_faces, raw_mesh_colors, opacity=0.82)
                 ]
                 if not bool(getattr(self.args, "tracking_only", False)):
                     hsi_points, hsi_colors = rebuild_depth_points_for_frame(
@@ -1208,6 +1493,20 @@ class SequenceViewer:
                     frame["hsi_colors"] = hsi_colors
                     frame_handles["hsi"] = [
                         add_point_cloud(self.server, f"/frames/{idx:04d}/points_hsi_depth", hsi_points, hsi_colors, self.point_size_value)
+                    ]
+                    hsi_mesh_vertices, hsi_mesh_colors, hsi_mesh_faces = build_depth_mesh_for_frame(
+                        frame,
+                        depth_key="hsi_depth_map",
+                        extrinsic_key="hsi_extrinsic",
+                        depth_point_stride=self.depth_point_stride_value,
+                        max_scene_depth=self.max_scene_depth_value,
+                        depth_edge_rtol=self.env_mesh_depth_edge_rtol,
+                    )
+                    frame["hsi_mesh_vertices"] = hsi_mesh_vertices
+                    frame["hsi_mesh_colors"] = hsi_mesh_colors
+                    frame["hsi_mesh_faces"] = hsi_mesh_faces
+                    frame_handles["hsi_mesh"] = [
+                        add_vertex_color_mesh(self.server, f"/frames/{idx:04d}/mesh_hsi_depth", hsi_mesh_vertices, hsi_mesh_faces, hsi_mesh_colors, opacity=0.82)
                     ]
         finally:
             self._rebuilding_points = False
@@ -1225,6 +1524,9 @@ class SequenceViewer:
         current = int(self.timestep.value)
         mode = str(self.mode.value)
         depth_source = str(self.depth_source.value)
+        environment_display = str(self.environment_display.value)
+        show_env_points = environment_display in {"points", "both"}
+        show_env_mesh = environment_display in {"mesh", "both"}
         smpl_stride = max(1, int(self.smpl_downsample.value))
         camera_stride = max(1, int(self.camera_downsample.value))
         for idx, frame_handles in enumerate(self.handles):
@@ -1241,8 +1543,10 @@ class SequenceViewer:
             show_decimated_camera = idx == current or (idx % camera_stride == 0)
             show_camera_frame = (idx <= current if mode != "4D current frame" else idx == current)
             show_raw_camera, show_hsi_camera = self._camera_visibility_for_depth(depth_source)
-            set_group_visible(frame_handles["raw"], show_points and depth_source in {"raw_depth", "both"})
-            set_group_visible(frame_handles["hsi"], show_points and depth_source in {"hsi_depth", "both"})
+            set_group_visible(frame_handles["raw"], show_points and show_env_points and depth_source in {"raw_depth", "both"})
+            set_group_visible(frame_handles["hsi"], show_points and show_env_points and depth_source in {"hsi_depth", "both"})
+            set_group_visible(frame_handles["raw_mesh"], show_points and show_env_mesh and depth_source in {"raw_depth", "both"})
+            set_group_visible(frame_handles["hsi_mesh"], show_points and show_env_mesh and depth_source in {"hsi_depth", "both"})
             set_group_visible(frame_handles["base_humans"], show_humans and show_decimated_smpl and bool(self.show_base.value))
             set_group_visible(frame_handles["hsi_humans"], show_humans and show_decimated_smpl and bool(self.show_hsi.value))
             set_group_visible(frame_handles["track_labels"], show_humans and show_decimated_smpl and bool(self.show_track_ids.value))
@@ -1365,6 +1669,118 @@ def rebuild_depth_points_for_frame(
     )
 
 
+def build_depth_mesh_for_frame(
+    frame: dict[str, Any],
+    depth_key: str,
+    extrinsic_key: str,
+    depth_point_stride: int,
+    max_scene_depth: float,
+    depth_edge_rtol: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    depth = torch.from_numpy(np.asarray(frame[depth_key], dtype=np.float32))
+    rgb = torch.from_numpy(np.asarray(frame["rgb_chw"], dtype=np.float32))
+    intrinsic = np.asarray(frame["intrinsic"], dtype=np.float32)
+    extrinsic = np.asarray(frame[extrinsic_key], dtype=np.float32)
+    return depth_to_world_surface_mesh_with_limits(
+        depth=depth,
+        rgb=rgb,
+        intrinsic=intrinsic,
+        extrinsic=extrinsic,
+        depth_point_stride=int(depth_point_stride),
+        max_scene_depth=float(max_scene_depth),
+        depth_edge_rtol=float(depth_edge_rtol),
+    )
+
+
+def depth_to_world_surface_mesh_with_limits(
+    depth: torch.Tensor,
+    rgb: torch.Tensor,
+    intrinsic: np.ndarray,
+    extrinsic: np.ndarray,
+    depth_point_stride: int,
+    max_scene_depth: float,
+    depth_edge_rtol: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    depth = depth.detach().float()
+    height, width = int(depth.shape[-2]), int(depth.shape[-1])
+    step = max(1, int(depth_point_stride))
+    ys, xs = torch.meshgrid(
+        torch.arange(0, height, step, device=depth.device, dtype=torch.float32),
+        torch.arange(0, width, step, device=depth.device, dtype=torch.float32),
+        indexing="ij",
+    )
+    z = depth[ys.long(), xs.long()]
+    fx = max(float(intrinsic[0, 0]), 1e-6)
+    fy = max(float(intrinsic[1, 1]), 1e-6)
+    cx = float(intrinsic[0, 2])
+    cy = float(intrinsic[1, 2])
+    x = (xs - cx) / fx * z
+    y = (ys - cy) / fy * z
+    points = torch.stack([x, y, z], dim=-1)
+    rgb_use = rgb.to(device=depth.device, dtype=torch.float32)
+    if tuple(rgb_use.shape[-2:]) != (height, width):
+        rgb_use = F.interpolate(rgb_use[None], size=(height, width), mode="bilinear", align_corners=False)[0]
+    colors = (rgb_use[:, ys.long(), xs.long()].permute(1, 2, 0).clamp(0.0, 1.0) * 255.0).to(dtype=torch.uint8)
+    valid = torch.isfinite(points).all(dim=-1) & (z > 1e-6)
+    if float(max_scene_depth) > 0:
+        valid = valid & (z <= float(max_scene_depth))
+    points_np = points.detach().cpu().numpy().astype(np.float32, copy=False)
+    colors_np = colors.detach().cpu().numpy().astype(np.uint8, copy=False)
+    depth_np = z.detach().cpu().numpy().astype(np.float32, copy=False)
+    valid_np = valid.detach().cpu().numpy().astype(bool, copy=False)
+    vertices_cam, vertex_colors, faces = depth_sample_grid_to_surface_mesh(
+        points_np,
+        colors_np,
+        depth_np,
+        valid_np,
+        depth_edge_rtol=float(depth_edge_rtol),
+    )
+    vertices_world = camera_points_to_world_np(vertices_cam, extrinsic) if vertices_cam.size else vertices_cam
+    return vertices_world, vertex_colors, faces
+
+
+def depth_sample_grid_to_surface_mesh(
+    points: np.ndarray,
+    colors: np.ndarray,
+    depth: np.ndarray,
+    valid: np.ndarray,
+    depth_edge_rtol: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    rows, cols = depth.shape
+    index_map = -np.ones((rows, cols), dtype=np.int64)
+    index_map[valid] = np.arange(int(valid.sum()), dtype=np.int64)
+    vertices = np.asarray(points[valid], dtype=np.float32).reshape(-1, 3)
+    vertex_colors = np.asarray(colors[valid], dtype=np.uint8).reshape(-1, 3)
+    if rows < 2 or cols < 2 or vertices.shape[0] == 0:
+        return vertices, vertex_colors, np.empty((0, 3), dtype=np.int64)
+
+    cell_mask = valid[:-1, :-1] & valid[:-1, 1:] & valid[1:, :-1] & valid[1:, 1:]
+    d00 = depth[:-1, :-1]
+    d01 = depth[:-1, 1:]
+    d10 = depth[1:, :-1]
+    d11 = depth[1:, 1:]
+    dmax = np.maximum.reduce([d00, d01, d10, d11])
+    dmin = np.minimum.reduce([d00, d01, d10, d11])
+    dmean = (d00 + d01 + d10 + d11) * 0.25
+    cell_mask &= ((dmax - dmin) / np.maximum(np.abs(dmean), 1e-6)) <= max(float(depth_edge_rtol), 0.0)
+
+    ys, xs = np.nonzero(cell_mask)
+    if ys.size == 0:
+        return vertices, vertex_colors, np.empty((0, 3), dtype=np.int64)
+    i00 = index_map[ys, xs]
+    i01 = index_map[ys, xs + 1]
+    i10 = index_map[ys + 1, xs]
+    i11 = index_map[ys + 1, xs + 1]
+    faces = np.concatenate(
+        [
+            np.stack([i00, i10, i01], axis=1),
+            np.stack([i10, i11, i01], axis=1),
+        ],
+        axis=0,
+    )
+    return vertices, vertex_colors, faces.astype(np.int64, copy=False)
+
+
 def remove_handle(handle: Any) -> None:
     try:
         handle.remove()
@@ -1389,12 +1805,66 @@ def add_mesh(server: Any, name: str, vertices: np.ndarray, faces: np.ndarray, co
         return handle
 
 
+def add_vertex_color_mesh(
+    server: Any,
+    name: str,
+    vertices: np.ndarray,
+    faces: np.ndarray,
+    colors: np.ndarray,
+    opacity: float = 1.0,
+) -> Any:
+    vertices = np.asarray(vertices, dtype=np.float32).reshape(-1, 3)
+    faces = np.asarray(faces, dtype=np.int64).reshape(-1, 3)
+    colors = np.asarray(colors, dtype=np.uint8).reshape(-1, 3)
+    if vertices.shape[0] == 0 or faces.shape[0] == 0:
+        return add_point_cloud(
+            server,
+            name,
+            np.zeros((0, 3), dtype=np.float32),
+            np.zeros((0, 3), dtype=np.uint8),
+            point_size=0.001,
+        )
+    api = scene_api(server)
+    try:
+        import trimesh  # noqa: PLC0415
+
+        mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_colors=colors, process=False)
+        try:
+            return api.add_mesh_trimesh(name=name, mesh=mesh, opacity=float(opacity))
+        except TypeError:
+            handle = api.add_mesh_trimesh(name=name, mesh=mesh)
+            try:
+                handle.opacity = float(opacity)
+            except Exception:
+                pass
+            return handle
+    except Exception:
+        median_color = np.median(colors, axis=0).astype(np.uint8).tolist() if colors.size else [160, 160, 160]
+        return add_mesh(server, name, vertices, faces, tuple(int(v) for v in median_color), opacity=opacity)
+
+
 def add_label(server: Any, name: str, text: str, position: np.ndarray) -> Any:
     api = scene_api(server)
     try:
         return api.add_label(name=name, text=text, position=position)
     except TypeError:
         return api.add_label(name, text, position)
+
+
+def add_transform_controls(server: Any, name: str, position: np.ndarray, scale: float, visible: bool) -> Any:
+    api = scene_api(server)
+    if not hasattr(api, "add_transform_controls"):
+        return None
+    position = np.asarray(position, dtype=np.float32)
+    try:
+        handle = api.add_transform_controls(name=name, position=position, scale=float(scale), visible=bool(visible))
+    except TypeError:
+        try:
+            handle = api.add_transform_controls(name=name, position=position, scale=float(scale))
+        except TypeError:
+            handle = api.add_transform_controls(name, position=position, scale=float(scale))
+        set_handle_visible(handle, visible)
+    return handle
 
 
 def add_camera(server: Any, transforms: Any, name: str, camera: dict[str, Any], scale: float, color: tuple[int, int, int] = (255, 255, 255)) -> Any:
@@ -1484,12 +1954,47 @@ def set_text_value(handle: Any, value: str) -> None:
         pass
 
 
+def set_handle_position(handle: Any, position: np.ndarray) -> None:
+    if handle is None:
+        return
+    position_np = np.asarray(position, dtype=np.float32).reshape(3)
+    try:
+        handle.position = position_np
+    except Exception:
+        pass
+
+
+def get_handle_position(handle: Any) -> np.ndarray | None:
+    if handle is None:
+        return None
+    try:
+        return np.asarray(handle.position, dtype=np.float32).reshape(3)
+    except Exception:
+        return None
+
+
+def set_handle_visible(handle: Any, visible: bool) -> None:
+    if handle is None:
+        return
+    try:
+        handle.visible = bool(visible)
+    except Exception:
+        pass
+
+
 def set_group_visible(handles: list[Any], visible: bool) -> None:
     for handle in handles:
-        try:
-            handle.visible = bool(visible)
-        except Exception:
-            pass
+        set_handle_visible(handle, visible)
+
+
+def human_entry_key(frame_index: int, kind: str, track_id: int, query_idx: int) -> str:
+    return f"f{int(frame_index):04d}:{kind}:id{int(track_id)}:q{int(query_idx)}"
+
+
+def resolve_smpl_edit_output(args: argparse.Namespace) -> Path:
+    if getattr(args, "smpl_edit_output", ""):
+        return resolve_project_path(str(args.smpl_edit_output))
+    return resolve_project_path(args.output_dir) / "smpl_edit_offsets.json"
 
 
 def camera_trajectory_colors(count: int) -> np.ndarray:
