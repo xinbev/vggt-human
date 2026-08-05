@@ -15,6 +15,7 @@ The viewer supports:
 - click/dropdown SMPL selection and viewer-only XYZ translation;
 - display of the active HSI scale strategy and scale/bias values;
 - a viewer-only HSI environment scale multiplier.
+- a single-frame live scale calibration mode using the complete HSI point cloud.
 
 ## HSI Scale Strategy
 
@@ -54,6 +55,18 @@ The `Visual Scale Multiplier` slider defaults to `1.0`, ranges from `0.5` to
 `2.0`, and uses a `0.01` step. Move the slider and click `Apply Scale` to update
 the complete HSI point sequence. `Reset Scale to 1.0` restores the model
 visualization.
+
+Enable `Single-Frame Scale Calibration` to pause playback and temporarily force
+the viewer to the current frame, HSI depth points, point rendering, and HSI
+SMPL. The point cloud remains complete, including person pixels; no human mask
+is subtracted. The scale slider then updates only the selected frame live, so
+the point-cloud person shape can be compared with SMPL without rebuilding the
+whole sequence on every slider event. `Timestep`, `Prev Frame`, and `Next Frame`
+remain available for choosing a representative frame.
+
+Turning calibration mode off applies the selected multiplier to the complete
+sequence and restores the playback, display mode, depth source, SMPL, and camera
+visibility settings that were active before calibration.
 
 The multiplier scales HSI environment world points, HSI camera positions, and
 the HSI camera trajectory about the shared world origin. It does not edit model

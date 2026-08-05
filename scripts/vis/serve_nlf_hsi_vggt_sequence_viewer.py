@@ -1036,6 +1036,9 @@ class SequenceViewer:
         self.env_mesh_color_mode = str(getattr(args, "env_mesh_color_mode", "point_overlay"))
         self.env_mesh_overlay_point_size = max(0.0005, float(args.point_size) * float(getattr(args, "env_mesh_overlay_point_size_scale", 0.75)))
         self._rebuilding_points = False
+        self.hsi_calibration_active = False
+        self._switching_hsi_calibration = False
+        self._hsi_calibration_restore_state: dict[str, Any] = {}
         self.global_handles: dict[str, list[Any]] = {}
         self.human_entries: list[dict[str, Any]] = []
         self.human_entry_by_key: dict[str, dict[str, Any]] = {}
@@ -1153,13 +1156,15 @@ class SequenceViewer:
                 add_point_cloud(self.server, "/camera_trajectory/hsi_scaled_centers", hsi_trajectory, camera_trajectory_colors(hsi_trajectory.shape[0]), max(self.point_size_value * 3.5, 0.012))
             ]
 
-    def _scaled_hsi_points(self, frame: dict[str, Any]) -> np.ndarray:
+    def _scaled_hsi_points(self, frame: dict[str, Any], scale: float | None = None) -> np.ndarray:
         points = np.asarray(frame["hsi_points"], dtype=np.float32)
-        return points * np.float32(self.hsi_visual_scale_value)
+        visual_scale = self.hsi_visual_scale_value if scale is None else float(scale)
+        return points * np.float32(visual_scale)
 
-    def _scaled_hsi_camera(self, frame: dict[str, Any]) -> dict[str, Any]:
+    def _scaled_hsi_camera(self, frame: dict[str, Any], scale: float | None = None) -> dict[str, Any]:
         camera = dict(frame["hsi_camera"])
-        camera["position"] = np.asarray(camera["position"], dtype=np.float32) * np.float32(self.hsi_visual_scale_value)
+        visual_scale = self.hsi_visual_scale_value if scale is None else float(scale)
+        camera["position"] = np.asarray(camera["position"], dtype=np.float32) * np.float32(visual_scale)
         return camera
 
     def _scaled_hsi_trajectory(self) -> np.ndarray:
@@ -1189,6 +1194,9 @@ class SequenceViewer:
             str(getattr(self.args, "environment_display", "points")),
         )
         with add_folder(self.server, "HSI Scale Controls"):
+            self.hsi_calibration_mode = add_checkbox(self.server, "Single-Frame Scale Calibration", False)
+            self.hsi_calibration_info = add_text(self.server, "Calibration Status", "Off")
+            set_handle_disabled(self.hsi_calibration_info, True)
             self.hsi_scale_strategy_info = add_text(self.server, "Strategy", "")
             self.hsi_model_scale_info = add_text(self.server, "Current Model Scale / Bias", "")
             self.hsi_raw_scale_info = add_text(self.server, "Raw Frame Scale / Bias", "")
@@ -1212,6 +1220,8 @@ class SequenceViewer:
             )
             self.apply_hsi_visual_scale = add_button(self.server, "Apply Scale")
             self.reset_hsi_visual_scale = add_button(self.server, "Reset Scale to 1.0")
+            if tracking_only:
+                set_handle_disabled(self.hsi_calibration_mode, True)
         self.point_size = add_slider(self.server, "Point Size", 0.0005, 0.08, 0.0005, self.point_size_value)
         self.density_preset = add_dropdown(self.server, "Point Density Preset", ["custom", "dense stride 1", "balanced stride 2", "fast stride 4", "full sequence stride 6"], "custom")
         self.depth_point_stride = add_slider(self.server, "Depth Point Stride", 1, 64, 1, self.depth_point_stride_value)
@@ -1263,6 +1273,7 @@ class SequenceViewer:
         bind_update(self.depth_point_stride, self._on_depth_sampling_update)
         bind_update(self.max_scene_depth, self._on_depth_sampling_update)
         bind_update(self.hsi_visual_scale, self._on_hsi_visual_scale_pending)
+        bind_update(self.hsi_calibration_mode, self._on_hsi_calibration_mode_update)
         bind_update(self.camera_size, self._on_camera_size_update)
         bind_update(self.smpl_opacity, self._on_smpl_opacity_update)
         bind_update(self.selected_smpl, self._on_selected_smpl_update)
@@ -1461,7 +1472,11 @@ class SequenceViewer:
         set_text_value(self.smpl_edit_info, f"Saved {len(rows)} SMPL offset(s) to {self.smpl_edit_output}")
 
     def _on_gui_update(self, _: Any = None) -> None:
+        if self._switching_hsi_calibration:
+            return
         self.current_step = int(self.timestep.value)
+        if self.hsi_calibration_active:
+            self._rebuild_hsi_calibration_frame(self.current_step)
         self._update_visibility()
         if bool(self.follow_camera.value):
             self._follow_pred_camera(self.current_step)
@@ -1504,13 +1519,17 @@ class SequenceViewer:
         self._rebuild_depth_point_clouds()
 
     def _on_hsi_visual_scale_pending(self, _: Any = None) -> None:
+        if self.hsi_calibration_active:
+            self.hsi_visual_scale_value = self._requested_hsi_visual_scale()
+            self._rebuild_hsi_calibration_frame(int(self.timestep.value))
+            self._update_visibility()
+            return
         self._update_hsi_scale_info(int(self.timestep.value))
 
     def _apply_hsi_visual_scale(self, _: Any = None) -> None:
-        requested = min(
-            HSI_VISUAL_SCALE_MAX,
-            max(HSI_VISUAL_SCALE_MIN, float(self.hsi_visual_scale.value)),
-        )
+        if self.hsi_calibration_active:
+            return
+        requested = self._requested_hsi_visual_scale()
         if abs(requested - self.hsi_visual_scale_value) <= 1e-7:
             self._update_hsi_scale_info(int(self.timestep.value))
             return
@@ -1519,7 +1538,120 @@ class SequenceViewer:
 
     def _reset_hsi_visual_scale(self, _: Any = None) -> None:
         self.hsi_visual_scale.value = 1.0
-        self._apply_hsi_visual_scale()
+        if self.hsi_calibration_active:
+            self.hsi_visual_scale_value = 1.0
+            self._rebuild_hsi_calibration_frame(int(self.timestep.value))
+            self._update_visibility()
+        else:
+            self._apply_hsi_visual_scale()
+
+    def _requested_hsi_visual_scale(self) -> float:
+        return min(
+            HSI_VISUAL_SCALE_MAX,
+            max(HSI_VISUAL_SCALE_MIN, float(self.hsi_visual_scale.value)),
+        )
+
+    def _on_hsi_calibration_mode_update(self, _: Any = None) -> None:
+        if self._switching_hsi_calibration:
+            return
+        if bool(self.hsi_calibration_mode.value):
+            self._enter_hsi_calibration_mode()
+        else:
+            self._exit_hsi_calibration_mode()
+
+    def _enter_hsi_calibration_mode(self) -> None:
+        if self.hsi_calibration_active or bool(getattr(self.args, "tracking_only", False)):
+            return
+        controls = {
+            "play": self.play,
+            "mode": self.mode,
+            "depth_source": self.depth_source,
+            "environment_display": self.environment_display,
+            "show_hsi": self.show_hsi,
+            "show_base": self.show_base,
+            "show_cameras": self.show_cameras,
+            "camera_source": self.camera_source,
+            "show_camera_trajectory": self.show_camera_trajectory,
+            "follow_camera": self.follow_camera,
+        }
+        self._hsi_calibration_restore_state = {key: handle.value for key, handle in controls.items()}
+        self.hsi_calibration_active = True
+        self._switching_hsi_calibration = True
+        try:
+            self.play.value = False
+            self.mode.value = "4D current frame"
+            self.depth_source.value = "hsi_depth"
+            self.environment_display.value = "points"
+            self.show_hsi.value = True
+            self.show_base.value = False
+            self.show_cameras.value = False
+            self.camera_source.value = "hsi_scaled"
+            self.show_camera_trajectory.value = False
+            self.follow_camera.value = False
+            for handle in controls.values():
+                set_handle_disabled(handle, True)
+            set_handle_disabled(self.apply_hsi_visual_scale, True)
+        finally:
+            self._switching_hsi_calibration = False
+        self.current_step = int(self.timestep.value)
+        self.hsi_visual_scale_value = self._requested_hsi_visual_scale()
+        self._rebuild_hsi_calibration_frame(self.current_step)
+        self._update_visibility()
+
+    def _exit_hsi_calibration_mode(self) -> None:
+        if not self.hsi_calibration_active:
+            return
+        restore_state = dict(self._hsi_calibration_restore_state)
+        self.hsi_calibration_active = False
+        self._switching_hsi_calibration = True
+        try:
+            controls = {
+                "play": self.play,
+                "mode": self.mode,
+                "depth_source": self.depth_source,
+                "environment_display": self.environment_display,
+                "show_hsi": self.show_hsi,
+                "show_base": self.show_base,
+                "show_cameras": self.show_cameras,
+                "camera_source": self.camera_source,
+                "show_camera_trajectory": self.show_camera_trajectory,
+                "follow_camera": self.follow_camera,
+            }
+            for key, handle in controls.items():
+                set_handle_disabled(handle, False)
+                if key != "play" and key in restore_state:
+                    handle.value = restore_state[key]
+            self.play.value = False
+            set_handle_disabled(self.apply_hsi_visual_scale, False)
+        finally:
+            self._switching_hsi_calibration = False
+        self._rebuild_hsi_visual_geometry()
+        if "play" in restore_state:
+            self.play.value = bool(restore_state["play"])
+        self._hsi_calibration_restore_state = {}
+        self._update_visibility()
+
+    def _rebuild_hsi_calibration_frame(self, frame_index: int) -> None:
+        if not self.hsi_calibration_active or bool(getattr(self.args, "tracking_only", False)):
+            return
+        idx = int(frame_index)
+        frame = self.scene["frames"][idx]
+        frame_handles = self.handles[idx]
+        for handle in frame_handles.get("hsi", []) + frame_handles.get("hsi_mesh", []):
+            remove_handle(handle)
+        frame_handles["hsi"] = [
+            add_point_cloud(
+                self.server,
+                f"/frames/{idx:04d}/points_hsi_depth",
+                self._scaled_hsi_points(frame),
+                frame["hsi_colors"],
+                self.point_size_value,
+            )
+        ]
+        frame_handles["hsi_mesh"] = []
+        scaled_camera = self._scaled_hsi_camera(frame)
+        for handle in frame_handles.get("cameras_hsi", []):
+            set_handle_position(handle, scaled_camera["position"])
 
     def _rebuild_hsi_visual_geometry(self) -> None:
         if bool(getattr(self.args, "tracking_only", False)):
@@ -1774,10 +1906,7 @@ class SequenceViewer:
             strategy = f"ema(alpha={alpha:.3g}): smoothed scale/bias can vary by frame"
         else:
             strategy = "per_frame: each frame uses its own predicted scale/bias"
-        pending = min(
-            HSI_VISUAL_SCALE_MAX,
-            max(HSI_VISUAL_SCALE_MIN, float(self.hsi_visual_scale.value)),
-        )
+        pending = self._requested_hsi_visual_scale()
         applied = float(self.hsi_visual_scale_value)
         raw_text = "unavailable"
         if raw_frame_scale is not None and raw_frame_bias is not None:
@@ -1786,6 +1915,13 @@ class SequenceViewer:
         if raw_scales.size > 0:
             raw_range = f"{raw_scales.min():.5g}/{np.median(raw_scales):.5g}/{raw_scales.max():.5g}"
         set_text_value(self.hsi_scale_strategy_info, strategy)
+        if self.hsi_calibration_active:
+            set_text_value(
+                self.hsi_calibration_info,
+                f"ON | frame {int(frame_index) + 1}/{len(self.scene['frames'])} | live full-point preview",
+            )
+        else:
+            set_text_value(self.hsi_calibration_info, "OFF | normal sequence display")
         set_text_value(self.hsi_model_scale_info, f"scale={model_scale:.6g}, bias={model_bias:.6g}")
         set_text_value(self.hsi_raw_scale_info, raw_text)
         set_text_value(
@@ -1795,11 +1931,10 @@ class SequenceViewer:
                 f"raw={raw_range}"
             ),
         )
-        visual_result = (
-            f"x{applied:.3f} | effective scale={model_scale * applied:.6g}, "
-            f"bias={model_bias * applied:.6g}"
-        )
-        if abs(pending - applied) > 1e-7:
+        visual_result = f"x{applied:.3f} | effective scale={model_scale * applied:.6g}, bias={model_bias * applied:.6g}"
+        if self.hsi_calibration_active:
+            visual_result += " | live on selected frame; turn mode off to apply sequence"
+        elif abs(pending - applied) > 1e-7:
             visual_result += f" | pending x{pending:.3f}: click Apply Scale"
         set_text_value(self.hsi_visual_result_info, visual_result)
 
