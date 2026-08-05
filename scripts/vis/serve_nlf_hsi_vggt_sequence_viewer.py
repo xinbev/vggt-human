@@ -21,7 +21,7 @@ from typing import Any
 import numpy as np
 import torch
 import torch.nn.functional as F
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -672,8 +672,6 @@ def projected_human_exclusion_mask(
     vertex_key: str,
     args: argparse.Namespace,
 ) -> np.ndarray:
-    import cv2  # noqa: PLC0415
-
     depth_np = depth.detach().float().cpu().numpy().astype(np.float32, copy=False)
     height, width = depth_np.shape[-2:]
     exclusion = np.zeros((height, width), dtype=bool)
@@ -701,23 +699,55 @@ def projected_human_exclusion_mask(
             [np.clip(u, 0.0, width - 1.0), np.clip(v, 0.0, height - 1.0)],
             axis=-1,
         )
-        hull = cv2.convexHull(np.rint(projected).astype(np.int32))
-        if hull is None or hull.shape[0] < 3:
+        hull = convex_hull_2d(np.rint(projected).astype(np.int32))
+        if hull.shape[0] < 3:
             continue
-        silhouette = np.zeros((height, width), dtype=np.uint8)
-        cv2.fillConvexPoly(silhouette, hull, 1)
+        silhouette_image = Image.new("L", (width, height), 0)
+        ImageDraw.Draw(silhouette_image).polygon(
+            [(int(point[0]), int(point[1])) for point in hull],
+            fill=255,
+        )
         if dilation_px > 0:
             kernel_size = 2 * dilation_px + 1
-            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
-            silhouette = cv2.dilate(silhouette, kernel, iterations=1)
+            silhouette_image = silhouette_image.filter(ImageFilter.MaxFilter(kernel_size))
+        silhouette = np.asarray(silhouette_image, dtype=np.uint8) > 0
         depth_gate = (
             np.isfinite(depth_np)
             & (depth_np > 1e-6)
             & (depth_np >= float(z.min()) - depth_margin)
             & (depth_np <= float(z.max()) + depth_margin)
         )
-        exclusion |= silhouette.astype(bool) & depth_gate
+        exclusion |= silhouette & depth_gate
     return exclusion
+
+
+def convex_hull_2d(points: np.ndarray) -> np.ndarray:
+    points_np = np.asarray(points, dtype=np.int32).reshape(-1, 2)
+    if points_np.shape[0] <= 1:
+        return points_np
+    points_np = np.unique(points_np, axis=0)
+    if points_np.shape[0] <= 2:
+        return points_np
+    order = np.lexsort((points_np[:, 1], points_np[:, 0]))
+    sorted_points = points_np[order]
+
+    def cross(origin: np.ndarray, first: np.ndarray, second: np.ndarray) -> int:
+        return int(
+            (int(first[0]) - int(origin[0])) * (int(second[1]) - int(origin[1]))
+            - (int(first[1]) - int(origin[1])) * (int(second[0]) - int(origin[0]))
+        )
+
+    lower: list[np.ndarray] = []
+    for point in sorted_points:
+        while len(lower) >= 2 and cross(lower[-2], lower[-1], point) <= 0:
+            lower.pop()
+        lower.append(point)
+    upper: list[np.ndarray] = []
+    for point in sorted_points[::-1]:
+        while len(upper) >= 2 and cross(upper[-2], upper[-1], point) <= 0:
+            upper.pop()
+        upper.append(point)
+    return np.asarray(lower[:-1] + upper[:-1], dtype=np.int32)
 
 
 def camera_points_to_world_np(points: np.ndarray, extrinsic: np.ndarray) -> np.ndarray:
