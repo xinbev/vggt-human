@@ -34,6 +34,10 @@ The viewer now adds:
   approximates per-face RGB by grouping faces into
   `--env-mesh-color-groups` Viser simple mesh nodes, avoiding the previous
   `trimesh/add_mesh_trimesh` path that could segfault in the server runtime;
+- by default, `--env-mesh-color-mode point_overlay` displays a neutral
+  semi-transparent depth surface plus same-grid RGB overlay points. This uses
+  the same Viser point-cloud color path as Human3R's online viewer, while still
+  preserving a mesh surface;
 - mesh faces include reversed copies, following the Human3R mesh export idea,
   to reduce view-dependent one-sided flicker;
 - `VIEWER_MODE=4d/3d/hybrid` controls the initial playback mode; the Stage2
@@ -62,7 +66,9 @@ The viewer now adds:
   in each grid cell uses the top-left pixel color and the second triangle uses
   the bottom-right pixel color, matching Human3R's `pts3d_to_trimesh` scheme.
   Because the current stable Viser path only supports one color per simple mesh
-  node, faces are quantized into a bounded number of color buckets.
+  node, exact RGB mesh coloring is not available through `add_mesh_simple`.
+  The default `point_overlay` mode uses correct RGB point colors over the mesh;
+  `bucketed_mesh` remains available as an approximate pure-simple-mesh fallback.
 
 ## Server Usage
 
@@ -112,6 +118,7 @@ This Stage2 wrapper forwards the aligned viewer settings to
 - `VIEWER_MODE=hybrid` by default
 - `ENVIRONMENT_DISPLAY=mesh` by default
 - `ENV_MESH_COLOR_GROUPS=216` by default
+- `ENV_MESH_COLOR_MODE=point_overlay` by default
 - `POINT_SIZE=0.006`
 
 ## Validation

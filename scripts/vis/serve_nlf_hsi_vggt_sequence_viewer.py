@@ -153,6 +153,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--environment-display", choices=["points", "mesh", "both"], default="points", help="Initial environment rendering mode. The Viser GUI can still toggle this live.")
     parser.add_argument("--env-mesh-depth-edge-rtol", type=float, default=0.15, help="Relative depth discontinuity threshold for environment surface mesh faces.")
     parser.add_argument("--env-mesh-color-groups", type=int, default=216, help="Maximum color buckets used to approximate RGB environment mesh face color with Viser simple meshes.")
+    parser.add_argument("--env-mesh-color-mode", choices=["point_overlay", "bucketed_mesh"], default="point_overlay", help="How to color depth mesh. point_overlay matches Human3R's Viser RGB point-cloud path over a neutral surface.")
+    parser.add_argument("--env-mesh-overlay-point-size-scale", type=float, default=0.75, help="Point-size scale for RGB overlay points in point_overlay mesh color mode.")
     parser.add_argument("--smpl-edit-output", default="", help="Optional JSON path for viewer-only SMPL translation edits. Defaults to <output-dir>/smpl_edit_offsets.json.")
     parser.add_argument("--show-track-ids", action=argparse.BooleanOptionalAction, default=True, help="Initial visibility for SMPL track ID labels. The Viser GUI can still toggle this live.")
     parser.add_argument("--point-size", type=float, default=0.012)
@@ -1003,6 +1005,8 @@ class SequenceViewer:
         self.max_scene_depth_value = float(args.max_scene_depth)
         self.env_mesh_depth_edge_rtol = float(getattr(args, "env_mesh_depth_edge_rtol", 0.08))
         self.env_mesh_color_groups = max(1, int(getattr(args, "env_mesh_color_groups", 216)))
+        self.env_mesh_color_mode = str(getattr(args, "env_mesh_color_mode", "point_overlay"))
+        self.env_mesh_overlay_point_size = max(0.0005, float(args.point_size) * float(getattr(args, "env_mesh_overlay_point_size_scale", 0.75)))
         self._rebuilding_points = False
         self.global_handles: dict[str, list[Any]] = {}
         self.human_entries: list[dict[str, Any]] = []
@@ -1535,6 +1539,8 @@ class SequenceViewer:
                 face_colors=raw_mesh_face_colors,
                 opacity=0.82,
                 max_color_groups=self.env_mesh_color_groups,
+                color_mode=self.env_mesh_color_mode,
+                overlay_point_size=self.env_mesh_overlay_point_size,
             )
         if bool(getattr(self.args, "tracking_only", False)):
             return
@@ -1560,6 +1566,8 @@ class SequenceViewer:
                 face_colors=hsi_mesh_face_colors,
                 opacity=0.82,
                 max_color_groups=self.env_mesh_color_groups,
+                color_mode=self.env_mesh_color_mode,
+                overlay_point_size=self.env_mesh_overlay_point_size,
             )
 
     def _camera_visibility_for_depth(self, depth_source: str) -> tuple[bool, bool]:
@@ -1842,6 +1850,8 @@ def add_vertex_color_mesh(
     face_colors: np.ndarray | None = None,
     opacity: float = 1.0,
     max_color_groups: int = 64,
+    color_mode: str = "point_overlay",
+    overlay_point_size: float = 0.004,
 ) -> list[Any]:
     vertices = np.asarray(vertices, dtype=np.float32).reshape(-1, 3)
     faces = np.asarray(faces, dtype=np.int64).reshape(-1, 3)
@@ -1858,6 +1868,11 @@ def add_vertex_color_mesh(
     if vertices.shape[0] == 0 or faces.shape[0] == 0:
         return []
     max_color_groups = max(1, int(max_color_groups))
+    if color_mode == "point_overlay":
+        surface = add_mesh(server, f"{name}/surface", vertices, faces, (150, 150, 150), opacity=min(float(opacity), 0.28))
+        color_points = add_point_cloud(server, f"{name}/rgb_overlay", vertices, colors, float(overlay_point_size))
+        return [surface, color_points]
+
     face_colors_float = face_colors_arr.astype(np.float32) if face_colors_arr is not None else colors[faces].astype(np.float32).mean(axis=1)
     if max_color_groups <= 1 or face_colors_float.shape[0] == 0:
         median_color = np.median(colors, axis=0).astype(np.uint8).tolist() if colors.size else [160, 160, 160]
