@@ -73,8 +73,6 @@ def main() -> None:
         )
     if int(args.human_mask_dilation_px) < 0:
         raise ValueError(f"--human-mask-dilation-px must be >= 0, got {args.human_mask_dilation_px}")
-    if not np.isfinite(args.human_mask_depth_margin_m) or float(args.human_mask_depth_margin_m) < 0.0:
-        raise ValueError(f"--human-mask-depth-margin-m must be finite and >= 0, got {args.human_mask_depth_margin_m}")
     ensure_viser_available()
     import viser  # noqa: PLC0415
     import viser.transforms as vtf  # noqa: PLC0415
@@ -121,6 +119,7 @@ def main() -> None:
         args=args,
         device=device,
     )
+    print_human_point_removal_summary(scene, args)
     validate_scene(scene, predictions, image_sequence)
 
     summary = build_summary(args, frame_paths, checkpoint, image_sequence, predictions, scene, output_dir)
@@ -169,7 +168,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--environment-display", choices=["points", "mesh", "both"], default="points", help="Initial environment rendering mode. The Viser GUI can still toggle this live.")
     parser.add_argument("--hsi-visual-scale", type=float, default=1.0, help="Initial viewer-only multiplier for HSI environment points and HSI camera positions.")
     parser.add_argument("--human-mask-dilation-px", type=int, default=12, help="Pixel dilation around the projected SMPL silhouette when removing human depth points in normal display mode.")
-    parser.add_argument("--human-mask-depth-margin-m", type=float, default=0.45, help="Depth margin around each SMPL body's camera-space depth range for human point removal.")
     parser.add_argument("--env-mesh-depth-edge-rtol", type=float, default=0.15, help="Relative depth discontinuity threshold for environment surface mesh faces.")
     parser.add_argument("--env-mesh-color-groups", type=int, default=216, help="Maximum color buckets used to approximate RGB environment mesh face color with Viser simple meshes.")
     parser.add_argument("--env-mesh-color-mode", choices=["point_overlay", "bucketed_mesh"], default="point_overlay", help="How to color depth mesh. point_overlay matches Human3R's Viser RGB point-cloud path over a neutral surface.")
@@ -676,7 +674,6 @@ def projected_human_exclusion_mask(
     height, width = depth_np.shape[-2:]
     exclusion = np.zeros((height, width), dtype=bool)
     dilation_px = max(0, int(args.human_mask_dilation_px))
-    depth_margin = max(0.0, float(args.human_mask_depth_margin_m))
     fx = max(float(intrinsic[0, 0]), 1e-6)
     fy = max(float(intrinsic[1, 1]), 1e-6)
     cx = float(intrinsic[0, 2])
@@ -688,36 +685,41 @@ def projected_human_exclusion_mask(
         if vertices is None:
             continue
         vertices_np = np.asarray(vertices, dtype=np.float32).reshape(-1, 3)
-        valid = np.isfinite(vertices_np).all(axis=1) & (vertices_np[:, 2] > 1e-6)
-        vertices_np = vertices_np[valid]
-        if vertices_np.shape[0] < 3:
+        valid_vertices = np.isfinite(vertices_np).all(axis=1) & (vertices_np[:, 2] > 1e-6)
+        if int(valid_vertices.sum()) < 3:
             continue
-        z = vertices_np[:, 2]
-        u = vertices_np[:, 0] / z * fx + cx
-        v = vertices_np[:, 1] / z * fy + cy
-        projected = np.stack(
-            [np.clip(u, 0.0, width - 1.0), np.clip(v, 0.0, height - 1.0)],
-            axis=-1,
-        )
-        hull = convex_hull_2d(np.rint(projected).astype(np.int32))
-        if hull.shape[0] < 3:
-            continue
-        silhouette_image = Image.new("L", (width, height), 0)
-        ImageDraw.Draw(silhouette_image).polygon(
-            [(int(point[0]), int(point[1])) for point in hull],
-            fill=255,
-        )
+        projected = np.zeros((vertices_np.shape[0], 2), dtype=np.float32)
+        z = vertices_np[valid_vertices, 2]
+        projected[valid_vertices, 0] = vertices_np[valid_vertices, 0] / z * fx + cx
+        projected[valid_vertices, 1] = vertices_np[valid_vertices, 1] / z * fy + cy
+        core_image = Image.new("L", (width, height), 0)
+        draw = ImageDraw.Draw(core_image)
+        faces = np.asarray(person.get("faces", np.empty((0, 3), dtype=np.int64)), dtype=np.int64).reshape(-1, 3)
+        face_bounds = (faces >= 0).all(axis=1) & (faces < vertices_np.shape[0]).all(axis=1)
+        faces = faces[face_bounds]
+        valid_faces = faces[valid_vertices[faces].all(axis=1)] if faces.size > 0 else faces
+        triangles = projected[valid_faces] if valid_faces.size > 0 else np.empty((0, 3, 2), dtype=np.float32)
+        if triangles.shape[0] > 0:
+            intersects_image = (
+                (triangles[..., 0].max(axis=1) >= 0.0)
+                & (triangles[..., 0].min(axis=1) < float(width))
+                & (triangles[..., 1].max(axis=1) >= 0.0)
+                & (triangles[..., 1].min(axis=1) < float(height))
+            )
+            triangles = triangles[intersects_image]
+            triangles[..., 0] = np.clip(triangles[..., 0], 0.0, width - 1.0)
+            triangles[..., 1] = np.clip(triangles[..., 1], 0.0, height - 1.0)
+            for triangle in np.rint(triangles).astype(np.int32):
+                draw.polygon([(int(point[0]), int(point[1])) for point in triangle], fill=255)
+        else:
+            hull = convex_hull_2d(np.rint(projected[valid_vertices]).astype(np.int32))
+            if hull.shape[0] >= 3:
+                draw.polygon([(int(point[0]), int(point[1])) for point in hull], fill=255)
+        silhouette_image = core_image
         if dilation_px > 0:
             kernel_size = 2 * dilation_px + 1
-            silhouette_image = silhouette_image.filter(ImageFilter.MaxFilter(kernel_size))
-        silhouette = np.asarray(silhouette_image, dtype=np.uint8) > 0
-        depth_gate = (
-            np.isfinite(depth_np)
-            & (depth_np > 1e-6)
-            & (depth_np >= float(z.min()) - depth_margin)
-            & (depth_np <= float(z.max()) + depth_margin)
-        )
-        exclusion |= silhouette & depth_gate
+            silhouette_image = core_image.filter(ImageFilter.MaxFilter(kernel_size))
+        exclusion |= np.asarray(silhouette_image, dtype=np.uint8) > 0
     return exclusion
 
 
@@ -1036,10 +1038,10 @@ def build_summary(
         "human_points_removed_hsi": [
             int(frame["hsi_points_full"].shape[0] - frame["hsi_points"].shape[0]) for frame in scene["frames"]
         ],
+        "human_mask_pixels_hsi": [int(np.count_nonzero(frame["hsi_human_exclusion_mask"])) for frame in scene["frames"]],
         "human_point_removal": {
-            "method": "projected_smpl_convex_hull_dilated_with_depth_range_gate",
+            "method": "projected_smpl_triangle_silhouette_dilated_unconditional",
             "dilation_px": int(args.human_mask_dilation_px),
-            "depth_margin_m": float(args.human_mask_depth_margin_m),
             "calibration_mode_uses_full_points": True,
         },
         "people_counts": [int(len(frame["people"])) for frame in scene["frames"]],
@@ -1059,6 +1061,22 @@ def build_summary(
         "depth_alignment_by_frame": [frame["depth_alignment"] for frame in scene["frames"]],
         "output_dir": str(output_dir),
     }
+
+
+def print_human_point_removal_summary(scene: dict[str, Any], args: argparse.Namespace) -> None:
+    full_points = sum(int(frame["hsi_points_full"].shape[0]) for frame in scene["frames"])
+    kept_points = sum(int(frame["hsi_points"].shape[0]) for frame in scene["frames"])
+    removed_points = max(0, full_points - kept_points)
+    mask_pixels = sum(int(np.count_nonzero(frame["hsi_human_exclusion_mask"])) for frame in scene["frames"])
+    removed_ratio = float(removed_points) / float(max(full_points, 1))
+    print(
+        f"[human-mask] frames={len(scene['frames'])} mask_pixels={mask_pixels} "
+        f"points_removed={removed_points}/{full_points} ({removed_ratio:.2%}) "
+        f"dilation={int(args.human_mask_dilation_px)}px",
+        flush=True,
+    )
+    if mask_pixels <= 0 or removed_points <= 0:
+        print("[human-mask][warning] no HSI human points were removed; check SMPL detections and projection geometry", flush=True)
 
 
 def summarize_tracking(predictions: dict[str, torch.Tensor]) -> dict[str, Any]:
@@ -2013,12 +2031,14 @@ class SequenceViewer:
         hsi_cam_pos = np.asarray(self._scaled_hsi_camera(frame)["position"], dtype=np.float32)
         hsi_full_count = int(np.asarray(frame.get("hsi_points_full", frame["hsi_points"])).shape[0])
         hsi_filtered_count = int(frame["hsi_points"].shape[0])
+        hsi_mask_pixels = int(np.count_nonzero(frame.get("hsi_human_exclusion_mask", np.zeros((0,), dtype=bool))))
         set_text_value(
             self.frame_info,
             (
                 f"{int(frame_index) + 1}/{len(self.scene['frames'])} "
                 f"{frame['frame_id']} | raw_pts={int(frame['raw_points'].shape[0])} "
                 f"hsi_pts={hsi_filtered_count}/{hsi_full_count} removed={hsi_full_count - hsi_filtered_count} "
+                f"maskPx={hsi_mask_pixels} "
                 f"people={len(frame['people'])} "
                 f"stride={int(frame.get('depth_point_stride', self.depth_point_stride_value))} "
                 f"maxD={float(frame.get('max_scene_depth', self.max_scene_depth_value)):.1f} "
