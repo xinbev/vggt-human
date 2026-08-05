@@ -51,20 +51,41 @@ The viewer now adds:
 
 Local script path:
 
-`scripts/vis/serve_nlf_hsi_vggt_sequence_viewer.sh`
+`scripts/vis/serve_stage2_human_scene_align_walking_id_overlay.sh`
 
 Server project path:
 
-`/home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/vis/serve_nlf_hsi_vggt_sequence_viewer.sh`
+`/home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/vis/serve_stage2_human_scene_align_walking_id_overlay.sh`
 
 Run on server:
 
 ```bash
-bash scripts/vis/serve_nlf_hsi_vggt_sequence_viewer.sh
+cd /home/zhw/lab_users/xyb/home/projects/vggt-human
+FRAMES_DIR=/home/zhw/lab_users/xyb/home/projects/Human3R-master/outputs/walking/color \
+STAGE2_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full \
+CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt \
+OUTPUT_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_human_scene_align_walking_viewer_id_overlay \
+CUDA_VISIBLE_DEVICES_VALUE=7 \
+PORT=8080 \
+MAX_FRAMES=64 \
+bash scripts/vis/serve_stage2_human_scene_align_walking_id_overlay.sh
 ```
 
 Outputs remain under the configured `outputs/vis/...` directory. Saved manual
 SMPL offsets default to `smpl_edit_offsets.json` in that viewer output folder.
+
+This Stage2 wrapper forwards the aligned viewer settings to
+`scripts/vis/serve_nlf_hsi_vggt_sequence_viewer.sh`:
+
+- `QUERY_SOURCE=nlf_detector`
+- `TRAIN_CONFIG=configs/train_smpl_hsi_nlf_stage2_human_scene_align.yaml`
+- `CHECKPOINT=outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt`
+- `TRACKING_OVERLAY=base_smpl`
+- `HSI_ALIGN_FEATURE_VERSION=legacy_scale_bias_v0`
+- `MAX_HUMANS=8`
+- `DEPTH_POINT_STRIDE=2`
+- `MAX_SCENE_DEPTH=80`
+- `POINT_SIZE=0.006`
 
 ## Validation
 

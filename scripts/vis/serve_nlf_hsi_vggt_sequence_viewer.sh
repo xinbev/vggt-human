@@ -27,6 +27,7 @@ TRACK_MAX_TRANSL_DISTANCE="${TRACK_MAX_TRANSL_DISTANCE:-1.50}"
 TRACK_MAX_BETA_L1="${TRACK_MAX_BETA_L1:-0.30}"
 DEPTH_POINT_STRIDE="${DEPTH_POINT_STRIDE:-4}"
 MAX_SCENE_DEPTH="${MAX_SCENE_DEPTH:-30.0}"
+ENV_MESH_DEPTH_EDGE_RTOL="${ENV_MESH_DEPTH_EDGE_RTOL:-0.08}"
 POINT_SIZE="${POINT_SIZE:-0.012}"
 CAMERA_FRUSTUM_SCALE="${CAMERA_FRUSTUM_SCALE:-0.20}"
 ALIGNMENT_VERTEX_STRIDE="${ALIGNMENT_VERTEX_STRIDE:-16}"
@@ -35,6 +36,7 @@ DEVICE="${DEVICE:-cuda}"
 CHECKPOINT="${CHECKPOINT:-}"
 BASELINE_CHECKPOINT="${BASELINE_CHECKPOINT:-}"
 SMPL_MODEL_DIR="${SMPL_MODEL_DIR:-}"
+SMPL_EDIT_OUTPUT="${SMPL_EDIT_OUTPUT:-}"
 HSI_ALIGN_FEATURE_VERSION="${HSI_ALIGN_FEATURE_VERSION:-}"
 SMOKE_ONLY="${SMOKE_ONLY:-false}"
 
@@ -65,7 +67,9 @@ echo "ID overlay  : ${TRACKING_OVERLAY} (post-HSI display only)"
 echo "Align compat: ${HSI_ALIGN_FEATURE_VERSION:-<config default>}"
 echo "Depth stride: ${DEPTH_POINT_STRIDE} (can be changed in Viser GUI)"
 echo "Max depth   : ${MAX_SCENE_DEPTH} (0 disables clipping; GUI adjustable)"
+echo "Mesh edge   : ${ENV_MESH_DEPTH_EDGE_RTOL} (relative depth jump cutoff)"
 echo "Point size  : ${POINT_SIZE}"
+echo "SMPL edits  : ${SMPL_EDIT_OUTPUT:-${OUTPUT_DIR}/smpl_edit_offsets.json}"
 echo "GPU visible : ${CUDA_VISIBLE_DEVICES_VALUE}"
 echo "Smoke only  : ${SMOKE_ONLY}"
 
@@ -93,6 +97,7 @@ ARGS=(
   --track-max-beta-l1 "${TRACK_MAX_BETA_L1}"
   --depth-point-stride "${DEPTH_POINT_STRIDE}"
   --max-scene-depth "${MAX_SCENE_DEPTH}"
+  --env-mesh-depth-edge-rtol "${ENV_MESH_DEPTH_EDGE_RTOL}"
   --point-size "${POINT_SIZE}"
   --camera-frustum-scale "${CAMERA_FRUSTUM_SCALE}"
   --alignment-vertex-stride "${ALIGNMENT_VERTEX_STRIDE}"
@@ -107,6 +112,9 @@ if [[ -n "${BASELINE_CHECKPOINT}" ]]; then
 fi
 if [[ -n "${SMPL_MODEL_DIR}" ]]; then
   ARGS+=(--smpl-model-dir "${SMPL_MODEL_DIR}")
+fi
+if [[ -n "${SMPL_EDIT_OUTPUT}" ]]; then
+  ARGS+=(--smpl-edit-output "${SMPL_EDIT_OUTPUT}")
 fi
 if [[ -n "${HSI_ALIGN_FEATURE_VERSION}" ]]; then
   ARGS+=(--override "model.hsi_align_feature_version=${HSI_ALIGN_FEATURE_VERSION}")
