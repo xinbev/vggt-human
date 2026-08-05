@@ -1,86 +1,79 @@
-# Interactive SMPL And Environment Mesh Viewer
+# Interactive SMPL And HSI Point Viewer
 
-## Task Goal
+## Current Behavior
 
-Add viewer-only controls to the existing Viser sequence viewer so a selected
-SMPL body can be translated interactively, and the depth-derived environment can
-be shown as a surface mesh instead of only a point cloud.
+The Stage2 walking viewer uses the original RGB point-cloud environment again.
+The generic viewer still retains the experimental mesh path for compatibility,
+but `serve_stage2_human_scene_align_walking_id_overlay.sh` now starts with
+`ENVIRONMENT_DISPLAY=points`.
 
-## Baseline Behavior
+The viewer supports:
 
-The baseline viewer in `scripts/vis/serve_nlf_hsi_vggt_sequence_viewer.py`:
+- current-frame, accumulated, and hybrid sequence display;
+- raw VGGT depth, HSI-corrected depth, or both;
+- optional track ID labels;
+- click/dropdown SMPL selection and viewer-only XYZ translation;
+- display of the active HSI scale strategy and scale/bias values;
+- a viewer-only HSI environment scale multiplier.
 
-- decodes SMPL vertices from `pred_poses`, `pred_betas`, and
-  `pred_transl_cam` or HSI-refined equivalents;
-- transforms SMPL vertices and depth points into the shared world frame;
-- displays depth as Viser point clouds and SMPL as Viser mesh nodes.
+## HSI Scale Strategy
 
-Model predictions and `run_summary.json` geometry were not edited by the
-viewer.
+The Stage2 walking wrapper loads
+`configs/train_smpl_hsi_nlf_stage2_human_scene_align.yaml`, whose model setting
+is:
 
-## New Behavior
+```yaml
+hsi_scene_affine_mode: clip_median
+```
 
-The viewer now adds:
+The HSI refinement head first predicts one scale and depth bias per frame. It
+confidence-weights all valid human-query predictions inside each frame. The
+`clip_median` strategy then takes the sequence median in log-scale space and
+the sequence median depth bias, and broadcasts that robust pair to every frame.
+Therefore this viewer uses one shared model scale/bias pair for the selected
+sequence, although the pre-aggregation per-frame values can differ.
 
-- `Environment Display`: `points`, `mesh`, or `both`;
-- `ENVIRONMENT_DISPLAY=points/mesh/both` controls the initial environment
-  rendering mode from shell scripts; the Stage2 walking wrapper defaults to
-  `mesh`;
-- depth-grid surface mesh construction for raw and HSI depth, using
-  `--env-mesh-depth-edge-rtol` to break faces across depth discontinuities;
-- environment mesh nodes are built lazily when `mesh` or `both` is selected,
-  so the viewer starts with the baseline point-cloud load;
-- environment mesh follows Human3R's depth-grid face-color assignment, then
-  approximates per-face RGB by grouping faces into
-  `--env-mesh-color-groups` Viser simple mesh nodes, avoiding the previous
-  `trimesh/add_mesh_trimesh` path that could segfault in the server runtime;
-- by default, `--env-mesh-color-mode point_overlay` displays a neutral
-  semi-transparent depth surface plus same-grid RGB overlay points. This uses
-  the same Viser point-cloud color path as Human3R's online viewer, while still
-  preserving a mesh surface;
-- mesh faces include reversed copies, following the Human3R mesh export idea,
-  to reduce view-dependent one-sided flicker;
-- `VIEWER_MODE=4d/3d/hybrid` controls the initial playback mode; the Stage2
-  walking wrapper defaults to `hybrid`, so the environment accumulates while
-  SMPL bodies remain current-frame;
-- SMPL click/dropdown selection with `SMPL dX`, `SMPL dY`, and `SMPL dZ`
-  viewer-only translation offsets;
-- `Show Track IDs` controls ID label visibility in the GUI, and
-  `SHOW_TRACK_IDS=true/false` controls its initial state from shell scripts;
-- optional Viser transform controls when the installed Viser version supports
-  `add_transform_controls`;
-- edit scope: selected frame only or same track across all frames;
-- `Save SMPL Offsets`, writing nonzero offsets to
-  `outputs/vis/.../smpl_edit_offsets.json` by default.
+The calibrated depth is:
 
-## Coordinate And Shape Notes
+```text
+hsi_depth = raw_depth * hsi_scene_scale + hsi_scene_depth_bias
+```
 
-- SMPL mesh vertices are already stored in world coordinates as `[V, 3]`.
-- The viewer translation offset is a world-frame XYZ offset applied to the
-  Viser scene node, not to the model output tensors.
-- Environment mesh vertices are sampled from depth with the same stride and
-  max-depth clipping used by point clouds.
-- Faces are generated on the sampled depth grid; cells with large relative
-  depth jumps are skipped.
-- Environment mesh colors come from the sampled RGB image. The first triangle
-  in each grid cell uses the top-left pixel color and the second triangle uses
-  the bottom-right pixel color, matching Human3R's `pts3d_to_trimesh` scheme.
-  Because the current stable Viser path only supports one color per simple mesh
-  node, exact RGB mesh coloring is not available through `add_mesh_simple`.
-  The default `point_overlay` mode uses correct RGB point colors over the mesh;
-  `bucketed_mesh` remains available as an approximate pure-simple-mesh fallback.
+The GUI `HSI Scale` field displays:
+
+- the configured strategy;
+- the current model scale and bias actually used by geometry;
+- the original per-frame prediction before sequence aggregation;
+- model and raw sequence min/median/max scale statistics;
+- the applied and pending viewer-only multipliers.
+
+## Manual Visualization Scale
+
+`HSI Visual Scale Multiplier` defaults to `1.0`. Change it and click
+`Apply HSI Visual Scale` to update the complete HSI point sequence. Reset sets
+it back to `1.0`.
+
+The multiplier scales HSI environment world points, HSI camera positions, and
+the HSI camera trajectory about the shared world origin. It does not edit model
+outputs, the checkpoint, raw VGGT points, HSI SMPL vertices, or saved alignment
+diagnostics. Scaling both the corrected depth and HSI camera translation is
+equivalent to multiplying the model scale and bias by the displayed viewer
+multiplier. The GUI therefore also reports the effective visual scale/bias.
+
+The initial multiplier can be set from the shell with
+`HSI_VISUAL_SCALE=<value>`; the supported GUI range is `0.01` to `5.0`.
 
 ## Server Usage
 
-Local script path:
+Local script:
 
 `scripts/vis/serve_stage2_human_scene_align_walking_id_overlay.sh`
 
-Server project path:
+Server script:
 
 `/home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/vis/serve_stage2_human_scene_align_walking_id_overlay.sh`
 
-Run on server:
+Run:
 
 ```bash
 cd /home/zhw/lab_users/xyb/home/projects/vggt-human
@@ -91,55 +84,16 @@ OUTPUT_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_h
 CUDA_VISIBLE_DEVICES_VALUE=7 \
 PORT=8080 \
 MAX_FRAMES=64 \
+HSI_VISUAL_SCALE=1.0 \
 bash scripts/vis/serve_stage2_human_scene_align_walking_id_overlay.sh
 ```
 
-Outputs remain under the configured `outputs/vis/...` directory. Saved manual
-SMPL offsets default to `smpl_edit_offsets.json` in that viewer output folder.
+The viewer summary remains under the configured `outputs/vis/...` directory.
+`run_summary.json` now records the affine strategy, final model scales, raw
+per-frame scales, and the initial viewer-only multiplier.
 
-To start with ID labels hidden:
+## Validation Boundary
 
-```bash
-SHOW_TRACK_IDS=false bash scripts/vis/serve_stage2_human_scene_align_walking_id_overlay.sh
-```
-
-This Stage2 wrapper forwards the aligned viewer settings to
-`scripts/vis/serve_nlf_hsi_vggt_sequence_viewer.sh`:
-
-- `QUERY_SOURCE=nlf_detector`
-- `TRAIN_CONFIG=configs/train_smpl_hsi_nlf_stage2_human_scene_align.yaml`
-- `CHECKPOINT=outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt`
-- `TRACKING_OVERLAY=base_smpl`
-- `SHOW_TRACK_IDS=true` by default
-- `HSI_ALIGN_FEATURE_VERSION=legacy_scale_bias_v0`
-- `MAX_HUMANS=8`
-- `DEPTH_POINT_STRIDE=2`
-- `MAX_SCENE_DEPTH=80`
-- `VIEWER_MODE=hybrid` by default
-- `ENVIRONMENT_DISPLAY=mesh` by default
-- `ENV_MESH_COLOR_GROUPS=216` by default
-- `ENV_MESH_COLOR_MODE=point_overlay` by default
-- `POINT_SIZE=0.006`
-
-## Validation
-
-Completed locally:
-
-- `python -m py_compile scripts/vis/serve_nlf_hsi_vggt_sequence_viewer.py`
-- `python -m py_compile scripts/vis/serve_nlf_roi_id_tracking_v2_viewer.py`
-
-Not completed locally:
-
-- full import/runtime smoke, because the Windows local environment does not
-  have `torch`;
-- interactive Viser verification, which needs the Linux server environment,
-  checkpoints, body model assets, and viewer dependencies.
-
-## Risks
-
-- Environment mesh is a depth-map surface mesh, not a fused watertight scene
-  mesh.
-- Dense mesh mode can be heavy at low stride; use stride 4 or 6 for long
-  sequences.
-- Viser transform controls are version-dependent, so sliders remain the
-  compatibility path.
+Windows validation covers syntax, shell wiring, and static geometry flow. Full
+Viser interaction still needs the Linux server environment, checkpoint, SMPL
+assets, and CUDA runtime.

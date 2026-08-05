@@ -62,6 +62,8 @@ PALETTE: list[tuple[int, int, int]] = [
 
 def main() -> None:
     args = parse_args()
+    if not np.isfinite(args.hsi_visual_scale) or not 0.01 <= float(args.hsi_visual_scale) <= 5.0:
+        raise ValueError(f"--hsi-visual-scale must be finite and within [0.01, 5.0], got {args.hsi_visual_scale}")
     ensure_viser_available()
     import viser  # noqa: PLC0415
     import viser.transforms as vtf  # noqa: PLC0415
@@ -76,6 +78,9 @@ def main() -> None:
         raise RuntimeError(f"No RGB frames found under {frames_dir}. Supported extensions: {sorted(IMAGE_EXTENSIONS)}")
 
     config = load_config(args)
+    model_config = config.get("model", {})
+    args.hsi_scene_affine_mode = str(model_config.get("hsi_scene_affine_mode", "per_frame"))
+    args.hsi_scene_affine_ema_alpha = float(model_config.get("hsi_scene_affine_ema_alpha", 0.25))
     patch_size = int(config.get("model", {}).get("patch_size", 16))
     _, image_resolution = resolve_image_size_config(config.get("data", {}), args.image_size)
     max_humans = int(args.max_humans or config.get("model", {}).get("num_smpl_queries", 20))
@@ -151,6 +156,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-scene-depth", type=float, default=30.0, help="Initial far-depth clipping in meters. Set 0 to disable; this can be changed live in the GUI.")
     parser.add_argument("--viewer-mode", choices=["4D current frame", "3D accumulate", "Hybrid"], default="4D current frame", help="Initial Viser playback mode.")
     parser.add_argument("--environment-display", choices=["points", "mesh", "both"], default="points", help="Initial environment rendering mode. The Viser GUI can still toggle this live.")
+    parser.add_argument("--hsi-visual-scale", type=float, default=1.0, help="Initial viewer-only multiplier for HSI environment points and HSI camera positions.")
     parser.add_argument("--env-mesh-depth-edge-rtol", type=float, default=0.15, help="Relative depth discontinuity threshold for environment surface mesh faces.")
     parser.add_argument("--env-mesh-color-groups", type=int, default=216, help="Maximum color buckets used to approximate RGB environment mesh face color with Viser simple meshes.")
     parser.add_argument("--env-mesh-color-mode", choices=["point_overlay", "bucketed_mesh"], default="point_overlay", help="How to color depth mesh. point_overlay matches Human3R's Viser RGB point-cloud path over a neutral surface.")
@@ -515,6 +521,8 @@ def build_scene_data(
         intrinsic = intrinsics[0, idx].detach().float().cpu().numpy()
         hsi_scale = prediction_scalar(predictions, "hsi_scene_scale", idx)
         hsi_bias = prediction_scalar(predictions, "hsi_scene_depth_bias", idx)
+        hsi_frame_scale = prediction_scalar(predictions, "hsi_frame_scene_scale", idx)
+        hsi_frame_bias = prediction_scalar(predictions, "hsi_frame_scene_depth_bias", idx)
         hsi_extrinsic = scale_w2c_extrinsic_translation(extrinsic, float(hsi_scale if hsi_scale is not None else 1.0))
         rgb = images[0, idx].detach().float().cpu()
         raw_points, raw_colors = depth_to_world_points(raw_depth[0, idx], rgb, intrinsic, extrinsic, args)
@@ -543,6 +551,8 @@ def build_scene_data(
                 "hsi_camera": camera_pose_from_extrinsic(hsi_extrinsic, intrinsic),
                 "hsi_scene_scale": hsi_scale,
                 "hsi_scene_depth_bias": hsi_bias,
+                "hsi_frame_scene_scale": hsi_frame_scale,
+                "hsi_frame_scene_depth_bias": hsi_frame_bias,
                 "depth_alignment": alignment[idx],
             }
         )
@@ -555,6 +565,8 @@ def build_scene_data(
         "camera_trajectory": hsi_camera_trajectory,
         "camera_trajectory_raw": raw_camera_trajectory,
         "camera_trajectory_hsi": hsi_camera_trajectory,
+        "hsi_scene_affine_mode": str(getattr(args, "hsi_scene_affine_mode", "per_frame")),
+        "hsi_scene_affine_ema_alpha": float(getattr(args, "hsi_scene_affine_ema_alpha", 0.25)),
     }
 
 
@@ -906,6 +918,11 @@ def build_summary(
         "people_counts": [int(len(frame["people"])) for frame in scene["frames"]],
         "hsi_scene_scale": [frame["hsi_scene_scale"] for frame in scene["frames"]],
         "hsi_scene_depth_bias": [frame["hsi_scene_depth_bias"] for frame in scene["frames"]],
+        "hsi_frame_scene_scale": [frame["hsi_frame_scene_scale"] for frame in scene["frames"]],
+        "hsi_frame_scene_depth_bias": [frame["hsi_frame_scene_depth_bias"] for frame in scene["frames"]],
+        "hsi_scene_affine_mode": str(scene.get("hsi_scene_affine_mode", "per_frame")),
+        "hsi_scene_affine_ema_alpha": float(scene.get("hsi_scene_affine_ema_alpha", 0.25)),
+        "hsi_visual_scale_initial": float(args.hsi_visual_scale),
         "camera_motion": {
             "raw_vggt": summarize_camera_motion(scene, "camera_trajectory_raw"),
             "hsi_scaled": summarize_camera_motion(scene, "camera_trajectory_hsi"),
@@ -1000,6 +1017,7 @@ class SequenceViewer:
         self.clients: dict[int, Any] = {}
         self.point_size_value = float(args.point_size)
         self.camera_scale_value = float(args.camera_frustum_scale)
+        self.hsi_visual_scale_value = min(5.0, max(0.01, float(args.hsi_visual_scale)))
         self.smpl_opacity_value = 1.0
         self.depth_point_stride_value = max(1, int(args.depth_point_stride))
         self.max_scene_depth_value = float(args.max_scene_depth)
@@ -1053,7 +1071,13 @@ class SequenceViewer:
             )
             if not tracking_only:
                 frame_handles["hsi"].append(
-                    add_point_cloud(self.server, f"/frames/{idx:04d}/points_hsi_depth", frame["hsi_points"], frame["hsi_colors"], self.point_size_value)
+                    add_point_cloud(
+                        self.server,
+                        f"/frames/{idx:04d}/points_hsi_depth",
+                        self._scaled_hsi_points(frame),
+                        frame["hsi_colors"],
+                        self.point_size_value,
+                    )
                 )
             for person in frame["people"]:
                 color = tuple(int(v) for v in person["color"])
@@ -1106,10 +1130,10 @@ class SequenceViewer:
                             entry["label_base_position"] = label_position.astype(np.float32, copy=False)
             frame_handles["cameras_raw"].append(add_camera(self.server, self.transforms, f"/frames/{idx:04d}/camera_raw_vggt", frame["raw_camera"], self.camera_scale_value, (255, 255, 255)))
             if not tracking_only:
-                frame_handles["cameras_hsi"].append(add_camera(self.server, self.transforms, f"/frames/{idx:04d}/camera_hsi_scaled", frame["hsi_camera"], self.camera_scale_value, (255, 176, 0)))
+                frame_handles["cameras_hsi"].append(add_camera(self.server, self.transforms, f"/frames/{idx:04d}/camera_hsi_scaled", self._scaled_hsi_camera(frame), self.camera_scale_value, (255, 176, 0)))
             self.handles.append(frame_handles)
         raw_trajectory = np.asarray(self.scene.get("camera_trajectory_raw", np.zeros((0, 3), dtype=np.float32)), dtype=np.float32)
-        hsi_trajectory = np.asarray(self.scene.get("camera_trajectory_hsi", np.zeros((0, 3), dtype=np.float32)), dtype=np.float32)
+        hsi_trajectory = self._scaled_hsi_trajectory()
         if raw_trajectory.shape[0] > 0:
             self.global_handles["camera_trajectory_raw"] = [
                 add_point_cloud(self.server, "/camera_trajectory/raw_vggt_centers", raw_trajectory, camera_trajectory_colors(raw_trajectory.shape[0]), max(self.point_size_value * 2.5, 0.01))
@@ -1119,8 +1143,25 @@ class SequenceViewer:
                 add_point_cloud(self.server, "/camera_trajectory/hsi_scaled_centers", hsi_trajectory, camera_trajectory_colors(hsi_trajectory.shape[0]), max(self.point_size_value * 3.5, 0.012))
             ]
 
+    def _scaled_hsi_points(self, frame: dict[str, Any]) -> np.ndarray:
+        points = np.asarray(frame["hsi_points"], dtype=np.float32)
+        return points * np.float32(self.hsi_visual_scale_value)
+
+    def _scaled_hsi_camera(self, frame: dict[str, Any]) -> dict[str, Any]:
+        camera = dict(frame["hsi_camera"])
+        camera["position"] = np.asarray(camera["position"], dtype=np.float32) * np.float32(self.hsi_visual_scale_value)
+        return camera
+
+    def _scaled_hsi_trajectory(self) -> np.ndarray:
+        trajectory = np.asarray(
+            self.scene.get("camera_trajectory_hsi", np.zeros((0, 3), dtype=np.float32)),
+            dtype=np.float32,
+        )
+        return trajectory * np.float32(self.hsi_visual_scale_value)
+
     def _build_gui(self) -> None:
         self.frame_info = add_text(self.server, "Frame Info", "")
+        self.hsi_scale_info = add_text(self.server, "HSI Scale", "")
         self.alignment_info = add_text(self.server, "Depth Align", "")
         self.camera_motion_info = add_text(self.server, "Camera Motion", format_camera_motion_short(self.scene))
         self.timestep = add_slider(self.server, "Timestep", 0, len(self.scene["frames"]) - 1, 1, 0)
@@ -1138,6 +1179,9 @@ class SequenceViewer:
             ["points", "mesh", "both"],
             str(getattr(self.args, "environment_display", "points")),
         )
+        self.hsi_visual_scale = add_slider(self.server, "HSI Visual Scale Multiplier", 0.01, 5.0, 0.01, self.hsi_visual_scale_value)
+        self.apply_hsi_visual_scale = add_button(self.server, "Apply HSI Visual Scale")
+        self.reset_hsi_visual_scale = add_button(self.server, "Reset HSI Visual Scale")
         self.point_size = add_slider(self.server, "Point Size", 0.0005, 0.08, 0.0005, self.point_size_value)
         self.density_preset = add_dropdown(self.server, "Point Density Preset", ["custom", "dense stride 1", "balanced stride 2", "fast stride 4", "full sequence stride 6"], "custom")
         self.depth_point_stride = add_slider(self.server, "Depth Point Stride", 1, 64, 1, self.depth_point_stride_value)
@@ -1188,6 +1232,7 @@ class SequenceViewer:
         bind_update(self.density_preset, self._on_density_preset_update)
         bind_update(self.depth_point_stride, self._on_depth_sampling_update)
         bind_update(self.max_scene_depth, self._on_depth_sampling_update)
+        bind_update(self.hsi_visual_scale, self._on_hsi_visual_scale_pending)
         bind_update(self.camera_size, self._on_camera_size_update)
         bind_update(self.smpl_opacity, self._on_smpl_opacity_update)
         bind_update(self.selected_smpl, self._on_selected_smpl_update)
@@ -1201,6 +1246,8 @@ class SequenceViewer:
         bind_click(self.fps_buttons, self._set_fps_preset)
         bind_click(self.reset_smpl_edit, self._reset_selected_smpl_offset)
         bind_click(self.save_smpl_edits, self._save_smpl_edit_offsets)
+        bind_click(self.apply_hsi_visual_scale, self._apply_hsi_visual_scale)
+        bind_click(self.reset_hsi_visual_scale, self._reset_hsi_visual_scale)
 
     def _register_clients(self) -> None:
         if hasattr(self.server, "on_client_connect"):
@@ -1426,6 +1473,58 @@ class SequenceViewer:
         self.max_scene_depth_value = float(self.max_scene_depth.value)
         self._rebuild_depth_point_clouds()
 
+    def _on_hsi_visual_scale_pending(self, _: Any = None) -> None:
+        self._update_hsi_scale_info(int(self.timestep.value))
+
+    def _apply_hsi_visual_scale(self, _: Any = None) -> None:
+        requested = max(0.01, float(self.hsi_visual_scale.value))
+        if abs(requested - self.hsi_visual_scale_value) <= 1e-7:
+            self._update_hsi_scale_info(int(self.timestep.value))
+            return
+        self.hsi_visual_scale_value = requested
+        self._rebuild_hsi_visual_geometry()
+
+    def _reset_hsi_visual_scale(self, _: Any = None) -> None:
+        self.hsi_visual_scale.value = 1.0
+        self._apply_hsi_visual_scale()
+
+    def _rebuild_hsi_visual_geometry(self) -> None:
+        if bool(getattr(self.args, "tracking_only", False)):
+            return
+        for frame, frame_handles in zip(self.scene["frames"], self.handles, strict=True):
+            idx = int(frame["frame_index"])
+            for handle in frame_handles.get("hsi", []) + frame_handles.get("hsi_mesh", []):
+                remove_handle(handle)
+            frame_handles["hsi"] = [
+                add_point_cloud(
+                    self.server,
+                    f"/frames/{idx:04d}/points_hsi_depth",
+                    self._scaled_hsi_points(frame),
+                    frame["hsi_colors"],
+                    self.point_size_value,
+                )
+            ]
+            frame_handles["hsi_mesh"] = []
+            scaled_camera = self._scaled_hsi_camera(frame)
+            for handle in frame_handles.get("cameras_hsi", []):
+                set_handle_position(handle, scaled_camera["position"])
+
+        for handle in self.global_handles.get("camera_trajectory_hsi", []):
+            remove_handle(handle)
+        hsi_trajectory = self._scaled_hsi_trajectory()
+        self.global_handles["camera_trajectory_hsi"] = []
+        if hsi_trajectory.shape[0] > 0:
+            self.global_handles["camera_trajectory_hsi"] = [
+                add_point_cloud(
+                    self.server,
+                    "/camera_trajectory/hsi_scaled_centers",
+                    hsi_trajectory,
+                    camera_trajectory_colors(hsi_trajectory.shape[0]),
+                    max(self.point_size_value * 3.5, 0.012),
+                )
+            ]
+        self._update_visibility()
+
     def _rebuild_depth_point_clouds(self) -> None:
         self._rebuilding_points = True
         try:
@@ -1465,7 +1564,13 @@ class SequenceViewer:
                     frame["hsi_points"] = hsi_points
                     frame["hsi_colors"] = hsi_colors
                     frame_handles["hsi"] = [
-                        add_point_cloud(self.server, f"/frames/{idx:04d}/points_hsi_depth", hsi_points, hsi_colors, self.point_size_value)
+                        add_point_cloud(
+                            self.server,
+                            f"/frames/{idx:04d}/points_hsi_depth",
+                            self._scaled_hsi_points(frame),
+                            hsi_colors,
+                            self.point_size_value,
+                        )
                     ]
                     frame_handles["hsi_mesh"] = []
         finally:
@@ -1589,24 +1694,21 @@ class SequenceViewer:
     def _update_info_text(self, frame_index: int) -> None:
         frame = self.scene["frames"][int(frame_index)]
         raw_cam_pos = np.asarray(frame["raw_camera"]["position"], dtype=np.float32)
-        hsi_cam_pos = np.asarray(frame["hsi_camera"]["position"], dtype=np.float32)
-        raw_mesh_faces = int(np.asarray(frame.get("raw_mesh_faces", np.empty((0, 3), dtype=np.int64))).reshape(-1, 3).shape[0])
-        hsi_mesh_faces = int(np.asarray(frame.get("hsi_mesh_faces", np.empty((0, 3), dtype=np.int64))).reshape(-1, 3).shape[0])
+        hsi_cam_pos = np.asarray(self._scaled_hsi_camera(frame)["position"], dtype=np.float32)
         set_text_value(
             self.frame_info,
             (
                 f"{int(frame_index) + 1}/{len(self.scene['frames'])} "
                 f"{frame['frame_id']} | raw_pts={int(frame['raw_points'].shape[0])} "
                 f"hsi_pts={int(frame['hsi_points'].shape[0])} people={len(frame['people'])} "
-                f"meshFaces(raw/hsi)={raw_mesh_faces}/{hsi_mesh_faces} "
                 f"stride={int(frame.get('depth_point_stride', self.depth_point_stride_value))} "
                 f"maxD={float(frame.get('max_scene_depth', self.max_scene_depth_value)):.1f} "
-                f"scale={frame['hsi_scene_scale']:.4g} bias={frame['hsi_scene_depth_bias']:.4g} "
                 f"rawCam=({raw_cam_pos[0]:.3f},{raw_cam_pos[1]:.3f},{raw_cam_pos[2]:.3f}) "
-                f"hsiCam=({hsi_cam_pos[0]:.3f},{hsi_cam_pos[1]:.3f},{hsi_cam_pos[2]:.3f}) "
+                f"hsiCamVisual=({hsi_cam_pos[0]:.3f},{hsi_cam_pos[1]:.3f},{hsi_cam_pos[2]:.3f}) "
                 f"IDs={[int(person['track_id']) for person in frame['people']]}"
             ),
         )
+        self._update_hsi_scale_info(frame_index)
         align = frame.get("depth_alignment", {})
         set_text_value(
             self.alignment_info,
@@ -1620,6 +1722,45 @@ class SequenceViewer:
         set_group_visible(self.global_handles.get("camera_trajectory_raw", []), bool(self.show_camera_trajectory.value) and show_raw_camera)
         set_group_visible(self.global_handles.get("camera_trajectory_hsi", []), bool(self.show_camera_trajectory.value) and show_hsi_camera)
 
+    def _update_hsi_scale_info(self, frame_index: int) -> None:
+        frame = self.scene["frames"][int(frame_index)]
+        model_scale = float(frame["hsi_scene_scale"])
+        model_bias = float(frame["hsi_scene_depth_bias"])
+        raw_frame_scale = frame.get("hsi_frame_scene_scale")
+        raw_frame_bias = frame.get("hsi_frame_scene_depth_bias")
+        model_scales = np.asarray([item["hsi_scene_scale"] for item in self.scene["frames"]], dtype=np.float64)
+        raw_scales = np.asarray(
+            [item["hsi_frame_scene_scale"] for item in self.scene["frames"] if item.get("hsi_frame_scene_scale") is not None],
+            dtype=np.float64,
+        )
+        mode = str(self.scene.get("hsi_scene_affine_mode", "per_frame"))
+        if mode == "clip_median":
+            strategy = "clip_median: one robust scale/bias shared by all frames"
+        elif mode == "ema":
+            alpha = float(self.scene.get("hsi_scene_affine_ema_alpha", 0.25))
+            strategy = f"ema(alpha={alpha:.3g}): smoothed scale/bias can vary by frame"
+        else:
+            strategy = "per_frame: each frame uses its own predicted scale/bias"
+        pending = max(0.01, float(self.hsi_visual_scale.value))
+        applied = float(self.hsi_visual_scale_value)
+        raw_text = "unavailable"
+        if raw_frame_scale is not None and raw_frame_bias is not None:
+            raw_text = f"scale={float(raw_frame_scale):.5g}, bias={float(raw_frame_bias):.5g}"
+        raw_range = "unavailable"
+        if raw_scales.size > 0:
+            raw_range = f"{raw_scales.min():.5g}/{np.median(raw_scales):.5g}/{raw_scales.max():.5g}"
+        set_text_value(
+            self.hsi_scale_info,
+            (
+                f"{strategy} | current model scale={model_scale:.5g}, bias={model_bias:.5g}; "
+                f"raw frame {raw_text} | model sequence min/median/max="
+                f"{model_scales.min():.5g}/{np.median(model_scales):.5g}/{model_scales.max():.5g}; "
+                f"raw sequence={raw_range} | applied visual x{applied:.3f} -> "
+                f"effective scale={model_scale * applied:.5g}, bias={model_bias * applied:.5g}"
+                + (f" | pending x{pending:.3f}, click Apply" if abs(pending - applied) > 1e-7 else "")
+            ),
+        )
+
     def _set_handle_attr(self, groups: list[str], attr: str, value: float) -> None:
         for frame_handles in self.handles:
             for group in groups:
@@ -1632,7 +1773,8 @@ class SequenceViewer:
     def _follow_pred_camera(self, step: int) -> None:
         show_raw_camera, show_hsi_camera = self._camera_visibility_for_depth(str(self.depth_source.value))
         camera_key = "raw_camera" if show_raw_camera and not show_hsi_camera else "hsi_camera"
-        camera = self.scene["frames"][int(step)][camera_key]
+        frame = self.scene["frames"][int(step)]
+        camera = frame[camera_key] if camera_key == "raw_camera" else self._scaled_hsi_camera(frame)
         rotation = camera["rotation_c2w"]
         position = camera["position"]
         wxyz = self.transforms.SO3.from_matrix(rotation).wxyz
