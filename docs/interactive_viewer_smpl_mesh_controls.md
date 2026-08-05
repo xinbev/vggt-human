@@ -68,6 +68,24 @@ Turning calibration mode off applies the selected multiplier to the complete
 sequence and restores the playback, display mode, depth source, SMPL, and camera
 visibility settings that were active before calibration.
 
+## Human Point Removal
+
+Normal sequence display removes human depth points; calibration mode bypasses
+this removal and uses the stored complete point cloud. The removal mask is built
+per person and per frame as follows:
+
+1. Project valid HSI SMPL vertices into the depth image.
+2. Fill their 2D convex hull as the coarse person silhouette.
+3. Dilate the silhouette by `12` pixels to cover projection and boundary error.
+4. Keep removal limited to depth values between the person's minimum and
+   maximum SMPL depth, expanded by `0.45 m` on both sides.
+
+The combined silhouette and depth gate removes residual body-edge points while
+preserving background surfaces behind the person. The shell variables
+`HUMAN_MASK_DILATION_PX` and `HUMAN_MASK_DEPTH_MARGIN_M` expose both thresholds.
+`run_summary.json` records the method, thresholds, full point counts, and
+removed HSI point counts.
+
 The multiplier scales HSI environment world points, HSI camera positions, and
 the HSI camera trajectory about the shared world origin. It does not edit model
 outputs, the checkpoint, raw VGGT points, HSI SMPL vertices, or saved alignment

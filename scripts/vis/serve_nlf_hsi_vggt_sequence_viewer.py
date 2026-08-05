@@ -71,6 +71,10 @@ def main() -> None:
             f"--hsi-visual-scale must be finite and within "
             f"[{HSI_VISUAL_SCALE_MIN}, {HSI_VISUAL_SCALE_MAX}], got {args.hsi_visual_scale}"
         )
+    if int(args.human_mask_dilation_px) < 0:
+        raise ValueError(f"--human-mask-dilation-px must be >= 0, got {args.human_mask_dilation_px}")
+    if not np.isfinite(args.human_mask_depth_margin_m) or float(args.human_mask_depth_margin_m) < 0.0:
+        raise ValueError(f"--human-mask-depth-margin-m must be finite and >= 0, got {args.human_mask_depth_margin_m}")
     ensure_viser_available()
     import viser  # noqa: PLC0415
     import viser.transforms as vtf  # noqa: PLC0415
@@ -164,6 +168,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--viewer-mode", choices=["4D current frame", "3D accumulate", "Hybrid"], default="4D current frame", help="Initial Viser playback mode.")
     parser.add_argument("--environment-display", choices=["points", "mesh", "both"], default="points", help="Initial environment rendering mode. The Viser GUI can still toggle this live.")
     parser.add_argument("--hsi-visual-scale", type=float, default=1.0, help="Initial viewer-only multiplier for HSI environment points and HSI camera positions.")
+    parser.add_argument("--human-mask-dilation-px", type=int, default=12, help="Pixel dilation around the projected SMPL silhouette when removing human depth points in normal display mode.")
+    parser.add_argument("--human-mask-depth-margin-m", type=float, default=0.45, help="Depth margin around each SMPL body's camera-space depth range for human point removal.")
     parser.add_argument("--env-mesh-depth-edge-rtol", type=float, default=0.15, help="Relative depth discontinuity threshold for environment surface mesh faces.")
     parser.add_argument("--env-mesh-color-groups", type=int, default=216, help="Maximum color buckets used to approximate RGB environment mesh face color with Viser simple meshes.")
     parser.add_argument("--env-mesh-color-mode", choices=["point_overlay", "bucketed_mesh"], default="point_overlay", help="How to color depth mesh. point_overlay matches Human3R's Viser RGB point-cloud path over a neutral surface.")
@@ -532,9 +538,13 @@ def build_scene_data(
         hsi_frame_bias = prediction_scalar(predictions, "hsi_frame_scene_depth_bias", idx)
         hsi_extrinsic = scale_w2c_extrinsic_translation(extrinsic, float(hsi_scale if hsi_scale is not None else 1.0))
         rgb = images[0, idx].detach().float().cpu()
-        raw_points, raw_colors = depth_to_world_points(raw_depth[0, idx], rgb, intrinsic, extrinsic, args)
-        hsi_points, hsi_colors = depth_to_world_points(hsi_depth[0, idx], rgb, intrinsic, hsi_extrinsic, args)
         frame_people = select_frame_people(predictions, people, priors, idx, hsi_extrinsic, faces, track_palette, args)
+        raw_human_mask = projected_human_exclusion_mask(raw_depth[0, idx], frame_people, intrinsic, "base_vertices_cam", args)
+        hsi_human_mask = projected_human_exclusion_mask(hsi_depth[0, idx], frame_people, intrinsic, "hsi_vertices_cam", args)
+        raw_points_full, raw_colors_full = depth_to_world_points(raw_depth[0, idx], rgb, intrinsic, extrinsic, args)
+        hsi_points_full, hsi_colors_full = depth_to_world_points(hsi_depth[0, idx], rgb, intrinsic, hsi_extrinsic, args)
+        raw_points, raw_colors = depth_to_world_points(raw_depth[0, idx], rgb, intrinsic, extrinsic, args, exclude_mask=raw_human_mask)
+        hsi_points, hsi_colors = depth_to_world_points(hsi_depth[0, idx], rgb, intrinsic, hsi_extrinsic, args, exclude_mask=hsi_human_mask)
         frames.append(
             {
                 "frame_index": int(idx),
@@ -542,8 +552,14 @@ def build_scene_data(
                 "image": str(image_path),
                 "raw_points": raw_points,
                 "raw_colors": raw_colors,
+                "raw_points_full": raw_points_full,
+                "raw_colors_full": raw_colors_full,
                 "hsi_points": hsi_points,
                 "hsi_colors": hsi_colors,
+                "hsi_points_full": hsi_points_full,
+                "hsi_colors_full": hsi_colors_full,
+                "raw_human_exclusion_mask": raw_human_mask,
+                "hsi_human_exclusion_mask": hsi_human_mask,
                 "raw_depth_map": raw_depth[0, idx].detach().float().cpu().numpy().astype(np.float32, copy=False),
                 "hsi_depth_map": hsi_depth[0, idx].detach().float().cpu().numpy().astype(np.float32, copy=False),
                 "rgb_chw": rgb.detach().float().cpu().numpy().astype(np.float32, copy=False),
@@ -594,6 +610,7 @@ def depth_to_world_points(
     intrinsic: np.ndarray,
     extrinsic: np.ndarray,
     args: argparse.Namespace,
+    exclude_mask: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     return depth_to_world_points_with_limits(
         depth=depth,
@@ -602,6 +619,7 @@ def depth_to_world_points(
         extrinsic=extrinsic,
         depth_point_stride=int(args.depth_point_stride),
         max_scene_depth=float(args.max_scene_depth),
+        exclude_mask=exclude_mask,
     )
 
 
@@ -612,6 +630,7 @@ def depth_to_world_points_with_limits(
     extrinsic: np.ndarray,
     depth_point_stride: int,
     max_scene_depth: float,
+    exclude_mask: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     depth = depth.detach().float()
     height, width = int(depth.shape[-2]), int(depth.shape[-1])
@@ -636,9 +655,69 @@ def depth_to_world_points_with_limits(
     mask = torch.isfinite(points).all(dim=-1) & (z > 1e-6)
     if float(max_scene_depth) > 0:
         mask = mask & (z <= float(max_scene_depth))
+    if exclude_mask is not None:
+        exclude = torch.as_tensor(exclude_mask, dtype=torch.bool, device=depth.device)
+        if tuple(exclude.shape) != (height, width):
+            exclude = F.interpolate(exclude[None, None].float(), size=(height, width), mode="nearest")[0, 0].bool()
+        mask = mask & ~exclude[ys.long(), xs.long()]
     points_np = points[mask].detach().cpu().numpy().astype(np.float32, copy=False)
     colors_np = colors[mask].detach().cpu().numpy().astype(np.uint8, copy=False)
     return camera_points_to_world_np(points_np, extrinsic), colors_np
+
+
+def projected_human_exclusion_mask(
+    depth: torch.Tensor,
+    people: list[dict[str, Any]],
+    intrinsic: np.ndarray,
+    vertex_key: str,
+    args: argparse.Namespace,
+) -> np.ndarray:
+    import cv2  # noqa: PLC0415
+
+    depth_np = depth.detach().float().cpu().numpy().astype(np.float32, copy=False)
+    height, width = depth_np.shape[-2:]
+    exclusion = np.zeros((height, width), dtype=bool)
+    dilation_px = max(0, int(args.human_mask_dilation_px))
+    depth_margin = max(0.0, float(args.human_mask_depth_margin_m))
+    fx = max(float(intrinsic[0, 0]), 1e-6)
+    fy = max(float(intrinsic[1, 1]), 1e-6)
+    cx = float(intrinsic[0, 2])
+    cy = float(intrinsic[1, 2])
+    for person in people:
+        vertices = person.get(vertex_key)
+        if vertices is None and vertex_key == "hsi_vertices_cam":
+            vertices = person.get("base_vertices_cam")
+        if vertices is None:
+            continue
+        vertices_np = np.asarray(vertices, dtype=np.float32).reshape(-1, 3)
+        valid = np.isfinite(vertices_np).all(axis=1) & (vertices_np[:, 2] > 1e-6)
+        vertices_np = vertices_np[valid]
+        if vertices_np.shape[0] < 3:
+            continue
+        z = vertices_np[:, 2]
+        u = vertices_np[:, 0] / z * fx + cx
+        v = vertices_np[:, 1] / z * fy + cy
+        projected = np.stack(
+            [np.clip(u, 0.0, width - 1.0), np.clip(v, 0.0, height - 1.0)],
+            axis=-1,
+        )
+        hull = cv2.convexHull(np.rint(projected).astype(np.int32))
+        if hull is None or hull.shape[0] < 3:
+            continue
+        silhouette = np.zeros((height, width), dtype=np.uint8)
+        cv2.fillConvexPoly(silhouette, hull, 1)
+        if dilation_px > 0:
+            kernel_size = 2 * dilation_px + 1
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
+            silhouette = cv2.dilate(silhouette, kernel, iterations=1)
+        depth_gate = (
+            np.isfinite(depth_np)
+            & (depth_np > 1e-6)
+            & (depth_np >= float(z.min()) - depth_margin)
+            & (depth_np <= float(z.max()) + depth_margin)
+        )
+        exclusion |= silhouette.astype(bool) & depth_gate
+    return exclusion
 
 
 def camera_points_to_world_np(points: np.ndarray, extrinsic: np.ndarray) -> np.ndarray:
@@ -849,6 +928,7 @@ def select_frame_people(
             key = f"{prefix}_vertices_cam"
             if key in decoded:
                 mesh_cam = decoded[key][0, frame_index, query_idx].detach().float().cpu().numpy()
+                item[f"{prefix}_vertices_cam"] = mesh_cam.astype(np.float32, copy=False)
                 item[f"{prefix}_vertices"] = camera_points_to_world_np(mesh_cam, extrinsic)
         people.append(item)
     return people
@@ -922,6 +1002,16 @@ def build_summary(
         "image_shape": list(images.shape),
         "nlf_image_hw": [int(v) for v in predictions.get("nlf_image_hw", torch.tensor([], device=images.device)).detach().cpu().reshape(-1).tolist()],
         "point_counts_hsi": [int(frame["hsi_points"].shape[0]) for frame in scene["frames"]],
+        "point_counts_hsi_full": [int(frame["hsi_points_full"].shape[0]) for frame in scene["frames"]],
+        "human_points_removed_hsi": [
+            int(frame["hsi_points_full"].shape[0] - frame["hsi_points"].shape[0]) for frame in scene["frames"]
+        ],
+        "human_point_removal": {
+            "method": "projected_smpl_convex_hull_dilated_with_depth_range_gate",
+            "dilation_px": int(args.human_mask_dilation_px),
+            "depth_margin_m": float(args.human_mask_depth_margin_m),
+            "calibration_mode_uses_full_points": True,
+        },
         "people_counts": [int(len(frame["people"])) for frame in scene["frames"]],
         "hsi_scene_scale": [frame["hsi_scene_scale"] for frame in scene["frames"]],
         "hsi_scene_depth_bias": [frame["hsi_scene_depth_bias"] for frame in scene["frames"]],
@@ -1156,10 +1246,21 @@ class SequenceViewer:
                 add_point_cloud(self.server, "/camera_trajectory/hsi_scaled_centers", hsi_trajectory, camera_trajectory_colors(hsi_trajectory.shape[0]), max(self.point_size_value * 3.5, 0.012))
             ]
 
-    def _scaled_hsi_points(self, frame: dict[str, Any], scale: float | None = None) -> np.ndarray:
-        points = np.asarray(frame["hsi_points"], dtype=np.float32)
+    def _scaled_hsi_points(
+        self,
+        frame: dict[str, Any],
+        scale: float | None = None,
+        include_humans: bool = False,
+    ) -> np.ndarray:
+        key = "hsi_points_full" if include_humans else "hsi_points"
+        points = np.asarray(frame.get(key, frame["hsi_points"]), dtype=np.float32)
         visual_scale = self.hsi_visual_scale_value if scale is None else float(scale)
         return points * np.float32(visual_scale)
+
+    @staticmethod
+    def _hsi_point_colors(frame: dict[str, Any], include_humans: bool = False) -> np.ndarray:
+        key = "hsi_colors_full" if include_humans else "hsi_colors"
+        return np.asarray(frame.get(key, frame["hsi_colors"]), dtype=np.uint8)
 
     def _scaled_hsi_camera(self, frame: dict[str, Any], scale: float | None = None) -> dict[str, Any]:
         camera = dict(frame["hsi_camera"])
@@ -1643,8 +1744,8 @@ class SequenceViewer:
             add_point_cloud(
                 self.server,
                 f"/frames/{idx:04d}/points_hsi_depth",
-                self._scaled_hsi_points(frame),
-                frame["hsi_colors"],
+                self._scaled_hsi_points(frame, include_humans=True),
+                self._hsi_point_colors(frame, include_humans=True),
                 self.point_size_value,
             )
         ]
@@ -1703,15 +1804,25 @@ class SequenceViewer:
                 ):
                     remove_handle(handle)
 
-                raw_points, raw_colors = rebuild_depth_points_for_frame(
+                raw_points_full, raw_colors_full = rebuild_depth_points_for_frame(
                     frame,
                     depth_key="raw_depth_map",
                     extrinsic_key="raw_extrinsic",
                     depth_point_stride=self.depth_point_stride_value,
                     max_scene_depth=self.max_scene_depth_value,
                 )
+                raw_points, raw_colors = rebuild_depth_points_for_frame(
+                    frame,
+                    depth_key="raw_depth_map",
+                    extrinsic_key="raw_extrinsic",
+                    depth_point_stride=self.depth_point_stride_value,
+                    max_scene_depth=self.max_scene_depth_value,
+                    exclude_mask_key="raw_human_exclusion_mask",
+                )
                 frame["raw_points"] = raw_points
                 frame["raw_colors"] = raw_colors
+                frame["raw_points_full"] = raw_points_full
+                frame["raw_colors_full"] = raw_colors_full
                 frame["depth_point_stride"] = int(self.depth_point_stride_value)
                 frame["max_scene_depth"] = float(self.max_scene_depth_value)
                 frame_handles["raw"] = [
@@ -1719,15 +1830,25 @@ class SequenceViewer:
                 ]
                 frame_handles["raw_mesh"] = []
                 if not bool(getattr(self.args, "tracking_only", False)):
-                    hsi_points, hsi_colors = rebuild_depth_points_for_frame(
+                    hsi_points_full, hsi_colors_full = rebuild_depth_points_for_frame(
                         frame,
                         depth_key="hsi_depth_map",
                         extrinsic_key="hsi_extrinsic",
                         depth_point_stride=self.depth_point_stride_value,
                         max_scene_depth=self.max_scene_depth_value,
                     )
+                    hsi_points, hsi_colors = rebuild_depth_points_for_frame(
+                        frame,
+                        depth_key="hsi_depth_map",
+                        extrinsic_key="hsi_extrinsic",
+                        depth_point_stride=self.depth_point_stride_value,
+                        max_scene_depth=self.max_scene_depth_value,
+                        exclude_mask_key="hsi_human_exclusion_mask",
+                    )
                     frame["hsi_points"] = hsi_points
                     frame["hsi_colors"] = hsi_colors
+                    frame["hsi_points_full"] = hsi_points_full
+                    frame["hsi_colors_full"] = hsi_colors_full
                     frame_handles["hsi"] = [
                         add_point_cloud(
                             self.server,
@@ -1860,12 +1981,15 @@ class SequenceViewer:
         frame = self.scene["frames"][int(frame_index)]
         raw_cam_pos = np.asarray(frame["raw_camera"]["position"], dtype=np.float32)
         hsi_cam_pos = np.asarray(self._scaled_hsi_camera(frame)["position"], dtype=np.float32)
+        hsi_full_count = int(np.asarray(frame.get("hsi_points_full", frame["hsi_points"])).shape[0])
+        hsi_filtered_count = int(frame["hsi_points"].shape[0])
         set_text_value(
             self.frame_info,
             (
                 f"{int(frame_index) + 1}/{len(self.scene['frames'])} "
                 f"{frame['frame_id']} | raw_pts={int(frame['raw_points'].shape[0])} "
-                f"hsi_pts={int(frame['hsi_points'].shape[0])} people={len(frame['people'])} "
+                f"hsi_pts={hsi_filtered_count}/{hsi_full_count} removed={hsi_full_count - hsi_filtered_count} "
+                f"people={len(frame['people'])} "
                 f"stride={int(frame.get('depth_point_stride', self.depth_point_stride_value))} "
                 f"maxD={float(frame.get('max_scene_depth', self.max_scene_depth_value)):.1f} "
                 f"rawCam=({raw_cam_pos[0]:.3f},{raw_cam_pos[1]:.3f},{raw_cam_pos[2]:.3f}) "
@@ -1992,11 +2116,15 @@ def rebuild_depth_points_for_frame(
     extrinsic_key: str,
     depth_point_stride: int,
     max_scene_depth: float,
+    exclude_mask_key: str | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     depth = torch.from_numpy(np.asarray(frame[depth_key], dtype=np.float32))
     rgb = torch.from_numpy(np.asarray(frame["rgb_chw"], dtype=np.float32))
     intrinsic = np.asarray(frame["intrinsic"], dtype=np.float32)
     extrinsic = np.asarray(frame[extrinsic_key], dtype=np.float32)
+    exclude_mask = None
+    if exclude_mask_key is not None and frame.get(exclude_mask_key) is not None:
+        exclude_mask = np.asarray(frame[exclude_mask_key], dtype=bool)
     return depth_to_world_points_with_limits(
         depth=depth,
         rgb=rgb,
@@ -2004,6 +2132,7 @@ def rebuild_depth_points_for_frame(
         extrinsic=extrinsic,
         depth_point_stride=int(depth_point_stride),
         max_scene_depth=float(max_scene_depth),
+        exclude_mask=exclude_mask,
     )
 
 
