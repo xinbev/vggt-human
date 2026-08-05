@@ -60,11 +60,17 @@ PALETTE: list[tuple[int, int, int]] = [
     (99, 102, 241),
 ]
 
+HSI_VISUAL_SCALE_MIN = 0.5
+HSI_VISUAL_SCALE_MAX = 2.0
+
 
 def main() -> None:
     args = parse_args()
-    if not np.isfinite(args.hsi_visual_scale) or not 0.01 <= float(args.hsi_visual_scale) <= 5.0:
-        raise ValueError(f"--hsi-visual-scale must be finite and within [0.01, 5.0], got {args.hsi_visual_scale}")
+    if not np.isfinite(args.hsi_visual_scale) or not HSI_VISUAL_SCALE_MIN <= float(args.hsi_visual_scale) <= HSI_VISUAL_SCALE_MAX:
+        raise ValueError(
+            f"--hsi-visual-scale must be finite and within "
+            f"[{HSI_VISUAL_SCALE_MIN}, {HSI_VISUAL_SCALE_MAX}], got {args.hsi_visual_scale}"
+        )
     ensure_viser_available()
     import viser  # noqa: PLC0415
     import viser.transforms as vtf  # noqa: PLC0415
@@ -1018,7 +1024,10 @@ class SequenceViewer:
         self.clients: dict[int, Any] = {}
         self.point_size_value = float(args.point_size)
         self.camera_scale_value = float(args.camera_frustum_scale)
-        self.hsi_visual_scale_value = min(5.0, max(0.01, float(args.hsi_visual_scale)))
+        self.hsi_visual_scale_value = min(
+            HSI_VISUAL_SCALE_MAX,
+            max(HSI_VISUAL_SCALE_MIN, float(args.hsi_visual_scale)),
+        )
         self.smpl_opacity_value = 1.0
         self.depth_point_stride_value = max(1, int(args.depth_point_stride))
         self.max_scene_depth_value = float(args.max_scene_depth)
@@ -1193,11 +1202,11 @@ class SequenceViewer:
                 self.hsi_visual_result_info,
             ):
                 set_handle_disabled(handle, True)
-            self.hsi_visual_scale = add_number(
+            self.hsi_visual_scale = add_slider(
                 self.server,
                 "Visual Scale Multiplier",
-                0.01,
-                5.0,
+                HSI_VISUAL_SCALE_MIN,
+                HSI_VISUAL_SCALE_MAX,
                 0.01,
                 self.hsi_visual_scale_value,
             )
@@ -1498,7 +1507,10 @@ class SequenceViewer:
         self._update_hsi_scale_info(int(self.timestep.value))
 
     def _apply_hsi_visual_scale(self, _: Any = None) -> None:
-        requested = max(0.01, float(self.hsi_visual_scale.value))
+        requested = min(
+            HSI_VISUAL_SCALE_MAX,
+            max(HSI_VISUAL_SCALE_MIN, float(self.hsi_visual_scale.value)),
+        )
         if abs(requested - self.hsi_visual_scale_value) <= 1e-7:
             self._update_hsi_scale_info(int(self.timestep.value))
             return
@@ -1762,7 +1774,10 @@ class SequenceViewer:
             strategy = f"ema(alpha={alpha:.3g}): smoothed scale/bias can vary by frame"
         else:
             strategy = "per_frame: each frame uses its own predicted scale/bias"
-        pending = max(0.01, float(self.hsi_visual_scale.value))
+        pending = min(
+            HSI_VISUAL_SCALE_MAX,
+            max(HSI_VISUAL_SCALE_MIN, float(self.hsi_visual_scale.value)),
+        )
         applied = float(self.hsi_visual_scale_value)
         raw_text = "unavailable"
         if raw_frame_scale is not None and raw_frame_bias is not None:
@@ -2124,14 +2139,6 @@ def add_slider(server: Any, name: str, min_value: float, max_value: float, step:
         return api.add_slider(name, min=min_value, max=max_value, step=step, initial_value=initial)
     except AttributeError:
         return server.add_gui_slider(name, min=min_value, max=max_value, step=step, initial_value=initial)
-
-
-def add_number(server: Any, name: str, min_value: float, max_value: float, step: float, initial: float) -> Any:
-    api = gui_api(server)
-    try:
-        return api.add_number(name, min=min_value, max=max_value, step=step, initial_value=initial)
-    except AttributeError:
-        return server.add_gui_number(name, min=min_value, max=max_value, step=step, initial_value=initial)
 
 
 def add_folder(server: Any, name: str) -> Any:

@@ -50,9 +50,10 @@ read-only rows for:
 
 ## Manual Visualization Scale
 
-The numeric `Visual Scale Multiplier` input defaults to `1.0`. Enter a value and
-click `Apply Scale` to update the complete HSI point sequence. `Reset Scale to
-1.0` restores the model visualization.
+The `Visual Scale Multiplier` slider defaults to `1.0`, ranges from `0.5` to
+`2.0`, and uses a `0.01` step. Move the slider and click `Apply Scale` to update
+the complete HSI point sequence. `Reset Scale to 1.0` restores the model
+visualization.
 
 The multiplier scales HSI environment world points, HSI camera positions, and
 the HSI camera trajectory about the shared world origin. It does not edit model
@@ -62,7 +63,7 @@ equivalent to multiplying the model scale and bias by the displayed viewer
 multiplier. The GUI therefore also reports the effective visual scale/bias.
 
 The initial multiplier can be set from the shell with
-`HSI_VISUAL_SCALE=<value>`; the supported GUI range is `0.01` to `5.0`.
+`HSI_VISUAL_SCALE=<value>`; the supported range is `0.5` to `2.0`.
 
 ## Server Usage
 
