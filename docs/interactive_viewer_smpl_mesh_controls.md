@@ -111,6 +111,22 @@ multiplier. The GUI therefore also reports the effective visual scale/bias.
 The initial multiplier can be set from the shell with
 `HSI_VISUAL_SCALE=<value>`; the supported range is `0.5` to `2.0`.
 
+## Point Cloud Measurement
+
+Open `Point Cloud Measurement` and enable `Enable Point Measurement`. Playback
+pauses so that the displayed cloud stays stable while selecting points. Click
+two visible raw or HSI environment points. The viewer marks them as `P1` and
+`P2`, draws a line between them, and displays the numeric distance both at the
+line midpoint and in `Measurement Result`. The GUI result also identifies each
+source frame, point index, and world coordinate.
+
+Distances use the coordinates currently displayed by the viewer and are labeled
+as `world units`. This includes the current HSI visual scale multiplier. A third
+point click clears the previous measurement and starts a new one. `Clear Current
+Measurement` removes the endpoints, labels, line, and value. Changing point
+filtering, point sampling, or HSI visual scale also clears the current result so
+that measurements cannot remain attached to stale geometry.
+
 ## Server Usage
 
 Local script:

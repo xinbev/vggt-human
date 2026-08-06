@@ -1192,6 +1192,9 @@ class SequenceViewer:
         self._switching_hsi_calibration = False
         self._hsi_calibration_restore_state: dict[str, Any] = {}
         self.global_handles: dict[str, list[Any]] = {}
+        self.measurement_points: list[np.ndarray] = []
+        self.measurement_sources: list[str] = []
+        self.measurement_handles: list[Any] = []
         self.human_entries: list[dict[str, Any]] = []
         self.human_entry_by_key: dict[str, dict[str, Any]] = {}
         self.selected_human_key = "none"
@@ -1232,22 +1235,22 @@ class SequenceViewer:
                 "cameras_hsi": [],
             }
             frame_handles["raw"].append(
-                add_point_cloud(
-                    self.server,
+                self._add_environment_point_cloud(
                     f"/frames/{idx:04d}/points_raw_depth",
                     self._raw_display_points(frame),
                     self._raw_display_colors(frame),
-                    self.point_size_value,
+                    frame_index=idx,
+                    source="raw",
                 )
             )
             if not tracking_only:
                 frame_handles["hsi"].append(
-                    add_point_cloud(
-                        self.server,
+                    self._add_environment_point_cloud(
                         f"/frames/{idx:04d}/points_hsi_depth",
                         self._scaled_hsi_points(frame),
                         self._hsi_point_colors(frame),
-                        self.point_size_value,
+                        frame_index=idx,
+                        source="hsi",
                     )
                 )
             for person in frame["people"]:
@@ -1388,6 +1391,11 @@ class SequenceViewer:
             )
             self.human_point_filter_info = add_text(self.server, "Human Point Filter", "")
             set_handle_disabled(self.human_point_filter_info, True)
+        with add_folder(self.server, "Point Cloud Measurement"):
+            self.measurement_enabled = add_checkbox(self.server, "Enable Point Measurement", False)
+            self.measurement_info = add_text(self.server, "Measurement Result", "Off")
+            set_handle_disabled(self.measurement_info, True)
+            self.clear_measurement = add_button(self.server, "Clear Current Measurement")
         with add_folder(self.server, "HSI Scale Controls"):
             self.hsi_calibration_mode = add_checkbox(self.server, "Single-Frame Scale Calibration", False)
             self.hsi_calibration_info = add_text(self.server, "Calibration Status", "Off")
@@ -1471,6 +1479,7 @@ class SequenceViewer:
         bind_update(self.hsi_calibration_mode, self._on_hsi_calibration_mode_update)
         bind_update(self.filter_human_points, self._on_filter_human_points_update)
         bind_update(self.human_filter_dilation, self._on_human_filter_dilation_pending)
+        bind_update(self.measurement_enabled, self._on_measurement_enabled_update)
         bind_update(self.camera_size, self._on_camera_size_update)
         bind_update(self.smpl_opacity, self._on_smpl_opacity_update)
         bind_update(self.selected_smpl, self._on_selected_smpl_update)
@@ -1488,12 +1497,135 @@ class SequenceViewer:
         bind_click(self.reset_hsi_visual_scale, self._reset_hsi_visual_scale)
         bind_click(self.apply_human_filter_dilation, self._apply_human_filter_dilation)
         bind_click(self.reset_human_filter_dilation, self._reset_human_filter_dilation)
+        bind_click(self.clear_measurement, self._clear_current_measurement)
 
     def _register_clients(self) -> None:
         if hasattr(self.server, "on_client_connect"):
             @self.server.on_client_connect
             def _on_connect(client: Any) -> None:
                 self.clients[int(getattr(client, "client_id", len(self.clients)))] = client
+
+    def _add_environment_point_cloud(
+        self,
+        name: str,
+        points: np.ndarray,
+        colors: np.ndarray,
+        frame_index: int,
+        source: str,
+    ) -> Any:
+        points_np = np.asarray(points, dtype=np.float32).reshape(-1, 3)
+        handle = add_point_cloud(self.server, name, points_np, colors, self.point_size_value)
+
+        def on_click(event: Any) -> None:
+            self._on_environment_point_click(event, points_np, frame_index, source)
+
+        bind_click(handle, on_click)
+        return handle
+
+    def _on_measurement_enabled_update(self, _: Any = None) -> None:
+        if bool(self.measurement_enabled.value):
+            self.play.value = False
+            if len(self.measurement_points) == 0:
+                set_text_value(self.measurement_info, "Ready | click the first environment point")
+            elif len(self.measurement_points) == 1:
+                set_text_value(self.measurement_info, "P1 selected | click the second environment point")
+            else:
+                self._update_measurement_result_text()
+        elif len(self.measurement_points) == 0:
+            set_text_value(self.measurement_info, "Off | enable measurement to select points")
+        else:
+            set_text_value(self.measurement_info, "Paused | current measurement remains visible")
+
+    def _on_environment_point_click(
+        self,
+        event: Any,
+        points: np.ndarray,
+        frame_index: int,
+        source: str,
+    ) -> None:
+        if not bool(getattr(self.measurement_enabled, "value", False)):
+            return
+        selection = nearest_clicked_point(event, points)
+        if selection is None:
+            set_text_value(self.measurement_info, "Selection failed | click directly on a visible point")
+            return
+        if len(self.measurement_points) >= 2:
+            self._clear_current_measurement(status=None)
+        point_index, point = selection
+        point = np.asarray(point, dtype=np.float32).reshape(3)
+        point_number = len(self.measurement_points) + 1
+        self.measurement_points.append(point)
+        self.measurement_sources.append(f"{source} frame {int(frame_index) + 1} point {point_index}")
+        marker_color = (0, 220, 255) if point_number == 1 else (255, 210, 0)
+        marker = add_point_cloud(
+            self.server,
+            f"/measurements/current/p{point_number}_marker",
+            point[None, :],
+            np.asarray([marker_color], dtype=np.uint8),
+            max(self.point_size_value * 4.0, 0.025),
+        )
+        label = add_label(
+            self.server,
+            f"/measurements/current/p{point_number}_label",
+            f"P{point_number}",
+            point,
+        )
+        self.measurement_handles.extend([marker, label])
+        if len(self.measurement_points) == 1:
+            set_text_value(
+                self.measurement_info,
+                f"P1 {self.measurement_sources[0]} | click the second environment point",
+            )
+            return
+        first, second = self.measurement_points
+        distance = float(np.linalg.norm(second - first))
+        midpoint = (first + second) * np.float32(0.5)
+        line = add_line_segments(
+            self.server,
+            "/measurements/current/distance_line",
+            np.stack([first, second], axis=0)[None, ...],
+            color=(255, 64, 96),
+            line_width=3.0,
+        )
+        distance_label = add_label(
+            self.server,
+            "/measurements/current/distance_label",
+            f"Distance: {distance:.4f} world units",
+            midpoint,
+        )
+        self.measurement_handles.extend([line, distance_label])
+        self._update_measurement_result_text()
+
+    def _update_measurement_result_text(self) -> None:
+        if len(self.measurement_points) != 2:
+            return
+        first, second = self.measurement_points
+        distance = float(np.linalg.norm(second - first))
+        set_text_value(
+            self.measurement_info,
+            (
+                f"Distance={distance:.6f} world units | "
+                f"P1: {self.measurement_sources[0]} "
+                f"({first[0]:.3f}, {first[1]:.3f}, {first[2]:.3f}) | "
+                f"P2: {self.measurement_sources[1]} "
+                f"({second[0]:.3f}, {second[1]:.3f}, {second[2]:.3f})"
+            ),
+        )
+
+    def _clear_current_measurement(self, _: Any = None, status: str | None = "button") -> None:
+        for handle in self.measurement_handles:
+            remove_handle(handle)
+        self.measurement_handles = []
+        self.measurement_points = []
+        self.measurement_sources = []
+        if status is None:
+            return
+        if status != "button":
+            set_text_value(self.measurement_info, status)
+        elif bool(getattr(self.measurement_enabled, "value", False)):
+            set_text_value(self.measurement_info, "Cleared | click the first environment point")
+        else:
+            set_text_value(self.measurement_info, "Cleared | enable measurement to select points")
 
     def _register_human_entry(
         self,
@@ -1796,29 +1928,30 @@ class SequenceViewer:
         self._rebuild_environment_point_handles()
 
     def _rebuild_environment_point_handles(self) -> None:
+        self._clear_current_measurement(status="Cleared because the displayed point clouds changed")
         tracking_only = bool(getattr(self.args, "tracking_only", False))
         for frame, frame_handles in zip(self.scene["frames"], self.handles, strict=True):
             idx = int(frame["frame_index"])
             for handle in frame_handles.get("raw", []) + frame_handles.get("hsi", []):
                 remove_handle(handle)
             frame_handles["raw"] = [
-                add_point_cloud(
-                    self.server,
+                self._add_environment_point_cloud(
                     f"/frames/{idx:04d}/points_raw_depth",
                     self._raw_display_points(frame),
                     self._raw_display_colors(frame),
-                    self.point_size_value,
+                    frame_index=idx,
+                    source="raw",
                 )
             ]
             frame_handles["hsi"] = []
             if not tracking_only:
                 frame_handles["hsi"] = [
-                    add_point_cloud(
-                        self.server,
+                    self._add_environment_point_cloud(
                         f"/frames/{idx:04d}/points_hsi_depth",
                         self._scaled_hsi_points(frame),
                         self._hsi_point_colors(frame),
-                        self.point_size_value,
+                        frame_index=idx,
+                        source="hsi",
                     )
                 ]
         self._update_visibility()
@@ -1950,18 +2083,19 @@ class SequenceViewer:
     def _rebuild_hsi_calibration_frame(self, frame_index: int) -> None:
         if not self.hsi_calibration_active or bool(getattr(self.args, "tracking_only", False)):
             return
+        self._clear_current_measurement(status="Cleared because the calibration point cloud changed")
         idx = int(frame_index)
         frame = self.scene["frames"][idx]
         frame_handles = self.handles[idx]
         for handle in frame_handles.get("hsi", []) + frame_handles.get("hsi_mesh", []):
             remove_handle(handle)
         frame_handles["hsi"] = [
-            add_point_cloud(
-                self.server,
+            self._add_environment_point_cloud(
                 f"/frames/{idx:04d}/points_hsi_depth",
                 self._scaled_hsi_points(frame, include_humans=True),
                 self._hsi_point_colors(frame, include_humans=True),
-                self.point_size_value,
+                frame_index=idx,
+                source="hsi calibration",
             )
         ]
         frame_handles["hsi_mesh"] = []
@@ -1972,17 +2106,18 @@ class SequenceViewer:
     def _rebuild_hsi_visual_geometry(self) -> None:
         if bool(getattr(self.args, "tracking_only", False)):
             return
+        self._clear_current_measurement(status="Cleared because the HSI visual scale changed")
         for frame, frame_handles in zip(self.scene["frames"], self.handles, strict=True):
             idx = int(frame["frame_index"])
             for handle in frame_handles.get("hsi", []) + frame_handles.get("hsi_mesh", []):
                 remove_handle(handle)
             frame_handles["hsi"] = [
-                add_point_cloud(
-                    self.server,
+                self._add_environment_point_cloud(
                     f"/frames/{idx:04d}/points_hsi_depth",
                     self._scaled_hsi_points(frame),
                     self._hsi_point_colors(frame),
-                    self.point_size_value,
+                    frame_index=idx,
+                    source="hsi",
                 )
             ]
             frame_handles["hsi_mesh"] = []
@@ -2007,6 +2142,7 @@ class SequenceViewer:
         self._update_visibility()
 
     def _rebuild_depth_point_clouds(self) -> None:
+        self._clear_current_measurement(status="Cleared because point sampling changed")
         self._rebuilding_points = True
         try:
             for frame, frame_handles in zip(self.scene["frames"], self.handles, strict=True):
@@ -2041,12 +2177,12 @@ class SequenceViewer:
                 frame["depth_point_stride"] = int(self.depth_point_stride_value)
                 frame["max_scene_depth"] = float(self.max_scene_depth_value)
                 frame_handles["raw"] = [
-                    add_point_cloud(
-                        self.server,
+                    self._add_environment_point_cloud(
                         f"/frames/{idx:04d}/points_raw_depth",
                         self._raw_display_points(frame),
                         self._raw_display_colors(frame),
-                        self.point_size_value,
+                        frame_index=idx,
+                        source="raw",
                     )
                 ]
                 frame_handles["raw_mesh"] = []
@@ -2071,12 +2207,12 @@ class SequenceViewer:
                     frame["hsi_points_full"] = hsi_points_full
                     frame["hsi_colors_full"] = hsi_colors_full
                     frame_handles["hsi"] = [
-                        add_point_cloud(
-                            self.server,
+                        self._add_environment_point_cloud(
                             f"/frames/{idx:04d}/points_hsi_depth",
                             self._scaled_hsi_points(frame),
                             self._hsi_point_colors(frame),
-                            self.point_size_value,
+                            frame_index=idx,
+                            source="hsi",
                         )
                     ]
                     frame_handles["hsi_mesh"] = []
@@ -2353,6 +2489,73 @@ def add_point_cloud(server: Any, name: str, points: np.ndarray, colors: np.ndarr
         return api.add_point_cloud(name=name, points=points, colors=colors, point_size=point_size)
     except TypeError:
         return api.add_point_cloud(name, points, colors, point_size=point_size)
+
+
+def nearest_clicked_point(event: Any, points: np.ndarray) -> tuple[int, np.ndarray] | None:
+    points_np = np.asarray(points, dtype=np.float32).reshape(-1, 3)
+    if points_np.shape[0] == 0:
+        return None
+    for attribute in ("point_index", "instance_index"):
+        index = getattr(event, attribute, None)
+        if index is not None and 0 <= int(index) < points_np.shape[0]:
+            return int(index), points_np[int(index)].copy()
+    ray_origin_value = getattr(event, "ray_origin", None)
+    ray_direction_value = getattr(event, "ray_direction", None)
+    if ray_origin_value is None or ray_direction_value is None:
+        return None
+    ray_origin = np.asarray(ray_origin_value, dtype=np.float32).reshape(-1)
+    ray_direction = np.asarray(ray_direction_value, dtype=np.float32).reshape(-1)
+    if ray_origin.size != 3 or ray_direction.size != 3:
+        return None
+    direction_norm = float(np.linalg.norm(ray_direction))
+    if not np.isfinite(direction_norm) or direction_norm <= 1e-8:
+        return None
+    ray_direction = ray_direction / np.float32(direction_norm)
+    finite = np.isfinite(points_np).all(axis=1)
+    if not bool(finite.any()):
+        return None
+    valid_indices = np.flatnonzero(finite)
+    valid_points = points_np[valid_indices]
+    offsets = valid_points - ray_origin[None, :]
+    along_ray = offsets @ ray_direction
+    in_front = along_ray >= 0.0
+    if not bool(in_front.any()):
+        return None
+    candidate_indices = valid_indices[in_front]
+    candidate_offsets = offsets[in_front]
+    candidate_along = along_ray[in_front]
+    distance_sq = np.maximum(
+        np.einsum("ij,ij->i", candidate_offsets, candidate_offsets) - candidate_along * candidate_along,
+        0.0,
+    )
+    selected = int(candidate_indices[int(np.argmin(distance_sq))])
+    return selected, points_np[selected].copy()
+
+
+def add_line_segments(
+    server: Any,
+    name: str,
+    points: np.ndarray,
+    color: tuple[int, int, int],
+    line_width: float,
+) -> Any:
+    api = scene_api(server)
+    points_np = np.asarray(points, dtype=np.float32).reshape(-1, 2, 3)
+    color_int = tuple(int(np.clip(value, 0, 255)) for value in color)
+    if hasattr(api, "add_line_segments"):
+        try:
+            return api.add_line_segments(
+                name=name,
+                points=points_np,
+                colors=color_int,
+                line_width=float(line_width),
+            )
+        except TypeError:
+            return api.add_line_segments(name, points_np, color_int, line_width=float(line_width))
+    start, end = points_np[0]
+    line_points = np.linspace(start, end, 64, dtype=np.float32)
+    line_colors = np.repeat(np.asarray(color_int, dtype=np.uint8)[None, :], line_points.shape[0], axis=0)
+    return add_point_cloud(server, name, line_points, line_colors, max(float(line_width) * 0.002, 0.006))
 
 
 def rebuild_depth_points_for_frame(
