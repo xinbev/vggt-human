@@ -109,6 +109,20 @@ DEPTH_STRIDE=4 \
 bash scripts/vis/create_hsi_anchor_projection_ply_elements.sh
 ```
 
+If the server's OpenCV extension cannot import because it was compiled against
+a different NumPy ABI, keep the environment unchanged and enable the built-in
+Pillow/NumPy image fallback:
+
+```bash
+DISABLE_OPENCV=true \
+bash scripts/vis/create_hsi_anchor_projection_ply_elements.sh
+```
+
+This fallback only replaces image loading, bilinear resize, and BGR/RGB channel
+conversion in the YOLO+SAM2 prior path. Model checkpoints and inference logic
+are unchanged. The selected backend is recorded as `image_backend` in
+`manifest.json`.
+
 Depth sample fallback:
 
 ```bash

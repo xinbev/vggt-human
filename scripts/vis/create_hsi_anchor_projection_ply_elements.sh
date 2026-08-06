@@ -29,6 +29,11 @@ MAX_SCENE_DEPTH="${MAX_SCENE_DEPTH:-30.0}"
 ANCHOR_RADIUS_SCALE="${ANCHOR_RADIUS_SCALE:-0.009}"
 PROJECTION_RADIUS_SCALE="${PROJECTION_RADIUS_SCALE:-0.0035}"
 MASK_DEPTH_SAMPLES="${MASK_DEPTH_SAMPLES:-24}"
+DISABLE_OPENCV="${DISABLE_OPENCV:-false}"
+
+if [[ "${DISABLE_OPENCV}" == "true" ]]; then
+  export VGGT_OMEGA_DISABLE_CV2=1
+fi
 
 cd "${REPO_ROOT}"
 mkdir -p "${OUTPUT_DIR}"
@@ -46,6 +51,7 @@ echo "Depth source: ${DEPTH_SOURCE}"
 echo "SMPL stage  : ${SMPL_STAGE}"
 echo "Colormap    : ${DEPTH_COLORMAP}"
 echo "Depth color : ${DEPTH_SURFACE_COLOR}"
+echo "Image backend: $([[ "${DISABLE_OPENCV}" == "true" ]] && echo pillow || echo opencv-with-fallback)"
 echo "Output      : ${OUTPUT_DIR}"
 
 args=(

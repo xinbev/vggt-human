@@ -1452,6 +1452,7 @@ class SequenceViewer:
         self.show_base = add_checkbox(self.server, "Show Base SMPL", tracking_only)
         self.show_track_ids = add_checkbox(self.server, "Show Track IDs", bool(getattr(self.args, "show_track_ids", True)))
         self.smpl_opacity = add_slider(self.server, "SMPL Opacity", 0.05, 1.00, 0.05, self.smpl_opacity_value)
+        self.smpl_color = add_rgb(self.server, "SMPL Color", (204, 51, 51))
         self.smpl_downsample = add_slider(self.server, "SMPL Downsample", 1, max(1, len(self.scene["frames"])), 1, 1)
         self.show_cameras = add_checkbox(self.server, "Show Cameras", True)
         self.camera_source = add_dropdown(self.server, "Camera Source", ["auto", "hsi_scaled", "raw_vggt", "both"], "auto")
@@ -1503,6 +1504,7 @@ class SequenceViewer:
         bind_update(self.measurement_color, self._on_measurement_style_update)
         bind_update(self.camera_size, self._on_camera_size_update)
         bind_update(self.smpl_opacity, self._on_smpl_opacity_update)
+        bind_update(self.smpl_color, self._on_smpl_color_update)
         bind_update(self.selected_smpl, self._on_selected_smpl_update)
         bind_update(self.smpl_edit_scope, self._on_smpl_offset_slider_update)
         bind_update(self.smpl_edit_dx, self._on_smpl_offset_slider_update)
@@ -2366,6 +2368,10 @@ class SequenceViewer:
     def _on_smpl_opacity_update(self, _: Any = None) -> None:
         self.smpl_opacity_value = float(self.smpl_opacity.value)
         self._set_handle_attr(["base_humans", "hsi_humans"], "opacity", self.smpl_opacity_value)
+
+    def _on_smpl_color_update(self, _: Any = None) -> None:
+        color = tuple(int(np.clip(value, 0, 255)) for value in self.smpl_color.value)
+        self._set_handle_attr(["base_humans", "hsi_humans"], "color", color)
 
     def _update_visibility(self) -> None:
         current = int(self.timestep.value)

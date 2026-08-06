@@ -23,6 +23,11 @@ DETECTOR_IMAGE_SIZE="${DETECTOR_IMAGE_SIZE:-640}"
 PLY_SCENE_STRIDE="${PLY_SCENE_STRIDE:-4}"
 PLY_DEPTH_UPSAMPLE="${PLY_DEPTH_UPSAMPLE:-2}"
 PLY_DEPTH_SOURCE="${PLY_DEPTH_SOURCE:-hsi}"
+DISABLE_OPENCV="${DISABLE_OPENCV:-false}"
+
+if [[ "${DISABLE_OPENCV}" == "true" ]]; then
+  export VGGT_OMEGA_DISABLE_CV2=1
+fi
 
 cd "${REPO_ROOT}"
 mkdir -p "${OUTPUT_DIR}"
@@ -30,6 +35,7 @@ mkdir -p "${OUTPUT_DIR}"
 echo "========== Real HSI local probe paper elements =========="
 echo "Image: ${IMAGE}"
 echo "Train config: ${TRAIN_CONFIG}"
+echo "Image backend: $([[ "${DISABLE_OPENCV}" == "true" ]] && echo pillow || echo opencv-with-fallback)"
 echo "Output: ${OUTPUT_DIR}"
 
 args=(

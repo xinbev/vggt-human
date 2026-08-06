@@ -1,11 +1,19 @@
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
-import cv2
 import numpy as np
 import torch
+
+if os.environ.get("VGGT_OMEGA_DISABLE_CV2", "").strip().lower() in {"1", "true", "yes"}:
+    cv2 = None
+else:
+    try:
+        import cv2
+    except (ImportError, AttributeError, SystemError):
+        cv2 = None
 
 from .schema import Detection, TrackObservation
 
@@ -47,7 +55,7 @@ class SAM2BoxMaskPredictor:
     ) -> tuple[dict[int, np.ndarray], dict[int, dict[str, float | int]]]:
         if not observations:
             return {}, {}
-        frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+        frame_rgb = _bgr_to_rgb(frame_bgr)
         masks: dict[int, np.ndarray] = {}
         metadata: dict[int, dict[str, float | int]] = {}
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.device.type == "cuda"):
@@ -78,7 +86,7 @@ class SAM2BoxMaskPredictor:
     ) -> tuple[dict[int, np.ndarray], dict[int, dict[str, float | int]]]:
         if not detections:
             return {}, {}
-        frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+        frame_rgb = _bgr_to_rgb(frame_bgr)
         masks: dict[int, np.ndarray] = {}
         metadata: dict[int, dict[str, float | int]] = {}
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.device.type == "cuda"):
@@ -110,3 +118,9 @@ def save_frame_masks(path: Path, masks: dict[int, np.ndarray], prefix: str = "pe
     else:
         arrays = {f"{prefix}_{item_id}": mask.astype(np.uint8) for item_id, mask in sorted(masks.items())}
     np.savez_compressed(path, **arrays)
+
+
+def _bgr_to_rgb(frame_bgr: np.ndarray) -> np.ndarray:
+    if cv2 is not None:
+        return cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+    return np.ascontiguousarray(frame_bgr[..., ::-1])

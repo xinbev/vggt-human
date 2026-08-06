@@ -348,5 +348,5 @@ CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_h
 OUTPUT_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_human_scene_align_walking_viewer_id_overlay \
 CUDA_VISIBLE_DEVICES_VALUE=7 \
 PORT=8080 \
-MAX_FRAMES=64 \
+MAX_FRAMES=0 \
 bash scripts/vis/serve_stage2_human_scene_align_walking_id_overlay.sh

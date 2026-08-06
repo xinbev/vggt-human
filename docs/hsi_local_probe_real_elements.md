@@ -78,6 +78,17 @@ From the Linux project root:
 bash scripts/vis/create_hsi_local_probe_real_elements.sh
 ```
 
+If `cv2` fails to import with `numpy._core.multiarray failed to import`, run the
+same wrapper with the dependency-free image preprocessing fallback:
+
+```bash
+DISABLE_OPENCV=true \
+bash scripts/vis/create_hsi_local_probe_real_elements.sh
+```
+
+The fallback uses Pillow/NumPy only for reading, resizing, and BGR/RGB channel
+conversion. It does not change VGGT, SMPL, YOLO, SAM2, or HSI model behavior.
+
 Useful overrides:
 
 ```bash

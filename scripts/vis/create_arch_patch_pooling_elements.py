@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -154,10 +155,14 @@ def resolve_config_path(config: dict, override: str | None, dotted_key: str) -> 
 
 
 def auto_sam2_person_mask(args: argparse.Namespace) -> tuple[np.ndarray, list[Box], dict, dict[str, np.ndarray]]:
-    try:
-        import cv2
-    except ImportError as exc:
-        raise RuntimeError("Automatic mask generation requires opencv-python/cv2.") from exc
+    disable_opencv = os.environ.get("VGGT_OMEGA_DISABLE_CV2", "").strip().lower() in {"1", "true", "yes"}
+    if disable_opencv:
+        cv2 = None
+    else:
+        try:
+            import cv2
+        except (ImportError, AttributeError, SystemError):
+            cv2 = None
     from vggt_omega.tracking.detectors import TorchScriptYOLOPersonDetector
     from vggt_omega.tracking.sam2_masks import SAM2BoxMaskPredictor
     from vggt_omega.training.config import load_yaml_config
@@ -167,9 +172,18 @@ def auto_sam2_person_mask(args: argparse.Namespace) -> tuple[np.ndarray, list[Bo
     sam2_root = resolve_config_path(config, args.sam2_root, "third_party.sam2_root")
     sam2_checkpoint = resolve_config_path(config, args.sam2_checkpoint, "third_party.sam2_checkpoint")
 
-    frame_bgr = cv2.imread(str(args.image), cv2.IMREAD_COLOR)
-    if frame_bgr is None:
-        raise ValueError(f"Failed to read image with cv2: {args.image}")
+    if cv2 is not None:
+        frame_bgr = cv2.imread(str(args.image), cv2.IMREAD_COLOR)
+        if frame_bgr is None:
+            raise ValueError(f"Failed to read image with cv2: {args.image}")
+        image_backend = "opencv"
+    else:
+        try:
+            frame_rgb = np.asarray(Image.open(args.image).convert("RGB"), dtype=np.uint8)
+        except (OSError, ValueError) as exc:
+            raise ValueError(f"Failed to read image with Pillow: {args.image}") from exc
+        frame_bgr = np.ascontiguousarray(frame_rgb[..., ::-1])
+        image_backend = "pillow_fallback"
 
     detector = TorchScriptYOLOPersonDetector(
         checkpoint=yolo_checkpoint,
@@ -215,6 +229,7 @@ def auto_sam2_person_mask(args: argparse.Namespace) -> tuple[np.ndarray, list[Bo
     boxes = [Box(*[float(v) for v in det.bbox_xyxy]) for det in selected_detections]
     auto_meta = {
         "enabled": True,
+        "image_backend": image_backend,
         "detector": {
             "checkpoint": yolo_checkpoint,
             "conf_threshold": float(args.det_conf),
