@@ -1,0 +1,173 @@
+{
+  "frames_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/measure_woman_n3library_20/input",
+  "num_frames": 1,
+  "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt",
+  "query_source": "nlf_detector",
+  "tracking_overlay": "base_smpl",
+  "tracking": {
+    "active": true,
+    "unique_track_ids": [
+      0
+    ],
+    "track_ids_by_frame": [
+      [
+        0
+      ]
+    ],
+    "mean_track_quality": 0.9365234375
+  },
+  "tracking_geometry_unchanged": true,
+  "image_shape": [
+    1,
+    1,
+    3,
+    384,
+    688
+  ],
+  "nlf_image_hw": [
+    384,
+    688
+  ],
+  "point_counts_hsi": [
+    58758
+  ],
+  "point_counts_hsi_full": [
+    66048
+  ],
+  "human_points_removed_hsi": [
+    7290
+  ],
+  "human_mask_pixels_hsi": [
+    29235
+  ],
+  "human_point_removal": {
+    "method": "projected_smpl_triangle_silhouette_dilated_unconditional",
+    "dilation_px": 12,
+    "calibration_mode_uses_full_points": true
+  },
+  "people_counts": [
+    1
+  ],
+  "hsi_scene_scale": [
+    6.253083229064941
+  ],
+  "hsi_scene_depth_bias": [
+    0.0
+  ],
+  "hsi_frame_scene_scale": [
+    6.253083229064941
+  ],
+  "hsi_frame_scene_depth_bias": [
+    0.0
+  ],
+  "hsi_scene_affine_mode": "clip_median",
+  "hsi_scene_affine_ema_alpha": 0.25,
+  "hsi_visual_scale_initial": 1.0,
+  "camera_motion": {
+    "raw_vggt": {
+      "num_cameras": 1,
+      "positions_world": [
+        [
+          1.7528655007481575e-06,
+          8.888605225365609e-05,
+          -0.00029494918999262154
+        ]
+      ],
+      "step_distances": [],
+      "total_path_m_vggt_units": 0.0,
+      "start_end_m_vggt_units": 0.0,
+      "axis_range_xyz_vggt_units": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean_step_m_vggt_units": 0.0,
+      "max_step_m_vggt_units": 0.0
+    },
+    "hsi_scaled": {
+      "num_cameras": 1,
+      "positions_world": [
+        [
+          1.0960813597193919e-05,
+          0.0005558119155466557,
+          -0.001844341866672039
+        ]
+      ],
+      "step_distances": [],
+      "total_path_m_vggt_units": 0.0,
+      "start_end_m_vggt_units": 0.0,
+      "axis_range_xyz_vggt_units": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean_step_m_vggt_units": 0.0,
+      "max_step_m_vggt_units": 0.0
+    }
+  },
+  "depth_alignment_note": "Depth alignment is computed by projecting SMPL vertices with VGGT K and sampling VGGT raw/HSI depth in the processed image plane; median_signed_m = z_smpl - z_depth.",
+  "depth_alignment_overall": {
+    "base_raw": {
+      "people": 1,
+      "valid_points": 428,
+      "median_abs_m_mean": 1.756386160850525,
+      "median_abs_m_median": 1.756386160850525,
+      "median_signed_m_mean": 1.756386160850525,
+      "median_signed_m_median": 1.756386160850525
+    },
+    "base_hsi": {
+      "people": 1,
+      "valid_points": 428,
+      "median_abs_m_mean": 1.340599775314331,
+      "median_abs_m_median": 1.340599775314331,
+      "median_signed_m_mean": -1.3415980339050293,
+      "median_signed_m_median": -1.3415980339050293
+    },
+    "hsi_hsi": {
+      "people": 1,
+      "valid_points": 428,
+      "median_abs_m_mean": 1.329580307006836,
+      "median_abs_m_median": 1.329580307006836,
+      "median_signed_m_mean": -1.3299031257629395,
+      "median_signed_m_median": -1.3299031257629395
+    }
+  },
+  "depth_alignment_by_frame": [
+    {
+      "base_raw": [
+        {
+          "valid_points": 428,
+          "median_signed_m": 1.756386160850525,
+          "median_abs_m": 1.756386160850525,
+          "mean_abs_m": 1.7473926544189453,
+          "p90_abs_m": 1.8946566581726074,
+          "query_index": 0,
+          "confidence": 0.9365234375
+        }
+      ],
+      "base_hsi": [
+        {
+          "valid_points": 428,
+          "median_signed_m": -1.3415980339050293,
+          "median_abs_m": 1.340599775314331,
+          "mean_abs_m": 1.4833935499191284,
+          "p90_abs_m": 1.7364552021026611,
+          "query_index": 0,
+          "confidence": 0.9365234375
+        }
+      ],
+      "hsi_hsi": [
+        {
+          "valid_points": 428,
+          "median_signed_m": -1.3299031257629395,
+          "median_abs_m": 1.329580307006836,
+          "mean_abs_m": 1.4867347478866577,
+          "p90_abs_m": 1.7659279108047485,
+          "query_index": 0,
+          "confidence": 0.9365234375
+        }
+      ]
+    }
+  ],
+  "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/measure_woman_n3library_20"
+}

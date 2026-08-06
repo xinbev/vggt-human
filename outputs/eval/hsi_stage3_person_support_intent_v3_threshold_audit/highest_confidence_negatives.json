@@ -1,0 +1,4602 @@
+[
+  {
+    "dataset_index": 977,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000411",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000411/rgb/seq_000411_0110.png",
+    "probability": 0.867455005645752,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.027961399406194687,
+      0.0174405500292778
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4134,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0020.png",
+    "probability": 0.8649687767028809,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0010436053853482008,
+      0.001442675944417715
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 973,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000411",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000411/rgb/seq_000411_0090.png",
+    "probability": 0.8649528622627258,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.016813386231660843,
+      0.004985172767192125
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 976,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000411",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000411/rgb/seq_000411_0105.png",
+    "probability": 0.8646919131278992,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.013169540092349052,
+      0.0030456786043941975
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4142,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0060.png",
+    "probability": 0.8608603477478027,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0006569267716258764,
+      0.0009020293364301324
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4143,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0065.png",
+    "probability": 0.860586404800415,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0009894805261865258,
+      0.00058916793204844
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4147,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0085.png",
+    "probability": 0.8595823049545288,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0007448433898389339,
+      0.000890049384906888
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4138,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0040.png",
+    "probability": 0.8593385219573975,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0013578180223703384,
+      0.0005660474998876452
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4135,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0025.png",
+    "probability": 0.8581637144088745,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0014519896358251572,
+      0.0014740130864083767
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4148,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0090.png",
+    "probability": 0.8581582307815552,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0007775158155709505,
+      0.0007093847380019724
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4133,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0015.png",
+    "probability": 0.857316255569458,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0009709451114758849,
+      0.0008396000484935939
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4144,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0070.png",
+    "probability": 0.8550821542739868,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.001408520620316267,
+      0.0008989383932203054
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4146,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0080.png",
+    "probability": 0.8550278544425964,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0010864547220990062,
+      0.0008547445759177208
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4137,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0035.png",
+    "probability": 0.8544498682022095,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0011455302592366934,
+      0.0006689729634672403
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4132,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0010.png",
+    "probability": 0.8543912172317505,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0014175926335155964,
+      0.0010107693960890174
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4141,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0055.png",
+    "probability": 0.8543442487716675,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0010959203355014324,
+      0.0013472794089466333
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4139,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0045.png",
+    "probability": 0.8537816405296326,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0013365588383749127,
+      0.0005952828214503825
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4149,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0095.png",
+    "probability": 0.8531270623207092,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0008038935484364629,
+      0.0005690212128683925
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4145,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0075.png",
+    "probability": 0.8516867756843567,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0011242036707699299,
+      0.000766201876103878
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4136,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0030.png",
+    "probability": 0.8512006402015686,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0014065586728975177,
+      0.0009236526675522327
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4150,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0100.png",
+    "probability": 0.8496485948562622,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0007586489664390683,
+      0.0006022471934556961
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3913,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000415",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000415/rgb/seq_000415_0010.png",
+    "probability": 0.8486825823783875,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0014363427180796862,
+      0.0017172632506117225
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4140,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0050.png",
+    "probability": 0.8478347659111023,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.001296869944781065,
+      0.0010574074694886804
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3914,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000415",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000415/rgb/seq_000415_0015.png",
+    "probability": 0.844592273235321,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0009511474054306746,
+      0.0013918662443757057
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4995,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000863",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0065.png",
+    "probability": 0.8433775901794434,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.016384130343794823,
+      0.011830497533082962
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4151,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0105.png",
+    "probability": 0.8429718613624573,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0008675278513692319,
+      0.0008407592540606856
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 886,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000355",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000355/rgb/seq_000355_0115.png",
+    "probability": 0.84168940782547,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.012158164754509926,
+      0.014665024355053902
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 885,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000355",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000355/rgb/seq_000355_0110.png",
+    "probability": 0.8416138887405396,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.01785477250814438,
+      0.04666566103696823
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3919,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000415",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000415/rgb/seq_000415_0040.png",
+    "probability": 0.8413849472999573,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0022995504550635815,
+      0.0017895414493978024
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3915,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000415",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000415/rgb/seq_000415_0020.png",
+    "probability": 0.8412683606147766,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.001360615948215127,
+      0.0014846697449684143
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3916,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000415",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000415/rgb/seq_000415_0025.png",
+    "probability": 0.8409125208854675,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0017942031845450401,
+      0.0017737224698066711
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 421,
+    "person_slot": 7,
+    "track_id": 1000000007,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000177",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000177/rgb/seq_000177_0020.png",
+    "probability": 0.840320885181427,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.001183798536658287,
+      0.0012883964227512479
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3917,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000415",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000415/rgb/seq_000415_0030.png",
+    "probability": 0.8401210904121399,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0015550046227872372,
+      0.0016053731087595224
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3918,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000415",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000415/rgb/seq_000415_0035.png",
+    "probability": 0.8400168418884277,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0021522699389606714,
+      0.0016515246825292706
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 422,
+    "person_slot": 7,
+    "track_id": 1000000007,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000177",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000177/rgb/seq_000177_0025.png",
+    "probability": 0.8389705419540405,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.002474105218425393,
+      0.0028339610435068607
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 420,
+    "person_slot": 7,
+    "track_id": 1000000007,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000177",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000177/rgb/seq_000177_0015.png",
+    "probability": 0.837809681892395,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0012025784235447645,
+      0.0014235759153962135
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 419,
+    "person_slot": 7,
+    "track_id": 1000000007,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000177",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000177/rgb/seq_000177_0010.png",
+    "probability": 0.837803840637207,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0006810017512179911,
+      0.0007776978309266269
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4152,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0110.png",
+    "probability": 0.8376463651657104,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0006519577000290155,
+      0.0007924670353531837
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4662,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000756",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000756/rgb/seq_000756_0040.png",
+    "probability": 0.8323147296905518,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0063863457180559635,
+      0.00708220899105072
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 917,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000379",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000379/rgb/seq_000379_0040.png",
+    "probability": 0.8319379091262817,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.002583946567028761,
+      0.0030606184154748917
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4996,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000863",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0070.png",
+    "probability": 0.8318191170692444,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.0085924556478858,
+      0.09272322058677673
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4153,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000563",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000563/rgb/seq_000563_0115.png",
+    "probability": 0.8315528035163879,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0008231736137531698,
+      0.0005542754079215229
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 6266,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221019_3-8_1000_highbmihand_static_suburb_d_seq_000193",
+    "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000193/rgb/seq_000193_0045.png",
+    "probability": 0.8311079740524292,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.012655328959226608,
+      0.017584431916475296
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 1134,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000499",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000499/rgb/seq_000499_0090.png",
+    "probability": 0.8305827379226685,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.03708174079656601,
+      0.03732011839747429
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3920,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000415",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000415/rgb/seq_000415_0045.png",
+    "probability": 0.830521285533905,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0012685104738920927,
+      0.0014166445471346378
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 5079,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221017_3_1000_batch01hand_seq_000896",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000896/rgb/seq_000896_0065.png",
+    "probability": 0.8279651999473572,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.01735953614115715,
+      0.004788699559867382
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 1131,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000499",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000499/rgb/seq_000499_0075.png",
+    "probability": 0.8277562260627747,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.06590017676353455,
+      0.044234756380319595
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 423,
+    "person_slot": 7,
+    "track_id": 1000000007,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000177",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000177/rgb/seq_000177_0030.png",
+    "probability": 0.8275554180145264,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.007893337868154049,
+      0.005169660784304142
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 911,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000379",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000379/rgb/seq_000379_0010.png",
+    "probability": 0.8268572092056274,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.007675451692193747,
+      0.007211805786937475
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 5002,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000863",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0100.png",
+    "probability": 0.8266709446907043,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.002198880072683096,
+      0.0032846054527908564
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 7328,
+    "person_slot": 5,
+    "track_id": 1000000006,
+    "sequence": "20221019_3-8_1000_highbmihand_static_suburb_d_seq_000645",
+    "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000645/rgb/seq_000645_0055.png",
+    "probability": 0.826315701007843,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.07811897993087769,
+      0.02575691230595112
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 437,
+    "person_slot": 7,
+    "track_id": 1000000007,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000177",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000177/rgb/seq_000177_0100.png",
+    "probability": 0.8263144493103027,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.001305391313508153,
+      0.001035123597830534
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 5001,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000863",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0095.png",
+    "probability": 0.8261352777481079,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.005053534172475338,
+      0.008977207355201244
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 5011,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000863",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0145.png",
+    "probability": 0.8258597254753113,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.019568193703889847,
+      0.00564330630004406
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 697,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309/rgb/seq_000309_0020.png",
+    "probability": 0.8252226114273071,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0005523264990188181,
+      0.0005968492478132248
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 1130,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000499",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000499/rgb/seq_000499_0070.png",
+    "probability": 0.824506938457489,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.10009752213954926,
+      0.06634047627449036
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 5003,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000863",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0105.png",
+    "probability": 0.8243364691734314,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.002979368669912219,
+      0.0025587202981114388
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 7329,
+    "person_slot": 5,
+    "track_id": 1000000006,
+    "sequence": "20221019_3-8_1000_highbmihand_static_suburb_d_seq_000645",
+    "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000645/rgb/seq_000645_0060.png",
+    "probability": 0.8241754174232483,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.1608189344406128,
+      0.09316905587911606
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4673,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000756",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000756/rgb/seq_000756_0095.png",
+    "probability": 0.8240377902984619,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.00922226533293724,
+      0.00945852231234312
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 698,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309/rgb/seq_000309_0025.png",
+    "probability": 0.8239207863807678,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0005123539012856781,
+      0.0007261690916493535
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4667,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000756",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000756/rgb/seq_000756_0065.png",
+    "probability": 0.8237067461013794,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.0017972621135413647,
+      0.14548097550868988
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 696,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309/rgb/seq_000309_0015.png",
+    "probability": 0.8234262466430664,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0003386201278772205,
+      0.0003606107784435153
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 5004,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000863",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0110.png",
+    "probability": 0.822974443435669,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.006072844844311476,
+      0.0038876868784427643
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4672,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000756",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000756/rgb/seq_000756_0090.png",
+    "probability": 0.8227012753486633,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.008904971182346344,
+      0.012909339740872383
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 7327,
+    "person_slot": 5,
+    "track_id": 1000000006,
+    "sequence": "20221019_3-8_1000_highbmihand_static_suburb_d_seq_000645",
+    "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000645/rgb/seq_000645_0050.png",
+    "probability": 0.8226301670074463,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.15876562893390656,
+      0.025238510221242905
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 5080,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221017_3_1000_batch01hand_seq_000896",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000896/rgb/seq_000896_0070.png",
+    "probability": 0.8225035667419434,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.02936175838112831,
+      0.0061937784776091576
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 7042,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221019_3-8_1000_highbmihand_static_suburb_d_seq_000512",
+    "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000512/rgb/seq_000512_0100.png",
+    "probability": 0.8223707675933838,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.12913167476654053,
+      0.018601709976792336
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4852,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221017_3_1000_batch01hand_seq_000810",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000810/rgb/seq_000810_0015.png",
+    "probability": 0.8223188519477844,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0007277950062416494,
+      0.0006435818504542112
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4853,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221017_3_1000_batch01hand_seq_000810",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000810/rgb/seq_000810_0020.png",
+    "probability": 0.8221616148948669,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.00036691653076559305,
+      0.0004567802825476974
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4674,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000756",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000756/rgb/seq_000756_0100.png",
+    "probability": 0.822096586227417,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.008943887427449226,
+      0.007151604630053043
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4660,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000756",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000756/rgb/seq_000756_0030.png",
+    "probability": 0.8219808340072632,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.01603955589234829,
+      0.011799408122897148
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 5000,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000863",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0090.png",
+    "probability": 0.8218684196472168,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.005158585496246815,
+      0.021865099668502808
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 699,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309/rgb/seq_000309_0030.png",
+    "probability": 0.8215835690498352,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.00041440961649641395,
+      0.0007030714768916368
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 700,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309/rgb/seq_000309_0035.png",
+    "probability": 0.8214702606201172,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.00030504720052704215,
+      0.0003923339827451855
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 890,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000365",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000365/rgb/seq_000365_0015.png",
+    "probability": 0.8210409283638,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.009609866887331009,
+      0.011206090450286865
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 5005,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000863",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0115.png",
+    "probability": 0.8209947347640991,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.015528488904237747,
+      0.00831298716366291
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 703,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309/rgb/seq_000309_0050.png",
+    "probability": 0.82079017162323,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0006757138762623072,
+      0.0007637601811438799
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 701,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309/rgb/seq_000309_0040.png",
+    "probability": 0.8205974102020264,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0007490372518077493,
+      0.0007916026515886188
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 7043,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221019_3-8_1000_highbmihand_static_suburb_d_seq_000512",
+    "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000512/rgb/seq_000512_0105.png",
+    "probability": 0.8203264474868774,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.13533495366573334,
+      0.06677475571632385
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 704,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309/rgb/seq_000309_0055.png",
+    "probability": 0.8200542330741882,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0005001112585887313,
+      0.0006506240461021662
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4854,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221017_3_1000_batch01hand_seq_000810",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000810/rgb/seq_000810_0025.png",
+    "probability": 0.8192997574806213,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0003615150635596365,
+      0.00040809993515722454
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4997,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000863",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0075.png",
+    "probability": 0.8189672827720642,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.006445514969527721,
+      0.1853974163532257
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 702,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309/rgb/seq_000309_0045.png",
+    "probability": 0.8189612627029419,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.00103860255330801,
+      0.0011162859154865146
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 695,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309/rgb/seq_000309_0010.png",
+    "probability": 0.8186183571815491,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.00021238249610178173,
+      0.00031049211975187063
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 7041,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221019_3-8_1000_highbmihand_static_suburb_d_seq_000512",
+    "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000512/rgb/seq_000512_0095.png",
+    "probability": 0.8186156153678894,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.20651096105575562,
+      0.026456767693161964
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 705,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309/rgb/seq_000309_0060.png",
+    "probability": 0.8184880018234253,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0003640542854554951,
+      0.0006207950646057725
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 5012,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000863",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0150.png",
+    "probability": 0.8183690309524536,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.009600769728422165,
+      0.013503419235348701
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 436,
+    "person_slot": 7,
+    "track_id": 1000000007,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000177",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000177/rgb/seq_000177_0095.png",
+    "probability": 0.8182915449142456,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.002494441345334053,
+      0.0007956119370646775
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4855,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221017_3_1000_batch01hand_seq_000810",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000810/rgb/seq_000810_0030.png",
+    "probability": 0.817375898361206,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0014043186092749238,
+      0.0013487627729773521
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 706,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309/rgb/seq_000309_0065.png",
+    "probability": 0.8173437118530273,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0002292311837663874,
+      0.0004188206803519279
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4675,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000756",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000756/rgb/seq_000756_0105.png",
+    "probability": 0.8169927000999451,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.006421900819987059,
+      0.0057704513892531395
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 7044,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221019_3-8_1000_highbmihand_static_suburb_d_seq_000512",
+    "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000512/rgb/seq_000512_0110.png",
+    "probability": 0.8163114190101624,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.38232120871543884,
+      0.18258613348007202
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 137,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045/rgb/seq_000045_0040.png",
+    "probability": 0.8162252306938171,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.002321777865290642,
+      0.001030678628012538
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 145,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045/rgb/seq_000045_0080.png",
+    "probability": 0.8160448670387268,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.002078515477478504,
+      0.0009383204160258174
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 5019,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000863",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0185.png",
+    "probability": 0.8160406947135925,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.012758929282426834,
+      0.021695759147405624
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 2374,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221014_3_250_batch01hand_orbit_archVizUI3_time15_seq_000179",
+    "sample_path": "Training/20221014_3_250_batch01hand_orbit_archVizUI3_time15_seq_000179/rgb/seq_000179_0155.png",
+    "probability": 0.8156110048294067,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.02953132800757885,
+      0.05105585604906082
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 7684,
+    "person_slot": 7,
+    "track_id": 1000000007,
+    "sequence": "20221019_3-8_1000_highbmihand_static_suburb_d_seq_000768",
+    "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000768/rgb/seq_000768_0055.png",
+    "probability": 0.8155947327613831,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.04420177638530731,
+      0.1513555496931076
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 141,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045/rgb/seq_000045_0060.png",
+    "probability": 0.8154815435409546,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0023788560647517443,
+      0.0016489375848323107
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 136,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045/rgb/seq_000045_0035.png",
+    "probability": 0.8152958750724792,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0021966109052300453,
+      0.0012769992463290691
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 6827,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sequence": "20221019_3-8_1000_highbmihand_static_suburb_d_seq_000475",
+    "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000475/rgb/seq_000475_0040.png",
+    "probability": 0.8151489496231079,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.009656248614192009,
+      0.0239991657435894
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3089,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000147",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000147/rgb/seq_000147_0050.png",
+    "probability": 0.8150793313980103,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0074149384163320065,
+      0.0007815639837644994
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 707,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309/rgb/seq_000309_0070.png",
+    "probability": 0.8150464296340942,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.00016243808204308152,
+      0.0003446267801336944
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 146,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045/rgb/seq_000045_0085.png",
+    "probability": 0.8149724006652832,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0020571874920278788,
+      0.0011557473335415125
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 708,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309/rgb/seq_000309_0075.png",
+    "probability": 0.814599335193634,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0003353847423568368,
+      0.0003121043264400214
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 869,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000355",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000355/rgb/seq_000355_0030.png",
+    "probability": 0.8142978549003601,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.010734537616372108,
+      0.013194531202316284
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 5007,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000863",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0125.png",
+    "probability": 0.8142196536064148,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.16722095012664795,
+      0.006271300837397575
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 7330,
+    "person_slot": 5,
+    "track_id": 1000000006,
+    "sequence": "20221019_3-8_1000_highbmihand_static_suburb_d_seq_000645",
+    "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000645/rgb/seq_000645_0065.png",
+    "probability": 0.8141546249389648,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.46745535731315613,
+      0.2069900929927826
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3522,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000299",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000299/rgb/seq_000299_0085.png",
+    "probability": 0.814129114151001,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.004600493237376213,
+      0.002990136155858636
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 144,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045/rgb/seq_000045_0075.png",
+    "probability": 0.8140668272972107,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0021806596778333187,
+      0.0011570171918720007
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 140,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045/rgb/seq_000045_0055.png",
+    "probability": 0.8138601779937744,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0022004847414791584,
+      0.001324629527516663
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4676,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000756",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000756/rgb/seq_000756_0110.png",
+    "probability": 0.8136833906173706,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.004005918744951487,
+      0.004187987186014652
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3088,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000147",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000147/rgb/seq_000147_0045.png",
+    "probability": 0.813661515712738,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0026639867573976517,
+      0.0006892686942592263
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 7683,
+    "person_slot": 7,
+    "track_id": 1000000007,
+    "sequence": "20221019_3-8_1000_highbmihand_static_suburb_d_seq_000768",
+    "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000768/rgb/seq_000768_0050.png",
+    "probability": 0.8135627508163452,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.04178700968623161,
+      0.09031505882740021
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4851,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221017_3_1000_batch01hand_seq_000810",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000810/rgb/seq_000810_0010.png",
+    "probability": 0.812807023525238,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0010038996115326881,
+      0.0009170559933409095
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 5006,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000863",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0120.png",
+    "probability": 0.8125409483909607,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.07307334244251251,
+      0.00887700542807579
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 6839,
+    "person_slot": 3,
+    "track_id": 1000000003,
+    "sequence": "20221019_3-8_1000_highbmihand_static_suburb_d_seq_000475",
+    "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000475/rgb/seq_000475_0100.png",
+    "probability": 0.812143862247467,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.05614300072193146,
+      0.022513102740049362
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 133,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045/rgb/seq_000045_0020.png",
+    "probability": 0.8119928240776062,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0018873825902119279,
+      0.0012259746436029673
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 709,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309/rgb/seq_000309_0080.png",
+    "probability": 0.8119552135467529,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0002753325388766825,
+      0.00039657828165218234
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4677,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000756",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000756/rgb/seq_000756_0115.png",
+    "probability": 0.8117135167121887,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0030158108565956354,
+      0.0027920808643102646
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 138,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045/rgb/seq_000045_0045.png",
+    "probability": 0.8115367889404297,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0018129232339560986,
+      0.0008839854272082448
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 5020,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000863",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0190.png",
+    "probability": 0.8115338683128357,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.029945064336061478,
+      0.012888602912425995
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 132,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045/rgb/seq_000045_0015.png",
+    "probability": 0.8110591769218445,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.001886937185190618,
+      0.0008772257715463638
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 7040,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221019_3-8_1000_highbmihand_static_suburb_d_seq_000512",
+    "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000512/rgb/seq_000512_0090.png",
+    "probability": 0.8110124468803406,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.28091612458229065,
+      0.03604329004883766
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 913,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000379",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000379/rgb/seq_000379_0020.png",
+    "probability": 0.8107650876045227,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0035504051484167576,
+      0.0033515370450913906
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3087,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000147",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000147/rgb/seq_000147_0040.png",
+    "probability": 0.8107511401176453,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0016181254759430885,
+      0.0011165523901581764
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 710,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309/rgb/seq_000309_0085.png",
+    "probability": 0.8105275630950928,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0001366270298603922,
+      0.000566121656447649
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3780,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0140.png",
+    "probability": 0.8103150129318237,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0004853062564507127,
+      0.0002795779728330672
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 139,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045/rgb/seq_000045_0050.png",
+    "probability": 0.8102892637252808,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0013934602029621601,
+      0.0006598160252906382
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 7212,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221019_3-8_1000_highbmihand_static_suburb_d_seq_000608",
+    "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000608/rgb/seq_000608_0020.png",
+    "probability": 0.8102665543556213,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.039747994393110275,
+      0.04976966232061386
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 7809,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221019_3-8_1000_highbmihand_static_suburb_d_seq_000811",
+    "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000811/rgb/seq_000811_0010.png",
+    "probability": 0.8102155327796936,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0045996373519301414,
+      0.0036929151974618435
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3761,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0045.png",
+    "probability": 0.8098056316375732,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0002971187059301883,
+      0.00026978860842064023
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3251,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000176",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000176/rgb/seq_000176_0025.png",
+    "probability": 0.8097568154335022,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0020257001742720604,
+      0.0020050539169460535
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4859,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221017_3_1000_batch01hand_seq_000810",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000810/rgb/seq_000810_0050.png",
+    "probability": 0.8096067905426025,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.001131905708462,
+      0.0003456385456956923
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3779,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0135.png",
+    "probability": 0.8095213174819946,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0006724548293277621,
+      0.0007697487017139792
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 2373,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221014_3_250_batch01hand_orbit_archVizUI3_time15_seq_000179",
+    "sample_path": "Training/20221014_3_250_batch01hand_orbit_archVizUI3_time15_seq_000179/rgb/seq_000179_0150.png",
+    "probability": 0.8094040155410767,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.032174624502658844,
+      0.050772201269865036
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3759,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0035.png",
+    "probability": 0.8092625141143799,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0008310275734402239,
+      0.001185470842756331
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3781,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0145.png",
+    "probability": 0.8091856837272644,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0003661711234599352,
+      0.0002824281982611865
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4908,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000840",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000840/rgb/seq_000840_0075.png",
+    "probability": 0.80915766954422,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0077241044491529465,
+      0.004887924063950777
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3757,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0025.png",
+    "probability": 0.8091495037078857,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0010035564191639423,
+      0.001496721524745226
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4678,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000756",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000756/rgb/seq_000756_0120.png",
+    "probability": 0.8090348243713379,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0026520213577896357,
+      0.0022392442915588617
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3758,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0030.png",
+    "probability": 0.8087589740753174,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.001307429512962699,
+      0.002135310787707567
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 135,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045/rgb/seq_000045_0030.png",
+    "probability": 0.8086897730827332,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0017069443129003048,
+      0.0014044807758182287
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4909,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000840",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000840/rgb/seq_000840_0080.png",
+    "probability": 0.8086416125297546,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.005135911982506514,
+      0.0034654010087251663
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3760,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0040.png",
+    "probability": 0.8086385130882263,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0002745981328189373,
+      0.00011243477638345212
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3756,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0020.png",
+    "probability": 0.808631420135498,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0010355226695537567,
+      0.0007937423652037978
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 2579,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000006",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000006/rgb/seq_000006_0040.png",
+    "probability": 0.8085983395576477,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.02382570505142212,
+      0.008308591321110725
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3921,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000415",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000415/rgb/seq_000415_0050.png",
+    "probability": 0.8085665106773376,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.004392468370497227,
+      0.0011997743276879191
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 143,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045/rgb/seq_000045_0070.png",
+    "probability": 0.8085204362869263,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.001783896703273058,
+      0.0010063834488391876
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3763,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0055.png",
+    "probability": 0.8084172010421753,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0002074947115033865,
+      0.0003470462397672236
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 142,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045/rgb/seq_000045_0065.png",
+    "probability": 0.8083490133285522,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0023759352043271065,
+      0.0014450211310759187
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3086,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000147",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000147/rgb/seq_000147_0035.png",
+    "probability": 0.8083403706550598,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0022975297179073095,
+      0.0018878511618822813
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 711,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309/rgb/seq_000309_0090.png",
+    "probability": 0.8081877827644348,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.00018589940737001598,
+      0.0005306814564391971
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 131,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045/rgb/seq_000045_0010.png",
+    "probability": 0.8081319332122803,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0019651351030915976,
+      0.0009061936289072037
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3250,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000176",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000176/rgb/seq_000176_0020.png",
+    "probability": 0.8081145286560059,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0004541252856142819,
+      0.000399671436753124
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3765,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0065.png",
+    "probability": 0.8080064058303833,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.00020780130580533296,
+      0.0001755495322868228
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3766,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0070.png",
+    "probability": 0.8079418540000916,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0003631725558079779,
+      0.00019554633763618767
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3762,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0050.png",
+    "probability": 0.8077091574668884,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0002014063356909901,
+      0.0003464726614765823
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3755,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0015.png",
+    "probability": 0.8076708912849426,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.000910331669729203,
+      0.0004925369285047054
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3767,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0075.png",
+    "probability": 0.807543158531189,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0002542246656958014,
+      0.00042414042400196195
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 435,
+    "person_slot": 7,
+    "track_id": 1000000007,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000177",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000177/rgb/seq_000177_0090.png",
+    "probability": 0.8074960112571716,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.004919426515698433,
+      0.003232455113902688
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 5018,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000863",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0180.png",
+    "probability": 0.8073500990867615,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.00860729068517685,
+      0.05114024132490158
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4910,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000840",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000840/rgb/seq_000840_0085.png",
+    "probability": 0.8068024516105652,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.00265464186668396,
+      0.002661617938429117
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 5234,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000956",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000956/rgb/seq_000956_0080.png",
+    "probability": 0.8067436814308167,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.06416573375463486,
+      0.013569356873631477
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 6073,
+    "person_slot": 4,
+    "track_id": 1000000004,
+    "sequence": "20221019_3-8_1000_highbmihand_static_suburb_d_seq_000157",
+    "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000157/rgb/seq_000157_0090.png",
+    "probability": 0.8067359924316406,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.01289527676999569,
+      0.10240082442760468
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3249,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000176",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000176/rgb/seq_000176_0015.png",
+    "probability": 0.806705892086029,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0002077959943562746,
+      0.00015256059123203158
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3783,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0155.png",
+    "probability": 0.8066866397857666,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.00014323738287203014,
+      0.00031908490927889943
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 6019,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221019_3-8_1000_highbmihand_static_suburb_d_seq_000131",
+    "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000131/rgb/seq_000131_0050.png",
+    "probability": 0.806624174118042,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.009276337921619415,
+      0.03607505187392235
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3789,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0185.png",
+    "probability": 0.8066165447235107,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0005660596070811152,
+      0.0010605494026094675
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4679,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000756",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000756/rgb/seq_000756_0125.png",
+    "probability": 0.8065836429595947,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.002306987764313817,
+      0.0018388465978205204
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 134,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000045/rgb/seq_000045_0025.png",
+    "probability": 0.8061906695365906,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0018058216664940119,
+      0.0012659553904086351
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3793,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0205.png",
+    "probability": 0.8061188459396362,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0006112492992542684,
+      0.00032119202660396695
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3787,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0175.png",
+    "probability": 0.805994987487793,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.000491380225867033,
+      0.0007563820108771324
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3270,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000176",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000176/rgb/seq_000176_0120.png",
+    "probability": 0.8058568239212036,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.00045344099635258317,
+      0.0006546999793499708
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3265,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000176",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000176/rgb/seq_000176_0095.png",
+    "probability": 0.8056920766830444,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.003021958749741316,
+      0.0009097723523154855
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3754,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0010.png",
+    "probability": 0.8056609034538269,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.00036033769720233977,
+      0.00028502458008006215
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3788,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0180.png",
+    "probability": 0.8056296110153198,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0006109126843512058,
+      0.0008983521838672459
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3784,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0160.png",
+    "probability": 0.8055296540260315,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0006214804598130286,
+      0.0008396189077757299
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3266,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000176",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000176/rgb/seq_000176_0100.png",
+    "probability": 0.8055088520050049,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.001408209907822311,
+      0.0008581893052905798
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3785,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0165.png",
+    "probability": 0.8054162263870239,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0011254141572862864,
+      0.0016454739961773157
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3770,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0090.png",
+    "probability": 0.8053537607192993,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0003792629868257791,
+      0.0008446720894426107
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3521,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000299",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000299/rgb/seq_000299_0080.png",
+    "probability": 0.8052892088890076,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.009101447649300098,
+      0.0037089050747454166
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3786,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0170.png",
+    "probability": 0.8051931262016296,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0007589858723804355,
+      0.0012510715750977397
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3791,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0195.png",
+    "probability": 0.8051517009735107,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.00036641740007326007,
+      0.00037990277633070946
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 575,
+    "person_slot": 4,
+    "track_id": 1000000004,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000244",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000244/rgb/seq_000244_0110.png",
+    "probability": 0.8051433563232422,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.00233274232596159,
+      0.029508013278245926
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3790,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0190.png",
+    "probability": 0.8051384091377258,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0004352549440227449,
+      0.0008725436637178063
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 712,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000309/rgb/seq_000309_0095.png",
+    "probability": 0.8051025867462158,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.00013103621313348413,
+      0.0005692057311534882
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3248,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000176",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000176/rgb/seq_000176_0010.png",
+    "probability": 0.8050930500030518,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.00032375287264585495,
+      0.0003722192777786404
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3085,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000147",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000147/rgb/seq_000147_0030.png",
+    "probability": 0.804850697517395,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0036087038461118937,
+      0.00205448130145669
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3035,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221017_3_1000_batch01hand_seq_000141",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000141/rgb/seq_000141_0020.png",
+    "probability": 0.8048402070999146,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.02097920887172222,
+      0.1749165952205658
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4998,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000863",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000863/rgb/seq_000863_0080.png",
+    "probability": 0.8047709465026855,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.006665709428489208,
+      0.15042009949684143
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3778,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0130.png",
+    "probability": 0.8045774102210999,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0009153633727692068,
+      0.0013820423046126962
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3794,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0210.png",
+    "probability": 0.8045182228088379,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0004039366031065583,
+      0.0004463929799385369
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3771,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0095.png",
+    "probability": 0.804320752620697,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.00045131781371310353,
+      0.0003132338752038777
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 3792,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000377",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000377/rgb/seq_000377_0200.png",
+    "probability": 0.8042479157447815,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0005091766943223774,
+      0.00011760683264583349
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 121,
+    "person_slot": 5,
+    "track_id": 1000000005,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000039",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000039/rgb/seq_000039_0075.png",
+    "probability": 0.8042430281639099,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.002942554419860244,
+      0.0032929801382124424
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 870,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000355",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000355/rgb/seq_000355_0035.png",
+    "probability": 0.8042166233062744,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.015574295073747635,
+      0.0637810006737709
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 555,
+    "person_slot": 4,
+    "track_id": 1000000004,
+    "sequence": "20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000244",
+    "sample_path": "Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000244/rgb/seq_000244_0010.png",
+    "probability": 0.8040092587471008,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.001602501142770052,
+      0.011782685294747353
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4668,
+    "person_slot": 2,
+    "track_id": 1000000002,
+    "sequence": "20221017_3_1000_batch01hand_seq_000756",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000756/rgb/seq_000756_0070.png",
+    "probability": 0.8035997152328491,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": false,
+    "foot_speed_m": [
+      0.004653277341276407,
+      0.2021464705467224
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 5235,
+    "person_slot": 0,
+    "track_id": 1000000000,
+    "sequence": "20221017_3_1000_batch01hand_seq_000956",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000956/rgb/seq_000956_0085.png",
+    "probability": 0.8034461140632629,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.021654590964317322,
+      0.018808972090482712
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  },
+  {
+    "dataset_index": 4856,
+    "person_slot": 1,
+    "track_id": 1000000001,
+    "sequence": "20221017_3_1000_batch01hand_seq_000810",
+    "sample_path": "Training/20221017_3_1000_batch01hand_seq_000810/rgb/seq_000810_0035.png",
+    "probability": 0.8033228516578674,
+    "label": false,
+    "temporal_valid": true,
+    "static_negative": true,
+    "foot_speed_m": [
+      0.0013855805154889822,
+      0.0013543270761147141
+    ],
+    "teacher_valid": [
+      true,
+      true
+    ],
+    "teacher_contact": [
+      false,
+      false
+    ]
+  }
+]
