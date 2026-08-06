@@ -120,6 +120,12 @@ two visible raw or HSI environment points. The viewer marks them as `P1` and
 line midpoint and in `Measurement Result`. The GUI result also identifies each
 source frame, point index, and world coordinate.
 
+Point selection uses Viser's scene-level click ray because Viser `0.2.x` point
+cloud handles do not expose node click callbacks. `Measurement Pick Radius`
+sets the maximum world-space distance between that ray and the selected point.
+Increase it when a sparse cloud is difficult to click; the status reports the
+nearest distance when a click falls outside the current radius.
+
 Distances use the coordinates currently displayed by the viewer and are labeled
 as `world units`. This includes the current HSI visual scale multiplier. A third
 point click clears the previous measurement and starts a new one. `Clear Current

@@ -1195,6 +1195,7 @@ class SequenceViewer:
         self.measurement_points: list[np.ndarray] = []
         self.measurement_sources: list[str] = []
         self.measurement_handles: list[Any] = []
+        self.measurement_pointer_active = False
         self.human_entries: list[dict[str, Any]] = []
         self.human_entry_by_key: dict[str, dict[str, Any]] = {}
         self.selected_human_key = "none"
@@ -1393,6 +1394,14 @@ class SequenceViewer:
             set_handle_disabled(self.human_point_filter_info, True)
         with add_folder(self.server, "Point Cloud Measurement"):
             self.measurement_enabled = add_checkbox(self.server, "Enable Point Measurement", False)
+            self.measurement_pick_radius = add_slider(
+                self.server,
+                "Measurement Pick Radius",
+                0.005,
+                0.5,
+                0.005,
+                max(0.05, min(0.5, self.point_size_value * 8.0)),
+            )
             self.measurement_info = add_text(self.server, "Measurement Result", "Off")
             set_handle_disabled(self.measurement_info, True)
             self.clear_measurement = add_button(self.server, "Clear Current Measurement")
@@ -1514,44 +1523,112 @@ class SequenceViewer:
         source: str,
     ) -> Any:
         points_np = np.asarray(points, dtype=np.float32).reshape(-1, 3)
-        handle = add_point_cloud(self.server, name, points_np, colors, self.point_size_value)
-
-        def on_click(event: Any) -> None:
-            self._on_environment_point_click(event, points_np, frame_index, source)
-
-        bind_click(handle, on_click)
-        return handle
+        return add_point_cloud(self.server, name, points_np, colors, self.point_size_value)
 
     def _on_measurement_enabled_update(self, _: Any = None) -> None:
         if bool(self.measurement_enabled.value):
             self.play.value = False
+            if not self._set_measurement_pointer_active(True):
+                set_text_value(
+                    self.measurement_info,
+                    "Unavailable | this Viser version has no scene click API",
+                )
+                return
             if len(self.measurement_points) == 0:
                 set_text_value(self.measurement_info, "Ready | click the first environment point")
             elif len(self.measurement_points) == 1:
                 set_text_value(self.measurement_info, "P1 selected | click the second environment point")
             else:
                 self._update_measurement_result_text()
-        elif len(self.measurement_points) == 0:
-            set_text_value(self.measurement_info, "Off | enable measurement to select points")
         else:
-            set_text_value(self.measurement_info, "Paused | current measurement remains visible")
+            self._set_measurement_pointer_active(False)
+            if len(self.measurement_points) == 0:
+                set_text_value(self.measurement_info, "Off | enable measurement to select points")
+            else:
+                set_text_value(self.measurement_info, "Paused | current measurement remains visible")
 
-    def _on_environment_point_click(
+    def _set_measurement_pointer_active(self, active: bool) -> bool:
+        api = scene_api(self.server)
+        if active:
+            if self.measurement_pointer_active:
+                return True
+            if not hasattr(api, "on_pointer_event"):
+                return False
+            api.on_pointer_event("click")(self._on_scene_measurement_click)
+            self.measurement_pointer_active = True
+            return True
+        if self.measurement_pointer_active and hasattr(api, "remove_pointer_callback"):
+            try:
+                api.remove_pointer_callback()
+            except Exception:
+                pass
+        self.measurement_pointer_active = False
+        return True
+
+    def _visible_measurement_clouds(self) -> list[tuple[int, str, np.ndarray]]:
+        if str(self.environment_display.value) not in {"points", "both"}:
+            return []
+        current = int(self.timestep.value)
+        mode = str(self.mode.value)
+        depth_source = str(self.depth_source.value)
+        tracking_only = bool(getattr(self.args, "tracking_only", False))
+        clouds: list[tuple[int, str, np.ndarray]] = []
+        for idx, frame in enumerate(self.scene["frames"]):
+            visible = idx == current if mode == "4D current frame" else idx <= current
+            if not visible:
+                continue
+            if depth_source in {"raw_depth", "both"}:
+                clouds.append((idx, "raw", self._raw_display_points(frame)))
+            if not tracking_only and depth_source in {"hsi_depth", "both"}:
+                if self.hsi_calibration_active and idx == current:
+                    points = self._scaled_hsi_points(frame, include_humans=True)
+                    source = "hsi calibration"
+                else:
+                    points = self._scaled_hsi_points(frame)
+                    source = "hsi"
+                clouds.append((idx, source, points))
+        return clouds
+
+    def _on_scene_measurement_click(self, event: Any) -> None:
+        if not bool(getattr(self.measurement_enabled, "value", False)):
+            return
+        clouds = self._visible_measurement_clouds()
+        if not clouds:
+            set_text_value(self.measurement_info, "No visible point cloud | set Environment Display to points or both")
+            return
+        best: tuple[float, int, np.ndarray, int, str] | None = None
+        for frame_index, source, points in clouds:
+            selection = nearest_clicked_point_with_distance(event, points)
+            if selection is None:
+                continue
+            point_index, point, ray_distance = selection
+            if best is None or ray_distance < best[0]:
+                best = (ray_distance, point_index, point, frame_index, source)
+        if best is None:
+            set_text_value(self.measurement_info, "Selection failed | click in front of the camera")
+            return
+        ray_distance, point_index, point, frame_index, source = best
+        pick_radius = max(0.0, float(self.measurement_pick_radius.value))
+        if ray_distance > pick_radius:
+            set_text_value(
+                self.measurement_info,
+                (
+                    f"No point within pick radius | nearest={ray_distance:.4f}, "
+                    f"radius={pick_radius:.4f}; increase Measurement Pick Radius"
+                ),
+            )
+            return
+        self._record_measurement_point(point_index, point, frame_index, source)
+
+    def _record_measurement_point(
         self,
-        event: Any,
-        points: np.ndarray,
+        point_index: int,
+        point: np.ndarray,
         frame_index: int,
         source: str,
     ) -> None:
-        if not bool(getattr(self.measurement_enabled, "value", False)):
-            return
-        selection = nearest_clicked_point(event, points)
-        if selection is None:
-            set_text_value(self.measurement_info, "Selection failed | click directly on a visible point")
-            return
         if len(self.measurement_points) >= 2:
             self._clear_current_measurement(status=None)
-        point_index, point = selection
         point = np.asarray(point, dtype=np.float32).reshape(3)
         point_number = len(self.measurement_points) + 1
         self.measurement_points.append(point)
@@ -2491,14 +2568,10 @@ def add_point_cloud(server: Any, name: str, points: np.ndarray, colors: np.ndarr
         return api.add_point_cloud(name, points, colors, point_size=point_size)
 
 
-def nearest_clicked_point(event: Any, points: np.ndarray) -> tuple[int, np.ndarray] | None:
+def nearest_clicked_point_with_distance(event: Any, points: np.ndarray) -> tuple[int, np.ndarray, float] | None:
     points_np = np.asarray(points, dtype=np.float32).reshape(-1, 3)
     if points_np.shape[0] == 0:
         return None
-    for attribute in ("point_index", "instance_index"):
-        index = getattr(event, attribute, None)
-        if index is not None and 0 <= int(index) < points_np.shape[0]:
-            return int(index), points_np[int(index)].copy()
     ray_origin_value = getattr(event, "ray_origin", None)
     ray_direction_value = getattr(event, "ray_direction", None)
     if ray_origin_value is None or ray_direction_value is None:
@@ -2528,8 +2601,9 @@ def nearest_clicked_point(event: Any, points: np.ndarray) -> tuple[int, np.ndarr
         np.einsum("ij,ij->i", candidate_offsets, candidate_offsets) - candidate_along * candidate_along,
         0.0,
     )
-    selected = int(candidate_indices[int(np.argmin(distance_sq))])
-    return selected, points_np[selected].copy()
+    local_index = int(np.argmin(distance_sq))
+    selected = int(candidate_indices[local_index])
+    return selected, points_np[selected].copy(), float(np.sqrt(distance_sq[local_index]))
 
 
 def add_line_segments(
