@@ -115,10 +115,10 @@ The initial multiplier can be set from the shell with
 
 Open `Point Cloud Measurement` and enable `Enable Point Measurement`. Playback
 pauses so that the displayed cloud stays stable while selecting points. Click
-two visible raw or HSI environment points. The viewer marks them as `P1` and
-`P2`, draws a line between them, and displays the numeric distance both at the
-line midpoint and in `Measurement Result`. The GUI result also identifies each
-source frame, point index, and world coordinate.
+two visible raw or HSI environment points. The viewer marks both endpoints
+without text labels, draws a line between them, and displays only an `x.xxm`
+distance label at the line midpoint. The value is also shown in `Measurement
+Result`, together with each source frame, point index, and world coordinate.
 
 Point selection uses Viser's scene-level click ray because Viser `0.2.x` point
 cloud handles do not expose node click callbacks. `Measurement Pick Radius`
@@ -126,8 +126,14 @@ sets the maximum world-space distance between that ray and the selected point.
 Increase it when a sparse cloud is difficult to click; the status reports the
 nearest distance when a click falls outside the current radius.
 
-Distances use the coordinates currently displayed by the viewer and are labeled
-as `world units`. This includes the current HSI visual scale multiplier. A third
+`Measurement Line Width` changes the line thickness, `Distance Font Size`
+changes the colored distance label size, and `Measurement Color` controls both
+the line and label background. These style controls update the current
+measurement immediately. The image-based label follows the active viewer camera
+so that its colored text remains readable while orbiting the scene.
+
+Distances use the coordinates currently displayed by the viewer and are shown
+in meters. This includes the current HSI visual scale multiplier. A third
 point click clears the previous measurement and starts a new one. `Clear Current
 Measurement` removes the endpoints, labels, line, and value. Changing point
 filtering, point sampling, or HSI visual scale also clears the current result so

@@ -21,7 +21,7 @@ from typing import Any
 import numpy as np
 import torch
 import torch.nn.functional as F
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -1196,6 +1196,8 @@ class SequenceViewer:
         self.measurement_sources: list[str] = []
         self.measurement_handles: list[Any] = []
         self.measurement_pointer_active = False
+        self.measurement_label_handle = None
+        self.measurement_label_wxyz = np.asarray([1.0, 0.0, 0.0, 0.0], dtype=np.float32)
         self.human_entries: list[dict[str, Any]] = []
         self.human_entry_by_key: dict[str, dict[str, Any]] = {}
         self.selected_human_key = "none"
@@ -1402,6 +1404,9 @@ class SequenceViewer:
                 0.005,
                 max(0.05, min(0.5, self.point_size_value * 8.0)),
             )
+            self.measurement_line_width = add_slider(self.server, "Measurement Line Width", 1.0, 10.0, 0.5, 3.0)
+            self.measurement_font_size = add_slider(self.server, "Distance Font Size", 16, 64, 2, 32)
+            self.measurement_color = add_rgb(self.server, "Measurement Color", (255, 64, 96))
             self.measurement_info = add_text(self.server, "Measurement Result", "Off")
             set_handle_disabled(self.measurement_info, True)
             self.clear_measurement = add_button(self.server, "Clear Current Measurement")
@@ -1489,6 +1494,9 @@ class SequenceViewer:
         bind_update(self.filter_human_points, self._on_filter_human_points_update)
         bind_update(self.human_filter_dilation, self._on_human_filter_dilation_pending)
         bind_update(self.measurement_enabled, self._on_measurement_enabled_update)
+        bind_update(self.measurement_line_width, self._on_measurement_style_update)
+        bind_update(self.measurement_font_size, self._on_measurement_style_update)
+        bind_update(self.measurement_color, self._on_measurement_style_update)
         bind_update(self.camera_size, self._on_camera_size_update)
         bind_update(self.smpl_opacity, self._on_smpl_opacity_update)
         bind_update(self.selected_smpl, self._on_selected_smpl_update)
@@ -1513,6 +1521,22 @@ class SequenceViewer:
             @self.server.on_client_connect
             def _on_connect(client: Any) -> None:
                 self.clients[int(getattr(client, "client_id", len(self.clients)))] = client
+                self._register_measurement_camera_updates(client)
+
+    def _register_measurement_camera_updates(self, client: Any) -> None:
+        camera = getattr(client, "camera", None)
+        if camera is None or not hasattr(camera, "on_update"):
+            return
+
+        @camera.on_update
+        def _(_: Any) -> None:
+            if self.measurement_label_handle is None:
+                return
+            try:
+                self.measurement_label_wxyz = np.asarray(camera.wxyz, dtype=np.float32).reshape(4)
+                set_handle_wxyz(self.measurement_label_handle, self.measurement_label_wxyz)
+            except Exception:
+                pass
 
     def _add_environment_point_cloud(
         self,
@@ -1618,6 +1642,12 @@ class SequenceViewer:
                 ),
             )
             return
+        client = getattr(event, "client", None)
+        if client is not None:
+            try:
+                self.measurement_label_wxyz = np.asarray(client.camera.wxyz, dtype=np.float32).reshape(4)
+            except Exception:
+                pass
         self._record_measurement_point(point_index, point, frame_index, source)
 
     def _record_measurement_point(
@@ -1630,48 +1660,65 @@ class SequenceViewer:
         if len(self.measurement_points) >= 2:
             self._clear_current_measurement(status=None)
         point = np.asarray(point, dtype=np.float32).reshape(3)
-        point_number = len(self.measurement_points) + 1
         self.measurement_points.append(point)
         self.measurement_sources.append(f"{source} frame {int(frame_index) + 1} point {point_index}")
-        marker_color = (0, 220, 255) if point_number == 1 else (255, 210, 0)
-        marker = add_point_cloud(
-            self.server,
-            f"/measurements/current/p{point_number}_marker",
-            point[None, :],
-            np.asarray([marker_color], dtype=np.uint8),
-            max(self.point_size_value * 4.0, 0.025),
-        )
-        label = add_label(
-            self.server,
-            f"/measurements/current/p{point_number}_label",
-            f"P{point_number}",
-            point,
-        )
-        self.measurement_handles.extend([marker, label])
+        self._render_measurement_geometry()
         if len(self.measurement_points) == 1:
             set_text_value(
                 self.measurement_info,
                 f"P1 {self.measurement_sources[0]} | click the second environment point",
             )
             return
+        self._update_measurement_result_text()
+
+    def _on_measurement_style_update(self, _: Any = None) -> None:
+        if self.measurement_points:
+            self._render_measurement_geometry()
+
+    def _render_measurement_geometry(self) -> None:
+        for handle in self.measurement_handles:
+            remove_handle(handle)
+        self.measurement_handles = []
+        self.measurement_label_handle = None
+        for index, point in enumerate(self.measurement_points):
+            marker_color = (0, 220, 255) if index == 0 else (255, 210, 0)
+            self.measurement_handles.append(
+                add_point_cloud(
+                    self.server,
+                    f"/measurements/current/p{index + 1}_marker",
+                    np.asarray(point, dtype=np.float32).reshape(1, 3),
+                    np.asarray([marker_color], dtype=np.uint8),
+                    max(self.point_size_value * 4.0, 0.025),
+                )
+            )
+        if len(self.measurement_points) != 2:
+            return
         first, second = self.measurement_points
         distance = float(np.linalg.norm(second - first))
         midpoint = (first + second) * np.float32(0.5)
+        color = tuple(int(value) for value in self.measurement_color.value)
         line = add_line_segments(
             self.server,
             "/measurements/current/distance_line",
             np.stack([first, second], axis=0)[None, ...],
-            color=(255, 64, 96),
-            line_width=3.0,
+            color=color,
+            line_width=float(self.measurement_line_width.value),
         )
-        distance_label = add_label(
+        label_image = render_measurement_label_image(
+            f"{distance:.2f}m",
+            font_size=int(self.measurement_font_size.value),
+            color=color,
+        )
+        label_height = max(0.025, float(self.measurement_font_size.value) * 0.002)
+        self.measurement_label_handle = add_image(
             self.server,
             "/measurements/current/distance_label",
-            f"Distance: {distance:.4f} world units",
-            midpoint,
+            label_image,
+            position=midpoint,
+            wxyz=self.measurement_label_wxyz,
+            render_height=label_height,
         )
-        self.measurement_handles.extend([line, distance_label])
-        self._update_measurement_result_text()
+        self.measurement_handles.extend([line, self.measurement_label_handle])
 
     def _update_measurement_result_text(self) -> None:
         if len(self.measurement_points) != 2:
@@ -1681,7 +1728,7 @@ class SequenceViewer:
         set_text_value(
             self.measurement_info,
             (
-                f"Distance={distance:.6f} world units | "
+                f"Distance={distance:.2f}m | "
                 f"P1: {self.measurement_sources[0]} "
                 f"({first[0]:.3f}, {first[1]:.3f}, {first[2]:.3f}) | "
                 f"P2: {self.measurement_sources[1]} "
@@ -1693,6 +1740,7 @@ class SequenceViewer:
         for handle in self.measurement_handles:
             remove_handle(handle)
         self.measurement_handles = []
+        self.measurement_label_handle = None
         self.measurement_points = []
         self.measurement_sources = []
         if status is None:
@@ -2568,6 +2616,79 @@ def add_point_cloud(server: Any, name: str, points: np.ndarray, colors: np.ndarr
         return api.add_point_cloud(name, points, colors, point_size=point_size)
 
 
+def add_image(
+    server: Any,
+    name: str,
+    image: np.ndarray,
+    position: np.ndarray,
+    wxyz: np.ndarray,
+    render_height: float,
+) -> Any:
+    api = scene_api(server)
+    image_np = np.asarray(image, dtype=np.uint8)
+    aspect = float(image_np.shape[1]) / float(max(image_np.shape[0], 1))
+    kwargs = {
+        "image": image_np,
+        "render_width": float(render_height) * aspect,
+        "render_height": float(render_height),
+        "format": "png",
+        "wxyz": np.asarray(wxyz, dtype=np.float32).reshape(4),
+        "position": np.asarray(position, dtype=np.float32).reshape(3),
+    }
+    try:
+        return api.add_image(name=name, **kwargs)
+    except TypeError:
+        return api.add_image(name, **kwargs)
+
+
+def render_measurement_label_image(
+    text: str,
+    font_size: int,
+    color: tuple[int, int, int],
+) -> np.ndarray:
+    font = load_measurement_font(font_size)
+    probe = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
+    probe_draw = ImageDraw.Draw(probe)
+    bbox = probe_draw.textbbox((0, 0), text, font=font, stroke_width=1)
+    padding_x = max(8, int(font_size * 0.35))
+    padding_y = max(5, int(font_size * 0.22))
+    width = max(1, int(bbox[2] - bbox[0]) + 2 * padding_x)
+    height = max(1, int(bbox[3] - bbox[1]) + 2 * padding_y)
+    image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    rgb = tuple(int(np.clip(value, 0, 255)) for value in color)
+    radius = max(3, int(font_size * 0.18))
+    draw.rounded_rectangle((0, 0, width - 1, height - 1), radius=radius, fill=rgb + (225,))
+    draw.text(
+        (padding_x - bbox[0], padding_y - bbox[1]),
+        text,
+        font=font,
+        fill=(255, 255, 255, 255),
+        stroke_width=1,
+        stroke_fill=(0, 0, 0, 180),
+    )
+    return np.asarray(image, dtype=np.uint8)
+
+
+def load_measurement_font(font_size: int) -> Any:
+    size = max(8, int(font_size))
+    candidates = (
+        "DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
+        "C:/Windows/Fonts/arialbd.ttf",
+    )
+    for candidate in candidates:
+        try:
+            return ImageFont.truetype(candidate, size=size)
+        except OSError:
+            continue
+    try:
+        return ImageFont.load_default(size=size)
+    except TypeError:
+        return ImageFont.load_default()
+
+
 def nearest_clicked_point_with_distance(event: Any, points: np.ndarray) -> tuple[int, np.ndarray, float] | None:
     points_np = np.asarray(points, dtype=np.float32).reshape(-1, 3)
     if points_np.shape[0] == 0:
@@ -2927,6 +3048,13 @@ def add_slider(server: Any, name: str, min_value: float, max_value: float, step:
         return server.add_gui_slider(name, min=min_value, max=max_value, step=step, initial_value=initial)
 
 
+def add_rgb(server: Any, name: str, initial: tuple[int, int, int]) -> Any:
+    api = gui_api(server)
+    if hasattr(api, "add_rgb"):
+        return api.add_rgb(name, initial_value=initial)
+    return server.add_gui_rgb(name, initial)
+
+
 def add_folder(server: Any, name: str) -> Any:
     api = gui_api(server)
     if hasattr(api, "add_folder"):
@@ -3013,6 +3141,15 @@ def set_handle_position(handle: Any, position: np.ndarray) -> None:
     position_np = np.asarray(position, dtype=np.float32).reshape(3)
     try:
         handle.position = position_np
+    except Exception:
+        pass
+
+
+def set_handle_wxyz(handle: Any, wxyz: np.ndarray) -> None:
+    if handle is None:
+        return
+    try:
+        handle.wxyz = np.asarray(wxyz, dtype=np.float32).reshape(4)
     except Exception:
         pass
 
