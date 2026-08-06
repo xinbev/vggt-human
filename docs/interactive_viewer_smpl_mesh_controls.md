@@ -128,9 +128,9 @@ nearest distance when a click falls outside the current radius.
 
 `Measurement Line Width` changes the line thickness, `Distance Font Size`
 changes the colored distance label size, and `Measurement Color` controls both
-the line and label background. These style controls update the current
-measurement immediately. The image-based label follows the active viewer camera
-so that its colored text remains readable while orbiting the scene.
+the line and label. These style controls update the current measurement
+immediately. The label uses pure Viser line-segment glyphs rather than image
+encoding, and follows the active viewer camera while orbiting the scene.
 
 Distances use the coordinates currently displayed by the viewer and are shown
 in meters. This includes the current HSI visual scale multiplier. A third

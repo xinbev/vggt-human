@@ -21,7 +21,7 @@ from typing import Any
 import numpy as np
 import torch
 import torch.nn.functional as F
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -138,7 +138,9 @@ def main() -> None:
         return
 
     server = viser.ViserServer(port=int(args.port))
-    if hasattr(server, "set_up_direction"):
+    if hasattr(server, "scene") and hasattr(server.scene, "set_up_direction"):
+        server.scene.set_up_direction("-y")
+    elif hasattr(server, "set_up_direction"):
         server.set_up_direction("-y")
     viewer = SequenceViewer(server=server, transforms=vtf, scene=scene, args=args)
     viewer.run()
@@ -1196,6 +1198,8 @@ class SequenceViewer:
         self.measurement_sources: list[str] = []
         self.measurement_handles: list[Any] = []
         self.measurement_pointer_active = False
+        self.measurement_pointer_api_mode = "none"
+        self.measurement_click_callback = None
         self.measurement_label_handle = None
         self.measurement_label_wxyz = np.asarray([1.0, 0.0, 0.0, 0.0], dtype=np.float32)
         self.human_entries: list[dict[str, Any]] = []
@@ -1576,17 +1580,28 @@ class SequenceViewer:
         if active:
             if self.measurement_pointer_active:
                 return True
-            if not hasattr(api, "on_pointer_event"):
+            callback = self._on_scene_measurement_click
+            if hasattr(api, "on_click"):
+                self.measurement_click_callback = api.on_click()(callback)
+                self.measurement_pointer_api_mode = "modern"
+            elif hasattr(api, "on_pointer_event"):
+                self.measurement_click_callback = api.on_pointer_event("click")(callback)
+                self.measurement_pointer_api_mode = "legacy"
+            else:
                 return False
-            api.on_pointer_event("click")(self._on_scene_measurement_click)
             self.measurement_pointer_active = True
             return True
-        if self.measurement_pointer_active and hasattr(api, "remove_pointer_callback"):
+        if self.measurement_pointer_active:
             try:
-                api.remove_pointer_callback()
+                if self.measurement_pointer_api_mode == "modern" and hasattr(api, "remove_click_callback"):
+                    api.remove_click_callback(self.measurement_click_callback)
+                elif hasattr(api, "remove_pointer_callback"):
+                    api.remove_pointer_callback()
             except Exception:
                 pass
         self.measurement_pointer_active = False
+        self.measurement_pointer_api_mode = "none"
+        self.measurement_click_callback = None
         return True
 
     def _visible_measurement_clouds(self) -> list[tuple[int, str, np.ndarray]]:
@@ -1704,19 +1719,18 @@ class SequenceViewer:
             color=color,
             line_width=float(self.measurement_line_width.value),
         )
-        label_image = render_measurement_label_image(
+        label_segments = build_measurement_text_segments(
             f"{distance:.2f}m",
-            font_size=int(self.measurement_font_size.value),
-            color=color,
+            height=max(0.025, float(self.measurement_font_size.value) * 0.002),
         )
-        label_height = max(0.025, float(self.measurement_font_size.value) * 0.002)
-        self.measurement_label_handle = add_image(
+        self.measurement_label_handle = add_line_segments(
             self.server,
             "/measurements/current/distance_label",
-            label_image,
+            label_segments,
+            color=color,
+            line_width=max(1.5, float(self.measurement_font_size.value) * 0.09),
             position=midpoint,
             wxyz=self.measurement_label_wxyz,
-            render_height=label_height,
         )
         self.measurement_handles.extend([line, self.measurement_label_handle])
 
@@ -2616,77 +2630,66 @@ def add_point_cloud(server: Any, name: str, points: np.ndarray, colors: np.ndarr
         return api.add_point_cloud(name, points, colors, point_size=point_size)
 
 
-def add_image(
-    server: Any,
-    name: str,
-    image: np.ndarray,
-    position: np.ndarray,
-    wxyz: np.ndarray,
-    render_height: float,
-) -> Any:
-    api = scene_api(server)
-    image_np = np.asarray(image, dtype=np.uint8)
-    aspect = float(image_np.shape[1]) / float(max(image_np.shape[0], 1))
-    kwargs = {
-        "image": image_np,
-        "render_width": float(render_height) * aspect,
-        "render_height": float(render_height),
-        "format": "png",
-        "wxyz": np.asarray(wxyz, dtype=np.float32).reshape(4),
-        "position": np.asarray(position, dtype=np.float32).reshape(3),
+def build_measurement_text_segments(text: str, height: float) -> np.ndarray:
+    strokes = {
+        "a": ((0.0, 1.0), (0.6, 1.0)),
+        "b": ((0.6, 1.0), (0.6, 0.5)),
+        "c": ((0.6, 0.5), (0.6, 0.0)),
+        "d": ((0.0, 0.0), (0.6, 0.0)),
+        "e": ((0.0, 0.0), (0.0, 0.5)),
+        "f": ((0.0, 0.5), (0.0, 1.0)),
+        "g": ((0.0, 0.5), (0.6, 0.5)),
     }
-    try:
-        return api.add_image(name=name, **kwargs)
-    except TypeError:
-        return api.add_image(name, **kwargs)
-
-
-def render_measurement_label_image(
-    text: str,
-    font_size: int,
-    color: tuple[int, int, int],
-) -> np.ndarray:
-    font = load_measurement_font(font_size)
-    probe = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
-    probe_draw = ImageDraw.Draw(probe)
-    bbox = probe_draw.textbbox((0, 0), text, font=font, stroke_width=1)
-    padding_x = max(8, int(font_size * 0.35))
-    padding_y = max(5, int(font_size * 0.22))
-    width = max(1, int(bbox[2] - bbox[0]) + 2 * padding_x)
-    height = max(1, int(bbox[3] - bbox[1]) + 2 * padding_y)
-    image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(image)
-    rgb = tuple(int(np.clip(value, 0, 255)) for value in color)
-    radius = max(3, int(font_size * 0.18))
-    draw.rounded_rectangle((0, 0, width - 1, height - 1), radius=radius, fill=rgb + (225,))
-    draw.text(
-        (padding_x - bbox[0], padding_y - bbox[1]),
-        text,
-        font=font,
-        fill=(255, 255, 255, 255),
-        stroke_width=1,
-        stroke_fill=(0, 0, 0, 180),
+    digit_strokes = {
+        "0": "abcedf",
+        "1": "bc",
+        "2": "abged",
+        "3": "abgcd",
+        "4": "fgbc",
+        "5": "afgcd",
+        "6": "afgecd",
+        "7": "abc",
+        "8": "abcedfg",
+        "9": "abfgcd",
+    }
+    glyphs: list[tuple[tuple[float, float], tuple[float, float]]] = []
+    cursor = 0.0
+    for character in text:
+        if character in digit_strokes:
+            glyphs.extend(
+                (
+                    (cursor + strokes[key][0][0], strokes[key][0][1]),
+                    (cursor + strokes[key][1][0], strokes[key][1][1]),
+                )
+                for key in digit_strokes[character]
+            )
+            cursor += 0.78
+        elif character == ".":
+            glyphs.append(((cursor + 0.08, 0.0), (cursor + 0.08, 0.08)))
+            cursor += 0.28
+        elif character == "m":
+            glyphs.extend(
+                [
+                    ((cursor, 0.0), (cursor, 0.65)),
+                    ((cursor, 0.65), (cursor + 0.22, 0.42)),
+                    ((cursor + 0.22, 0.42), (cursor + 0.44, 0.65)),
+                    ((cursor + 0.44, 0.65), (cursor + 0.44, 0.0)),
+                ]
+            )
+            cursor += 0.62
+        else:
+            cursor += 0.4
+    if not glyphs:
+        return np.empty((0, 2, 3), dtype=np.float32)
+    segments = np.asarray(
+        [[[start[0], start[1], 0.0], [end[0], end[1], 0.0]] for start, end in glyphs],
+        dtype=np.float32,
     )
-    return np.asarray(image, dtype=np.uint8)
-
-
-def load_measurement_font(font_size: int) -> Any:
-    size = max(8, int(font_size))
-    candidates = (
-        "DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
-        "C:/Windows/Fonts/arialbd.ttf",
-    )
-    for candidate in candidates:
-        try:
-            return ImageFont.truetype(candidate, size=size)
-        except OSError:
-            continue
-    try:
-        return ImageFont.load_default(size=size)
-    except TypeError:
-        return ImageFont.load_default()
+    min_xy = segments[..., :2].min(axis=(0, 1))
+    max_xy = segments[..., :2].max(axis=(0, 1))
+    segments[..., :2] -= ((min_xy + max_xy) * np.float32(0.5))[None, None, :]
+    segments *= np.float32(max(float(height), 1e-4))
+    return segments
 
 
 def nearest_clicked_point_with_distance(event: Any, points: np.ndarray) -> tuple[int, np.ndarray, float] | None:
@@ -2733,10 +2736,17 @@ def add_line_segments(
     points: np.ndarray,
     color: tuple[int, int, int],
     line_width: float,
+    position: np.ndarray | None = None,
+    wxyz: np.ndarray | None = None,
 ) -> Any:
     api = scene_api(server)
     points_np = np.asarray(points, dtype=np.float32).reshape(-1, 2, 3)
     color_int = tuple(int(np.clip(value, 0, 255)) for value in color)
+    transform_kwargs: dict[str, Any] = {}
+    if position is not None:
+        transform_kwargs["position"] = np.asarray(position, dtype=np.float32).reshape(3)
+    if wxyz is not None:
+        transform_kwargs["wxyz"] = np.asarray(wxyz, dtype=np.float32).reshape(4)
     if hasattr(api, "add_line_segments"):
         try:
             return api.add_line_segments(
@@ -2744,9 +2754,16 @@ def add_line_segments(
                 points=points_np,
                 colors=color_int,
                 line_width=float(line_width),
+                **transform_kwargs,
             )
         except TypeError:
-            return api.add_line_segments(name, points_np, color_int, line_width=float(line_width))
+            return api.add_line_segments(
+                name,
+                points_np,
+                color_int,
+                line_width=float(line_width),
+                **transform_kwargs,
+            )
     start, end = points_np[0]
     line_points = np.linspace(start, end, 64, dtype=np.float32)
     line_colors = np.repeat(np.asarray(color_int, dtype=np.uint8)[None, :], line_points.shape[0], axis=0)
