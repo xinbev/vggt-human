@@ -123,6 +123,13 @@ conversion in the YOLO+SAM2 prior path. Model checkpoints and inference logic
 are unchanged. The selected backend is recorded as `image_backend` in
 `manifest.json`.
 
+The exporter restores model-construction settings saved inside the selected
+training checkpoint before building `VGGTOmega`. For older Stage2 checkpoints
+that predate `model.hsi_align_feature_version`, it infers the compatible schema
+from `hsi_human_scene_align_head.mlp.0.weight`: 23 inputs map to
+`legacy_mean_v1`, 25 to `legacy_scale_bias_v0`, and 35 to `robust_basis_v2`.
+It does not discard size-mismatched weights.
+
 Depth sample fallback:
 
 ```bash

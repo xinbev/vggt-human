@@ -147,6 +147,7 @@ def main() -> None:
 
     config = load_config(args)
     checkpoint = resolve_checkpoint(args, config)
+    config = restore_checkpoint_model_config(config, checkpoint, args.override)
     image_path = resolve_project_path(args.image)
     _, input_size = resolve_image_size_config(config.get("data", {}), args.image_size)
     patch_size = int(config.get("model", {}).get("patch_size", 16))
@@ -284,6 +285,66 @@ def resolve_checkpoint(args: argparse.Namespace, config: dict[str, Any]) -> Path
     if not raw:
         raise ValueError("No checkpoint provided and checkpoint.resume is empty in train config.")
     return resolve_project_path(raw)
+
+
+def restore_checkpoint_model_config(
+    config: dict[str, Any],
+    checkpoint_path: Path,
+    explicit_overrides: list[str] | None = None,
+) -> dict[str, Any]:
+    """Restore model construction settings saved with a training checkpoint.
+
+    Older Stage2 checkpoints predate the explicit HSI align feature-version
+    field.  Infer that schema from the saved MLP input width so the full head is
+    loaded instead of silently dropping a size-mismatched layer.
+    """
+    if not checkpoint_path.is_file():
+        return config
+    checkpoint = torch.load(checkpoint_path, map_location="cpu")
+    checkpoint_config = checkpoint.get("config") if isinstance(checkpoint, dict) else None
+    saved_model = checkpoint_config.get("model") if isinstance(checkpoint_config, dict) else None
+    restored = dict(config)
+    if isinstance(saved_model, dict):
+        restored["model"] = deep_update(dict(config.get("model", {})), saved_model)
+        print(f"[ckpt-config] restored {len(saved_model)} model settings from {checkpoint_path}")
+
+    state_dict = extract_state_dict(checkpoint)
+    align_weight = state_dict.get("hsi_human_scene_align_head.mlp.0.weight")
+    if isinstance(align_weight, torch.Tensor) and align_weight.ndim == 2:
+        input_dim = int(align_weight.shape[1])
+        version_by_dim = {
+            23: "legacy_mean_v1",
+            25: "legacy_scale_bias_v0",
+            35: "robust_basis_v2",
+        }
+        inferred_version = version_by_dim.get(input_dim)
+        model_cfg = restored.setdefault("model", {})
+        saved_version = model_cfg.get("hsi_align_feature_version")
+        if saved_version is None and inferred_version is not None:
+            model_cfg["hsi_align_feature_version"] = inferred_version
+            print(f"[ckpt-config] inferred hsi_align_feature_version={inferred_version} from input_dim={input_dim}")
+
+    if explicit_overrides:
+        restored = apply_overrides(restored, explicit_overrides)
+
+    model_cfg = restored.setdefault("model", {})
+    configured_version = str(model_cfg.get("hsi_align_feature_version", "legacy_mean_v1"))
+    expected_dim_by_version = {
+        "legacy_mean_v1": 23,
+        "legacy_scale_bias_v0": 25,
+        "robust_basis_v2": 35,
+    }
+    if isinstance(align_weight, torch.Tensor) and align_weight.ndim == 2:
+        checkpoint_dim = int(align_weight.shape[1])
+        expected_dim = expected_dim_by_version.get(configured_version)
+        if expected_dim is not None and expected_dim != checkpoint_dim:
+            raise ValueError(
+                "Checkpoint/config HSI align feature mismatch: "
+                f"checkpoint input_dim={checkpoint_dim}, configured "
+                f"hsi_align_feature_version={configured_version!r} expects {expected_dim}."
+            )
+    del checkpoint
+    return restored
 
 
 def load_vggt_baseline_for_camera(model: torch.nn.Module, config: dict[str, Any], device: torch.device) -> None:

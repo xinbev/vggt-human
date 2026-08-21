@@ -89,6 +89,12 @@ bash scripts/vis/create_hsi_local_probe_real_elements.sh
 The fallback uses Pillow/NumPy only for reading, resizing, and BGR/RGB channel
 conversion. It does not change VGGT, SMPL, YOLO, SAM2, or HSI model behavior.
 
+Before model construction, the script restores the model settings stored in
+the training checkpoint. Legacy HSI human-scene alignment checkpoints without
+an explicit feature-version field are matched from their first MLP input width,
+so the 25-dimensional scale/bias-era head is loaded faithfully rather than
+partially skipped.
+
 Useful overrides:
 
 ```bash

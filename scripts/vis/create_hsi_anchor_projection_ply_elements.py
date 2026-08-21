@@ -28,6 +28,7 @@ from scripts.vis.create_hsi_local_probe_real_elements import (  # noqa: E402
     load_vggt_baseline_for_camera,
     resolve_checkpoint,
     resolve_project_path,
+    restore_checkpoint_model_config,
     unproject_one,
 )
 from scripts.vis.create_hsi_paper_ply_elements import (  # noqa: E402
@@ -124,6 +125,7 @@ def main() -> None:
 
     config = load_config(args)
     checkpoint = resolve_checkpoint(args, config)
+    config = restore_checkpoint_model_config(config, checkpoint, args.override)
     image_path = resolve_project_path(args.image)
     input_size = int(config.get("data", {}).get("image_resolution", config.get("data", {}).get("image_size", args.image_size)))
     patch_size = int(config.get("model", {}).get("patch_size", 16))
