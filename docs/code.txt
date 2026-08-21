@@ -350,3 +350,86 @@ CUDA_VISIBLE_DEVICES_VALUE=7 \
 PORT=8080 \
 MAX_FRAMES=0 \
 bash scripts/vis/serve_stage2_human_scene_align_walking_id_overlay.sh
+
+
+
+================================
+#单帧测量demo——坐姿
+cd /home/zhw/lab_users/xyb/home/projects/vggt-human
+
+INPUT_DIR=outputs/vis/measure_woman_BasementSittingBooth_1112/input
+mkdir -p "${INPUT_DIR}"
+ln -sfn \
+  /home/zhw/lab_users/xyb/home/projects/vggt-human/assets/demo/measure/woman_BasementSittingBooth_1112.jpg \
+  "${INPUT_DIR}/woman_BasementSittingBooth_1112.jpg"
+
+SHOW_TRACK_IDS=false \
+FILTER_HUMAN_POINTS=false \
+FRAMES_DIR="${INPUT_DIR}" \
+STAGE2_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full \
+CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt \
+OUTPUT_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/measure_woman_BasementSittingBooth_1112 \
+CUDA_VISIBLE_DEVICES_VALUE=7 \
+PORT=8080 \
+MAX_FRAMES=1 \
+VIEWER_MODE=4d \
+ENVIRONMENT_DISPLAY=points \
+bash scripts/vis/serve_stage2_human_scene_align_walking_id_overlay.sh
+
+
+#单帧测量demo——女人——站姿
+cd /home/zhw/lab_users/xyb/home/projects/vggt-human
+
+INPUT_DIR=outputs/vis/measure_woman_n3library_20/input
+mkdir -p "${INPUT_DIR}"
+ln -sfn \
+  /home/zhw/lab_users/xyb/home/projects/vggt-human/assets/demo/measure/woman_n3library_20.jpg \
+  "${INPUT_DIR}/woman_n3library_20.jpg"
+
+SHOW_TRACK_IDS=false \
+FILTER_HUMAN_POINTS=false \
+FRAMES_DIR="${INPUT_DIR}" \
+STAGE2_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full \
+CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt \
+OUTPUT_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/measure_woman_n3library_20 \
+CUDA_VISIBLE_DEVICES_VALUE=7 \
+PORT=8080 \
+MAX_FRAMES=1 \
+VIEWER_MODE=4d \
+ENVIRONMENT_DISPLAY=points \
+bash scripts/vis/serve_stage2_human_scene_align_walking_id_overlay.sh
+
+
+===============================================接触demo
+#坐姿
+cd /home/zhw/lab_users/xyb/home/projects/vggt-human
+
+SINGLE_FRAME_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/emdb_p9_76_frame_00600/input
+mkdir -p "${SINGLE_FRAME_DIR}"
+ln -sfn /home/zhw/xyb_space/emdb/P9/76_outdoor_sitting/images/00600.jpg "${SINGLE_FRAME_DIR}/00600.jpg"
+
+SHOW_TRACK_IDS=false \
+FRAMES_DIR="${SINGLE_FRAME_DIR}" \
+STAGE2_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full \
+CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt \
+OUTPUT_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/emdb_p9_76_frame_00600 \
+CUDA_VISIBLE_DEVICES_VALUE=7 \
+PORT=8080 \
+MAX_FRAMES=1 \
+VIEWER_MODE=4d \
+bash scripts/vis/serve_stage2_human_scene_align_walking_id_overlay.sh
+
+/home/zhw/lab_users/xyb/home/projects/vggt-human/assets/demo/measure/s001_frame_00650__00.00.21.642.jpg
+
+
+
+cd /home/zhw/lab_users/xyb/home/projects/vggt-human
+
+FRAMES_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/assets/demo/12-HW/woman-1_frames \
+OUTPUT_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/woman-1_viser \
+CUDA_VISIBLE_DEVICES_VALUE=6 \
+MAX_FRAMES=0 \
+PORT=8080 \
+bash scripts/vis/serve_nlf_hsi_vggt_wild_sequence_viewer.sh
+
+FRAMES_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/assets/demo/12-HW/woman-1_frames STAGE2_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt OUTPUT_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/woman-1_viser CUDA_VISIBLE_DEVICES_VALUE=7 PORT=8080 MAX_FRAMES=20 bash scripts/vis/serve_stage2_human_scene_align_walking_id_overlay.sh

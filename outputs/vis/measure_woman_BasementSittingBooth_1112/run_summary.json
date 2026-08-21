@@ -38,7 +38,7 @@
     3404
   ],
   "human_mask_pixels_hsi": [
-    13556
+    13565
   ],
   "human_point_removal": {
     "method": "projected_smpl_triangle_silhouette_dilated_unconditional",
@@ -49,13 +49,13 @@
     1
   ],
   "hsi_scene_scale": [
-    5.160861968994141
+    5.178971290588379
   ],
   "hsi_scene_depth_bias": [
     0.0
   ],
   "hsi_frame_scene_scale": [
-    5.160861968994141
+    5.178971290588379
   ],
   "hsi_frame_scene_depth_bias": [
     0.0
@@ -68,9 +68,9 @@
       "num_cameras": 1,
       "positions_world": [
         [
-          -7.323323370655999e-05,
-          0.00021143522462807596,
-          -0.00021411955822259188
+          -8.903575508156791e-05,
+          0.00021011862554587424,
+          -0.0002031049516517669
         ]
       ],
       "step_distances": [],
@@ -88,9 +88,9 @@
       "num_cameras": 1,
       "positions_world": [
         [
-          -0.00037794664967805147,
-          0.0010911880526691675,
-          -0.0011050414759665728
+          -0.00046111358096823096,
+          0.00108819839078933,
+          -0.0010518747149035335
         ]
       ],
       "step_distances": [],
@@ -110,26 +110,26 @@
     "base_raw": {
       "people": 1,
       "valid_points": 431,
-      "median_abs_m_mean": 1.863694667816162,
-      "median_abs_m_median": 1.863694667816162,
-      "median_signed_m_mean": 1.863694667816162,
-      "median_signed_m_median": 1.863694667816162
+      "median_abs_m_mean": 1.8649232387542725,
+      "median_abs_m_median": 1.8649232387542725,
+      "median_signed_m_mean": 1.8649232387542725,
+      "median_signed_m_median": 1.8649232387542725
     },
     "base_hsi": {
       "people": 1,
       "valid_points": 431,
-      "median_abs_m_mean": 2.019474506378174,
-      "median_abs_m_median": 2.019474506378174,
-      "median_signed_m_mean": -2.019474506378174,
-      "median_signed_m_median": -2.019474506378174
+      "median_abs_m_mean": 2.004499673843384,
+      "median_abs_m_median": 2.004499673843384,
+      "median_signed_m_mean": -2.004499673843384,
+      "median_signed_m_median": -2.004499673843384
     },
     "hsi_hsi": {
       "people": 1,
       "valid_points": 431,
-      "median_abs_m_mean": 2.007948875427246,
-      "median_abs_m_median": 2.007948875427246,
-      "median_signed_m_mean": -2.007948875427246,
-      "median_signed_m_median": -2.007948875427246
+      "median_abs_m_mean": 1.9887640476226807,
+      "median_abs_m_median": 1.9887640476226807,
+      "median_signed_m_mean": -1.9887640476226807,
+      "median_signed_m_median": -1.9887640476226807
     }
   },
   "depth_alignment_by_frame": [
@@ -137,10 +137,10 @@
       "base_raw": [
         {
           "valid_points": 431,
-          "median_signed_m": 1.863694667816162,
-          "median_abs_m": 1.863694667816162,
-          "mean_abs_m": 1.8880302906036377,
-          "p90_abs_m": 2.098986864089966,
+          "median_signed_m": 1.8649232387542725,
+          "median_abs_m": 1.8649232387542725,
+          "mean_abs_m": 1.8896864652633667,
+          "p90_abs_m": 2.1012587547302246,
           "query_index": 0,
           "confidence": 0.89990234375
         }
@@ -148,10 +148,10 @@
       "base_hsi": [
         {
           "valid_points": 431,
-          "median_signed_m": -2.019474506378174,
-          "median_abs_m": 2.019474506378174,
-          "mean_abs_m": 1.9471399784088135,
-          "p90_abs_m": 2.2523951530456543,
+          "median_signed_m": -2.004499673843384,
+          "median_abs_m": 2.004499673843384,
+          "mean_abs_m": 1.9279383420944214,
+          "p90_abs_m": 2.231358766555786,
           "query_index": 0,
           "confidence": 0.89990234375
         }
@@ -159,10 +159,10 @@
       "hsi_hsi": [
         {
           "valid_points": 431,
-          "median_signed_m": -2.007948875427246,
-          "median_abs_m": 2.007948875427246,
-          "mean_abs_m": 1.92768132686615,
-          "p90_abs_m": 2.223980188369751,
+          "median_signed_m": -1.9887640476226807,
+          "median_abs_m": 1.9887640476226807,
+          "mean_abs_m": 1.9083865880966187,
+          "p90_abs_m": 2.204570770263672,
           "query_index": 0,
           "confidence": 0.89990234375
         }

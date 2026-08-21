@@ -29,16 +29,16 @@
     688
   ],
   "point_counts_hsi": [
-    58758
+    58765
   ],
   "point_counts_hsi_full": [
     66048
   ],
   "human_points_removed_hsi": [
-    7290
+    7283
   ],
   "human_mask_pixels_hsi": [
-    29235
+    29216
   ],
   "human_point_removal": {
     "method": "projected_smpl_triangle_silhouette_dilated_unconditional",
@@ -49,13 +49,13 @@
     1
   ],
   "hsi_scene_scale": [
-    6.253083229064941
+    6.254759311676025
   ],
   "hsi_scene_depth_bias": [
     0.0
   ],
   "hsi_frame_scene_scale": [
-    6.253083229064941
+    6.254759311676025
   ],
   "hsi_frame_scene_depth_bias": [
     0.0
@@ -68,9 +68,9 @@
       "num_cameras": 1,
       "positions_world": [
         [
-          1.7528655007481575e-06,
-          8.888605225365609e-05,
-          -0.00029494918999262154
+          -5.418109140009619e-06,
+          8.479014650220051e-05,
+          -0.00029532567714340985
         ]
       ],
       "step_distances": [],
@@ -88,9 +88,9 @@
       "num_cameras": 1,
       "positions_world": [
         [
-          1.0960813597193919e-05,
-          0.0005558119155466557,
-          -0.001844341866672039
+          -3.388896948308684e-05,
+          0.0005303419311530888,
+          -0.0018471908988431096
         ]
       ],
       "step_distances": [],
@@ -110,26 +110,26 @@
     "base_raw": {
       "people": 1,
       "valid_points": 428,
-      "median_abs_m_mean": 1.756386160850525,
-      "median_abs_m_median": 1.756386160850525,
-      "median_signed_m_mean": 1.756386160850525,
-      "median_signed_m_median": 1.756386160850525
+      "median_abs_m_mean": 1.757450819015503,
+      "median_abs_m_median": 1.757450819015503,
+      "median_signed_m_mean": 1.757450819015503,
+      "median_signed_m_median": 1.757450819015503
     },
     "base_hsi": {
       "people": 1,
       "valid_points": 428,
-      "median_abs_m_mean": 1.340599775314331,
-      "median_abs_m_median": 1.340599775314331,
-      "median_signed_m_mean": -1.3415980339050293,
-      "median_signed_m_median": -1.3415980339050293
+      "median_abs_m_mean": 1.3382759094238281,
+      "median_abs_m_median": 1.3382759094238281,
+      "median_signed_m_mean": -1.3387155532836914,
+      "median_signed_m_median": -1.3387155532836914
     },
     "hsi_hsi": {
       "people": 1,
       "valid_points": 428,
-      "median_abs_m_mean": 1.329580307006836,
-      "median_abs_m_median": 1.329580307006836,
-      "median_signed_m_mean": -1.3299031257629395,
-      "median_signed_m_median": -1.3299031257629395
+      "median_abs_m_mean": 1.3265595436096191,
+      "median_abs_m_median": 1.3265595436096191,
+      "median_signed_m_mean": -1.3272995948791504,
+      "median_signed_m_median": -1.3272995948791504
     }
   },
   "depth_alignment_by_frame": [
@@ -137,10 +137,10 @@
       "base_raw": [
         {
           "valid_points": 428,
-          "median_signed_m": 1.756386160850525,
-          "median_abs_m": 1.756386160850525,
-          "mean_abs_m": 1.7473926544189453,
-          "p90_abs_m": 1.8946566581726074,
+          "median_signed_m": 1.757450819015503,
+          "median_abs_m": 1.757450819015503,
+          "mean_abs_m": 1.7488874197006226,
+          "p90_abs_m": 1.8960808515548706,
           "query_index": 0,
           "confidence": 0.9365234375
         }
@@ -148,10 +148,10 @@
       "base_hsi": [
         {
           "valid_points": 428,
-          "median_signed_m": -1.3415980339050293,
-          "median_abs_m": 1.340599775314331,
-          "mean_abs_m": 1.4833935499191284,
-          "p90_abs_m": 1.7364552021026611,
+          "median_signed_m": -1.3387155532836914,
+          "median_abs_m": 1.3382759094238281,
+          "mean_abs_m": 1.479231834411621,
+          "p90_abs_m": 1.7321100234985352,
           "query_index": 0,
           "confidence": 0.9365234375
         }
@@ -159,10 +159,10 @@
       "hsi_hsi": [
         {
           "valid_points": 428,
-          "median_signed_m": -1.3299031257629395,
-          "median_abs_m": 1.329580307006836,
-          "mean_abs_m": 1.4867347478866577,
-          "p90_abs_m": 1.7659279108047485,
+          "median_signed_m": -1.3272995948791504,
+          "median_abs_m": 1.3265595436096191,
+          "mean_abs_m": 1.482904314994812,
+          "p90_abs_m": 1.7625247240066528,
           "query_index": 0,
           "confidence": 0.9365234375
         }

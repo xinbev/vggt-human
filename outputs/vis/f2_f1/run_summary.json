@@ -1,0 +1,202 @@
+{
+  "frames_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/f2_f1/input",
+  "num_frames": 1,
+  "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt",
+  "query_source": "nlf_detector",
+  "tracking_overlay": "base_smpl",
+  "tracking": {
+    "active": true,
+    "unique_track_ids": [
+      0,
+      1
+    ],
+    "track_ids_by_frame": [
+      [
+        0,
+        1
+      ]
+    ],
+    "mean_track_quality": 0.916748046875
+  },
+  "tracking_geometry_unchanged": true,
+  "image_shape": [
+    1,
+    1,
+    3,
+    416,
+    624
+  ],
+  "nlf_image_hw": [
+    416,
+    624
+  ],
+  "point_counts_hsi": [
+    53535
+  ],
+  "point_counts_hsi_full": [
+    64896
+  ],
+  "human_points_removed_hsi": [
+    11361
+  ],
+  "human_mask_pixels_hsi": [
+    45453
+  ],
+  "human_point_removal": {
+    "method": "projected_smpl_triangle_silhouette_dilated_unconditional",
+    "dilation_px": 12,
+    "calibration_mode_uses_full_points": true
+  },
+  "people_counts": [
+    2
+  ],
+  "hsi_scene_scale": [
+    6.4245758056640625
+  ],
+  "hsi_scene_depth_bias": [
+    0.0
+  ],
+  "hsi_frame_scene_scale": [
+    6.4245758056640625
+  ],
+  "hsi_frame_scene_depth_bias": [
+    0.0
+  ],
+  "hsi_scene_affine_mode": "clip_median",
+  "hsi_scene_affine_ema_alpha": 0.25,
+  "hsi_visual_scale_initial": 1.0,
+  "camera_motion": {
+    "raw_vggt": {
+      "num_cameras": 1,
+      "positions_world": [
+        [
+          -1.3402920558291953e-05,
+          3.180607018293813e-05,
+          -0.00024208523973356932
+        ]
+      ],
+      "step_distances": [],
+      "total_path_m_vggt_units": 0.0,
+      "start_end_m_vggt_units": 0.0,
+      "axis_range_xyz_vggt_units": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean_step_m_vggt_units": 0.0,
+      "max_step_m_vggt_units": 0.0
+    },
+    "hsi_scaled": {
+      "num_cameras": 1,
+      "positions_world": [
+        [
+          -8.610807708464563e-05,
+          0.0002043404965661466,
+          -0.0015552949625998735
+        ]
+      ],
+      "step_distances": [],
+      "total_path_m_vggt_units": 0.0,
+      "start_end_m_vggt_units": 0.0,
+      "axis_range_xyz_vggt_units": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "mean_step_m_vggt_units": 0.0,
+      "max_step_m_vggt_units": 0.0
+    }
+  },
+  "depth_alignment_note": "Depth alignment is computed by projecting SMPL vertices with VGGT K and sampling VGGT raw/HSI depth in the processed image plane; median_signed_m = z_smpl - z_depth.",
+  "depth_alignment_overall": {
+    "base_raw": {
+      "people": 2,
+      "valid_points": 862,
+      "median_abs_m_mean": 8.633081912994385,
+      "median_abs_m_median": 8.633081912994385,
+      "median_signed_m_mean": 8.633081912994385,
+      "median_signed_m_median": 8.633081912994385
+    },
+    "base_hsi": {
+      "people": 2,
+      "valid_points": 862,
+      "median_abs_m_mean": 3.4168431758880615,
+      "median_abs_m_median": 3.4168431758880615,
+      "median_signed_m_mean": 3.4168431758880615,
+      "median_signed_m_median": 3.4168431758880615
+    },
+    "hsi_hsi": {
+      "people": 2,
+      "valid_points": 862,
+      "median_abs_m_mean": 3.446126699447632,
+      "median_abs_m_median": 3.446126699447632,
+      "median_signed_m_mean": 3.446126699447632,
+      "median_signed_m_median": 3.446126699447632
+    }
+  },
+  "depth_alignment_by_frame": [
+    {
+      "base_raw": [
+        {
+          "valid_points": 431,
+          "median_signed_m": 8.404991149902344,
+          "median_abs_m": 8.404991149902344,
+          "mean_abs_m": 8.40389633178711,
+          "p90_abs_m": 8.599526405334473,
+          "query_index": 0,
+          "confidence": 0.93603515625
+        },
+        {
+          "valid_points": 431,
+          "median_signed_m": 8.861172676086426,
+          "median_abs_m": 8.861172676086426,
+          "mean_abs_m": 8.880389213562012,
+          "p90_abs_m": 9.0252046585083,
+          "query_index": 1,
+          "confidence": 0.8974609375
+        }
+      ],
+      "base_hsi": [
+        {
+          "valid_points": 431,
+          "median_signed_m": 3.375126838684082,
+          "median_abs_m": 3.375126838684082,
+          "mean_abs_m": 3.39558482170105,
+          "p90_abs_m": 3.621203899383545,
+          "query_index": 0,
+          "confidence": 0.93603515625
+        },
+        {
+          "valid_points": 431,
+          "median_signed_m": 3.458559513092041,
+          "median_abs_m": 3.458559513092041,
+          "mean_abs_m": 3.4944727420806885,
+          "p90_abs_m": 3.6751837730407715,
+          "query_index": 1,
+          "confidence": 0.8974609375
+        }
+      ],
+      "hsi_hsi": [
+        {
+          "valid_points": 431,
+          "median_signed_m": 3.4028806686401367,
+          "median_abs_m": 3.4028806686401367,
+          "mean_abs_m": 3.4298343658447266,
+          "p90_abs_m": 3.6537728309631348,
+          "query_index": 0,
+          "confidence": 0.93603515625
+        },
+        {
+          "valid_points": 431,
+          "median_signed_m": 3.489372730255127,
+          "median_abs_m": 3.489372730255127,
+          "mean_abs_m": 3.525740385055542,
+          "p90_abs_m": 3.7038755416870117,
+          "query_index": 1,
+          "confidence": 0.8974609375
+        }
+      ]
+    }
+  ],
+  "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/f2_f1"
+}

@@ -60,14 +60,45 @@ PALETTE: list[tuple[int, int, int]] = [
     (99, 102, 241),
 ]
 
-HSI_VISUAL_SCALE_MIN = 0.5
-HSI_VISUAL_SCALE_MAX = 2.0
+HSI_VISUAL_SCALE_MIN = 0.1
+HSI_VISUAL_SCALE_MAX = 10.0
+HSI_VISUAL_SCALE_SLIDER_MIN = float(np.log10(HSI_VISUAL_SCALE_MIN))
+HSI_VISUAL_SCALE_SLIDER_MAX = float(np.log10(HSI_VISUAL_SCALE_MAX))
 HUMAN_MASK_DILATION_MIN_PX = 0
 HUMAN_MASK_DILATION_MAX_PX = 32
-HUMAN_MASK_DILATION_DEFAULT_PX = 12
+HUMAN_MASK_DILATION_DEFAULT_PX = 5
+
+
+def hsi_visual_scale_to_slider(scale: float) -> float:
+    clamped = min(HSI_VISUAL_SCALE_MAX, max(HSI_VISUAL_SCALE_MIN, float(scale)))
+    return float(np.log10(clamped))
+
+
+def hsi_visual_slider_to_scale(value: float) -> float:
+    scale = float(10.0 ** float(value))
+    return min(HSI_VISUAL_SCALE_MAX, max(HSI_VISUAL_SCALE_MIN, scale))
+
+
+def sync_if_cuda(device: torch.device | None = None) -> None:
+    if torch.cuda.is_available() and (device is None or device.type == "cuda"):
+        torch.cuda.synchronize(device)
+
+
+def elapsed_since(start: float, device: torch.device | None = None) -> float:
+    sync_if_cuda(device)
+    return time.perf_counter() - start
+
+
+def add_timing_rate(entry: dict[str, float], frames: int) -> dict[str, float]:
+    seconds = float(entry.get("seconds", 0.0))
+    entry["ms_per_frame"] = 1000.0 * seconds / float(max(int(frames), 1))
+    entry["fps"] = float(frames) / seconds if seconds > 0.0 else 0.0
+    return entry
 
 
 def main() -> None:
+    total_start = time.perf_counter()
+    timings: dict[str, Any] = {}
     args = parse_args()
     if not np.isfinite(args.hsi_visual_scale) or not HSI_VISUAL_SCALE_MIN <= float(args.hsi_visual_scale) <= HSI_VISUAL_SCALE_MAX:
         raise ValueError(
@@ -89,10 +120,13 @@ def main() -> None:
     output_dir = resolve_project_path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    step_start = time.perf_counter()
     frame_paths = select_frames(frames_dir, args)
     if not frame_paths:
         raise RuntimeError(f"No RGB frames found under {frames_dir}. Supported extensions: {sorted(IMAGE_EXTENSIONS)}")
+    timings["select_frames"] = {"seconds": time.perf_counter() - step_start}
 
+    step_start = time.perf_counter()
     config = load_config(args)
     model_config = config.get("model", {})
     args.hsi_scene_affine_mode = str(model_config.get("hsi_scene_affine_mode", "per_frame"))
@@ -100,23 +134,40 @@ def main() -> None:
     patch_size = int(config.get("model", {}).get("patch_size", 16))
     _, image_resolution = resolve_image_size_config(config.get("data", {}), args.image_size)
     max_humans = int(args.max_humans or config.get("model", {}).get("num_smpl_queries", 20))
+    timings["load_config"] = {"seconds": time.perf_counter() - step_start}
 
+    step_start = time.perf_counter()
     images, geometries = load_sequence_images(frame_paths, image_resolution, patch_size, str(config["data"].get("resize_mode", "balanced")))
     priors = build_query_priors(frame_paths, geometries, args, max_humans, device) if args.query_source == "bedlam_sidecar" else None
+    sync_if_cuda(device)
+    timings["load_images_and_priors"] = {"seconds": time.perf_counter() - step_start}
 
+    step_start = time.perf_counter()
     model = build_model(config).to(device).eval()
     load_vggt_baseline_for_camera(model, config, device)
     checkpoint = resolve_stage_checkpoint(args)
     load_training_checkpoint(model, checkpoint, device)
     smpl = SMPLLayer(require_smpl_model_dir(config, args)).to(device).eval()
+    sync_if_cuda(device)
+    timings["load_models"] = {"seconds": time.perf_counter() - step_start}
 
+    step_start = time.perf_counter()
     image_sequence = images.unsqueeze(0).to(device)
+    sync_if_cuda(device)
+    timings["transfer_images_to_device"] = {"seconds": time.perf_counter() - step_start}
+
     with torch.inference_mode():
+        step_start = time.perf_counter()
         predictions = run_model(model, image_sequence, priors)
+        timings["model_forward"] = {"seconds": elapsed_since(step_start, device)}
+    step_start = time.perf_counter()
     geometry_snapshot = snapshot_viewer_geometry(predictions)
     apply_posthoc_tracking_overlay(predictions, args)
     assert_viewer_geometry_unchanged(predictions, geometry_snapshot, args)
+    sync_if_cuda(device)
+    timings["posthoc_tracking_overlay"] = {"seconds": time.perf_counter() - step_start}
 
+    step_start = time.perf_counter()
     scene = build_scene_data(
         frame_paths=frame_paths,
         images=image_sequence,
@@ -125,11 +176,19 @@ def main() -> None:
         smpl=smpl,
         args=args,
         device=device,
+        timings=timings,
     )
+    timings["build_scene_data"] = {"seconds": elapsed_since(step_start, device)}
+    step_start = time.perf_counter()
     print_human_point_removal_summary(scene, args)
     validate_scene(scene, predictions, image_sequence)
+    timings["validate_and_summarize"] = {"seconds": time.perf_counter() - step_start}
 
-    summary = build_summary(args, frame_paths, checkpoint, image_sequence, predictions, scene, output_dir)
+    timings["total_before_viewer"] = {"seconds": elapsed_since(total_start, device)}
+    for value in timings.values():
+        if isinstance(value, dict) and "seconds" in value:
+            add_timing_rate(value, len(frame_paths))
+    summary = build_summary(args, frame_paths, checkpoint, image_sequence, predictions, scene, output_dir, timings)
     summary_path = output_dir / "run_summary.json"
     summary_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
     print(json.dumps({"viewer": f"http://127.0.0.1:{int(args.port)}", "summary": str(summary_path)}, indent=2), flush=True)
@@ -176,7 +235,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--viewer-mode", choices=["4D current frame", "3D accumulate", "Hybrid"], default="4D current frame", help="Initial Viser playback mode.")
     parser.add_argument("--environment-display", choices=["points", "mesh", "both"], default="points", help="Initial environment rendering mode. The Viser GUI can still toggle this live.")
     parser.add_argument("--hsi-visual-scale", type=float, default=1.0, help="Initial viewer-only multiplier for HSI environment points and HSI camera positions.")
-    parser.add_argument("--human-mask-dilation-px", type=int, default=12, help="Pixel dilation around the projected SMPL silhouette when removing human depth points in normal display mode.")
+    parser.add_argument("--human-mask-dilation-px", type=int, default=HUMAN_MASK_DILATION_DEFAULT_PX, help="Pixel dilation around the projected SMPL silhouette when removing human depth points in normal display mode.")
     parser.add_argument("--filter-human-points", action=argparse.BooleanOptionalAction, default=True, help="Initial Viser state for projected-SMPL human point filtering.")
     parser.add_argument("--env-mesh-depth-edge-rtol", type=float, default=0.15, help="Relative depth discontinuity threshold for environment surface mesh faces.")
     parser.add_argument("--env-mesh-color-groups", type=int, default=216, help="Maximum color buckets used to approximate RGB environment mesh face color with Viser simple meshes.")
@@ -522,7 +581,9 @@ def build_scene_data(
     smpl: SMPLLayer,
     args: argparse.Namespace,
     device: torch.device,
+    timings: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    stage_start = time.perf_counter()
     image_hw = tuple(int(v) for v in images.shape[-2:])
     extrinsics, intrinsics = encoding_to_camera(predictions["pose_enc"].detach().float(), image_size_hw=image_hw, build_intrinsics=True)
     raw_depth = canonical_depth(predictions["depth"]).detach().float()
@@ -531,11 +592,22 @@ def build_scene_data(
         scale = predictions["hsi_scene_scale"].detach().float().reshape(raw_depth.shape[:2] + (1, 1)).to(raw_depth.device)
         bias = predictions["hsi_scene_depth_bias"].detach().float().reshape(raw_depth.shape[:2] + (1, 1)).to(raw_depth.device)
         hsi_depth = raw_depth * scale + bias
+    if timings is not None:
+        timings["scene_camera_and_depth"] = {"seconds": elapsed_since(stage_start, device)}
 
+    stage_start = time.perf_counter()
     people = decode_people(predictions, smpl, args, device)
+    if timings is not None:
+        timings["decode_people_smpl"] = {"seconds": elapsed_since(stage_start, device)}
     faces = np.asarray(smpl.faces, dtype=np.int64).reshape(-1, 3)
     track_palette: dict[int, int] = {}
+
+    stage_start = time.perf_counter()
     alignment = compute_depth_alignment(predictions, people, raw_depth, hsi_depth, intrinsics, args)
+    if timings is not None:
+        timings["depth_alignment"] = {"seconds": elapsed_since(stage_start, device)}
+
+    stage_start = time.perf_counter()
     frames = []
     for idx, image_path in enumerate(frame_paths):
         extrinsic = extrinsics[0, idx].detach().float().cpu().numpy()
@@ -589,6 +661,8 @@ def build_scene_data(
         )
     raw_camera_trajectory = np.stack([frame["raw_camera"]["position"] for frame in frames], axis=0).astype(np.float32) if frames else np.zeros((0, 3), dtype=np.float32)
     hsi_camera_trajectory = np.stack([frame["hsi_camera"]["position"] for frame in frames], axis=0).astype(np.float32) if frames else np.zeros((0, 3), dtype=np.float32)
+    if timings is not None:
+        timings["build_frame_point_clouds"] = {"seconds": elapsed_since(stage_start, device)}
     return {
         "frames": frames,
         "image_hw": list(image_hw),
@@ -1034,6 +1108,7 @@ def build_summary(
     predictions: dict[str, torch.Tensor],
     scene: dict[str, Any],
     output_dir: Path,
+    timings: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "frames_dir": str(resolve_project_path(args.frames_dir)),
@@ -1073,6 +1148,7 @@ def build_summary(
         "depth_alignment_note": "Depth alignment is computed by projecting SMPL vertices with VGGT K and sampling VGGT raw/HSI depth in the processed image plane; median_signed_m = z_smpl - z_depth.",
         "depth_alignment_overall": summarize_depth_alignment(scene),
         "depth_alignment_by_frame": [frame["depth_alignment"] for frame in scene["frames"]],
+        "timings": timings or {},
         "output_dir": str(output_dir),
     }
 
@@ -1433,11 +1509,11 @@ class SequenceViewer:
                 set_handle_disabled(handle, True)
             self.hsi_visual_scale = add_slider(
                 self.server,
-                "Visual Scale Multiplier",
-                HSI_VISUAL_SCALE_MIN,
-                HSI_VISUAL_SCALE_MAX,
+                "Visual Scale Multiplier (log10)",
+                HSI_VISUAL_SCALE_SLIDER_MIN,
+                HSI_VISUAL_SCALE_SLIDER_MAX,
                 0.01,
-                self.hsi_visual_scale_value,
+                hsi_visual_scale_to_slider(self.hsi_visual_scale_value),
             )
             self.apply_hsi_visual_scale = add_button(self.server, "Apply Scale")
             self.reset_hsi_visual_scale = add_button(self.server, "Reset Scale to 1.0")
@@ -2116,7 +2192,7 @@ class SequenceViewer:
         self._rebuild_hsi_visual_geometry()
 
     def _reset_hsi_visual_scale(self, _: Any = None) -> None:
-        self.hsi_visual_scale.value = 1.0
+        self.hsi_visual_scale.value = hsi_visual_scale_to_slider(1.0)
         if self.hsi_calibration_active:
             self.hsi_visual_scale_value = 1.0
             self._rebuild_hsi_calibration_frame(int(self.timestep.value))
@@ -2125,10 +2201,7 @@ class SequenceViewer:
             self._apply_hsi_visual_scale()
 
     def _requested_hsi_visual_scale(self) -> float:
-        return min(
-            HSI_VISUAL_SCALE_MAX,
-            max(HSI_VISUAL_SCALE_MIN, float(self.hsi_visual_scale.value)),
-        )
+        return hsi_visual_slider_to_scale(float(self.hsi_visual_scale.value))
 
     def _on_hsi_calibration_mode_update(self, _: Any = None) -> None:
         if self._switching_hsi_calibration:
