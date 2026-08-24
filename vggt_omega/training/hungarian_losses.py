@@ -15,6 +15,7 @@ class HungarianSMPLLoss(nn.Module):
     def __init__(
         self,
         matcher: HungarianSMPLMatcher,
+        matching_mode: str = "hungarian",
         pose_weight: float = 1.0,
         betas_weight: float = 0.1,
         transl_cam_weight: float = 0.1,
@@ -87,6 +88,7 @@ class HungarianSMPLLoss(nn.Module):
         hsi_depth_teacher_max_m: float = 0.0,
         hsi_depth_teacher_error_clip_m: float = 0.0,
         hsi_depth_teacher_use_human_roi: bool = False,
+        hsi_depth_teacher_require_matched_frame: bool = False,
         hsi_depth_teacher_roi_expand: float = 0.35,
         hsi_depth_teacher_min_valid_pixels: int = 256,
         hsi_smpl_scale_teacher_weight: float = 0.0,
@@ -174,6 +176,9 @@ class HungarianSMPLLoss(nn.Module):
     ) -> None:
         super().__init__()
         self.matcher = matcher
+        self.matching_mode = str(matching_mode or "hungarian").lower()
+        if self.matching_mode not in {"hungarian", "gt_slots"}:
+            raise ValueError(f"Unsupported matching_mode: {self.matching_mode!r}")
         self.pose_weight = pose_weight
         self.betas_weight = betas_weight
         self.transl_cam_weight = transl_cam_weight if cam_weight is None else cam_weight
@@ -247,6 +252,7 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_depth_teacher_max_m = hsi_depth_teacher_max_m
         self.hsi_depth_teacher_error_clip_m = hsi_depth_teacher_error_clip_m
         self.hsi_depth_teacher_use_human_roi = hsi_depth_teacher_use_human_roi
+        self.hsi_depth_teacher_require_matched_frame = bool(hsi_depth_teacher_require_matched_frame)
         self.hsi_depth_teacher_roi_expand = hsi_depth_teacher_roi_expand
         self.hsi_depth_teacher_min_valid_pixels = hsi_depth_teacher_min_valid_pixels
         self.hsi_smpl_scale_teacher_weight = hsi_smpl_scale_teacher_weight
@@ -369,15 +375,27 @@ class HungarianSMPLLoss(nn.Module):
     def forward(self, predictions: dict[str, torch.Tensor], batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         self._active_projection_image_hw = _infer_projection_image_hw(predictions, batch, self.projection_image_size)
         pred_confs = _flatten_prediction(_require_prediction(predictions, "pred_confs"), unframed_ndim=3)
-        pred_boxes = _flatten_prediction(_require_prediction(predictions, "pred_boxes"), unframed_ndim=3)
+        pred_boxes_value = predictions.get("pred_boxes")
+        if pred_boxes_value is None and self.matching_mode == "gt_slots":
+            pred_boxes = pred_confs.new_zeros(*pred_confs.shape[:2], 4)
+        else:
+            pred_boxes = _flatten_prediction(_require_prediction(predictions, "pred_boxes"), unframed_ndim=3)
         pred_pose = _flatten_prediction(_require_prediction(predictions, "pred_pose_6d"), unframed_ndim=3)
         pred_betas = _flatten_prediction(_require_prediction(predictions, "pred_betas"), unframed_ndim=3)
         pred_transl_cam = _flatten_prediction(_require_prediction(predictions, "pred_transl_cam"), unframed_ndim=3)
         pred_id_embed = predictions.get("pred_id_embed")
         flat_id_embed = _flatten_prediction(pred_id_embed, unframed_ndim=3) if pred_id_embed is not None else None
 
-        targets = flatten_smpl_targets(batch, device=pred_confs.device)
-        indices = self.matcher({"pred_confs": pred_confs, "pred_boxes": pred_boxes}, targets)
+        targets = flatten_smpl_targets(
+            batch,
+            device=pred_confs.device,
+            use_boxes_mask=self.matching_mode != "gt_slots",
+        )
+        indices = (
+            _gt_slot_matching_indices(batch, pred_confs, targets)
+            if self.matching_mode == "gt_slots"
+            else self.matcher({"pred_confs": pred_confs, "pred_boxes": pred_boxes}, targets)
+        )
         losses: dict[str, torch.Tensor] = {}
 
         matched = _collect_matches(indices, targets, pred_confs.device)
@@ -2915,7 +2933,8 @@ class HungarianSMPLLoss(nn.Module):
             return out
         if "gt_depth" not in batch:
             return out
-        depth = _canonical_depth(_require_prediction(predictions, "depth"))
+        depth_source = predictions.get("hsi_refinement_depth_input", predictions.get("depth"))
+        depth = _canonical_depth(depth_source)
         gt_depth = _canonical_depth(batch["gt_depth"].to(device=depth.device, dtype=depth.dtype))
         if gt_depth.shape[-2:] != depth.shape[-2:]:
             gt_depth = F.interpolate(
@@ -2930,6 +2949,14 @@ class HungarianSMPLLoss(nn.Module):
         valid_depth = torch.isfinite(gt_depth) & torch.isfinite(aligned_depth) & (gt_depth > 1e-6)
         if self.hsi_depth_teacher_max_m > 0:
             valid_depth = valid_depth & (gt_depth <= float(self.hsi_depth_teacher_max_m))
+        if self.hsi_depth_teacher_require_matched_frame:
+            matched_frames = torch.zeros(
+                depth.shape[0] * depth.shape[1],
+                dtype=torch.bool,
+                device=depth.device,
+            )
+            matched_frames[torch.unique(frame_idx)] = True
+            valid_depth = valid_depth & matched_frames.reshape(depth.shape[0], depth.shape[1], 1, 1)
         roi_used = False
         if self.hsi_depth_teacher_use_human_roi and "gt_boxes" in batch and "boxes_mask" in batch:
             roi_mask = _human_roi_depth_mask(
@@ -3409,9 +3436,13 @@ class HungarianSMPLLoss(nn.Module):
         }
 
 
-def flatten_smpl_targets(batch: dict[str, torch.Tensor], device: torch.device) -> list[dict[str, torch.Tensor]]:
+def flatten_smpl_targets(
+    batch: dict[str, torch.Tensor],
+    device: torch.device,
+    use_boxes_mask: bool = True,
+) -> list[dict[str, torch.Tensor]]:
     smpl_mask = batch["smpl_mask"].to(device=device).bool()
-    boxes_mask = batch["boxes_mask"].to(device=device).bool()
+    boxes_mask = batch["boxes_mask"].to(device=device).bool() if use_boxes_mask else torch.ones_like(smpl_mask)
     gt_boxes = batch["gt_boxes"].to(device=device)
     gt_pose = batch["gt_pose_6d"].to(device=device)
     gt_betas = batch["gt_betas"].to(device=device)
@@ -3481,6 +3512,29 @@ def flatten_smpl_targets(batch: dict[str, torch.Tensor], device: torch.device) -
                     target[key] = torch.zeros(int(valid.sum()), 2, dtype=torch.float32, device=device)
             targets.append(target)
     return targets
+
+
+def _gt_slot_matching_indices(
+    batch: dict[str, torch.Tensor],
+    pred_confs: torch.Tensor,
+    targets: list[dict[str, torch.Tensor]],
+) -> list[tuple[torch.Tensor, torch.Tensor]]:
+    smpl_mask = batch["smpl_mask"].to(device=pred_confs.device).bool().reshape(-1, pred_confs.shape[1])
+    if smpl_mask.shape[0] != pred_confs.shape[0]:
+        raise ValueError(
+            f"GT-slot matching frame mismatch: mask={tuple(smpl_mask.shape)} pred={tuple(pred_confs.shape)}"
+        )
+    indices: list[tuple[torch.Tensor, torch.Tensor]] = []
+    for frame_idx, valid in enumerate(smpl_mask):
+        src_idx = torch.nonzero(valid, as_tuple=False).reshape(-1)
+        if src_idx.numel() != len(targets[frame_idx]["boxes"]):
+            raise RuntimeError(
+                "GT-slot matching target order is inconsistent with batch smpl_mask: "
+                f"frame={frame_idx} slots={src_idx.numel()} targets={len(targets[frame_idx]['boxes'])}"
+            )
+        tgt_idx = torch.arange(src_idx.numel(), dtype=torch.long, device=pred_confs.device)
+        indices.append((src_idx, tgt_idx))
+    return indices
 
 
 def _collect_matches(indices, targets: list[dict[str, torch.Tensor]], device: torch.device) -> dict[str, torch.Tensor]:

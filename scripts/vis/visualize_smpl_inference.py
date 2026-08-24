@@ -37,7 +37,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.train.train_smpl import apply_overrides, build_model, load_yaml_config
+from scripts.train.train_smpl import apply_overrides, build_model, load_yaml_config, make_state_dict_loadable
 from vggt_omega.data.geometry import compute_resize_geometry, resize_image_with_geometry, resolve_image_size_config
 from vggt_omega.models.smpl_layer import SMPLLayer
 from vggt_omega.training.config import deep_update, require_path
@@ -195,9 +195,16 @@ def load_vggt_baseline_for_camera(model: torch.nn.Module, config: dict[str, Any]
     checkpoint_path = require_path(config, "checkpoints.vggt_baseline", allow_empty=False)
     checkpoint = torch.load(checkpoint_path, map_location=device)
     state_dict = extract_state_dict(checkpoint)
+    state_dict, shape_report = make_state_dict_loadable(
+        state_dict,
+        model.state_dict(),
+        adapt_query_tensors=False,
+    )
     missing, unexpected = model.load_state_dict(state_dict, strict=False)
     print(f"[ckpt] loaded VGGT baseline for camera: {checkpoint_path}")
     print(f"[ckpt] baseline missing={len(missing)} unexpected={len(unexpected)}")
+    if shape_report["skipped"]:
+        print(f"[ckpt] baseline shape-mismatched tensors skipped={len(shape_report['skipped'])}")
 
 
 def load_training_checkpoint(model: torch.nn.Module, checkpoint_path: Path, device: torch.device) -> None:

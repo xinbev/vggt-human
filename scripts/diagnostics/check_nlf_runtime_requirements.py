@@ -48,6 +48,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--smpl-model-dir", default="")
     parser.add_argument("--projdir", default="")
     parser.add_argument("--skip-load-nlf", action="store_true")
+    parser.add_argument("--require-detector", action="store_true")
     return parser.parse_args()
 
 
@@ -118,6 +119,8 @@ def main() -> None:
         summary["assets"]["nlf_has_detect_smpl_batched"] = bool(hasattr(model, "detect_smpl_batched"))
         if not summary["assets"]["nlf_has_estimate_smpl_batched"]:
             raise AttributeError("NLF model does not expose estimate_smpl_batched")
+        if args.require_detector and not summary["assets"]["nlf_has_detect_smpl_batched"]:
+            raise AttributeError("NLF detector inference requires detect_smpl_batched")
 
     out_json = output_dir / "summary.json"
     out_json.write_text(json.dumps(summary, indent=2), encoding="utf-8")

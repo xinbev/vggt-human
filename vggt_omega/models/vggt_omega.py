@@ -41,6 +41,7 @@ class VGGTOmega(nn.Module):
         enable_alignment: bool = False,
         enable_smpl: bool = False,
         num_smpl_queries: int = 0,
+        smpl_use_aggregator_queries: bool = True,
         smpl_num_layers: int = 4,
         smpl_intermediate_layer_idx: tuple[int, ...] = (4, 11, 17, 23),
         smpl_predict_boxes: bool = False,
@@ -207,20 +208,27 @@ class VGGTOmega(nn.Module):
         if smpl_enable_translation_refine and not enable_camera:
             raise ValueError("smpl_enable_translation_refine=True requires enable_camera=True")
         self.smpl_provider = str(smpl_provider or "internal").lower()
+        self.num_smpl_queries = int(num_smpl_queries)
+        self.smpl_use_aggregator_queries = bool(smpl_use_aggregator_queries)
         if self.smpl_provider not in {"internal", "nlf", "gt_perturbed"}:
             raise ValueError(f"Unsupported smpl_provider: {self.smpl_provider}")
+        if enable_smpl and self.smpl_provider == "internal" and not self.smpl_use_aggregator_queries:
+            raise ValueError("Internal SMPL provider requires smpl_use_aggregator_queries=true")
+        if enable_smpl and smpl_predict_id_embed and not self.smpl_use_aggregator_queries:
+            raise ValueError("SMPL identity prediction requires smpl_use_aggregator_queries=true")
         if self.smpl_provider == "nlf" and enable_smpl and not enable_camera:
             raise ValueError("smpl_provider='nlf' requires enable_camera=True")
         self.smpl_id_feature_mode = str(smpl_id_feature_mode or "query").lower()
         if self.smpl_id_feature_mode not in {"query", "roi_query"}:
             raise ValueError(f"Unsupported smpl_id_feature_mode: {self.smpl_id_feature_mode}")
 
+        aggregator_smpl_queries = self.num_smpl_queries if enable_smpl and self.smpl_use_aggregator_queries else 0
         self.aggregator = Aggregator(
             patch_size=patch_size,
             embed_dim=embed_dim,
-            num_smpl_queries=num_smpl_queries if enable_smpl else 0,
-            smpl_query_box_prior=smpl_query_box_prior if enable_smpl else False,
-            smpl_query_patch_pool=smpl_query_patch_pool if enable_smpl else False,
+            num_smpl_queries=aggregator_smpl_queries,
+            smpl_query_box_prior=smpl_query_box_prior if aggregator_smpl_queries > 0 else False,
+            smpl_query_patch_pool=smpl_query_patch_pool if aggregator_smpl_queries > 0 else False,
             smpl_query_patch_pool_expand=smpl_query_patch_pool_expand,
             smpl_query_patch_pool_mode=smpl_query_patch_pool_mode,
             smpl_query_mask_min_patch_count=smpl_query_mask_min_patch_count,
@@ -658,7 +666,7 @@ class VGGTOmega(nn.Module):
                         pose_enc=predictions.get("pose_enc"),
                         smpl_query_boxes=smpl_reference_boxes if smpl_query_boxes is not None else None,
                         smpl_query_boxes_mask=smpl_query_boxes_mask,
-                        max_humans=token_layout.num_smpl_queries,
+                        max_humans=self.num_smpl_queries,
                     )
                 )
             elif self.smpl_provider == "gt_perturbed":
@@ -696,12 +704,14 @@ class VGGTOmega(nn.Module):
             if self.hsi_refinement_head is not None:
                 if hsi_intrinsics_override is not None:
                     predictions["hsi_intrinsics_override"] = hsi_intrinsics_override
+                hsi_refinement_depth = hsi_depth_override if hsi_depth_override is not None else predictions["depth"]
+                predictions["hsi_refinement_depth_input"] = hsi_refinement_depth
                 predictions.update(
                     self.hsi_refinement_head(
                         aggregated_tokens_list,
                         token_layout=token_layout,
                         smpl_outputs=predictions,
-                        depth=predictions["depth"],
+                        depth=hsi_refinement_depth,
                         pose_enc=predictions["pose_enc"],
                         image_size_hw=image_size_hw,
                         track_ids=predictions.get("assigned_track_ids"),

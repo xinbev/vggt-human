@@ -62,6 +62,7 @@ def main() -> None:
     train_config = load_yaml_config(args.train_config)
     config = deep_update(path_config, train_config)
     config = apply_overrides(config, args.override)
+    validate_gt_scale_box_free_contract(config)
 
     seed = int(config.get("experiment", {}).get("seed", 42))
     set_seed(seed)
@@ -108,6 +109,7 @@ def main() -> None:
     if overlay_path:
         load_overlay_checkpoint(model, overlay_path, device, config)
     frozen_hashes = hash_model_prefixes(model, normalize_string_list(config.get("checkpoint", {}).get("frozen_hash_prefixes", [])))
+    wandb_run = init_wandb(config, output_dir)
 
     epochs = int(config["optim"]["epochs"])
     train_started_at = time.monotonic()
@@ -136,6 +138,7 @@ def main() -> None:
             progress_total_steps=total_train_steps,
             progress_done_offset=(epoch - start_epoch) * len(train_loader),
             total_epochs=epochs,
+            wandb_run=wandb_run,
         )
         assert_model_prefix_hashes(model, frozen_hashes)
         monitor_losses = train_losses
@@ -175,6 +178,14 @@ def main() -> None:
         }
         save_json(metrics_payload, output_dir / f"metrics_epoch_{epoch + 1:04d}.json")
         save_json(metrics_payload, output_dir / "metrics_latest.json")
+        if wandb_run is not None:
+            epoch_log = {
+                "epoch": epoch + 1,
+                **{f"train_epoch/{key}": float(value) for key, value in train_losses.items()},
+            }
+            if val_losses is not None:
+                epoch_log.update({f"val/{key}": float(value) for key, value in val_losses.items()})
+            wandb_run.log(epoch_log, step=global_step)
         if should_save_checkpoint(config, epoch + 1, epochs):
             checkpoint_cfg = config.get("checkpoint", {})
             if bool(checkpoint_cfg.get("save_epoch_checkpoint", True)):
@@ -183,6 +194,8 @@ def main() -> None:
                 save_checkpoint(model, optimizer, epoch + 1, global_step, config, output_dir / "checkpoint_latest.pt")
             if bool(checkpoint_cfg.get("save_final", False)) and (epoch + 1) == epochs:
                 save_checkpoint(model, optimizer, epoch + 1, global_step, config, output_dir / "checkpoint_final.pt")
+    if wandb_run is not None:
+        wandb_run.finish()
 
 
 def parse_args() -> argparse.Namespace:
@@ -192,6 +205,82 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", default="")
     parser.add_argument("--override", action="append", default=[], help="Override config values with dotted.key=value")
     return parser.parse_args()
+
+
+def init_wandb(config: dict[str, Any], output_dir: Path) -> Any | None:
+    wandb_cfg = config.get("logging", {}).get("wandb", {})
+    if not bool(wandb_cfg.get("enabled", False)):
+        return None
+    try:
+        import wandb
+    except ImportError as exc:
+        raise RuntimeError(
+            "logging.wandb.enabled=true but wandb is not installed in the training environment"
+        ) from exc
+
+    tags = normalize_string_list(wandb_cfg.get("tags", []))
+    init_kwargs: dict[str, Any] = {
+        "project": str(wandb_cfg.get("project", "vggt-human")),
+        "name": str(wandb_cfg.get("name", config.get("experiment", {}).get("name", "smpl-train"))),
+        "config": config,
+        "dir": str(output_dir),
+        "mode": str(wandb_cfg.get("mode", "online")),
+        "tags": tags,
+    }
+    entity = str(wandb_cfg.get("entity", "") or "").strip()
+    group = str(wandb_cfg.get("group", "") or "").strip()
+    if entity:
+        init_kwargs["entity"] = entity
+    if group:
+        init_kwargs["group"] = group
+    run = wandb.init(**init_kwargs)
+    run.define_metric("train/*", step_metric="global_step")
+    run.define_metric("train_epoch/*", step_metric="epoch")
+    run.define_metric("val/*", step_metric="epoch")
+    print(
+        f"[wandb] enabled project={init_kwargs['project']} name={init_kwargs['name']} "
+        f"mode={init_kwargs['mode']}"
+    )
+    return run
+
+
+def validate_gt_scale_box_free_contract(config: dict[str, Any]) -> None:
+    model_cfg = config.get("model", {})
+    if not bool(model_cfg.get("gt_smpl_box_free", False)):
+        return
+    data_cfg = config.get("data", {})
+    matching_cfg = config.get("matching", {})
+    optim_cfg = config.get("optim", {})
+    prior_cfg = config.get("training_prior", {})
+    loss_cfg = config.get("loss", {})
+    checks = {
+        "model.smpl_provider=gt_perturbed": str(model_cfg.get("smpl_provider", "")).lower() == "gt_perturbed",
+        "model.gt_smpl_online_visibility=true": bool(model_cfg.get("gt_smpl_online_visibility", False)),
+        "model.smpl_query_box_prior=false": not bool(model_cfg.get("smpl_query_box_prior", False)),
+        "model.smpl_use_aggregator_queries=false": not bool(
+            model_cfg.get("smpl_use_aggregator_queries", True)
+        ),
+        "data.boxes_root_key empty": not bool(data_cfg.get("boxes_root_key")),
+        "data.require_boxes=false": not bool(data_cfg.get("require_boxes", False)),
+        "data.box_free_gt_slots=true": bool(data_cfg.get("box_free_gt_slots", False)),
+        "matching.mode=gt_slots": str(matching_cfg.get("mode", "")).lower() == "gt_slots",
+        "optim.drop_no_visible_gt_samples=true": bool(optim_cfg.get("drop_no_visible_gt_samples", False)),
+        "optim.required_supervision_metric=scale-valid-points": str(
+            optim_cfg.get("required_supervision_metric", "")
+        ) == "metric_hsi_smpl_scale_teacher_valid_points",
+        "loss.hsi_depth_teacher_require_matched_frame=true": bool(
+            loss_cfg.get("hsi_depth_teacher_require_matched_frame", False)
+        ),
+        "visibility min-points matches scale teacher": int(
+            prior_cfg.get("gt_smpl_visibility_min_points", 0) or 0
+        ) == int(loss_cfg.get("hsi_smpl_scale_teacher_min_points_per_person", -1)),
+        "visibility max-z matches scale teacher": float(
+            prior_cfg.get("gt_smpl_visibility_max_z_m", 0.0) or 0.0
+        ) == float(loss_cfg.get("hsi_smpl_scale_teacher_max_z_m", -1.0)),
+    }
+    failed = [label for label, valid in checks.items() if not valid]
+    if failed:
+        raise ValueError(f"Invalid box-free GT scale training contract: {failed}")
 
 
 def build_loader(config: dict[str, Any], split: str, shuffle: bool, role: str = "train") -> DataLoader:
@@ -229,6 +318,7 @@ def build_loader(config: dict[str, Any], split: str, shuffle: bool, role: str = 
         require_depth=bool(data_cfg.get("require_depth", False)),
         boxes_root=boxes_root,
         require_boxes=bool(data_cfg.get("require_boxes", False)),
+        box_free_gt_slots=bool(data_cfg.get("box_free_gt_slots", False)),
         query_source=str(data_cfg.get("query_source", "persons")),
         patch_size=int(config.get("model", {}).get("patch_size", 16)),
         mask_patch_threshold=float(data_cfg.get("mask_patch_threshold", 0.10)),
@@ -405,6 +495,7 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         enable_alignment=bool(model_cfg.get("enable_alignment", False)),
         enable_smpl=bool(model_cfg.get("enable_smpl", True)),
         num_smpl_queries=int(model_cfg["num_smpl_queries"]),
+        smpl_use_aggregator_queries=bool(model_cfg.get("smpl_use_aggregator_queries", True)),
         smpl_predict_boxes=bool(model_cfg.get("predict_boxes", False)),
         smpl_bbox_mode=str(model_cfg.get("smpl_bbox_mode", "direct")),
         smpl_predict_id_embed=bool(model_cfg.get("predict_id_embed", False)),
@@ -590,6 +681,7 @@ def build_criterion(config: dict[str, Any]) -> torch.nn.Module:
             if smpl_model_dir:
                 loss_cfg["smpl_model_dir"] = smpl_model_dir
         match_cfg = config.get("matching", {})
+        loss_cfg.setdefault("matching_mode", str(match_cfg.get("mode", "hungarian")))
         data_image_resolution = int(config.get("data", {}).get("image_resolution", config.get("data", {}).get("image_size", 512)))
         matcher = HungarianSMPLMatcher(
             cost_conf=float(match_cfg.get("cost_conf", 1.0)),
@@ -888,9 +980,22 @@ def load_initial_checkpoint(model: torch.nn.Module, config: dict[str, Any], devi
     checkpoint_path = require_path(config, "checkpoints.vggt_baseline", allow_empty=False)
     checkpoint = torch.load(checkpoint_path, map_location=device)
     state_dict = extract_state_dict(checkpoint)
-    missing, unexpected = model.load_state_dict(state_dict, strict=bool(ckpt_cfg.get("strict", False)))
+    strict = bool(ckpt_cfg.get("strict", False))
+    if not strict:
+        state_dict, shape_report = make_state_dict_loadable(
+            state_dict,
+            model.state_dict(),
+            adapt_query_tensors=bool(ckpt_cfg.get("baseline_adapt_query_tensors", False)),
+        )
+    else:
+        shape_report = {"adapted": [], "skipped": []}
+    missing, unexpected = model.load_state_dict(state_dict, strict=strict)
     print(f"[ckpt] loaded baseline: {checkpoint_path}")
     print(f"[ckpt] missing={len(missing)} unexpected={len(unexpected)}")
+    if shape_report["skipped"]:
+        print(f"[ckpt] baseline shape-mismatched tensors skipped={len(shape_report['skipped'])}")
+        for item in shape_report["skipped"][:10]:
+            print(f"  - {item}")
 
 
 def build_teacher_model(config: dict[str, Any], device: torch.device) -> torch.nn.Module | None:
@@ -1138,6 +1243,7 @@ def train_one_epoch(
     progress_total_steps: int | None = None,
     progress_done_offset: int = 0,
     total_epochs: int | None = None,
+    wandb_run: Any | None = None,
 ) -> tuple[int, dict[str, float]]:
     model.train()
     apply_freeze_policy(model, config)
@@ -1147,8 +1253,29 @@ def train_one_epoch(
     max_steps_per_epoch = int(config["optim"].get("max_steps_per_epoch", 0) or 0)
     totals: dict[str, float] = {}
     count = 0
+    loader_batches = 0
+    input_samples = 0
+    dropped_no_visible_samples = 0
+    empty_visible_frames = 0
+    skipped_no_visible_batches = 0
+    skipped_no_supervision_batches = 0
+    gradient_contract_verified = False
     for step, batch in enumerate(loader):
+        loader_batches += 1
         batch = move_to_device(batch, device, config=config)
+        batch, batch_stats = prepare_box_free_gt_scale_batch(batch, config)
+        input_samples += int(batch_stats["input_samples"])
+        dropped_no_visible_samples += int(batch_stats["dropped_no_visible_samples"])
+        empty_visible_frames += int(batch_stats["empty_visible_frames"])
+        if int(batch_stats["kept_samples"]) == 0:
+            skipped_no_visible_batches += 1
+            maybe_log_skipped_batch(
+                reason="no online-visible GT people",
+                epoch=epoch,
+                loader_step=step,
+                skipped_count=skipped_no_visible_batches,
+            )
+            continue
         optimizer.zero_grad(set_to_none=True)
         predictions = forward_model(model, batch, config, epoch=epoch)
         if teacher_model is not None:
@@ -1157,17 +1284,42 @@ def train_one_epoch(
         loss = losses["loss_total"]
         if not torch.isfinite(loss):
             raise FloatingPointError(f"Non-finite loss at epoch={epoch + 1}, step={step}: {loss.item()}")
+        supervision_key = missing_required_supervision(losses, config)
+        if supervision_key is not None:
+            skipped_no_supervision_batches += 1
+            maybe_log_skipped_batch(
+                reason=f"zero required supervision metric {supervision_key}",
+                epoch=epoch,
+                loader_step=step,
+                skipped_count=skipped_no_supervision_batches,
+            )
+            del loss, losses, predictions
+            continue
         loss.backward()
-        if step == 0:
+        if not gradient_contract_verified:
             validate_required_gradient_prefixes(model, config)
+            gradient_contract_verified = True
         if grad_clip_norm > 0:
             torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip_norm)
         optimizer.step()
 
-        for key, value in scalarize_losses(losses).items():
+        step_scalars = scalarize_losses(losses)
+        step_scalars.update(depth_perturbation_scalars(predictions))
+        for key, value in step_scalars.items():
             totals[key] = totals.get(key, 0.0) + float(value)
         count += 1
         global_step += 1
+        wandb_log_interval = int(
+            config.get("logging", {}).get("wandb", {}).get("log_interval", log_interval) or log_interval
+        )
+        if wandb_run is not None and global_step % max(wandb_log_interval, 1) == 0:
+            wandb_run.log(
+                {
+                    "global_step": global_step,
+                    **{f"train/{key}": float(value) for key, value in step_scalars.items()},
+                },
+                step=global_step,
+            )
         if global_step % log_interval == 0:
             if log_style in {"progress", "compact"}:
                 line = format_progress_log(
@@ -1194,11 +1346,123 @@ def train_one_epoch(
             break
     if log_style == "progress":
         print("", flush=True)
+    if count == 0:
+        raise RuntimeError(
+            "No optimizer steps were produced in this epoch after GT visibility/supervision filtering: "
+            f"epoch={epoch + 1} loader_batches={loader_batches} "
+            f"skipped_no_visible_batches={skipped_no_visible_batches} "
+            f"skipped_no_supervision_batches={skipped_no_supervision_batches}. "
+            "Inspect metric_gt_smpl_visibility_keep_ratio and the box-free data smoke output."
+        )
     averaged = {key: value / max(count, 1) for key, value in totals.items()}
+    averaged.update(
+        {
+            "metric_train_loader_batches": float(loader_batches),
+            "metric_train_optimizer_steps": float(count),
+            "metric_train_input_samples": float(input_samples),
+            "metric_train_dropped_no_visible_samples": float(dropped_no_visible_samples),
+            "metric_train_dropped_no_visible_sample_rate": float(
+                dropped_no_visible_samples / max(input_samples, 1)
+            ),
+            "metric_train_empty_visible_frames": float(empty_visible_frames),
+            "metric_train_skipped_no_visible_batches": float(skipped_no_visible_batches),
+            "metric_train_skipped_no_supervision_batches": float(skipped_no_supervision_batches),
+            "metric_train_skipped_batch_rate": float(
+                (skipped_no_visible_batches + skipped_no_supervision_batches) / max(loader_batches, 1)
+            ),
+        }
+    )
     reduce_contact_intent_epoch_metrics(averaged)
     if averaged:
         print(format_epoch_summary("train-epoch", epoch, averaged, config), flush=True)
+    print(
+        "[train-filter] "
+        f"epoch={epoch + 1} input_samples={input_samples} "
+        f"dropped_no_visible_samples={dropped_no_visible_samples} "
+        f"empty_visible_frames={empty_visible_frames} "
+        f"skipped_no_visible_batches={skipped_no_visible_batches} "
+        f"skipped_no_supervision_batches={skipped_no_supervision_batches} "
+        f"optimizer_steps={count}",
+        flush=True,
+    )
     return global_step, averaged
+
+
+def prepare_box_free_gt_scale_batch(
+    batch: dict[str, torch.Tensor],
+    config: dict[str, Any],
+) -> tuple[dict[str, torch.Tensor], dict[str, int]]:
+    batch_size = int(batch["images"].shape[0])
+    stats = {
+        "input_samples": batch_size,
+        "kept_samples": batch_size,
+        "dropped_no_visible_samples": 0,
+        "empty_visible_frames": 0,
+    }
+    model_cfg = config.get("model", {})
+    optim_cfg = config.get("optim", {})
+    active = (
+        str(model_cfg.get("smpl_provider", "")).lower() == "gt_perturbed"
+        and bool(model_cfg.get("gt_smpl_online_visibility", False))
+    )
+    if not active:
+        return batch, stats
+
+    apply_gt_smpl_online_visibility(batch, config)
+    visible = batch["smpl_mask"].bool()
+    frame_has_person = visible.any(dim=-1)
+    sample_has_person = frame_has_person.any(dim=-1)
+    stats["empty_visible_frames"] = int((~frame_has_person).sum().detach().cpu())
+    if not bool(optim_cfg.get("drop_no_visible_gt_samples", False)):
+        return batch, stats
+
+    stats["kept_samples"] = int(sample_has_person.sum().detach().cpu())
+    stats["dropped_no_visible_samples"] = batch_size - stats["kept_samples"]
+    if stats["kept_samples"] == batch_size:
+        return batch, stats
+    return filter_batch_samples(batch, sample_has_person), stats
+
+
+def filter_batch_samples(
+    batch: dict[str, torch.Tensor],
+    keep: torch.Tensor,
+) -> dict[str, torch.Tensor]:
+    keep = keep.bool()
+    batch_size = int(keep.numel())
+    return {
+        key: value[keep] if value.ndim > 0 and int(value.shape[0]) == batch_size else value
+        for key, value in batch.items()
+    }
+
+
+def missing_required_supervision(
+    losses: dict[str, torch.Tensor],
+    config: dict[str, Any],
+) -> str | None:
+    optim_cfg = config.get("optim", {})
+    key = str(optim_cfg.get("required_supervision_metric", "") or "").strip()
+    if not key:
+        return None
+    value = losses.get(key)
+    if not isinstance(value, torch.Tensor):
+        raise KeyError(f"Configured optim.required_supervision_metric is missing from losses: {key!r}")
+    threshold = float(optim_cfg.get("required_supervision_min", 0.0) or 0.0)
+    scalar = float(value.detach().float().mean().cpu())
+    return key if not math.isfinite(scalar) or scalar <= threshold else None
+
+
+def maybe_log_skipped_batch(
+    reason: str,
+    epoch: int,
+    loader_step: int,
+    skipped_count: int,
+) -> None:
+    if skipped_count <= 5 or skipped_count % 100 == 0:
+        print(
+            f"[train-skip] epoch={epoch + 1} loader_step={loader_step} reason={reason} "
+            f"count={skipped_count}",
+            flush=True,
+        )
 
 
 @torch.no_grad()
@@ -1229,6 +1493,8 @@ def validate(
         v4_records.extend(collect_hsi_v4_validation_records(predictions, batch, config))
         for key, value in losses.items():
             totals[key] = totals.get(key, 0.0) + float(value.detach().cpu())
+        for key, value in depth_perturbation_scalars(predictions).items():
+            totals[key] = totals.get(key, 0.0) + float(value)
         configured_monitor = str(config.get("checkpoint", {}).get("monitor", ""))
         selection_key = configured_monitor if configured_monitor in losses else "metric_stage2_selection"
         selection = losses.get(selection_key)
@@ -1487,11 +1753,14 @@ def forward_model(
 ) -> dict[str, torch.Tensor]:
     model_cfg = config.get("model", {})
     provider = str(model_cfg.get("smpl_provider", "internal")).lower()
-    needs_query_inputs = bool(model_cfg.get("smpl_query_box_prior", False)) or provider in {"nlf", "gt_perturbed"}
-    if not needs_query_inputs:
+    uses_gt_override = provider == "gt_perturbed"
+    needs_query_inputs = bool(model_cfg.get("smpl_query_box_prior", False)) or provider == "nlf"
+    if not needs_query_inputs and not uses_gt_override:
         return model(batch["images"])
-    boxes = batch.get("smpl_query_boxes", batch.get("gt_boxes"))
-    mask = batch.get("smpl_query_boxes_mask", batch.get("boxes_mask"))
+    if uses_gt_override and bool(model_cfg.get("gt_smpl_online_visibility", False)):
+        apply_gt_smpl_online_visibility(batch, config)
+    boxes = batch.get("smpl_query_boxes", batch.get("gt_boxes")) if needs_query_inputs else None
+    mask = batch.get("smpl_query_boxes_mask", batch.get("boxes_mask")) if needs_query_inputs else None
     if model.training:
         prior_cfg = config.get("training_prior", {})
         if prior_cfg:
@@ -1515,6 +1784,8 @@ def forward_model(
             batch,
             config,
             using_gt_override=smpl_override_outputs is not None,
+            epoch=epoch,
+            is_training=model.training,
         )
     )
     predictions = model(
@@ -1535,6 +1806,9 @@ def forward_model(
     )
     if smpl_override_outputs is not None:
         predictions["stage2_gt_override_active"] = predictions["pred_transl_cam"].new_ones(())
+    for key, value in geometry.get("diagnostics", {}).items():
+        if isinstance(value, torch.Tensor):
+            predictions[key] = value.to(device=predictions["pred_transl_cam"].device)
     return predictions
 
 
@@ -1605,6 +1879,8 @@ def resolve_hsi_geometry_inputs(
     batch: dict[str, torch.Tensor],
     config: dict[str, Any],
     using_gt_override: bool,
+    epoch: int = 0,
+    is_training: bool = True,
 ) -> dict[str, Any]:
     model_cfg = config.get("model", {})
     mode = str(model_cfg.get("hsi_geometry_mode", "") or "").lower()
@@ -1634,12 +1910,239 @@ def resolve_hsi_geometry_inputs(
         intrinsics = batch.get("K_scal3r")
         if depth is None or intrinsics is None:
             raise ValueError("gt_metric geometry requires batch['gt_depth'] and batch['K_scal3r']")
-        return {"mode": mode, "depth": depth, "intrinsics": intrinsics, "depth_is_metric": True}
+        depth, diagnostics = maybe_perturb_gt_metric_depth(depth, config, epoch=epoch, is_training=is_training)
+        return {"mode": mode, "depth": depth, "intrinsics": intrinsics, "depth_is_metric": True, "diagnostics": diagnostics}
     if mode == "real_inference":
         if using_gt_override:
             raise ValueError("GT SMPL override cannot be paired with real_inference geometry")
         return {"mode": mode, "depth": None, "intrinsics": None, "depth_is_metric": False}
     raise ValueError(f"Unsupported model.hsi_geometry_mode: {mode!r}")
+
+
+def maybe_perturb_gt_metric_depth(
+    depth: torch.Tensor,
+    config: dict[str, Any],
+    epoch: int = 0,
+    is_training: bool = True,
+) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    prior_cfg = config.get("training_prior", {})
+    mode = str(prior_cfg.get("hsi_gt_depth_scale_noise_mode", "uniform") or "uniform").lower()
+    schedule_key = (
+        "hsi_gt_depth_log_scale_std_schedule"
+        if "hsi_gt_depth_log_scale_std_schedule" in prior_cfg
+        else "hsi_gt_depth_scale_noise_schedule"
+    )
+    schedule = parse_float_schedule(prior_cfg.get(schedule_key, "0.0"))
+    noise_amount = schedule[min(max(int(epoch), 0), len(schedule) - 1)] if schedule else 0.0
+    if noise_amount <= 0.0:
+        scale = depth.new_ones(*depth.shape[:2], 1, 1)
+        return depth, {
+            "hsi_gt_depth_perturb_scale": scale,
+            "hsi_gt_depth_perturb_target_scale": scale,
+        }
+
+    unit = str(prior_cfg.get("hsi_gt_depth_scale_noise_unit", "sequence") or "sequence").lower()
+    if unit not in {"sequence", "frame"}:
+        raise ValueError(f"Unsupported training_prior.hsi_gt_depth_scale_noise_unit: {unit!r}")
+    clean_prob = min(max(float(prior_cfg.get("hsi_gt_depth_scale_clean_prob", 0.0) or 0.0), 0.0), 1.0)
+    shape = (depth.shape[0], 1, 1, 1) if unit == "sequence" else (*depth.shape[:2], 1, 1)
+
+    if is_training:
+        if mode == "uniform":
+            eps = depth.new_empty(*shape).uniform_(-float(noise_amount), float(noise_amount))
+            scale = 1.0 + eps
+        elif mode in {"normal", "gaussian"}:
+            eps = depth.new_empty(*shape).normal_(mean=0.0, std=float(noise_amount))
+            scale = 1.0 + eps
+        elif mode in {"lognormal", "log_normal", "gaussian_log"}:
+            log_mean = float(prior_cfg.get("hsi_gt_depth_log_scale_mean", 0.0) or 0.0)
+            log_scale = depth.new_empty(*shape).normal_(mean=log_mean, std=float(noise_amount))
+            scale = torch.exp(log_scale)
+        else:
+            raise ValueError(f"Unsupported training_prior.hsi_gt_depth_scale_noise_mode: {mode!r}")
+        if clean_prob > 0.0:
+            noisy = torch.rand(*shape, device=depth.device) >= clean_prob
+            scale = torch.where(noisy, scale, torch.ones_like(scale))
+    else:
+        eval_factor = float(prior_cfg.get("hsi_gt_depth_scale_eval_factor", 1.0) or 1.0)
+        scale = depth.new_full(shape, eval_factor if eval_factor > 0.0 else 1.0)
+
+    scale_min = float(prior_cfg.get("hsi_gt_depth_scale_min", 0.0) or 0.0)
+    scale_max = float(prior_cfg.get("hsi_gt_depth_scale_max", 0.0) or 0.0)
+    if scale_min > 0.0 or scale_max > 0.0:
+        scale = scale.clamp(min=max(scale_min, 1e-4), max=scale_max if scale_max > 0.0 else None)
+    else:
+        scale = scale.clamp(min=1e-4)
+    scale = scale.expand(*depth.shape[:2], 1, 1)
+    perturbed = depth * scale.unsqueeze(2) if depth.ndim == 5 else depth * scale
+    target_scale = scale.reciprocal()
+    return perturbed, {
+        "hsi_gt_depth_perturb_scale": scale,
+        "hsi_gt_depth_perturb_target_scale": target_scale,
+    }
+
+
+def depth_perturbation_scalars(predictions: dict[str, torch.Tensor]) -> dict[str, float]:
+    scale = predictions.get("hsi_gt_depth_perturb_scale")
+    target = predictions.get("hsi_gt_depth_perturb_target_scale")
+    if not isinstance(scale, torch.Tensor) or not isinstance(target, torch.Tensor):
+        return {}
+    scale_f = scale.detach().float().reshape(-1)
+    target_f = target.detach().float().reshape(-1)
+    scalars = {
+        "metric_hsi_gt_depth_perturb_scale_mean": float(scale_f.mean().cpu()),
+        "metric_hsi_gt_depth_perturb_scale_std": float(scale_f.std(unbiased=False).cpu()),
+        "metric_hsi_gt_depth_perturb_log_scale_std": float(torch.log(scale_f.clamp(min=1e-6)).std(unbiased=False).cpu()),
+        "metric_hsi_gt_depth_perturb_target_scale_mean": float(target_f.mean().cpu()),
+    }
+    visibility = predictions.get("gt_smpl_online_visibility_mask")
+    original = predictions.get("gt_smpl_original_mask")
+    if isinstance(visibility, torch.Tensor) and isinstance(original, torch.Tensor):
+        visible_count = visibility.detach().float().sum()
+        original_count = original.detach().float().sum()
+        scalars["metric_gt_smpl_visible_people"] = float(visible_count.cpu())
+        scalars["metric_gt_smpl_visibility_keep_ratio"] = float(
+            (visible_count / original_count.clamp(min=1.0)).cpu()
+        )
+    return scalars
+
+
+@torch.no_grad()
+def apply_gt_smpl_online_visibility(batch: dict[str, torch.Tensor], config: dict[str, Any]) -> None:
+    if "gt_smpl_online_visibility_mask" in batch:
+        return
+    required = ("gt_pose_6d", "gt_betas", "gt_depth", "K_scal3r")
+    missing = [key for key in required if key not in batch]
+    if missing:
+        raise ValueError(f"Online GT SMPL visibility requires batch keys: {missing}")
+
+    pose6d = batch["gt_pose_6d"].float()
+    betas = batch["gt_betas"].float()
+    transl = batch.get("gt_transl_cam", batch.get("gt_cam_trans"))
+    if transl is None:
+        raise ValueError("Online GT SMPL visibility requires gt_transl_cam or gt_cam_trans")
+    transl = transl.float()
+    original = batch.get("smpl_mask")
+    if original is None:
+        original = torch.ones(pose6d.shape[:3], dtype=torch.bool, device=pose6d.device)
+    else:
+        original = original.bool()
+
+    flat_original = original.reshape(-1)
+    selected = torch.nonzero(flat_original, as_tuple=False).reshape(-1)
+    visible_flat = torch.zeros_like(flat_original)
+    if selected.numel() > 0:
+        smpl = _get_cached_smpl_layer(config, pose6d.device)
+        flat_pose = pose6d.reshape(-1, pose6d.shape[-1])
+        flat_betas = betas.reshape(-1, betas.shape[-1])
+        flat_transl = transl.reshape(-1, 3)
+        visibility_cfg = config.get("training_prior", {})
+        max_points = int(visibility_cfg.get("gt_smpl_visibility_max_points", 512) or 0)
+        depth = _canonical_training_depth(batch["gt_depth"].float())
+        flat_depth = depth.reshape(-1, *depth.shape[-2:])
+        flat_intrinsics = batch["K_scal3r"].float().reshape(-1, 3, 3)
+        num_queries = int(pose6d.shape[2])
+        min_points = max(int(visibility_cfg.get("gt_smpl_visibility_min_points", 32) or 32), 1)
+        decode_batch_size = max(int(visibility_cfg.get("gt_smpl_visibility_decode_batch_size", 128) or 128), 1)
+        for selected_chunk in selected.split(decode_batch_size):
+            axis_angle = rot6d_to_axis_angle(flat_pose[selected_chunk].reshape(-1, 24, 6)).reshape(-1, 72)
+            vertices, _ = smpl(axis_angle.float(), flat_betas[selected_chunk].float())
+            vertices_cam = vertices.to(dtype=pose6d.dtype) + flat_transl[selected_chunk, None, :]
+            if max_points > 0 and vertices_cam.shape[1] > max_points:
+                point_idx = torch.linspace(
+                    0,
+                    vertices_cam.shape[1] - 1,
+                    steps=max_points,
+                    device=vertices_cam.device,
+                ).round().long()
+                vertices_cam = vertices_cam.index_select(1, point_idx)
+            frame_idx = torch.div(selected_chunk, num_queries, rounding_mode="floor")
+            visible_counts = _count_visible_smpl_points(
+                vertices_cam=vertices_cam,
+                depth=flat_depth,
+                intrinsics=flat_intrinsics[frame_idx],
+                frame_idx=frame_idx,
+                window=int(visibility_cfg.get("gt_smpl_visibility_window", 3) or 3),
+                tolerance_m=float(visibility_cfg.get("gt_smpl_visibility_tolerance_m", 0.20) or 0.20),
+                max_z_m=float(visibility_cfg.get("gt_smpl_visibility_max_z_m", 0.0) or 0.0),
+            )
+            visible_flat[selected_chunk] = visible_counts >= min_points
+
+    visible = visible_flat.reshape_as(original) & original
+    batch["gt_smpl_original_mask"] = original
+    batch["gt_smpl_online_visibility_mask"] = visible
+    batch["smpl_mask"] = visible
+    for key in ("gt_track_mask", "person_id_mask"):
+        value = batch.get(key)
+        if isinstance(value, torch.Tensor) and value.shape == visible.shape:
+            batch[key] = value.bool() & visible
+
+
+def _get_cached_smpl_layer(config: dict[str, Any], device: torch.device) -> SMPLLayer:
+    model_dir = str(config.get("assets", {}).get("smpl_model_dir", "") or "")
+    if not model_dir:
+        raise ValueError("Online GT SMPL visibility requires assets.smpl_model_dir")
+    key = (model_dir, str(device))
+    smpl = _SMPL_NOISE_CACHE.get(key)
+    if smpl is None:
+        smpl = SMPLLayer(model_dir).to(device).eval()
+        for parameter in smpl.parameters():
+            parameter.requires_grad = False
+        _SMPL_NOISE_CACHE[key] = smpl
+    return smpl
+
+
+def _canonical_training_depth(depth: torch.Tensor) -> torch.Tensor:
+    if depth.ndim == 5 and depth.shape[2] == 1:
+        return depth[:, :, 0]
+    if depth.ndim == 5 and depth.shape[-1] == 1:
+        return depth[..., 0]
+    if depth.ndim == 4:
+        return depth
+    raise ValueError(f"Expected GT depth [B,S,1,H,W], [B,S,H,W,1], or [B,S,H,W], got {tuple(depth.shape)}")
+
+
+def _count_visible_smpl_points(
+    vertices_cam: torch.Tensor,
+    depth: torch.Tensor,
+    intrinsics: torch.Tensor,
+    frame_idx: torch.Tensor,
+    window: int,
+    tolerance_m: float,
+    max_z_m: float = 0.0,
+) -> torch.Tensor:
+    height, width = depth.shape[-2:]
+    z = vertices_cam[..., 2]
+    x = intrinsics[:, None, 0, 0] * vertices_cam[..., 0] / z.clamp(min=1e-6) + intrinsics[:, None, 0, 2]
+    y = intrinsics[:, None, 1, 1] * vertices_cam[..., 1] / z.clamp(min=1e-6) + intrinsics[:, None, 1, 2]
+    center_x = x.round().long()
+    center_y = y.round().long()
+    point_valid = torch.isfinite(vertices_cam).all(dim=-1) & (z > 1e-6)
+    if max_z_m > 0.0:
+        point_valid = point_valid & (z <= float(max_z_m))
+
+    window = max(int(window), 1)
+    if window % 2 == 0:
+        window += 1
+    radius = window // 2
+    offsets = torch.arange(-radius, radius + 1, device=vertices_cam.device)
+    oy, ox = torch.meshgrid(offsets, offsets, indexing="ij")
+    xs = center_x[..., None] + ox.reshape(1, 1, -1)
+    ys = center_y[..., None] + oy.reshape(1, 1, -1)
+    local_valid = (xs >= 0) & (xs < width) & (ys >= 0) & (ys < height)
+    sampled = depth[
+        frame_idx[:, None, None],
+        ys.clamp(0, height - 1),
+        xs.clamp(0, width - 1),
+    ]
+    local_valid = local_valid & torch.isfinite(sampled) & (sampled > 1e-6)
+    delta = torch.abs(sampled - z[..., None].to(dtype=sampled.dtype))
+    inf = torch.full_like(delta, float("inf"))
+    nearest = torch.where(local_valid, delta, inf).amin(dim=-1)
+    visible = point_valid & torch.isfinite(nearest)
+    if tolerance_m > 0.0:
+        visible = visible & (nearest <= float(tolerance_m))
+    return visible.sum(dim=-1)
 
 
 def build_smpl_override_outputs(
@@ -1656,8 +2159,9 @@ def build_smpl_override_outputs(
         valid = torch.ones(clean_transl.shape[:-1], dtype=torch.bool, device=clean_transl.device)
     else:
         valid = valid.bool()
+    box_free = bool(config.get("model", {}).get("gt_smpl_box_free", False))
     boxes_mask = batch.get("boxes_mask")
-    if boxes_mask is not None:
+    if boxes_mask is not None and not box_free:
         valid = valid & boxes_mask.bool()
     perturb_mode = str(config.get("training_prior", {}).get("smpl_perturb_mode", "translation") or "translation").lower()
     if perturb_mode == "translation":
@@ -1723,7 +2227,13 @@ def build_smpl_override_outputs(
         "base_clean_pred_pose_6d": pose6d,
         "gt_smpl_provider_mask": valid,
     }
-    if boxes is not None:
+    for key in ("gt_smpl_online_visibility_mask", "gt_smpl_original_mask"):
+        value = batch.get(key)
+        if isinstance(value, torch.Tensor):
+            outputs[key] = value
+    if box_free:
+        outputs["pred_boxes"] = pose6d.new_zeros(*pose6d.shape[:3], 4)
+    elif boxes is not None:
         outputs["pred_boxes"] = boxes.to(device=pose6d.device, dtype=pose6d.dtype)
     return outputs
 
