@@ -973,6 +973,37 @@ def validate_required_gradient_prefixes(model: torch.nn.Module, config: dict[str
         print(f"[grad] required prefix verified: {prefix}")
 
 
+def monitored_gradient_scalars(
+    model: torch.nn.Module,
+    config: dict[str, Any],
+) -> dict[str, float]:
+    configured = config.get("optim", {}).get("gradient_monitor_prefixes", {})
+    if not configured:
+        return {}
+    if not isinstance(configured, dict):
+        raise TypeError("optim.gradient_monitor_prefixes must be a label-to-prefix mapping")
+    scalars: dict[str, float] = {}
+    named_parameters = list(model.named_parameters())
+    for label, raw_prefix in configured.items():
+        prefix = str(raw_prefix)
+        squared_norm = 0.0
+        matched = 0
+        for name, parameter in named_parameters:
+            if not name.startswith(prefix) or not parameter.requires_grad:
+                continue
+            matched += 1
+            gradient = parameter.grad
+            if gradient is None:
+                continue
+            if not torch.isfinite(gradient).all():
+                raise FloatingPointError(f"Non-finite monitored gradient for parameter: {name}")
+            squared_norm += float(gradient.detach().float().square().sum().cpu())
+        if matched == 0:
+            raise RuntimeError(f"Gradient monitor prefix has no trainable parameters: {prefix!r}")
+        scalars[f"metric_grad_norm_{label}"] = math.sqrt(squared_norm)
+    return scalars
+
+
 def load_initial_checkpoint(model: torch.nn.Module, config: dict[str, Any], device: torch.device) -> None:
     ckpt_cfg = config.get("checkpoint", {})
     if not ckpt_cfg.get("load_vggt_baseline", False):
@@ -1299,12 +1330,14 @@ def train_one_epoch(
         if not gradient_contract_verified:
             validate_required_gradient_prefixes(model, config)
             gradient_contract_verified = True
+        gradient_scalars = monitored_gradient_scalars(model, config)
         if grad_clip_norm > 0:
             torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip_norm)
         optimizer.step()
 
         step_scalars = scalarize_losses(losses)
         step_scalars.update(depth_perturbation_scalars(predictions))
+        step_scalars.update(gradient_scalars)
         for key, value in step_scalars.items():
             totals[key] = totals.get(key, 0.0) + float(value)
         count += 1

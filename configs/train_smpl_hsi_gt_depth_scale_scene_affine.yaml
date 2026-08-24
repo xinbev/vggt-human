@@ -112,6 +112,8 @@ optim:
     - metric_train_dropped_no_visible_sample_rate
     - metric_train_skipped_no_supervision_batches
     - metric_train_skipped_batch_rate
+    - metric_grad_norm_hsi_scale_delta
+    - metric_grad_norm_hsi_bias_delta
   save_interval: 1
   max_steps_per_epoch: 0
   drop_no_visible_gt_samples: true
@@ -125,7 +127,9 @@ optim:
     - hsi_refinement_head.bias_delta.
   required_gradient_prefixes:
     - hsi_refinement_head.scale_delta.
-    - hsi_refinement_head.bias_delta.
+  gradient_monitor_prefixes:
+    hsi_scale_delta: hsi_refinement_head.scale_delta.
+    hsi_bias_delta: hsi_refinement_head.bias_delta.
 
 training_prior:
   center_noise: 0.0
@@ -193,7 +197,7 @@ loss:
   hsi_align_no_worse_weight: 0.0
   hsi_depth_teacher_weight: 0.10
   hsi_depth_teacher_max_m: 20.0
-  hsi_depth_teacher_error_clip_m: 2.0
+  hsi_depth_teacher_error_clip_m: 0.0
   hsi_depth_teacher_use_human_roi: false
   hsi_depth_teacher_require_matched_frame: true
   hsi_depth_teacher_roi_expand: 0.85

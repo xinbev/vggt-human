@@ -232,6 +232,15 @@ frames containing at least one online-visible matched GT person
 (`hsi_depth_teacher_require_matched_frame=true`), so empty frames cannot add a
 constant, non-learnable depth error to `loss_total`.
 
+The synthetic corruption is multiplicative, so non-zero `scale_delta` gradient
+is mandatory while `bias_delta` may legitimately have zero gradient when its
+prediction is already zero. Only the scale branch is therefore part of the
+hard first-step gradient contract. Both gradient norms are still logged as
+`metric_grad_norm_hsi_scale_delta` and `metric_grad_norm_hsi_bias_delta`.
+The dense auxiliary uses no hard metric-error clamp
+(`hsi_depth_teacher_error_clip_m=0`); Smooth L1 already bounds its gradient,
+whereas clamping large warm-start errors would create a dead gradient region.
+
 The HSI log-scale clamp remains `[-5, 5]`, matching the source checkpoint. A
 narrow clamp around the new perturbation range is unsafe during warm start:
 the old scale branch can initially predict a much larger log-scale, and a hard
