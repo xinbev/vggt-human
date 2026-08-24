@@ -1,0 +1,16 @@
+{
+  "status": "ok",
+  "depth_shape": [
+    1,
+    2,
+    1,
+    16,
+    16
+  ],
+  "clean_eval_depth_scale": 1.0,
+  "clean_eval_target_scale": 1.0,
+  "sampled_log_scale_mean": -0.002806849079206586,
+  "sampled_log_scale_std": 0.299032986164093,
+  "smpl_override_clean": true,
+  "box_free_gt_slots": true
+}

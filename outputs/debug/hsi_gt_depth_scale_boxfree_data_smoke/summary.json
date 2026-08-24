@@ -1,0 +1,27 @@
+{
+  "status": "ok",
+  "dataset_samples": 91220,
+  "scanned_samples": 32,
+  "original_people": 498,
+  "online_visible_people": 495,
+  "visibility_keep_ratio": 0.9939759036144579,
+  "original_nonempty_samples": 32,
+  "online_nonempty_samples": 32,
+  "dropped_no_visible_samples": 0,
+  "dropped_no_visible_sample_rate": 0.0,
+  "empty_visible_frames": 0,
+  "empty_visible_frame_rate": 0.0,
+  "depth_perturb_scale": [
+    1.0509437322616577,
+    1.0509437322616577
+  ],
+  "boxes_root_key": "",
+  "matching_mode": "gt_slots",
+  "runtime": {
+    "vggt_baseline": "/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt",
+    "resume_checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt",
+    "smpl_model_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/body_models/smpl",
+    "resume_model_tensors": 164,
+    "wandb_available": true
+  }
+}
