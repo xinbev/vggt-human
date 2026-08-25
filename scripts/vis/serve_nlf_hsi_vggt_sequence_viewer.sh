@@ -47,6 +47,13 @@ BASELINE_CHECKPOINT="${BASELINE_CHECKPOINT:-}"
 SMPL_MODEL_DIR="${SMPL_MODEL_DIR:-}"
 SMPL_EDIT_OUTPUT="${SMPL_EDIT_OUTPUT:-}"
 HSI_ALIGN_FEATURE_VERSION="${HSI_ALIGN_FEATURE_VERSION:-}"
+HSI_OVERLAY_CHECKPOINT="${HSI_OVERLAY_CHECKPOINT:-}"
+SCENE_SCALE_PREALIGN="${SCENE_SCALE_PREALIGN:-none}"
+COARSE_SCALE_MIN="${COARSE_SCALE_MIN:-0.10}"
+COARSE_SCALE_MAX="${COARSE_SCALE_MAX:-10.0}"
+COARSE_ANCHOR_STRIDE="${COARSE_ANCHOR_STRIDE:-8}"
+COARSE_MIN_ANCHOR_PIXELS="${COARSE_MIN_ANCHOR_PIXELS:-32}"
+SMPL_USE_AGGREGATOR_QUERIES="${SMPL_USE_AGGREGATOR_QUERIES:-}"
 SMOKE_ONLY="${SMOKE_ONLY:-false}"
 
 cd "${REPO_ROOT}"
@@ -90,6 +97,11 @@ echo "Max depth   : ${MAX_SCENE_DEPTH} (0 disables clipping; GUI adjustable)"
 echo "Viewer mode : ${VIEWER_MODE_ARG} (initial GUI state)"
 echo "Env display : ${ENVIRONMENT_DISPLAY} (points|mesh|both; GUI adjustable)"
 echo "HSI vis scale: ${HSI_VISUAL_SCALE} (viewer-only; GUI adjustable)"
+echo "Scale prealign: ${SCENE_SCALE_PREALIGN}"
+if [[ "${SCENE_SCALE_PREALIGN}" == "smpl_median" ]]; then
+  echo "Coarse scale : range=[${COARSE_SCALE_MIN},${COARSE_SCALE_MAX}] stride=${COARSE_ANCHOR_STRIDE} min_pixels=${COARSE_MIN_ANCHOR_PIXELS}"
+fi
+echo "HSI overlay : ${HSI_OVERLAY_CHECKPOINT:-<none>}"
 echo "Human mask  : projected SMPL triangles + ${HUMAN_MASK_DILATION_PX}px dilation (unconditional removal)"
 echo "Filter human: ${FILTER_HUMAN_POINTS} (initial GUI state)"
 if [[ "${ENVIRONMENT_DISPLAY}" != "points" ]]; then
@@ -129,6 +141,11 @@ ARGS=(
   --viewer-mode "${VIEWER_MODE_ARG}"
   --environment-display "${ENVIRONMENT_DISPLAY}"
   --hsi-visual-scale "${HSI_VISUAL_SCALE}"
+  --scene-scale-prealign "${SCENE_SCALE_PREALIGN}"
+  --coarse-scale-min "${COARSE_SCALE_MIN}"
+  --coarse-scale-max "${COARSE_SCALE_MAX}"
+  --coarse-anchor-stride "${COARSE_ANCHOR_STRIDE}"
+  --coarse-min-anchor-pixels "${COARSE_MIN_ANCHOR_PIXELS}"
   --human-mask-dilation-px "${HUMAN_MASK_DILATION_PX}"
   --env-mesh-depth-edge-rtol "${ENV_MESH_DEPTH_EDGE_RTOL}"
   --env-mesh-color-groups "${ENV_MESH_COLOR_GROUPS}"
@@ -164,6 +181,9 @@ fi
 if [[ -n "${BASELINE_CHECKPOINT}" ]]; then
   ARGS+=(--baseline-checkpoint "${BASELINE_CHECKPOINT}")
 fi
+if [[ -n "${HSI_OVERLAY_CHECKPOINT}" ]]; then
+  ARGS+=(--hsi-overlay-checkpoint "${HSI_OVERLAY_CHECKPOINT}")
+fi
 if [[ -n "${SMPL_MODEL_DIR}" ]]; then
   ARGS+=(--smpl-model-dir "${SMPL_MODEL_DIR}")
 fi
@@ -172,6 +192,9 @@ if [[ -n "${SMPL_EDIT_OUTPUT}" ]]; then
 fi
 if [[ -n "${HSI_ALIGN_FEATURE_VERSION}" ]]; then
   ARGS+=(--override "model.hsi_align_feature_version=${HSI_ALIGN_FEATURE_VERSION}")
+fi
+if [[ -n "${SMPL_USE_AGGREGATOR_QUERIES}" ]]; then
+  ARGS+=(--override "model.smpl_use_aggregator_queries=${SMPL_USE_AGGREGATOR_QUERIES}")
 fi
 if [[ "${SMOKE_ONLY}" == "1" || "${SMOKE_ONLY}" == "true" || "${SMOKE_ONLY}" == "TRUE" ]]; then
   ARGS+=(--smoke-only)

@@ -29,6 +29,7 @@ if str(ROOT) not in sys.path:
 
 from scripts.train.train_smpl import apply_overrides, build_model, load_yaml_config  # noqa: E402
 from scripts.vis.visualize_smpl_inference import (  # noqa: E402
+    estimate_scene_to_smpl_scale,
     load_training_checkpoint,
     load_vggt_baseline_for_camera,
 )
@@ -147,6 +148,10 @@ def main() -> None:
     load_vggt_baseline_for_camera(model, config, device)
     checkpoint = resolve_stage_checkpoint(args)
     load_training_checkpoint(model, checkpoint, device)
+    overlay_checkpoint = None
+    if args.hsi_overlay_checkpoint:
+        overlay_checkpoint = resolve_project_path(args.hsi_overlay_checkpoint)
+        load_checkpoint_prefix_overlay(model, overlay_checkpoint, device, ("hsi_refinement_head.",))
     smpl = SMPLLayer(require_smpl_model_dir(config, args)).to(device).eval()
     sync_if_cuda(device)
     timings["load_models"] = {"seconds": time.perf_counter() - step_start}
@@ -158,7 +163,7 @@ def main() -> None:
 
     with torch.inference_mode():
         step_start = time.perf_counter()
-        predictions = run_model(model, image_sequence, priors)
+        predictions = run_model(model, image_sequence, priors, smpl=smpl, args=args)
         timings["model_forward"] = {"seconds": elapsed_since(step_start, device)}
     step_start = time.perf_counter()
     geometry_snapshot = snapshot_viewer_geometry(predictions)
@@ -189,6 +194,7 @@ def main() -> None:
         if isinstance(value, dict) and "seconds" in value:
             add_timing_rate(value, len(frame_paths))
     summary = build_summary(args, frame_paths, checkpoint, image_sequence, predictions, scene, output_dir, timings)
+    summary["hsi_overlay_checkpoint"] = None if overlay_checkpoint is None else str(overlay_checkpoint)
     summary_path = output_dir / "run_summary.json"
     summary_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
     print(json.dumps({"viewer": f"http://127.0.0.1:{int(args.port)}", "summary": str(summary_path)}, indent=2), flush=True)
@@ -248,6 +254,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--alignment-vertex-stride", type=int, default=16)
     parser.add_argument("--smpl-model-dir", default="")
     parser.add_argument("--baseline-checkpoint", default="")
+    parser.add_argument("--hsi-overlay-checkpoint", default="", help="Optional checkpoint overlaid by prefix after the main Stage2 checkpoint.")
+    parser.add_argument("--scene-scale-prealign", choices=["none", "smpl_median"], default="none")
+    parser.add_argument("--coarse-scale-min", type=float, default=0.10)
+    parser.add_argument("--coarse-scale-max", type=float, default=10.0)
+    parser.add_argument("--coarse-anchor-stride", type=int, default=8)
+    parser.add_argument("--coarse-min-anchor-pixels", type=int, default=32)
     parser.add_argument("--smoke-only", action="store_true", help="Run inference, validation, and summary export, then exit without serving Viser.")
     parser.add_argument("--override", action="append", default=[])
     return parser.parse_args()
@@ -473,7 +485,9 @@ def run_model(
     model: torch.nn.Module,
     images: torch.Tensor,
     priors: dict[str, torch.Tensor] | None,
-) -> dict[str, torch.Tensor]:
+    smpl: SMPLLayer | None = None,
+    args: argparse.Namespace | None = None,
+) -> dict[str, Any]:
     kwargs: dict[str, torch.Tensor] = {}
     if priors is not None:
         kwargs.update(
@@ -485,8 +499,109 @@ def run_model(
             }
         )
     predictions = model(images, **kwargs)
+    if args is not None and str(args.scene_scale_prealign) == "smpl_median":
+        if smpl is None:
+            raise ValueError("SMPL-median pre-alignment requires an SMPLLayer")
+        predictions = run_smpl_coarse_hsi_cascade(model, images, kwargs, predictions, smpl, args)
     predictions["images"] = images
     return predictions
+
+
+@torch.no_grad()
+def run_smpl_coarse_hsi_cascade(
+    model: torch.nn.Module,
+    images: torch.Tensor,
+    model_kwargs: dict[str, torch.Tensor],
+    first_pass: dict[str, torch.Tensor],
+    smpl: SMPLLayer,
+    args: argparse.Namespace,
+) -> dict[str, Any]:
+    raw_depth = canonical_depth(first_pass["depth"]).detach().float()
+    decoded = decode_people(first_pass, smpl, args, raw_depth.device)
+    base_vertices = decoded.get("base_vertices_cam")
+    if not isinstance(base_vertices, torch.Tensor):
+        raise RuntimeError("SMPL coarse pre-alignment requires decoded NLF base vertices")
+
+    coarse_scale = raw_depth.new_ones(raw_depth.shape[:2])
+    coarse_records: list[dict[str, Any]] = []
+    confs = first_pass["pred_confs"].detach().float()
+    for frame_idx in range(raw_depth.shape[1]):
+        valid_people = confs[0, frame_idx, :, 0] >= float(args.conf_threshold)
+        if not bool(valid_people.any()):
+            coarse_records.append({"applied": False, "reason": "no_confident_people", "scale": 1.0})
+            continue
+        record = estimate_scene_to_smpl_scale(
+            smpl_vertices=base_vertices[0, frame_idx, valid_people],
+            depth=raw_depth[0, frame_idx],
+            pose_enc=first_pass["pose_enc"][:, frame_idx : frame_idx + 1],
+            input_size=max(raw_depth.shape[-2:]),
+            min_anchor_pixels=int(args.coarse_min_anchor_pixels),
+            scale_min=float(args.coarse_scale_min),
+            scale_max=float(args.coarse_scale_max),
+            anchor_stride=int(args.coarse_anchor_stride),
+        )
+        if bool(record.get("applied", False)):
+            coarse_scale[0, frame_idx] = float(record["scale"])
+        coarse_records.append(record)
+
+    coarse_depth = raw_depth * coarse_scale[..., None, None]
+    cascade = model(
+        images,
+        **model_kwargs,
+        hsi_depth_override=coarse_depth,
+        hsi_depth_is_metric=True,
+        hsi_geometry_mode="smpl_coarse_metric",
+    )
+    residual_scale = cascade["hsi_scene_scale"].detach().clone()
+    residual_bias = cascade["hsi_scene_depth_bias"].detach().clone()
+    residual_frame_scale = cascade.get("hsi_frame_scene_scale", residual_scale).detach().clone()
+    residual_frame_bias = cascade.get("hsi_frame_scene_depth_bias", residual_bias).detach().clone()
+    coarse_scale_tensor = coarse_scale[..., None].to(device=residual_scale.device, dtype=residual_scale.dtype)
+
+    cascade["hsi_residual_scene_scale"] = residual_scale
+    cascade["hsi_residual_scene_depth_bias"] = residual_bias
+    cascade["hsi_residual_frame_scene_scale"] = residual_frame_scale
+    cascade["hsi_residual_frame_scene_depth_bias"] = residual_frame_bias
+    cascade["hsi_coarse_scene_scale"] = coarse_scale_tensor
+    cascade["hsi_scene_scale"] = coarse_scale_tensor * residual_scale
+    cascade["hsi_scene_depth_bias"] = residual_bias
+    cascade["hsi_frame_scene_scale"] = coarse_scale_tensor * residual_frame_scale
+    cascade["hsi_frame_scene_depth_bias"] = residual_frame_bias
+    cascade["hsi_coarse_scale_applied"] = torch.tensor(
+        [bool(record.get("applied", False)) for record in coarse_records],
+        device=residual_scale.device,
+        dtype=torch.bool,
+    ).reshape(1, -1)
+    cascade["_hsi_coarse_scale_records"] = coarse_records
+    return cascade
+
+
+def load_checkpoint_prefix_overlay(
+    model: torch.nn.Module,
+    checkpoint_path: Path,
+    device: torch.device,
+    prefixes: tuple[str, ...],
+) -> None:
+    if not checkpoint_path.is_file():
+        raise FileNotFoundError(f"HSI overlay checkpoint not found: {checkpoint_path}")
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    state_dict = checkpoint.get("model") if isinstance(checkpoint, dict) else None
+    if not isinstance(state_dict, dict):
+        raise ValueError(f"HSI overlay checkpoint has no model state_dict: {checkpoint_path}")
+    state_dict = {key.removeprefix("module."): value for key, value in state_dict.items()}
+    selected = {key: value for key, value in state_dict.items() if any(key.startswith(prefix) for prefix in prefixes)}
+    if not selected:
+        raise RuntimeError(f"HSI overlay checkpoint contains none of prefixes: {prefixes}")
+    model_state = model.state_dict()
+    mismatched = [
+        key for key, value in selected.items()
+        if key not in model_state or tuple(value.shape) != tuple(model_state[key].shape)
+    ]
+    if mismatched:
+        raise RuntimeError(f"HSI overlay has missing/shape-mismatched tensors: {mismatched[:20]}")
+    missing, unexpected = model.load_state_dict(selected, strict=False)
+    print(f"[ckpt] overlaid HSI prefixes {prefixes}: {checkpoint_path}")
+    print(f"[ckpt] overlay tensors={len(selected)} missing={len(missing)} unexpected={len(unexpected)}")
 
 
 def apply_posthoc_tracking_overlay(
@@ -616,6 +731,9 @@ def build_scene_data(
         hsi_bias = prediction_scalar(predictions, "hsi_scene_depth_bias", idx)
         hsi_frame_scale = prediction_scalar(predictions, "hsi_frame_scene_scale", idx)
         hsi_frame_bias = prediction_scalar(predictions, "hsi_frame_scene_depth_bias", idx)
+        hsi_coarse_scale = prediction_scalar(predictions, "hsi_coarse_scene_scale", idx)
+        hsi_residual_scale = prediction_scalar(predictions, "hsi_residual_scene_scale", idx)
+        hsi_residual_bias = prediction_scalar(predictions, "hsi_residual_scene_depth_bias", idx)
         hsi_extrinsic = scale_w2c_extrinsic_translation(extrinsic, float(hsi_scale if hsi_scale is not None else 1.0))
         rgb = images[0, idx].detach().float().cpu()
         frame_people = select_frame_people(predictions, people, priors, idx, hsi_extrinsic, faces, track_palette, args)
@@ -656,6 +774,9 @@ def build_scene_data(
                 "hsi_scene_depth_bias": hsi_bias,
                 "hsi_frame_scene_scale": hsi_frame_scale,
                 "hsi_frame_scene_depth_bias": hsi_frame_bias,
+                "hsi_coarse_scene_scale": hsi_coarse_scale,
+                "hsi_residual_scene_scale": hsi_residual_scale,
+                "hsi_residual_scene_depth_bias": hsi_residual_bias,
                 "depth_alignment": alignment[idx],
             }
         )
@@ -672,6 +793,7 @@ def build_scene_data(
         "camera_trajectory_hsi": hsi_camera_trajectory,
         "hsi_scene_affine_mode": str(getattr(args, "hsi_scene_affine_mode", "per_frame")),
         "hsi_scene_affine_ema_alpha": float(getattr(args, "hsi_scene_affine_ema_alpha", 0.25)),
+        "scene_scale_prealign": str(getattr(args, "scene_scale_prealign", "none")),
     }
 
 
@@ -1138,6 +1260,11 @@ def build_summary(
         "hsi_scene_depth_bias": [frame["hsi_scene_depth_bias"] for frame in scene["frames"]],
         "hsi_frame_scene_scale": [frame["hsi_frame_scene_scale"] for frame in scene["frames"]],
         "hsi_frame_scene_depth_bias": [frame["hsi_frame_scene_depth_bias"] for frame in scene["frames"]],
+        "hsi_coarse_scene_scale": [frame["hsi_coarse_scene_scale"] for frame in scene["frames"]],
+        "hsi_residual_scene_scale": [frame["hsi_residual_scene_scale"] for frame in scene["frames"]],
+        "hsi_residual_scene_depth_bias": [frame["hsi_residual_scene_depth_bias"] for frame in scene["frames"]],
+        "hsi_coarse_scale_records": predictions.get("_hsi_coarse_scale_records", []),
+        "scene_scale_prealign": str(scene.get("scene_scale_prealign", "none")),
         "hsi_scene_affine_mode": str(scene.get("hsi_scene_affine_mode", "per_frame")),
         "hsi_scene_affine_ema_alpha": float(scene.get("hsi_scene_affine_ema_alpha", 0.25)),
         "hsi_visual_scale_initial": float(args.hsi_visual_scale),
@@ -1495,8 +1622,8 @@ class SequenceViewer:
             self.hsi_calibration_info = add_text(self.server, "Calibration Status", "Off")
             set_handle_disabled(self.hsi_calibration_info, True)
             self.hsi_scale_strategy_info = add_text(self.server, "Strategy", "")
-            self.hsi_model_scale_info = add_text(self.server, "Current Model Scale / Bias", "")
-            self.hsi_raw_scale_info = add_text(self.server, "Raw Frame Scale / Bias", "")
+            self.hsi_model_scale_info = add_text(self.server, "Current Effective Scale / Bias", "")
+            self.hsi_raw_scale_info = add_text(self.server, "Frame Scale Components", "")
             self.hsi_scale_range_info = add_text(self.server, "Sequence Scale Min / Median / Max", "")
             self.hsi_visual_result_info = add_text(self.server, "Applied / Effective", "")
             for handle in (
@@ -2614,6 +2741,9 @@ class SequenceViewer:
         frame = self.scene["frames"][int(frame_index)]
         model_scale = float(frame["hsi_scene_scale"])
         model_bias = float(frame["hsi_scene_depth_bias"])
+        coarse_scale = frame.get("hsi_coarse_scene_scale")
+        residual_scale = frame.get("hsi_residual_scene_scale")
+        residual_bias = frame.get("hsi_residual_scene_depth_bias")
         raw_frame_scale = frame.get("hsi_frame_scene_scale")
         raw_frame_bias = frame.get("hsi_frame_scene_depth_bias")
         model_scales = np.asarray([item["hsi_scene_scale"] for item in self.scene["frames"]], dtype=np.float64)
@@ -2629,11 +2759,18 @@ class SequenceViewer:
             strategy = f"ema(alpha={alpha:.3g}): smoothed scale/bias can vary by frame"
         else:
             strategy = "per_frame: each frame uses its own predicted scale/bias"
+        if str(self.scene.get("scene_scale_prealign", "none")) == "smpl_median":
+            strategy = "SMPL median coarse scale -> HSI residual -> Stage2 align | " + strategy
         pending = self._requested_hsi_visual_scale()
         applied = float(self.hsi_visual_scale_value)
         raw_text = "unavailable"
         if raw_frame_scale is not None and raw_frame_bias is not None:
             raw_text = f"scale={float(raw_frame_scale):.5g}, bias={float(raw_frame_bias):.5g}"
+        if coarse_scale is not None and residual_scale is not None:
+            raw_text = (
+                f"coarse={float(coarse_scale):.5g}, residual={float(residual_scale):.5g}, "
+                f"residual_bias={float(residual_bias or 0.0):.5g}"
+            )
         raw_range = "unavailable"
         if raw_scales.size > 0:
             raw_range = f"{raw_scales.min():.5g}/{np.median(raw_scales):.5g}/{raw_scales.max():.5g}"
