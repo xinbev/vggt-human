@@ -61,6 +61,7 @@ def main() -> None:
         depth_root / "exr_depth",
         args.inspect_frames,
         exr_channel=args.exr_channel,
+        depth_component=args.depth_component,
     )
     summary: dict[str, Any] = {
         "scene": args.scene,
@@ -87,7 +88,12 @@ def main() -> None:
         depth_source = depth_root / "exr_depth" / PurePosixPath(rel_image).with_suffix(".exr")
         verify_frame_sources(rgb_source, depth_source)
         image_hw = read_image_hw(rgb_source)
-        depth = read_exr_depth(depth_source, expected_hw=image_hw, preferred_channel=args.exr_channel)
+        depth = read_exr_depth(
+            depth_source,
+            expected_hw=image_hw,
+            preferred_channel=args.exr_channel,
+            preferred_component=args.depth_component,
+        )
         depth = sanitize_depth(depth, args.depth_scale)
         persons = build_persons(labels, rows, args.translation_mode)
         intrinsics, pose = frame_camera(labels, rows)
@@ -132,6 +138,12 @@ def parse_args() -> argparse.Namespace:
         default="",
         help="Optional exact EXR channel override. Defaults to auto-detecting WorldDepth, then Depth/Z.",
     )
+    parser.add_argument(
+        "--depth-component",
+        type=int,
+        default=-1,
+        help="Component index for a multi-component depth channel; -1 refuses to guess.",
+    )
     parser.add_argument("--translation-mode", choices=("add_cam_ext", "direct"), default="add_cam_ext")
     parser.add_argument("--copy-mode", choices=("copy", "hardlink", "symlink"), default="hardlink")
     parser.add_argument("--sequence", default="", help="Optional seq_XXXXXX filter for a small conversion")
@@ -140,7 +152,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--inspect-only", action="store_true", help="Read and report sample EXRs without writing data")
     parser.add_argument("--dry-run", action="store_true", help="Validate every selected source frame without writing output")
     parser.add_argument("--overwrite", action="store_true")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.depth_component < -1:
+        parser.error("--depth-component must be -1 or a non-negative component index")
+    return args
 
 
 def _require_dir(path: Path, label: str) -> None:
@@ -176,6 +191,7 @@ def inspect_samples(
     exr_depth_root: Path,
     count: int,
     exr_channel: str = "",
+    depth_component: int = -1,
 ) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     for rel_image in list(groups)[: max(1, count)]:
@@ -183,28 +199,44 @@ def inspect_samples(
         exr_path = exr_depth_root / PurePosixPath(rel_image).with_suffix(".exr")
         verify_frame_sources(rgb_path, exr_path)
         image_hw = read_image_hw(rgb_path)
-        raw_depth, channel = read_exr_depth(
-            exr_path,
-            expected_hw=image_hw,
-            return_channel=True,
-            preferred_channel=exr_channel,
-        )
+        record: dict[str, Any] = {
+            "imgname": rel_image,
+            "rgb_hw": list(image_hw),
+            "exr_channels": describe_exr_channels(exr_path),
+        }
+        try:
+            raw_depth, channel = read_exr_depth(
+                exr_path,
+                expected_hw=image_hw,
+                return_channel=True,
+                preferred_channel=exr_channel,
+                preferred_component=depth_component,
+            )
+        except ValueError as exc:
+            # Inspection must report the real EXR contents before requesting a
+            # component choice. Conversion mode still fails on the same error.
+            record["selected_depth_error"] = str(exc)
+            results.append(record)
+            continue
         finite_positive = raw_depth[np.isfinite(raw_depth) & (raw_depth > 0)]
         if finite_positive.size == 0:
-            raise ValueError(f"No finite positive depth values in {exr_path}")
-        results.append(
+            record["selected_depth_error"] = f"No finite positive values in selected channel {channel!r}"
+            results.append(record)
+            continue
+        median = float(np.median(finite_positive))
+        record.update(
             {
-                "imgname": rel_image,
-                "rgb_hw": list(image_hw),
                 "depth_hw": list(raw_depth.shape),
-                "exr_channel": channel,
+                "selected_exr_channel": channel,
+                "selected_depth_component": depth_component if depth_component >= 0 else 0,
                 "raw_depth_positive_min": float(finite_positive.min()),
-                "raw_depth_positive_median": float(np.median(finite_positive)),
+                "raw_depth_positive_median": median,
                 "raw_depth_positive_max": float(finite_positive.max()),
-                "candidate_median_if_cm": float(np.median(finite_positive) * 0.01),
-                "candidate_median_if_m": float(np.median(finite_positive)),
+                "candidate_median_if_cm": median * 0.01,
+                "candidate_median_if_m": median,
             }
         )
+        results.append(record)
     return results
 
 
@@ -225,6 +257,7 @@ def read_exr_depth(
     expected_hw: tuple[int, int],
     return_channel: bool = False,
     preferred_channel: str = "",
+    preferred_component: int = -1,
 ) -> np.ndarray | tuple[np.ndarray, str]:
     try:
         import OpenEXR
@@ -235,17 +268,101 @@ def read_exr_depth(
         raise ValueError(f"EXR has no parts: {path}")
     channels = exr.parts[0].channels
     channel_name = select_depth_channel(channels, preferred_channel)
-    depth = np.asarray(channels[channel_name].pixels, dtype=np.float32).squeeze()
+    depth = np.asarray(channels[channel_name].pixels, dtype=np.float32)
     if depth.ndim == 1 and depth.size == expected_hw[0] * expected_hw[1]:
         depth = depth.reshape(expected_hw)
-    if depth.ndim != 2:
-        raise ValueError(f"Expected a 2D EXR depth channel from {path}, got {depth.shape}")
+    depth = select_depth_component(depth, channel_name, path, preferred_component)
     if tuple(depth.shape) != tuple(expected_hw):
         raise ValueError(
             f"RGB/depth raster sizes differ for {path}: RGB={expected_hw}, depth={tuple(depth.shape)}. "
             "Do not resize blindly; inspect BEDLAM2 depth-camera metadata first."
         )
     return (depth, channel_name) if return_channel else depth
+
+
+def select_depth_component(depth: np.ndarray, channel_name: str, path: Path, preferred_component: int = -1) -> np.ndarray:
+    """Return a 2D scalar depth map, rejecting ambiguous multi-component data."""
+    depth = np.asarray(depth, dtype=np.float32)
+    if depth.ndim == 2:
+        if preferred_component not in {-1, 0}:
+            raise ValueError(
+                f"EXR channel {channel_name!r} is scalar, but --depth-component={preferred_component} was requested: {path}"
+            )
+        return depth
+    if depth.ndim == 3 and depth.shape[-1] == 1:
+        if preferred_component not in {-1, 0}:
+            raise ValueError(
+                f"EXR channel {channel_name!r} has one component, but --depth-component={preferred_component} was requested: {path}"
+            )
+        return depth[..., 0]
+    if depth.ndim == 3:
+        components = depth.shape[-1]
+        if preferred_component < 0:
+            raise ValueError(
+                f"EXR channel {channel_name!r} has shape {depth.shape} ({components} components). "
+                "Inspection printed a per-component report; set --depth-component only after choosing the scalar depth component."
+            )
+        if preferred_component >= components:
+            raise ValueError(
+                f"--depth-component={preferred_component} is out of range for {channel_name!r} with shape {depth.shape}: {path}"
+            )
+        return depth[..., preferred_component]
+    raise ValueError(f"Expected a 2D or HxWxC EXR depth channel from {path}, got {depth.shape}")
+
+
+def describe_exr_channels(path: Path) -> dict[str, Any]:
+    """Read actual EXR payload statistics without choosing a training depth map."""
+    try:
+        import OpenEXR
+    except ImportError as exc:  # pragma: no cover - server-only dependency.
+        raise ImportError("OpenEXR is required. Install it in the server environment before conversion.") from exc
+    exr = OpenEXR.File(str(path))
+    if not exr.parts:
+        raise ValueError(f"EXR has no parts: {path}")
+    return {name: summarize_exr_array(channel.pixels) for name, channel in exr.parts[0].channels.items()}
+
+
+def summarize_exr_array(value: Any) -> dict[str, Any]:
+    array = np.asarray(value)
+    out: dict[str, Any] = {"shape": list(array.shape), "dtype": str(array.dtype)}
+    if array.ndim == 2:
+        flat_components = array.reshape(-1, 1)
+    elif array.ndim == 3:
+        flat_components = array.reshape(-1, array.shape[-1])
+    else:
+        out["note"] = "Unsupported raster rank; no component statistics generated."
+        return out
+    component_summaries = []
+    for component_index in range(flat_components.shape[-1]):
+        component = flat_components[:, component_index].astype(np.float64, copy=False)
+        finite = component[np.isfinite(component)]
+        positive = finite[finite > 0]
+        summary: dict[str, Any] = {
+            "index": component_index,
+            "finite_count": int(finite.size),
+            "positive_count": int(positive.size),
+        }
+        if finite.size:
+            summary.update({"finite_min": float(finite.min()), "finite_max": float(finite.max())})
+        if positive.size:
+            summary.update(
+                {
+                    "positive_min": float(positive.min()),
+                    "positive_median": float(np.median(positive)),
+                    "positive_max": float(positive.max()),
+                }
+            )
+        component_summaries.append(summary)
+    out["components"] = component_summaries
+    if array.ndim == 3:
+        sample_y = min(array.shape[0] - 1, array.shape[0] // 2)
+        sample_x = min(array.shape[1] - 1, array.shape[1] // 2)
+        out["sample_pixels"] = {
+            "top_left": np.asarray(array[0, 0]).reshape(-1).astype(float).tolist(),
+            "center": np.asarray(array[sample_y, sample_x]).reshape(-1).astype(float).tolist(),
+            "bottom_right": np.asarray(array[-1, -1]).reshape(-1).astype(float).tolist(),
+        }
+    return out
 
 
 def select_depth_channel(channels: Any, preferred_channel: str = "") -> str:

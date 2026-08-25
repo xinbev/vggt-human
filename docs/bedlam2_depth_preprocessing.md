@@ -56,7 +56,11 @@ The report prints `raw_depth_positive_*`, the selected EXR channel, and the
 RGB/depth raster dimensions. BEDLAM2 Movie Render Queue EXRs normally store
 the required map in `FinalImageMovieRenderQueue_WorldDepth`; the adapter now
 recognises this automatically. For a different export, provide its exact name
-as `EXR_CHANNEL=...`. Confirm the EXR unit from BEDLAM2 metadata or a known
+as `EXR_CHANNEL=...`. If the selected channel is multi-component, inspection
+prints each component's shape, min/median/max, finite/positive counts, and
+sample pixel vectors, then intentionally stops before any output is written.
+Choose a component only after reviewing that report, with
+`DEPTH_COMPONENT=<0-based index>`. Confirm the EXR unit from BEDLAM2 metadata or a known
 scene distance before choosing `DEPTH_SCALE`. The legacy BEDLAM converter used
 `0.01` because its EXR values were centimetres, but that is an initial
 candidate—not an assumption applied by this adapter.
