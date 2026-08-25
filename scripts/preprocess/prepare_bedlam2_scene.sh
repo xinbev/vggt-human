@@ -10,6 +10,7 @@ RGB_ROOT="${RGB_ROOT:-/home/zhw/xyb_space/bedlam2/hf_raw/BEDLAM2/${SCENE}}"
 DEPTH_ROOT="${DEPTH_ROOT:-/home/zhw/xyb_space/bedlam2/hf_raw/BEDLAM2-depth/${SCENE}}"
 LABELS="${LABELS:-/home/zhw/xyb_space/bedlam2/bedlam_data/labels_smpl_6fps/${SCENE}.npz}"
 OUTDIR="${OUTDIR:-${REPO_ROOT}/outputs/preprocess/bedlam2_processed}"
+INSPECT_JSON="${INSPECT_JSON:-${REPO_ROOT}/outputs/preprocess/bedlam2_inspection/${SCENE}_exr_inspection.json}"
 DEPTH_SCALE="${DEPTH_SCALE:-}"
 COPY_MODE="${COPY_MODE:-hardlink}"
 INSPECT_ONLY="${INSPECT_ONLY:-false}"
@@ -44,7 +45,10 @@ if [[ "${DEPTH_COMPONENT}" != "-1" ]]; then ARGS+=(--depth-component "${DEPTH_CO
 
 if [[ "${INSPECT_ONLY}" == "true" ]]; then
   echo "========== BEDLAM2 EXR inspection =========="
-  python scripts/preprocess/prepare_bedlam2_scene.py "${ARGS[@]}" --depth-scale 1.0 --inspect-only
+  mkdir -p "$(dirname "${INSPECT_JSON}")"
+  python scripts/preprocess/prepare_bedlam2_scene.py "${ARGS[@]}" --depth-scale 1.0 --inspect-only \
+    | tee "${INSPECT_JSON}"
+  echo "Inspection JSON: ${INSPECT_JSON}"
   echo "Inspect raw_depth_positive_median. Set DEPTH_SCALE=0.01 only after confirming the EXR values are centimetres."
   exit 0
 fi
