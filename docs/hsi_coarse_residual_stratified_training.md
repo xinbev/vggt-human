@@ -56,24 +56,27 @@ Fallback `coarse=1` is never treated as a teacher target.
 
 ## W&B
 
-Only configured useful metrics are uploaded. Two custom multi-line panels are
-generated automatically:
+Only configured useful scalar metrics are uploaded. Runtime W&B Media charts
+and Tables are disabled because W&B 0.28.2 can segfault while serializing them
+inside the training process. The following scalar namespaces are uploaded from
+the first optimizer step:
 
 ```text
-charts/residual_teacher_vs_pred
-  residual teacher
-  residual pred
+scale_compare/residual_teacher
+scale_compare/residual_pred
 
-charts/absolute_scale_pipeline
-  GT absolute scale
-  traditional coarse used
-  final predicted scale
+scale_compare/absolute_GT
+scale_compare/traditional_coarse
+scale_compare/final_pred
+scale_compare/final_log_l1
 ```
 
-`diagnostics/person_scale_contributions` is logged every 1000 optimizer steps.
-It records each sampled person's confidence, predicted residual scale,
-normalized weight, weighted log contribution, frame-level coarse, residual
-teacher/prediction, and final scale.
+In the W&B workspace, create one line panel with the two residual keys and one
+line panel with the three absolute-scale keys. W&B then overlays teacher and
+prediction without requiring Media objects in the trainer. Per-person behavior
+is monitored through scalar min/mean/max/std and weighted-contribution std;
+full person Tables remain available in code but are disabled by default for
+process stability.
 
 ## Server Commands
 

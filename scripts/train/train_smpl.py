@@ -241,10 +241,13 @@ def init_wandb(config: dict[str, Any], output_dir: Path) -> Any | None:
     run.define_metric("train/*", step_metric="global_step")
     run.define_metric("train_epoch/*", step_metric="epoch")
     run.define_metric("val/*", step_metric="epoch")
+    run.define_metric("scale_compare/*", step_metric="global_step")
     print(
         f"[wandb] enabled project={init_kwargs['project']} name={init_kwargs['name']} "
         f"mode={init_kwargs['mode']}"
     )
+    if int(wandb_cfg.get("scale_chart_interval", 0) or 0) <= 0:
+        print("[wandb] scalar-only mode: runtime Media charts are disabled for process stability")
     return run
 
 
@@ -1040,6 +1043,22 @@ def filter_wandb_scalars(
     return {key: float(scalars[key]) for key in keys if key in scalars}
 
 
+def wandb_scale_comparison_aliases(scalars: dict[str, float]) -> dict[str, float]:
+    aliases = {
+        "metric_scale_pipeline_residual_teacher": "scale_compare/residual_teacher",
+        "metric_scale_pipeline_residual_pred": "scale_compare/residual_pred",
+        "metric_scale_pipeline_absolute_teacher": "scale_compare/absolute_GT",
+        "metric_scale_pipeline_coarse_used": "scale_compare/traditional_coarse",
+        "metric_scale_pipeline_final_pred": "scale_compare/final_pred",
+        "metric_scale_pipeline_final_log_l1": "scale_compare/final_log_l1",
+    }
+    return {
+        alias: float(scalars[source])
+        for source, alias in aliases.items()
+        if source in scalars
+    }
+
+
 def append_wandb_scale_history(
     history: list[dict[str, float]],
     global_step: int,
@@ -1530,16 +1549,17 @@ def train_one_epoch(
         wandb_log_interval = int(
             config.get("logging", {}).get("wandb", {}).get("log_interval", log_interval) or log_interval
         )
-        if wandb_run is not None and global_step % max(wandb_log_interval, 1) == 0:
+        if wandb_run is not None and (global_step == 1 or global_step % max(wandb_log_interval, 1) == 0):
             wandb_scalars = filter_wandb_scalars(step_scalars, config)
             wandb_payload: dict[str, Any] = {
                 "global_step": global_step,
                 **{f"train/{key}": float(value) for key, value in wandb_scalars.items()},
+                **wandb_scale_comparison_aliases(step_scalars),
             }
-            if wandb_scale_history is not None:
+            chart_interval = int(config.get("logging", {}).get("wandb", {}).get("scale_chart_interval", 0) or 0)
+            if wandb_scale_history is not None and chart_interval > 0:
                 append_wandb_scale_history(wandb_scale_history, global_step, step_scalars, config)
-                chart_interval = int(config.get("logging", {}).get("wandb", {}).get("scale_chart_interval", 200) or 200)
-                if global_step % max(chart_interval, 1) == 0:
+                if global_step % chart_interval == 0:
                     wandb_payload.update(build_wandb_scale_charts(wandb_scale_history, config))
             person_table_interval = int(config.get("logging", {}).get("wandb", {}).get("person_table_interval", 1000) or 0)
             if person_table_interval > 0 and global_step % person_table_interval == 0:
@@ -1547,6 +1567,11 @@ def train_one_epoch(
                 if person_table is not None:
                     wandb_payload["diagnostics/person_scale_contributions"] = person_table
             wandb_run.log(wandb_payload, step=global_step)
+            if global_step == 1:
+                print(
+                    f"[wandb] first scalar payload logged: keys={len(wandb_payload) - 1} step=1",
+                    flush=True,
+                )
         if global_step % log_interval == 0:
             if log_style in {"progress", "compact"}:
                 line = format_progress_log(

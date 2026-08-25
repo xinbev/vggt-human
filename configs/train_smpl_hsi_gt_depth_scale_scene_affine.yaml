@@ -201,9 +201,9 @@ logging:
     group: hsi_scene_scale_finetune
     mode: online
     log_interval: 20
-    scale_chart_interval: 200
+    scale_chart_interval: 0
     scale_chart_max_points: 1200
-    person_table_interval: 1000
+    person_table_interval: 0
     person_table_max_rows: 64
     log_keys:
       - loss_total
