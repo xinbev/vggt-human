@@ -1,0 +1,370 @@
+# BEDLAM2 Data Handoff
+
+## 1. Project Goal
+
+Use the same BEDLAM2 RGB + depth sequence to train a two-stage SMPL-based model:
+
+1. Stage 1: input SMPL parameters and depth, predict environmental scale correction.
+2. Stage 2: output an SMPL sequence and optimize SMPL `trans` using depth and camera sequences.
+
+BEDLAM2 native GT is SMPL-X locked-head. The current conversion assumes SMPL-X and SMPL translations are directly compatible. The main conversion differences are shape dimensions and detailed SMPL-X joints such as hands, face, jaw, and head.
+
+## 2. Current Target Sequence
+
+```text
+Sequence folder: 20241213_1_250_rome_tracking
+BEDLAM2 scene name: rome-tracking-b2v40
+```
+
+The processing CSV currently contains only this scene:
+
+```text
+/home/zhw/xyb_space/bedlam2/BEDLAM/data_processing/bedlam2_scene_names.csv
+```
+
+Current CSV content:
+
+```text
+Folder name,Scene name
+20241213_1_250_rome_tracking,rome-tracking-b2v40
+```
+
+The original full scene list backup is:
+
+```text
+/home/zhw/xyb_space/bedlam2/BEDLAM/data_processing/bedlam2_scene_names.full.bak
+```
+
+## 3. Raw Data Paths
+
+RGB data:
+
+```text
+/home/zhw/xyb_space/bedlam2/hf_raw/BEDLAM2/20241213_1_250_rome_tracking/
+  png/
+  be_seq.csv
+  be_camera_animations.json
+  ground_truth/meta_exr/
+  ground_truth/meta_exr_csv/
+```
+
+Depth data:
+
+```text
+/home/zhw/xyb_space/bedlam2/hf_raw/BEDLAM2-depth/20241213_1_250_rome_tracking/
+  exr_depth/
+  be_seq.csv
+  be_camera_animations.json
+  be_camera_animations_depth.json
+  ground_truth/meta_exr_depth/
+  ground_truth/meta_exr_depth_csv/
+```
+
+SMPL-X motion GT:
+
+```text
+/home/zhw/xyb_space/bedlam2/bedlam_data/motions_npz_training/
+  *.npz
+```
+
+Important: motion GT is under the project-level `bedlam_data`, not under `BEDLAM/data_processing/bedlam_data`.
+
+## 4. Local Model and Utility Dependencies
+
+All processing dependencies are now available under:
+
+```text
+/home/zhw/xyb_space/bedlam2/BEDLAM/data_processing/bedlam_data/
+```
+
+SMPL-X locked-head model:
+
+```text
+/home/zhw/xyb_space/bedlam2/BEDLAM/data_processing/bedlam_data/body_models/smplx_neutral_head/models_lockedhead/smplx/
+  SMPLX_FEMALE.npz
+  SMPLX_MALE.npz
+  SMPLX_NEUTRAL.npz
+```
+
+SMPL model:
+
+```text
+/home/zhw/xyb_space/bedlam2/BEDLAM/data_processing/bedlam_data/body_models/SMPL_python_v.1.1.0/smpl/models/
+  SMPL_FEMALE.pkl
+  SMPL_MALE.pkl
+  SMPL_NEUTRAL.pkl
+```
+
+Mapping files:
+
+```text
+/home/zhw/xyb_space/bedlam2/BEDLAM/data_processing/bedlam_data/utils/smplx2smpl.pkl
+/home/zhw/xyb_space/bedlam2/BEDLAM/data_processing/bedlam_data/utils/SMPL_to_J19.pkl
+```
+
+The SMPL-X wrapper is configured with these absolute paths in:
+
+```text
+/home/zhw/xyb_space/bedlam2/BEDLAM/data_processing/smplx_openpose.py
+```
+
+## 5. Processing Code Changes
+
+The following local compatibility/fix changes are present:
+
+```text
+/home/zhw/xyb_space/bedlam2/BEDLAM/data_processing/df_full_body_smplx_bedlam2.py
+```
+
+At the frame-index boundary, the previously empty `if` block was fixed to:
+
+```python
+if smplx_param_ind >= smplx_param_orig['poses'].shape[0]:
+    continue
+```
+
+The following file contains compatibility patches for old `chumpy` with Python 3.11 and current NumPy:
+
+```text
+/home/zhw/xyb_space/bedlam2/BEDLAM/data_processing/smplx_openpose.py
+```
+
+The patches provide:
+
+```text
+inspect.getargspec compatibility
+old NumPy aliases used by chumpy, such as bool/int/float/object/str
+absolute paths for SMPL and mapping files
+```
+
+Both scripts pass `py_compile` in:
+
+```text
+/home/zhw/.conda/envs/zhw_env/bin/python
+```
+
+## 6. Completed Processing Outputs
+
+SMPL-X 6 FPS label:
+
+```text
+/home/zhw/xyb_space/bedlam2/bedlam_data/labels_smplx_6fps/20241213_1_250_rome_tracking.npz
+```
+
+SMPL 6 FPS label:
+
+```text
+/home/zhw/xyb_space/bedlam2/bedlam_data/labels_smpl_6fps/20241213_1_250_rome_tracking.npz
+```
+
+Verified output sizes:
+
+```text
+SMPL-X NPZ: about 124 MB
+SMPL NPZ: about 86 MB
+```
+
+Verified frame count:
+
+```text
+12342 frames
+```
+
+The processing completed with:
+
+```text
+100%|...| 1/1
+```
+
+The PyTorch `UserWarning` about constructing a tensor from a tensor did not prevent output generation.
+
+## 7. SMPL NPZ Contents
+
+The SMPL NPZ contains these fields:
+
+```text
+imgname
+center
+scale
+pose_cam
+pose_world
+shape
+trans_cam
+trans_world
+gtkps
+cam_int
+cam_ext
+gender
+lh_c
+rh_c
+lh_s
+rh_s
+proj_verts
+hand_det_conf
+smpl_pose_cam
+smpl_pose_world
+smpl_betas
+smpl_trans_cam
+smpl_trans_world
+```
+
+Useful SMPL fields for loading:
+
+```text
+smpl_pose_cam:    (12342, 72)
+smpl_pose_world:  (12342, 72)
+smpl_betas:       (12342, 10)
+smpl_trans_cam:   (12342, 3)
+smpl_trans_world: (12342, 3)
+cam_int:          (12342, 3, 3)
+cam_ext:          (12342, 4, 4)
+imgname:          (12342,)
+gender:           (12342,)
+```
+
+The converted SMPL pose uses 72 values. SMPL-X hands, face, jaw, and other discarded detailed pose dimensions are not present in `smpl_pose_cam` or `smpl_pose_world`. The converted SMPL betas use the first 10 shape values.
+
+First SMPL record summary:
+
+```text
+imgname: seq_000002/seq_000002_0000.png
+gender: neutral
+center: [631.60009766, 363.44287109]
+scale: 2.484753662109375
+smpl_trans_cam: [-0.03822234, -0.54880464, -0.31830132]
+smpl_trans_world: [-0.03237622, -0.5967017, -0.01821127]
+```
+
+## 8. Depth Is Not Inside NPZ
+
+The official preprocessing script does not copy or embed RGB/depth data into the label NPZ. It only reads RGB PNG and RGB-side camera metadata while generating labels.
+
+The depth EXR files remain at:
+
+```text
+/home/zhw/xyb_space/bedlam2/hf_raw/BEDLAM2-depth/20241213_1_250_rome_tracking/exr_depth/
+```
+
+Depth camera metadata remains at:
+
+```text
+/home/zhw/xyb_space/bedlam2/hf_raw/BEDLAM2-depth/20241213_1_250_rome_tracking/ground_truth/meta_exr_depth_csv/
+```
+
+RGB PNG remains at:
+
+```text
+/home/zhw/xyb_space/bedlam2/hf_raw/BEDLAM2/20241213_1_250_rome_tracking/png/
+```
+
+The NPZ only contains camera-related label fields:
+
+```text
+cam_int
+cam_ext
+```
+
+## 9. Required Loader Pairing Logic
+
+The next agent should build a dataset loader or manifest that joins:
+
+```text
+SMPL NPZ record
+RGB PNG
+Depth EXR
+Depth camera/meta CSV
+```
+
+For each NPZ `imgname`, first resolve RGB using:
+
+```text
+RGB_ROOT / imgname
+```
+
+Example:
+
+```text
+imgname:
+  seq_000002/seq_000002_0000.png
+
+RGB candidate:
+  /home/zhw/xyb_space/bedlam2/hf_raw/BEDLAM2/20241213_1_250_rome_tracking/png/seq_000002/seq_000002_0000.png
+```
+
+Then find the depth file with the same sequence/frame stem under `exr_depth`. Do not assume the depth extension or directory layout without checking the actual files. The loader must verify that RGB and depth frame stems match.
+
+The first expected depth candidate is:
+
+```text
+/home/zhw/xyb_space/bedlam2/hf_raw/BEDLAM2-depth/20241213_1_250_rome_tracking/exr_depth/seq_000002/seq_000002_0000.exr
+```
+
+If this exact path does not exist, search the depth tree by stem and use `meta_exr_depth_csv` to resolve camera/frame correspondence.
+
+The depth loader should preserve the EXR values as floating-point depth values and should not treat them as 8-bit images. It should record the depth unit/scale after inspecting the depth metadata or sample values.
+
+## 10. How to Re-run Processing
+
+Run from the processing directory:
+
+```bash
+cd /home/zhw/xyb_space/bedlam2/BEDLAM/data_processing
+```
+
+6 FPS:
+
+```bash
+/home/zhw/.conda/envs/zhw_env/bin/python df_full_body_smplx_bedlam2.py \
+  --img_folder /home/zhw/xyb_space/bedlam2/hf_raw/BEDLAM2 \
+  --smplx_gt_folder /home/zhw/xyb_space/bedlam2/bedlam_data/motions_npz_training \
+  --model_folder /home/zhw/xyb_space/bedlam2/BEDLAM/data_processing/bedlam_data/body_models/smplx_neutral_head/models_lockedhead/smplx \
+  --output_folder /home/zhw/xyb_space/bedlam2/bedlam_data/labels_smplx_6fps \
+  --fps 6
+```
+
+30 FPS, if needed:
+
+```bash
+/home/zhw/.conda/envs/zhw_env/bin/python df_full_body_smplx_bedlam2.py \
+  --img_folder /home/zhw/xyb_space/bedlam2/hf_raw/BEDLAM2 \
+  --smplx_gt_folder /home/zhw/xyb_space/bedlam2/bedlam_data/motions_npz_training \
+  --model_folder /home/zhw/xyb_space/bedlam2/BEDLAM/data_processing/bedlam_data/body_models/smplx_neutral_head/models_lockedhead/smplx \
+  --output_folder /home/zhw/xyb_space/bedlam2/bedlam_data/labels_smplx_30fps \
+  --fps 30
+```
+
+The script skips a scene when its output NPZ already exists. It does not resume partially written NPZ files, so an incomplete output file should be removed before re-running that scene.
+
+After SMPL-X labels exist, the conversion script is:
+
+```text
+/home/zhw/xyb_space/bedlam2/convert_bedlam2_smplx_to_smpl.sh
+```
+
+Example:
+
+```bash
+cd /home/zhw/xyb_space/bedlam2
+bash convert_bedlam2_smplx_to_smpl.sh \
+  /home/zhw/xyb_space/bedlam2/bedlam_data/labels_smplx_6fps \
+  /home/zhw/xyb_space/bedlam2/bedlam_data/labels_smpl_6fps
+```
+
+## 11. Space and File Handling
+
+The preprocessing script does not copy PNG or depth EXR files. It writes only label NPZ files to the selected output directory.
+
+Do not delete raw RGB/depth files because the future loader needs them. After verifying the converted SMPL labels, the intermediate SMPL-X NPZ can be removed if storage is limited and no re-conversion is needed.
+
+Do not delete motion GT or model files until all required label generation and validation are complete.
+
+## 12. Current Next Task
+
+The next agent should:
+
+1. Inspect the actual depth file tree and verify RGB/depth filename and frame-stem correspondence.
+2. Inspect one depth EXR and its depth metadata to determine array shape, dtype, valid range, and units.
+3. Build a manifest or loader returning RGB, depth, SMPL parameters, and camera parameters for one synchronized frame.
+4. Validate that the loader works for the first NPZ record and reports missing/mismatched frames clearly.
+
+Do not regenerate the labels unless a validation step proves they are incorrect.

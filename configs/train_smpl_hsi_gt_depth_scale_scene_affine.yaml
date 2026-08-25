@@ -163,6 +163,26 @@ logging:
     group: hsi_scene_scale_finetune
     mode: online
     log_interval: 20
+    log_keys:
+      - loss_total
+      - loss_hsi_smpl_scale_teacher
+      - metric_hsi_smpl_scale_teacher_log_l1
+      - metric_hsi_smpl_scale_teacher_rel_l1
+      - metric_hsi_smpl_scale_teacher_scale
+      - metric_hsi_smpl_scale_teacher_pred_scale
+      - metric_hsi_smpl_scale_teacher_valid_points
+      - loss_hsi_depth_teacher
+      - metric_hsi_depth_teacher_l1
+      - metric_hsi_gt_depth_perturb_scale_mean
+      - metric_hsi_gt_depth_perturb_target_scale_mean
+      - metric_gt_smpl_visible_people
+      - metric_gt_smpl_visibility_keep_ratio
+      - metric_grad_norm_hsi_scale_delta
+      - metric_grad_norm_hsi_bias_delta
+      - metric_train_dropped_no_visible_sample_rate
+      - metric_train_skipped_no_supervision_batches
+      - metric_train_skipped_batch_rate
+      - metric_train_optimizer_steps
     tags:
       - hsi
       - scene-scale

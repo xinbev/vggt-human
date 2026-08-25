@@ -179,12 +179,14 @@ def main() -> None:
         save_json(metrics_payload, output_dir / f"metrics_epoch_{epoch + 1:04d}.json")
         save_json(metrics_payload, output_dir / "metrics_latest.json")
         if wandb_run is not None:
+            filtered_train = filter_wandb_scalars(train_losses, config)
             epoch_log = {
                 "epoch": epoch + 1,
-                **{f"train_epoch/{key}": float(value) for key, value in train_losses.items()},
+                **{f"train_epoch/{key}": float(value) for key, value in filtered_train.items()},
             }
             if val_losses is not None:
-                epoch_log.update({f"val/{key}": float(value) for key, value in val_losses.items()})
+                filtered_val = filter_wandb_scalars(val_losses, config)
+                epoch_log.update({f"val/{key}": float(value) for key, value in filtered_val.items()})
             wandb_run.log(epoch_log, step=global_step)
         if should_save_checkpoint(config, epoch + 1, epochs):
             checkpoint_cfg = config.get("checkpoint", {})
@@ -1004,6 +1006,17 @@ def monitored_gradient_scalars(
     return scalars
 
 
+def filter_wandb_scalars(
+    scalars: dict[str, float],
+    config: dict[str, Any],
+) -> dict[str, float]:
+    configured = config.get("logging", {}).get("wandb", {}).get("log_keys")
+    if configured is None:
+        return scalars
+    keys = normalize_string_list(configured)
+    return {key: float(scalars[key]) for key in keys if key in scalars}
+
+
 def load_initial_checkpoint(model: torch.nn.Module, config: dict[str, Any], device: torch.device) -> None:
     ckpt_cfg = config.get("checkpoint", {})
     if not ckpt_cfg.get("load_vggt_baseline", False):
@@ -1346,10 +1359,11 @@ def train_one_epoch(
             config.get("logging", {}).get("wandb", {}).get("log_interval", log_interval) or log_interval
         )
         if wandb_run is not None and global_step % max(wandb_log_interval, 1) == 0:
+            wandb_scalars = filter_wandb_scalars(step_scalars, config)
             wandb_run.log(
                 {
                     "global_step": global_step,
-                    **{f"train/{key}": float(value) for key, value in step_scalars.items()},
+                    **{f"train/{key}": float(value) for key, value in wandb_scalars.items()},
                 },
                 step=global_step,
             )

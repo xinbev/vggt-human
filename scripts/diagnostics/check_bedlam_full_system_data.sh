@@ -10,6 +10,12 @@ ARGS=(
   --batch-size "${BATCH_SIZE:-1}"
 )
 
+# Keep the configured baseline untouched, while allowing a separately
+# materialized BEDLAM2 tree to be smoke-checked without editing path.yaml.
+if [[ -n "${BEDLAM_ROOT:-}" ]]; then
+  ARGS+=(--override "datasets.bedlam_root=${BEDLAM_ROOT}")
+fi
+
 if [[ -n "${SPLIT:-}" ]]; then
   ARGS+=(--split "${SPLIT}")
 fi
