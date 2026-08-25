@@ -125,7 +125,8 @@ def read_vector_payload(path: Path, requested_channel: str) -> tuple[np.ndarray,
 def sample_pixels(hw: tuple[int, int], stride: int) -> np.ndarray:
     height, width = hw
     ys, xs = np.mgrid[0:height:stride, 0:width:stride]
-    return np.stack((xs.reshape(-1), ys.reshape(-1)), axis=1).astype(np.float64)
+    # These coordinates are used for NumPy indexing before reprojection.
+    return np.stack((xs.reshape(-1), ys.reshape(-1)), axis=1).astype(np.int64)
 
 
 def evaluate_candidates(points: np.ndarray, pixels: np.ndarray, K: np.ndarray, ext: np.ndarray) -> list[dict[str, Any]]:

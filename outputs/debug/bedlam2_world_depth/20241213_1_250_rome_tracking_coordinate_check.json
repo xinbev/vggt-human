@@ -1,0 +1,148 @@
+{
+  "imgname": "seq_000002/seq_000002_0000.png",
+  "label_row": 0,
+  "exr_path": "/home/zhw/xyb_space/bedlam2/hf_raw/BEDLAM2-depth/20241213_1_250_rome_tracking/exr_depth/seq_000002/seq_000002_0000.exr",
+  "exr_channel": "FinalImageMovieRenderQueue_WorldDepth",
+  "payload_shape": [
+    720,
+    1280,
+    3
+  ],
+  "sample_stride": 8,
+  "sample_count": 14400,
+  "cam_int": [
+    [
+      550.6767288888889,
+      0.0,
+      640.0
+    ],
+    [
+      0.0,
+      550.6767288888889,
+      360.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "cam_ext": [
+    [
+      0.9999803995254356,
+      0.005961011392755179,
+      -0.001914917263385725,
+      0.009772407475596056
+    ],
+    [
+      -0.006261035453514835,
+      0.9520620987310743,
+      -0.30584074220880375,
+      0.9294295182335879
+    ],
+    [
+      0.0,
+      0.3058467369499919,
+      0.9520807599657932,
+      2.4038893344944854
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "candidates": [
+    {
+      "name": "world_ue_to_cv_xyz_cam_ext_w2c_scale_0.01",
+      "raw_vector_scale": 0.01,
+      "positive_z_fraction": 1.0,
+      "median_z": 7.11312564642995,
+      "median_reprojection_error_px": 424.52865742732274,
+      "p95_reprojection_error_px": 1230.8058811321814
+    },
+    {
+      "name": "world_ue_to_cv_xyz_cam_ext_c2w_scale_1",
+      "raw_vector_scale": 1.0,
+      "positive_z_fraction": 1.0,
+      "median_z": 468.4192814716453,
+      "median_reprojection_error_px": 616.8025207248055,
+      "p95_reprojection_error_px": 1450.0789459649225
+    },
+    {
+      "name": "camera_ue_to_cv_xyz",
+      "raw_vector_scale": 1.0,
+      "positive_z_fraction": 1.0,
+      "median_z": 495.0,
+      "median_reprojection_error_px": 641.1982748749076,
+      "p95_reprojection_error_px": 1415.566851378446
+    },
+    {
+      "name": "world_ue_to_cv_xyz_cam_ext_w2c_scale_1",
+      "raw_vector_scale": 1.0,
+      "positive_z_fraction": 1.0,
+      "median_z": 473.32752052804085,
+      "median_reprojection_error_px": 746.477675452483,
+      "p95_reprojection_error_px": 1490.7104271500725
+    },
+    {
+      "name": "world_raw_xyz_cam_ext_w2c_scale_0.01",
+      "raw_vector_scale": 0.01,
+      "positive_z_fraction": 1.0,
+      "median_z": 4.311065602841367,
+      "median_reprojection_error_px": 1028.2374710392317,
+      "p95_reprojection_error_px": 1721.389160623432
+    },
+    {
+      "name": "world_ue_to_cv_xyz_cam_ext_c2w_scale_0.01",
+      "raw_vector_scale": 0.01,
+      "positive_z_fraction": 0.8726388888888889,
+      "median_z": 4.373159416139664,
+      "median_reprojection_error_px": 1282.351633895458,
+      "p95_reprojection_error_px": 12478.915923548477
+    },
+    {
+      "name": "world_raw_xyz_cam_ext_w2c_scale_1",
+      "raw_vector_scale": 1.0,
+      "positive_z_fraction": 1.0,
+      "median_z": 193.1215161691827,
+      "median_reprojection_error_px": 1959.422377967252,
+      "p95_reprojection_error_px": 2517.9976559750003
+    },
+    {
+      "name": "world_raw_xyz_cam_ext_c2w_scale_1",
+      "raw_vector_scale": 1.0,
+      "positive_z_fraction": 0.07236111111111111,
+      "median_z": 42.86368228236151,
+      "median_reprojection_error_px": 16502.217570843215,
+      "p95_reprojection_error_px": 191290.67269454527
+    },
+    {
+      "name": "camera_raw_xyz",
+      "raw_vector_scale": 1.0,
+      "positive_z_fraction": 0.8741666666666666,
+      "median_z": 3.9599609375,
+      "median_reprojection_error_px": 70027.86029890763,
+      "p95_reprojection_error_px": 969763.9574424577
+    },
+    {
+      "name": "world_raw_xyz_cam_ext_c2w_scale_0.01",
+      "raw_vector_scale": 0.01,
+      "positive_z_fraction": 0.0,
+      "median_z": null,
+      "median_reprojection_error_px": Infinity,
+      "p95_reprojection_error_px": Infinity
+    }
+  ],
+  "recommended": {
+    "name": "world_ue_to_cv_xyz_cam_ext_w2c_scale_0.01",
+    "raw_vector_scale": 0.01,
+    "positive_z_fraction": 1.0,
+    "median_z": 7.11312564642995,
+    "median_reprojection_error_px": 424.52865742732274,
+    "p95_reprojection_error_px": 1230.8058811321814
+  },
+  "auto_accept": false,
+  "acceptance_threshold_px": 2.0
+}
