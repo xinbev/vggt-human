@@ -79,7 +79,11 @@ echo "GPU         : ${CUDA_VISIBLE_DEVICES}"
 echo "Batch/views : ${BATCH_SIZE} / ${NUM_VIEWS}"
 echo "Epochs/lr   : ${EPOCHS} / ${LR}"
 echo "Scale train : ${HSI_SCALE_TRAINING_MODE}"
-if [[ -n "${LOG10_SCALE_STD_SCHEDULE}" ]]; then
+if [[ "${HSI_SCALE_TRAINING_MODE}" == "coarse_residual_stratified" ]]; then
+  NOISE_SCHEDULE_OVERRIDE="training_prior.hsi_gt_depth_log_scale_std_schedule=${LOG_SCALE_STD_SCHEDULE}"
+  echo "Absolute S  : 10% x1 | 20% logU[0.25,2] | 50% logU[2,12] | 20% logU[12,20]"
+  echo "Coarse error: 30% x1 | 40% logU[0.67,1.5] | 25% logU[0.4,2.5] | 5% logU[0.25,4]"
+elif [[ -n "${LOG10_SCALE_STD_SCHEDULE}" ]]; then
   NOISE_SCHEDULE_OVERRIDE="training_prior.hsi_gt_depth_log10_scale_std_schedule=${LOG10_SCALE_STD_SCHEDULE}"
   echo "Noise       : log10_std=${LOG10_SCALE_STD_SCHEDULE}, mode=${NOISE_MODE}, unit=${NOISE_UNIT}, clean=${CLEAN_PROB}"
 else

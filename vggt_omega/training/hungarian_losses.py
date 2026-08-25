@@ -3008,6 +3008,7 @@ class HungarianSMPLLoss(nn.Module):
                     frame_idx=frame_idx,
                     gt_joints_cam=gt_joints_cam,
                     gt_vertices_cam=gt_vertices_cam,
+                    coarse_valid_mask=predictions.get("hsi_coarse_valid_mask"),
                 )
             )
 
@@ -3110,6 +3111,7 @@ class HungarianSMPLLoss(nn.Module):
         frame_idx: torch.Tensor,
         gt_joints_cam: torch.Tensor,
         gt_vertices_cam: torch.Tensor,
+        coarse_valid_mask: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor]:
         zero = depth.sum() * 0.0
         out = {
@@ -3169,10 +3171,9 @@ class HungarianSMPLLoss(nn.Module):
         log_l1_values: list[torch.Tensor] = []
         rel_l1_values: list[torch.Tensor] = []
         scale_values = point_z / raw_sampled.clamp(min=1e-6)
-        coarse_valid = predictions.get("hsi_coarse_valid_mask")
         flat_coarse_valid = None
-        if isinstance(coarse_valid, torch.Tensor):
-            flat_coarse_valid = coarse_valid.to(device=depth.device).bool().reshape(-1)
+        if isinstance(coarse_valid_mask, torch.Tensor):
+            flat_coarse_valid = coarse_valid_mask.to(device=depth.device).bool().reshape(-1)
 
         for flat_frame_tensor in torch.unique(frame_idx):
             flat_frame = int(flat_frame_tensor.detach().cpu())
