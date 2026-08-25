@@ -1,0 +1,995 @@
+{
+  "scene": "20241213_1_250_rome_tracking",
+  "labels": "/home/zhw/xyb_space/bedlam2/bedlam_data/labels_smpl_6fps/20241213_1_250_rome_tracking.npz",
+  "rgb_root": "/home/zhw/xyb_space/bedlam2/hf_raw/BEDLAM2/20241213_1_250_rome_tracking",
+  "depth_root": "/home/zhw/xyb_space/bedlam2/hf_raw/BEDLAM2-depth/20241213_1_250_rome_tracking",
+  "outdir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/bedlam2_processed",
+  "split": "Training",
+  "depth_scale_to_m": 1.0,
+  "translation_mode": "add_cam_ext",
+  "frame_count": 12342,
+  "person_count": 12342,
+  "sample_inspection": [
+    {
+      "imgname": "seq_000002/seq_000002_0000.png",
+      "rgb_hw": [
+        720,
+        1280
+      ],
+      "exr_channels": {
+        "RGBA": {
+          "shape": [
+            720,
+            1280,
+            4
+          ],
+          "dtype": "float16",
+          "components": [
+            {
+              "index": 0,
+              "finite_count": 921600,
+              "positive_count": 881090,
+              "finite_min": 0.0,
+              "finite_max": 0.8466796875,
+              "positive_min": 5.960464477539063e-08,
+              "positive_median": 0.146484375,
+              "positive_max": 0.8466796875
+            },
+            {
+              "index": 1,
+              "finite_count": 921600,
+              "positive_count": 880611,
+              "finite_min": 0.0,
+              "finite_max": 0.79541015625,
+              "positive_min": 5.960464477539063e-08,
+              "positive_median": 0.1512451171875,
+              "positive_max": 0.79541015625
+            },
+            {
+              "index": 2,
+              "finite_count": 921600,
+              "positive_count": 886205,
+              "finite_min": 0.0,
+              "finite_max": 0.8095703125,
+              "positive_min": 5.960464477539063e-08,
+              "positive_median": 0.1614990234375,
+              "positive_max": 0.8095703125
+            },
+            {
+              "index": 3,
+              "finite_count": 921600,
+              "positive_count": 921600,
+              "finite_min": 1.0,
+              "finite_max": 1.0,
+              "positive_min": 1.0,
+              "positive_median": 1.0,
+              "positive_max": 1.0
+            }
+          ],
+          "sample_pixels": {
+            "top_left": [
+              0.018341064453125,
+              0.01263427734375,
+              0.0089874267578125,
+              1.0
+            ],
+            "center": [
+              0.10137939453125,
+              0.0308074951171875,
+              0.04168701171875,
+              1.0
+            ],
+            "bottom_right": [
+              0.03204345703125,
+              0.035125732421875,
+              0.041412353515625,
+              1.0
+            ]
+          }
+        },
+        "ActorHitProxyMask00": {
+          "shape": [
+            720,
+            1280,
+            4
+          ],
+          "dtype": "float32",
+          "components": [
+            {
+              "index": 0,
+              "finite_count": 921600,
+              "positive_count": 897306,
+              "finite_min": -3.1562233715476395e-08,
+              "finite_max": 100.70238494873047,
+              "positive_min": 0.00033741394872777164,
+              "positive_median": 100.70238494873047,
+              "positive_max": 100.70238494873047
+            },
+            {
+              "index": 1,
+              "finite_count": 921600,
+              "positive_count": 921600,
+              "finite_min": 1.0,
+              "finite_max": 1.0,
+              "positive_min": 1.0,
+              "positive_median": 1.0,
+              "positive_max": 1.0
+            },
+            {
+              "index": 2,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            },
+            {
+              "index": 3,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            }
+          ],
+          "sample_pixels": {
+            "top_left": [
+              100.70238494873047,
+              1.0,
+              0.0,
+              0.0
+            ],
+            "center": [
+              -3.1562233715476395e-08,
+              1.0,
+              0.0,
+              0.0
+            ],
+            "bottom_right": [
+              100.70238494873047,
+              1.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "ActorHitProxyMask01": {
+          "shape": [
+            720,
+            1280,
+            4
+          ],
+          "dtype": "float32",
+          "components": [
+            {
+              "index": 0,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            },
+            {
+              "index": 1,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            },
+            {
+              "index": 2,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            },
+            {
+              "index": 3,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            }
+          ],
+          "sample_pixels": {
+            "top_left": [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "center": [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "bottom_right": [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "ActorHitProxyMask02": {
+          "shape": [
+            720,
+            1280,
+            4
+          ],
+          "dtype": "float32",
+          "components": [
+            {
+              "index": 0,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            },
+            {
+              "index": 1,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            },
+            {
+              "index": 2,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            },
+            {
+              "index": 3,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            }
+          ],
+          "sample_pixels": {
+            "top_left": [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "center": [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "bottom_right": [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "FinalImageMovieRenderQueue_WorldDepth": {
+          "shape": [
+            720,
+            1280,
+            4
+          ],
+          "dtype": "float16",
+          "components": [
+            {
+              "index": 0,
+              "finite_count": 921600,
+              "positive_count": 921600,
+              "finite_min": 172.0,
+              "finite_max": 2050.0,
+              "positive_min": 172.0,
+              "positive_median": 485.5,
+              "positive_max": 2050.0
+            },
+            {
+              "index": 1,
+              "finite_count": 921600,
+              "positive_count": 921600,
+              "finite_min": 179.25,
+              "finite_max": 2634.0,
+              "positive_min": 179.25,
+              "positive_median": 587.0,
+              "positive_max": 2634.0
+            },
+            {
+              "index": 2,
+              "finite_count": 921600,
+              "positive_count": 807105,
+              "finite_min": -5.31640625,
+              "finite_max": 721.5,
+              "positive_min": 3.0517578125e-05,
+              "positive_median": 3.66796875,
+              "positive_max": 721.5
+            },
+            {
+              "index": 3,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            }
+          ],
+          "sample_pixels": {
+            "top_left": [
+              1548.0,
+              2578.0,
+              662.0,
+              0.0
+            ],
+            "center": [
+              191.125,
+              191.125,
+              104.375,
+              0.0
+            ],
+            "bottom_right": [
+              172.875,
+              288.0,
+              1.4482421875,
+              0.0
+            ]
+          }
+        }
+      },
+      "selected_depth_error": "EXR channel 'FinalImageMovieRenderQueue_WorldDepth' has shape (720, 1280, 4) (4 components). Inspection printed a per-component report; set --depth-component only after choosing the scalar depth component."
+    },
+    {
+      "imgname": "seq_000002/seq_000002_0005.png",
+      "rgb_hw": [
+        720,
+        1280
+      ],
+      "exr_channels": {
+        "RGBA": {
+          "shape": [
+            720,
+            1280,
+            4
+          ],
+          "dtype": "float16",
+          "components": [
+            {
+              "index": 0,
+              "finite_count": 921600,
+              "positive_count": 882463,
+              "finite_min": 0.0,
+              "finite_max": 0.83251953125,
+              "positive_min": 5.960464477539063e-08,
+              "positive_median": 0.1470947265625,
+              "positive_max": 0.83251953125
+            },
+            {
+              "index": 1,
+              "finite_count": 921600,
+              "positive_count": 881582,
+              "finite_min": 0.0,
+              "finite_max": 0.8271484375,
+              "positive_min": 5.960464477539063e-08,
+              "positive_median": 0.1522216796875,
+              "positive_max": 0.8271484375
+            },
+            {
+              "index": 2,
+              "finite_count": 921600,
+              "positive_count": 887396,
+              "finite_min": 0.0,
+              "finite_max": 0.83447265625,
+              "positive_min": 5.960464477539063e-08,
+              "positive_median": 0.162841796875,
+              "positive_max": 0.83447265625
+            },
+            {
+              "index": 3,
+              "finite_count": 921600,
+              "positive_count": 921600,
+              "finite_min": 1.0,
+              "finite_max": 1.0,
+              "positive_min": 1.0,
+              "positive_median": 1.0,
+              "positive_max": 1.0
+            }
+          ],
+          "sample_pixels": {
+            "top_left": [
+              0.01001739501953125,
+              0.006443023681640625,
+              0.00518798828125,
+              1.0
+            ],
+            "center": [
+              0.09332275390625,
+              0.0283660888671875,
+              0.036956787109375,
+              1.0
+            ],
+            "bottom_right": [
+              0.1400146484375,
+              0.14404296875,
+              0.170166015625,
+              1.0
+            ]
+          }
+        },
+        "ActorHitProxyMask00": {
+          "shape": [
+            720,
+            1280,
+            4
+          ],
+          "dtype": "float32",
+          "components": [
+            {
+              "index": 0,
+              "finite_count": 921600,
+              "positive_count": 897807,
+              "finite_min": -3.1562233715476395e-08,
+              "finite_max": 100.70238494873047,
+              "positive_min": 0.00033741394872777164,
+              "positive_median": 100.70238494873047,
+              "positive_max": 100.70238494873047
+            },
+            {
+              "index": 1,
+              "finite_count": 921600,
+              "positive_count": 921600,
+              "finite_min": 1.0,
+              "finite_max": 1.0,
+              "positive_min": 1.0,
+              "positive_median": 1.0,
+              "positive_max": 1.0
+            },
+            {
+              "index": 2,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            },
+            {
+              "index": 3,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            }
+          ],
+          "sample_pixels": {
+            "top_left": [
+              100.70238494873047,
+              1.0,
+              0.0,
+              0.0
+            ],
+            "center": [
+              -3.1562233715476395e-08,
+              1.0,
+              0.0,
+              0.0
+            ],
+            "bottom_right": [
+              100.70238494873047,
+              1.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "ActorHitProxyMask01": {
+          "shape": [
+            720,
+            1280,
+            4
+          ],
+          "dtype": "float32",
+          "components": [
+            {
+              "index": 0,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            },
+            {
+              "index": 1,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            },
+            {
+              "index": 2,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            },
+            {
+              "index": 3,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            }
+          ],
+          "sample_pixels": {
+            "top_left": [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "center": [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "bottom_right": [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "ActorHitProxyMask02": {
+          "shape": [
+            720,
+            1280,
+            4
+          ],
+          "dtype": "float32",
+          "components": [
+            {
+              "index": 0,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            },
+            {
+              "index": 1,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            },
+            {
+              "index": 2,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            },
+            {
+              "index": 3,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            }
+          ],
+          "sample_pixels": {
+            "top_left": [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "center": [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "bottom_right": [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "FinalImageMovieRenderQueue_WorldDepth": {
+          "shape": [
+            720,
+            1280,
+            4
+          ],
+          "dtype": "float16",
+          "components": [
+            {
+              "index": 0,
+              "finite_count": 921600,
+              "positive_count": 921600,
+              "finite_min": 171.875,
+              "finite_max": 2045.0,
+              "positive_min": 171.875,
+              "positive_median": 488.5,
+              "positive_max": 2045.0
+            },
+            {
+              "index": 1,
+              "finite_count": 921600,
+              "positive_count": 921600,
+              "finite_min": 181.5,
+              "finite_max": 2634.0,
+              "positive_min": 181.5,
+              "positive_median": 590.0,
+              "positive_max": 2634.0
+            },
+            {
+              "index": 2,
+              "finite_count": 921600,
+              "positive_count": 807014,
+              "finite_min": -5.41015625,
+              "finite_max": 728.0,
+              "positive_min": 3.0517578125e-05,
+              "positive_median": 3.708984375,
+              "positive_max": 728.0
+            },
+            {
+              "index": 3,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            }
+          ],
+          "sample_pixels": {
+            "top_left": [
+              1547.0,
+              2578.0,
+              668.0,
+              0.0
+            ],
+            "center": [
+              191.0,
+              191.0,
+              104.5625,
+              0.0
+            ],
+            "bottom_right": [
+              172.75,
+              287.75,
+              1.365234375,
+              0.0
+            ]
+          }
+        }
+      },
+      "selected_depth_error": "EXR channel 'FinalImageMovieRenderQueue_WorldDepth' has shape (720, 1280, 4) (4 components). Inspection printed a per-component report; set --depth-component only after choosing the scalar depth component."
+    },
+    {
+      "imgname": "seq_000002/seq_000002_0010.png",
+      "rgb_hw": [
+        720,
+        1280
+      ],
+      "exr_channels": {
+        "RGBA": {
+          "shape": [
+            720,
+            1280,
+            4
+          ],
+          "dtype": "float16",
+          "components": [
+            {
+              "index": 0,
+              "finite_count": 921600,
+              "positive_count": 882391,
+              "finite_min": 0.0,
+              "finite_max": 0.7890625,
+              "positive_min": 5.960464477539063e-08,
+              "positive_median": 0.1475830078125,
+              "positive_max": 0.7890625
+            },
+            {
+              "index": 1,
+              "finite_count": 921600,
+              "positive_count": 881648,
+              "finite_min": 0.0,
+              "finite_max": 0.77294921875,
+              "positive_min": 5.960464477539063e-08,
+              "positive_median": 0.1527099609375,
+              "positive_max": 0.77294921875
+            },
+            {
+              "index": 2,
+              "finite_count": 921600,
+              "positive_count": 887266,
+              "finite_min": 0.0,
+              "finite_max": 0.7841796875,
+              "positive_min": 5.960464477539063e-08,
+              "positive_median": 0.1632080078125,
+              "positive_max": 0.7841796875
+            },
+            {
+              "index": 3,
+              "finite_count": 921600,
+              "positive_count": 921600,
+              "finite_min": 1.0,
+              "finite_max": 1.0,
+              "positive_min": 1.0,
+              "positive_median": 1.0,
+              "positive_max": 1.0
+            }
+          ],
+          "sample_pixels": {
+            "top_left": [
+              0.0122833251953125,
+              0.0054931640625,
+              0.00481414794921875,
+              1.0
+            ],
+            "center": [
+              0.108154296875,
+              0.032989501953125,
+              0.044647216796875,
+              1.0
+            ],
+            "bottom_right": [
+              0.079345703125,
+              0.0833740234375,
+              0.0982666015625,
+              1.0
+            ]
+          }
+        },
+        "ActorHitProxyMask00": {
+          "shape": [
+            720,
+            1280,
+            4
+          ],
+          "dtype": "float32",
+          "components": [
+            {
+              "index": 0,
+              "finite_count": 921600,
+              "positive_count": 898440,
+              "finite_min": -3.1562233715476395e-08,
+              "finite_max": 100.70238494873047,
+              "positive_min": 0.00033741394872777164,
+              "positive_median": 100.70238494873047,
+              "positive_max": 100.70238494873047
+            },
+            {
+              "index": 1,
+              "finite_count": 921600,
+              "positive_count": 921600,
+              "finite_min": 1.0,
+              "finite_max": 1.0,
+              "positive_min": 1.0,
+              "positive_median": 1.0,
+              "positive_max": 1.0
+            },
+            {
+              "index": 2,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            },
+            {
+              "index": 3,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            }
+          ],
+          "sample_pixels": {
+            "top_left": [
+              100.70238494873047,
+              1.0,
+              0.0,
+              0.0
+            ],
+            "center": [
+              -3.1562233715476395e-08,
+              1.0,
+              0.0,
+              0.0
+            ],
+            "bottom_right": [
+              100.70238494873047,
+              1.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "ActorHitProxyMask01": {
+          "shape": [
+            720,
+            1280,
+            4
+          ],
+          "dtype": "float32",
+          "components": [
+            {
+              "index": 0,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            },
+            {
+              "index": 1,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            },
+            {
+              "index": 2,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            },
+            {
+              "index": 3,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            }
+          ],
+          "sample_pixels": {
+            "top_left": [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "center": [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "bottom_right": [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "ActorHitProxyMask02": {
+          "shape": [
+            720,
+            1280,
+            4
+          ],
+          "dtype": "float32",
+          "components": [
+            {
+              "index": 0,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            },
+            {
+              "index": 1,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            },
+            {
+              "index": 2,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            },
+            {
+              "index": 3,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            }
+          ],
+          "sample_pixels": {
+            "top_left": [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "center": [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "bottom_right": [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "FinalImageMovieRenderQueue_WorldDepth": {
+          "shape": [
+            720,
+            1280,
+            4
+          ],
+          "dtype": "float16",
+          "components": [
+            {
+              "index": 0,
+              "finite_count": 921600,
+              "positive_count": 921600,
+              "finite_min": 171.5,
+              "finite_max": 2047.0,
+              "positive_min": 171.5,
+              "positive_median": 489.75,
+              "positive_max": 2047.0
+            },
+            {
+              "index": 1,
+              "finite_count": 921600,
+              "positive_count": 921600,
+              "finite_min": 182.5,
+              "finite_max": 2634.0,
+              "positive_min": 182.5,
+              "positive_median": 592.0,
+              "positive_max": 2634.0
+            },
+            {
+              "index": 2,
+              "finite_count": 921600,
+              "positive_count": 806831,
+              "finite_min": -20.484375,
+              "finite_max": 733.5,
+              "positive_min": 1.52587890625e-05,
+              "positive_median": 3.716796875,
+              "positive_max": 733.5
+            },
+            {
+              "index": 3,
+              "finite_count": 921600,
+              "positive_count": 0,
+              "finite_min": 0.0,
+              "finite_max": 0.0
+            }
+          ],
+          "sample_pixels": {
+            "top_left": [
+              1548.0,
+              2578.0,
+              673.0,
+              0.0
+            ],
+            "center": [
+              191.75,
+              191.75,
+              104.5,
+              0.0
+            ],
+            "bottom_right": [
+              172.75,
+              287.75,
+              1.0390625,
+              0.0
+            ]
+          }
+        }
+      },
+      "selected_depth_error": "EXR channel 'FinalImageMovieRenderQueue_WorldDepth' has shape (720, 1280, 4) (4 components). Inspection printed a per-component report; set --depth-component only after choosing the scalar depth component."
+    }
+  ]
+}
