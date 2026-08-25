@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -1444,6 +1446,11 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_smpl_scale_teacher_pred_scale": zero.detach(),
             "metric_hsi_smpl_scale_teacher_log_l1": zero.detach(),
             "metric_hsi_smpl_scale_teacher_rel_l1": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_log10_std": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_pred_log10_std": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_log_correlation": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_identity_log_l1": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_identity_improvement": zero.detach(),
             "metric_hsi_smpl_scale_teacher_bias": zero.detach(),
             "metric_hsi_smpl_scale_teacher_pred_bias": zero.detach(),
             "metric_hsi_contact_pos_frac": zero.detach(),
@@ -2925,6 +2932,11 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_smpl_scale_teacher_pred_scale": zero.detach(),
             "metric_hsi_smpl_scale_teacher_log_l1": zero.detach(),
             "metric_hsi_smpl_scale_teacher_rel_l1": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_log10_std": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_pred_log10_std": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_log_correlation": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_identity_log_l1": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_identity_improvement": zero.detach(),
             "metric_hsi_smpl_scale_teacher_bias": zero.detach(),
             "metric_hsi_smpl_scale_teacher_pred_bias": zero.detach(),
             "metric_hsi_contact_pos_frac": zero.detach(),
@@ -3104,6 +3116,11 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_smpl_scale_teacher_pred_scale": zero.detach(),
             "metric_hsi_smpl_scale_teacher_log_l1": zero.detach(),
             "metric_hsi_smpl_scale_teacher_rel_l1": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_log10_std": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_pred_log10_std": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_log_correlation": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_identity_log_l1": zero.detach(),
+            "metric_hsi_smpl_scale_teacher_identity_improvement": zero.detach(),
             "metric_hsi_smpl_scale_teacher_bias": zero.detach(),
             "metric_hsi_smpl_scale_teacher_pred_bias": zero.detach(),
         }
@@ -3196,6 +3213,23 @@ class HungarianSMPLLoss(nn.Module):
         out["metric_hsi_smpl_scale_teacher_pred_scale"] = torch.stack(pred_scales).mean().detach()
         out["metric_hsi_smpl_scale_teacher_log_l1"] = torch.stack(log_l1_values).mean().detach()
         out["metric_hsi_smpl_scale_teacher_rel_l1"] = torch.stack(rel_l1_values).mean().detach()
+        teacher_log = torch.log(torch.stack(teacher_scales).detach().clamp(min=1e-6))
+        pred_log = torch.log(torch.stack(pred_scales).detach().clamp(min=1e-6))
+        teacher_log10 = teacher_log / math.log(10.0)
+        pred_log10 = pred_log / math.log(10.0)
+        teacher_centered = teacher_log - teacher_log.mean()
+        pred_centered = pred_log - pred_log.mean()
+        correlation_denom = torch.sqrt(
+            teacher_centered.square().sum() * pred_centered.square().sum()
+        ).clamp(min=1e-8)
+        correlation = (teacher_centered * pred_centered).sum() / correlation_denom
+        identity_log_l1 = teacher_log.abs().mean()
+        model_log_l1 = torch.abs(pred_log - teacher_log).mean()
+        out["metric_hsi_smpl_scale_teacher_log10_std"] = teacher_log10.std(unbiased=False).detach()
+        out["metric_hsi_smpl_scale_teacher_pred_log10_std"] = pred_log10.std(unbiased=False).detach()
+        out["metric_hsi_smpl_scale_teacher_log_correlation"] = correlation.detach()
+        out["metric_hsi_smpl_scale_teacher_identity_log_l1"] = identity_log_l1.detach()
+        out["metric_hsi_smpl_scale_teacher_identity_improvement"] = (identity_log_l1 - model_log_l1).detach()
         out["metric_hsi_smpl_scale_teacher_bias"] = torch.stack(teacher_biases).mean().detach()
         out["metric_hsi_smpl_scale_teacher_pred_bias"] = torch.stack(pred_biases).mean().detach()
         return out

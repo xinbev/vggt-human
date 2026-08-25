@@ -1974,11 +1974,15 @@ def maybe_perturb_gt_metric_depth(
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     prior_cfg = config.get("training_prior", {})
     mode = str(prior_cfg.get("hsi_gt_depth_scale_noise_mode", "uniform") or "uniform").lower()
-    schedule_key = (
-        "hsi_gt_depth_log_scale_std_schedule"
-        if "hsi_gt_depth_log_scale_std_schedule" in prior_cfg
-        else "hsi_gt_depth_scale_noise_schedule"
-    )
+    log10_modes = {"log10_normal", "log10_gaussian", "lognormal_log10"}
+    if mode in log10_modes:
+        schedule_key = "hsi_gt_depth_log10_scale_std_schedule"
+    else:
+        schedule_key = (
+            "hsi_gt_depth_log_scale_std_schedule"
+            if "hsi_gt_depth_log_scale_std_schedule" in prior_cfg
+            else "hsi_gt_depth_scale_noise_schedule"
+        )
     schedule = parse_float_schedule(prior_cfg.get(schedule_key, "0.0"))
     noise_amount = schedule[min(max(int(epoch), 0), len(schedule) - 1)] if schedule else 0.0
     if noise_amount <= 0.0:
@@ -2005,6 +2009,10 @@ def maybe_perturb_gt_metric_depth(
             log_mean = float(prior_cfg.get("hsi_gt_depth_log_scale_mean", 0.0) or 0.0)
             log_scale = depth.new_empty(*shape).normal_(mean=log_mean, std=float(noise_amount))
             scale = torch.exp(log_scale)
+        elif mode in log10_modes:
+            log10_mean = float(prior_cfg.get("hsi_gt_depth_log10_scale_mean", 0.0) or 0.0)
+            log10_scale = depth.new_empty(*shape).normal_(mean=log10_mean, std=float(noise_amount))
+            scale = torch.pow(depth.new_tensor(10.0), log10_scale)
         else:
             raise ValueError(f"Unsupported training_prior.hsi_gt_depth_scale_noise_mode: {mode!r}")
         if clean_prob > 0.0:
@@ -2040,6 +2048,7 @@ def depth_perturbation_scalars(predictions: dict[str, torch.Tensor]) -> dict[str
         "metric_hsi_gt_depth_perturb_scale_mean": float(scale_f.mean().cpu()),
         "metric_hsi_gt_depth_perturb_scale_std": float(scale_f.std(unbiased=False).cpu()),
         "metric_hsi_gt_depth_perturb_log_scale_std": float(torch.log(scale_f.clamp(min=1e-6)).std(unbiased=False).cpu()),
+        "metric_hsi_gt_depth_perturb_log10_scale_std": float(torch.log10(scale_f.clamp(min=1e-6)).std(unbiased=False).cpu()),
         "metric_hsi_gt_depth_perturb_target_scale_mean": float(target_f.mean().cpu()),
     }
     visibility = predictions.get("gt_smpl_online_visibility_mask")
@@ -2710,6 +2719,11 @@ def compact_loss_name(key: str) -> str:
         "metric_hsi_smpl_scale_teacher_l1": "scaleL1",
         "metric_hsi_smpl_scale_teacher_log_l1": "scaleLog",
         "metric_hsi_smpl_scale_teacher_rel_l1": "scaleRel",
+        "metric_hsi_smpl_scale_teacher_log10_std": "scaleTStd10",
+        "metric_hsi_smpl_scale_teacher_pred_log10_std": "scalePStd10",
+        "metric_hsi_smpl_scale_teacher_log_correlation": "scaleCorr",
+        "metric_hsi_smpl_scale_teacher_identity_log_l1": "scaleIdLog",
+        "metric_hsi_smpl_scale_teacher_identity_improvement": "scaleGain",
         "metric_hsi_base_transl_l1": "hsiBaseT",
         "metric_hsi_refined_transl_l1": "hsiRefT",
         "metric_hsi_transl_l1_delta": "hsiDT",

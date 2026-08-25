@@ -22,6 +22,7 @@ EPOCHS="${EPOCHS:-5}"
 LR="${LR:-1e-5}"
 MAX_STEPS_PER_EPOCH="${MAX_STEPS_PER_EPOCH:-0}"
 LOG_SCALE_STD_SCHEDULE="${LOG_SCALE_STD_SCHEDULE:-0.30}"
+LOG10_SCALE_STD_SCHEDULE="${LOG10_SCALE_STD_SCHEDULE:-}"
 NOISE_MODE="${NOISE_MODE:-lognormal}"
 NOISE_UNIT="${NOISE_UNIT:-sequence}"
 CLEAN_PROB="${CLEAN_PROB:-0.0}"
@@ -76,7 +77,13 @@ echo "Person input: box-free GT SMPL with online depth visibility"
 echo "GPU         : ${CUDA_VISIBLE_DEVICES}"
 echo "Batch/views : ${BATCH_SIZE} / ${NUM_VIEWS}"
 echo "Epochs/lr   : ${EPOCHS} / ${LR}"
-echo "Noise       : log_std=${LOG_SCALE_STD_SCHEDULE}, mode=${NOISE_MODE}, unit=${NOISE_UNIT}, clean=${CLEAN_PROB}"
+if [[ -n "${LOG10_SCALE_STD_SCHEDULE}" ]]; then
+  NOISE_SCHEDULE_OVERRIDE="training_prior.hsi_gt_depth_log10_scale_std_schedule=${LOG10_SCALE_STD_SCHEDULE}"
+  echo "Noise       : log10_std=${LOG10_SCALE_STD_SCHEDULE}, mode=${NOISE_MODE}, unit=${NOISE_UNIT}, clean=${CLEAN_PROB}"
+else
+  NOISE_SCHEDULE_OVERRIDE="training_prior.hsi_gt_depth_log_scale_std_schedule=${LOG_SCALE_STD_SCHEDULE}"
+  echo "Noise       : ln_std=${LOG_SCALE_STD_SCHEDULE}, mode=${NOISE_MODE}, unit=${NOISE_UNIT}, clean=${CLEAN_PROB}"
+fi
 echo "W&B         : enabled=${WANDB_ENABLED}, project=${WANDB_PROJECT}, name=${WANDB_RUN_NAME}, mode=${WANDB_MODE}"
 echo "Checkpoints : latest=${SAVE_LATEST}, top_k=${SAVE_TOP_K}"
 
@@ -101,7 +108,7 @@ python scripts/train/train_smpl.py \
   --override "optim.epochs=${EPOCHS}" \
   --override "optim.lr=${LR}" \
   --override "optim.max_steps_per_epoch=${MAX_STEPS_PER_EPOCH}" \
-  --override "training_prior.hsi_gt_depth_log_scale_std_schedule=${LOG_SCALE_STD_SCHEDULE}" \
+  --override "${NOISE_SCHEDULE_OVERRIDE}" \
   --override "training_prior.hsi_gt_depth_scale_noise_mode=${NOISE_MODE}" \
   --override "training_prior.hsi_gt_depth_scale_noise_unit=${NOISE_UNIT}" \
   --override "training_prior.hsi_gt_depth_scale_clean_prob=${CLEAN_PROB}" \

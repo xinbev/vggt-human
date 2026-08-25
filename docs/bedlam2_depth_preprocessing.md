@@ -65,6 +65,20 @@ scene distance before choosing `DEPTH_SCALE`. The legacy BEDLAM converter used
 `0.01` because its EXR values were centimetres, but that is an initial
 candidate—not an assumption applied by this adapter.
 
+For a four-component `WorldDepth` payload, do not choose a component. Its RGB
+values can encode a 3D point vector rather than scalar depth. Run the read-only
+coordinate validation first:
+
+```bash
+bash scripts/diagnostics/inspect_bedlam2_world_depth.sh
+```
+
+It tests raw and Unreal-to-OpenCV vectors as camera/world points against
+`cam_int` and `cam_ext`; only a candidate that reprojects to the source pixels
+with low error is eligible for conversion. Its report is written under
+`outputs/debug/bedlam2_world_depth/`. Do not run the materializer until this
+check identifies the vector coordinate convention and scale.
+
 After confirmation, materialize the scene (for centimetre EXR values):
 
 ```bash

@@ -103,6 +103,11 @@ optim:
     - metric_hsi_smpl_scale_teacher_pred_scale
     - metric_hsi_smpl_scale_teacher_log_l1
     - metric_hsi_smpl_scale_teacher_rel_l1
+    - metric_hsi_smpl_scale_teacher_log10_std
+    - metric_hsi_smpl_scale_teacher_pred_log10_std
+    - metric_hsi_smpl_scale_teacher_log_correlation
+    - metric_hsi_smpl_scale_teacher_identity_log_l1
+    - metric_hsi_smpl_scale_teacher_identity_improvement
     - metric_hsi_smpl_scale_teacher_valid_points
     - metric_gt_smpl_visible_people
     - metric_gt_smpl_visibility_keep_ratio
@@ -171,10 +176,16 @@ logging:
       - metric_hsi_smpl_scale_teacher_scale
       - metric_hsi_smpl_scale_teacher_pred_scale
       - metric_hsi_smpl_scale_teacher_valid_points
+      - metric_hsi_smpl_scale_teacher_log10_std
+      - metric_hsi_smpl_scale_teacher_pred_log10_std
+      - metric_hsi_smpl_scale_teacher_log_correlation
+      - metric_hsi_smpl_scale_teacher_identity_log_l1
+      - metric_hsi_smpl_scale_teacher_identity_improvement
       - loss_hsi_depth_teacher
       - metric_hsi_depth_teacher_l1
       - metric_hsi_gt_depth_perturb_scale_mean
       - metric_hsi_gt_depth_perturb_target_scale_mean
+      - metric_hsi_gt_depth_perturb_log10_scale_std
       - metric_gt_smpl_visible_people
       - metric_gt_smpl_visibility_keep_ratio
       - metric_grad_norm_hsi_scale_delta

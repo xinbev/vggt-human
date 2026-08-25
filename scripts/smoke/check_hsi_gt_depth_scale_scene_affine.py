@@ -112,6 +112,28 @@ def main() -> None:
     if not 0.27 <= sampled_log_std <= 0.33:
         raise AssertionError(f"Unexpected log-scale Gaussian std: {sampled_log_std:.6f}")
 
+    log10_config = {
+        "training_prior": {
+            "hsi_gt_depth_log10_scale_std_schedule": "0.30",
+            "hsi_gt_depth_scale_noise_mode": "log10_normal",
+            "hsi_gt_depth_scale_noise_unit": "sequence",
+            "hsi_gt_depth_scale_clean_prob": 0.0,
+        }
+    }
+    _, log10_diagnostics = maybe_perturb_gt_metric_depth(
+        distribution_depth,
+        log10_config,
+        epoch=0,
+        is_training=True,
+    )
+    sampled_log10_scale = torch.log10(log10_diagnostics["hsi_gt_depth_perturb_scale"].reshape(-1))
+    sampled_log10_mean = float(sampled_log10_scale.mean())
+    sampled_log10_std = float(sampled_log10_scale.std(unbiased=False))
+    if abs(sampled_log10_mean) > 0.03:
+        raise AssertionError(f"Log10-scale Gaussian mean drifted: {sampled_log10_mean:.6f}")
+    if not 0.27 <= sampled_log10_std <= 0.33:
+        raise AssertionError(f"Unexpected log10-scale Gaussian std: {sampled_log10_std:.6f}")
+
     out_dir = ROOT / "outputs" / "debug" / "hsi_gt_depth_scale_scene_affine_smoke"
     out_dir.mkdir(parents=True, exist_ok=True)
     summary = {
@@ -121,6 +143,8 @@ def main() -> None:
         "clean_eval_target_scale": float(target.mean().item()),
         "sampled_log_scale_mean": sampled_log_mean,
         "sampled_log_scale_std": sampled_log_std,
+        "sampled_log10_scale_mean": sampled_log10_mean,
+        "sampled_log10_scale_std": sampled_log10_std,
         "smpl_override_clean": True,
         "box_free_gt_slots": True,
     }
