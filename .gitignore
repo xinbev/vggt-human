@@ -33,3 +33,4 @@ outputs/debug/hsi_contact_teachers_v3_strict_pilot256/Training
 assets/demo/12-HW/
 
 outputs/vis/seq_000080_shared_6fps/
+outputs/train/smpl_hsi_gt_depth_scale_scene_affine_boxfree/wandb/run-20260824_160533-e6j59aru/run-e6j59aru.wandb

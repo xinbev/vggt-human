@@ -36,7 +36,7 @@
   },
   "experiment": {
     "name": "smpl_hsi_gt_depth_scale_scene_affine_boxfree",
-    "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/debug/hsi_gt_depth_scale_boxfree_one_step",
+    "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_gt_depth_scale_scene_affine_boxfree",
     "seed": 42
   },
   "data": {
@@ -55,7 +55,7 @@
     "box_free_gt_slots": true,
     "require_smpl": true,
     "require_depth": true,
-    "num_workers": 0,
+    "num_workers": 12,
     "pin_memory": true
   },
   "model": {
@@ -116,17 +116,17 @@
     ],
     "save_optimizer": false,
     "save_epoch_checkpoint": false,
-    "save_latest": false,
+    "save_latest": true,
     "save_final": false,
-    "save_top_k": 0,
+    "save_top_k": 1,
     "save_top_k_from_train": true,
     "topk_create_stable_copies": false,
     "monitor": "loss_total",
     "monitor_mode": "min"
   },
   "optim": {
-    "batch_size": 2,
-    "epochs": 1,
+    "batch_size": 20,
+    "epochs": 5,
     "lr": 1e-05,
     "weight_decay": 0.05,
     "grad_clip_norm": 1.0,
@@ -154,7 +154,7 @@
       "metric_grad_norm_hsi_bias_delta"
     ],
     "save_interval": 1,
-    "max_steps_per_epoch": 1,
+    "max_steps_per_epoch": 0,
     "drop_no_visible_gt_samples": true,
     "required_supervision_metric": "metric_hsi_smpl_scale_teacher_valid_points",
     "required_supervision_min": 0.0,
@@ -199,7 +199,7 @@
   },
   "logging": {
     "wandb": {
-      "enabled": false,
+      "enabled": true,
       "project": "vggt-human",
       "entity": "",
       "name": "smpl_hsi_gt_depth_scale_scene_affine_boxfree",
