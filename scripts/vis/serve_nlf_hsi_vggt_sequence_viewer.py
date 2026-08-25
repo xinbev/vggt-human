@@ -557,13 +557,34 @@ def run_smpl_coarse_hsi_cascade(
     residual_frame_scale = cascade.get("hsi_frame_scene_scale", residual_scale).detach().clone()
     residual_frame_bias = cascade.get("hsi_frame_scene_depth_bias", residual_bias).detach().clone()
     coarse_scale_tensor = coarse_scale[..., None].to(device=residual_scale.device, dtype=residual_scale.dtype)
+    effective_scale = coarse_scale_tensor * residual_scale
+
+    print("[coarse-hsi] final_depth = raw_vggt_depth * coarse_scale * hsi_residual_scale + hsi_residual_bias", flush=True)
+    for frame_idx, record in enumerate(coarse_records):
+        coarse_value = float(coarse_scale_tensor[0, frame_idx, 0].detach().cpu())
+        residual_value = float(residual_scale[0, frame_idx, 0].detach().cpu())
+        effective_value = float(effective_scale[0, frame_idx, 0].detach().cpu())
+        bias_value = float(residual_bias[0, frame_idx, 0].detach().cpu())
+        print(
+            "[coarse-hsi] "
+            f"frame={frame_idx:04d} "
+            f"coarse={coarse_value:.6g} "
+            f"hsi_residual={residual_value:.6g} "
+            f"effective={effective_value:.6g} "
+            f"bias={bias_value:.6g} "
+            f"anchors={int(record.get('num_anchor_pixels', 0) or 0)} "
+            f"applied={bool(record.get('applied', False))} "
+            f"reason={record.get('reason', 'unknown')}",
+            flush=True,
+        )
+    print_coarse_hsi_scale_summary(coarse_scale_tensor, residual_scale, effective_scale, residual_bias)
 
     cascade["hsi_residual_scene_scale"] = residual_scale
     cascade["hsi_residual_scene_depth_bias"] = residual_bias
     cascade["hsi_residual_frame_scene_scale"] = residual_frame_scale
     cascade["hsi_residual_frame_scene_depth_bias"] = residual_frame_bias
     cascade["hsi_coarse_scene_scale"] = coarse_scale_tensor
-    cascade["hsi_scene_scale"] = coarse_scale_tensor * residual_scale
+    cascade["hsi_scene_scale"] = effective_scale
     cascade["hsi_scene_depth_bias"] = residual_bias
     cascade["hsi_frame_scene_scale"] = coarse_scale_tensor * residual_frame_scale
     cascade["hsi_frame_scene_depth_bias"] = residual_frame_bias
@@ -574,6 +595,30 @@ def run_smpl_coarse_hsi_cascade(
     ).reshape(1, -1)
     cascade["_hsi_coarse_scale_records"] = coarse_records
     return cascade
+
+
+def print_coarse_hsi_scale_summary(
+    coarse_scale: torch.Tensor,
+    residual_scale: torch.Tensor,
+    effective_scale: torch.Tensor,
+    residual_bias: torch.Tensor,
+) -> None:
+    def stats(value: torch.Tensor) -> tuple[float, float, float]:
+        flat = value.detach().float().reshape(-1).cpu()
+        return float(flat.min()), float(flat.median()), float(flat.max())
+
+    coarse_stats = stats(coarse_scale)
+    residual_stats = stats(residual_scale)
+    effective_stats = stats(effective_scale)
+    bias_stats = stats(residual_bias)
+    print(
+        "[coarse-hsi-summary] min/median/max "
+        f"coarse={coarse_stats[0]:.6g}/{coarse_stats[1]:.6g}/{coarse_stats[2]:.6g} "
+        f"hsi_residual={residual_stats[0]:.6g}/{residual_stats[1]:.6g}/{residual_stats[2]:.6g} "
+        f"effective={effective_stats[0]:.6g}/{effective_stats[1]:.6g}/{effective_stats[2]:.6g} "
+        f"bias={bias_stats[0]:.6g}/{bias_stats[1]:.6g}/{bias_stats[2]:.6g}",
+        flush=True,
+    )
 
 
 def load_checkpoint_prefix_overlay(

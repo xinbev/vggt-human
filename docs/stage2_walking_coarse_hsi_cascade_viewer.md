@@ -37,6 +37,19 @@ effective scale = coarse scale * residual HSI scale
 effective bias = residual HSI bias
 ```
 
+The terminal prints every frame as:
+
+```text
+[coarse-hsi] frame=0000 coarse=... hsi_residual=... effective=... bias=... anchors=... applied=... reason=...
+```
+
+and prints sequence min/median/max values under `[coarse-hsi-summary]`.
+`effective` is exactly `coarse * hsi_residual`. The displayed depth is:
+
+```text
+raw VGGT depth * effective + bias
+```
+
 ## Server Command
 
 ```bash
