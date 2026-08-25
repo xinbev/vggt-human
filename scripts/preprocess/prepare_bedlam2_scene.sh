@@ -17,6 +17,7 @@ DRY_RUN="${DRY_RUN:-false}"
 OVERWRITE="${OVERWRITE:-false}"
 SEQUENCE="${SEQUENCE:-}"
 MAX_FRAMES="${MAX_FRAMES:-0}"
+EXR_CHANNEL="${EXR_CHANNEL:-}"
 
 cd "${REPO_ROOT}"
 
@@ -37,6 +38,7 @@ if [[ -n "${SEQUENCE}" ]]; then ARGS+=(--sequence "${SEQUENCE}"); fi
 if [[ "${MAX_FRAMES}" != "0" ]]; then ARGS+=(--max-frames "${MAX_FRAMES}"); fi
 if [[ "${OVERWRITE}" == "true" ]]; then ARGS+=(--overwrite); fi
 if [[ "${DRY_RUN}" == "true" ]]; then ARGS+=(--dry-run); fi
+if [[ -n "${EXR_CHANNEL}" ]]; then ARGS+=(--exr-channel "${EXR_CHANNEL}"); fi
 
 if [[ "${INSPECT_ONLY}" == "true" ]]; then
   echo "========== BEDLAM2 EXR inspection =========="

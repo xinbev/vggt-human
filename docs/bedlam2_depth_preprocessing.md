@@ -53,10 +53,13 @@ INSPECT_ONLY=true bash scripts/preprocess/prepare_bedlam2_scene.sh
 ```
 
 The report prints `raw_depth_positive_*`, the selected EXR channel, and the
-RGB/depth raster dimensions.  Confirm the EXR unit from BEDLAM2 metadata or a
-known scene distance before choosing `DEPTH_SCALE`.  The legacy BEDLAM
-converter used `0.01` because its EXR values were centimetres, but that is an
-initial candidate—not an assumption applied by this adapter.
+RGB/depth raster dimensions. BEDLAM2 Movie Render Queue EXRs normally store
+the required map in `FinalImageMovieRenderQueue_WorldDepth`; the adapter now
+recognises this automatically. For a different export, provide its exact name
+as `EXR_CHANNEL=...`. Confirm the EXR unit from BEDLAM2 metadata or a known
+scene distance before choosing `DEPTH_SCALE`. The legacy BEDLAM converter used
+`0.01` because its EXR values were centimetres, but that is an initial
+candidate—not an assumption applied by this adapter.
 
 After confirmation, materialize the scene (for centimetre EXR values):
 

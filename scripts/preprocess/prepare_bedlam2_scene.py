@@ -55,7 +55,13 @@ def main() -> None:
     if not groups:
         raise RuntimeError("No BEDLAM2 label frames selected. Check --sequence and imgname values.")
 
-    inspection = inspect_samples(groups, rgb_root / "png", depth_root / "exr_depth", args.inspect_frames)
+    inspection = inspect_samples(
+        groups,
+        rgb_root / "png",
+        depth_root / "exr_depth",
+        args.inspect_frames,
+        exr_channel=args.exr_channel,
+    )
     summary: dict[str, Any] = {
         "scene": args.scene,
         "labels": str(labels_path),
@@ -81,7 +87,7 @@ def main() -> None:
         depth_source = depth_root / "exr_depth" / PurePosixPath(rel_image).with_suffix(".exr")
         verify_frame_sources(rgb_source, depth_source)
         image_hw = read_image_hw(rgb_source)
-        depth = read_exr_depth(depth_source, expected_hw=image_hw)
+        depth = read_exr_depth(depth_source, expected_hw=image_hw, preferred_channel=args.exr_channel)
         depth = sanitize_depth(depth, args.depth_scale)
         persons = build_persons(labels, rows, args.translation_mode)
         intrinsics, pose = frame_camera(labels, rows)
@@ -121,6 +127,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--scene", required=True)
     parser.add_argument("--split", default="Training")
     parser.add_argument("--depth-scale", type=float, required=True, help="Multiplier converting raw EXR values to metres")
+    parser.add_argument(
+        "--exr-channel",
+        default="",
+        help="Optional exact EXR channel override. Defaults to auto-detecting WorldDepth, then Depth/Z.",
+    )
     parser.add_argument("--translation-mode", choices=("add_cam_ext", "direct"), default="add_cam_ext")
     parser.add_argument("--copy-mode", choices=("copy", "hardlink", "symlink"), default="hardlink")
     parser.add_argument("--sequence", default="", help="Optional seq_XXXXXX filter for a small conversion")
@@ -160,7 +171,11 @@ def split_image_name(rel_image: str) -> tuple[str, str]:
 
 
 def inspect_samples(
-    groups: OrderedDict[str, list[int]], rgb_png_root: Path, exr_depth_root: Path, count: int
+    groups: OrderedDict[str, list[int]],
+    rgb_png_root: Path,
+    exr_depth_root: Path,
+    count: int,
+    exr_channel: str = "",
 ) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     for rel_image in list(groups)[: max(1, count)]:
@@ -168,7 +183,12 @@ def inspect_samples(
         exr_path = exr_depth_root / PurePosixPath(rel_image).with_suffix(".exr")
         verify_frame_sources(rgb_path, exr_path)
         image_hw = read_image_hw(rgb_path)
-        raw_depth, channel = read_exr_depth(exr_path, expected_hw=image_hw, return_channel=True)
+        raw_depth, channel = read_exr_depth(
+            exr_path,
+            expected_hw=image_hw,
+            return_channel=True,
+            preferred_channel=exr_channel,
+        )
         finite_positive = raw_depth[np.isfinite(raw_depth) & (raw_depth > 0)]
         if finite_positive.size == 0:
             raise ValueError(f"No finite positive depth values in {exr_path}")
@@ -201,7 +221,10 @@ def read_image_hw(path: Path) -> tuple[int, int]:
 
 
 def read_exr_depth(
-    path: Path, expected_hw: tuple[int, int], return_channel: bool = False
+    path: Path,
+    expected_hw: tuple[int, int],
+    return_channel: bool = False,
+    preferred_channel: str = "",
 ) -> np.ndarray | tuple[np.ndarray, str]:
     try:
         import OpenEXR
@@ -211,9 +234,7 @@ def read_exr_depth(
     if not exr.parts:
         raise ValueError(f"EXR has no parts: {path}")
     channels = exr.parts[0].channels
-    channel_name = next((name for name in ("Depth", "Z", "depth", "z") if name in channels), None)
-    if channel_name is None:
-        raise KeyError(f"No Depth/Z channel in {path}; available={sorted(channels)}")
+    channel_name = select_depth_channel(channels, preferred_channel)
     depth = np.asarray(channels[channel_name].pixels, dtype=np.float32).squeeze()
     if depth.ndim == 1 and depth.size == expected_hw[0] * expected_hw[1]:
         depth = depth.reshape(expected_hw)
@@ -225,6 +246,36 @@ def read_exr_depth(
             "Do not resize blindly; inspect BEDLAM2 depth-camera metadata first."
         )
     return (depth, channel_name) if return_channel else depth
+
+
+def select_depth_channel(channels: Any, preferred_channel: str = "") -> str:
+    """Choose the scalar scene-depth channel across BEDLAM EXR variants.
+
+    BEDLAM2 Movie Render Queue files encode this as
+    ``FinalImageMovieRenderQueue_WorldDepth`` rather than the legacy ``Depth``
+    channel.  An exact override stays available for another renderer/export.
+    """
+    names = list(channels)
+    if preferred_channel:
+        if preferred_channel not in channels:
+            raise KeyError(
+                f"Requested EXR channel {preferred_channel!r} is unavailable; available={sorted(names)}"
+            )
+        return preferred_channel
+    for name in names:
+        if name.lower().endswith("worlddepth"):
+            return name
+    for name in names:
+        lowered = name.lower()
+        if "worlddepth" in lowered or "scene_depth" in lowered or "scenedepth" in lowered:
+            return name
+    for name in ("Depth", "Z", "depth", "z"):
+        if name in channels:
+            return name
+    raise KeyError(
+        "No recognised scalar depth channel. Expected a *WorldDepth*, Depth, or Z channel; "
+        f"available={sorted(names)}"
+    )
 
 
 def sanitize_depth(raw_depth: np.ndarray, scale: float) -> np.ndarray:
