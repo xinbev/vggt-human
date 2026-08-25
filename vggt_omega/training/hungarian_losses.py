@@ -2969,6 +2969,10 @@ class HungarianSMPLLoss(nn.Module):
             )
             matched_frames[torch.unique(frame_idx)] = True
             valid_depth = valid_depth & matched_frames.reshape(depth.shape[0], depth.shape[1], 1, 1)
+        coarse_valid = predictions.get("hsi_coarse_valid_mask")
+        if isinstance(coarse_valid, torch.Tensor):
+            coarse_frame_mask = coarse_valid.to(device=depth.device).bool().reshape(depth.shape[0], depth.shape[1], 1, 1)
+            valid_depth = valid_depth & coarse_frame_mask
         roi_used = False
         if self.hsi_depth_teacher_use_human_roi and "gt_boxes" in batch and "boxes_mask" in batch:
             roi_mask = _human_roi_depth_mask(
@@ -3165,9 +3169,15 @@ class HungarianSMPLLoss(nn.Module):
         log_l1_values: list[torch.Tensor] = []
         rel_l1_values: list[torch.Tensor] = []
         scale_values = point_z / raw_sampled.clamp(min=1e-6)
+        coarse_valid = predictions.get("hsi_coarse_valid_mask")
+        flat_coarse_valid = None
+        if isinstance(coarse_valid, torch.Tensor):
+            flat_coarse_valid = coarse_valid.to(device=depth.device).bool().reshape(-1)
 
         for flat_frame_tensor in torch.unique(frame_idx):
             flat_frame = int(flat_frame_tensor.detach().cpu())
+            if flat_coarse_valid is not None and not bool(flat_coarse_valid[flat_frame]):
+                continue
             frame_mask = frame_idx == flat_frame
             frame_valid = valid[frame_mask]
             if not frame_valid.any():

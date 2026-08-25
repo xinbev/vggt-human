@@ -17,6 +17,7 @@ if str(ROOT) not in sys.path:
 
 from scripts.train.train_smpl import (  # noqa: E402
     apply_gt_smpl_online_visibility,
+    build_coarse_residual_training_depth,
     build_loader,
     build_smpl_override_outputs,
     extract_state_dict,
@@ -79,6 +80,17 @@ def main() -> None:
     if not torch.isfinite(scale).all() or not bool((scale > 0).all()):
         raise AssertionError("GT depth perturbation produced an invalid multiplicative scale")
 
+    coarse_config = deep_update(config, {"training_prior": {"hsi_scale_training_mode": "coarse_residual_stratified"}})
+    coarse_depth, coarse_diagnostics = build_coarse_residual_training_depth(batch, coarse_config)
+    coarse_valid = coarse_diagnostics["hsi_coarse_valid_mask"].bool()
+    if not bool(coarse_valid.any()):
+        raise AssertionError("Real BEDLAM smoke batch produced no valid traditional coarse frame")
+    if not torch.isfinite(coarse_depth).all() or not bool((coarse_depth >= 0).all()):
+        raise AssertionError("Coarse-residual training produced invalid depth")
+    absolute_target = coarse_diagnostics["hsi_absolute_scale_target"][coarse_valid]
+    coarse_estimate = coarse_diagnostics["hsi_coarse_scale_estimate"][coarse_valid]
+    coarse_log_l1 = float(torch.abs(torch.log(coarse_estimate) - torch.log(absolute_target)).mean())
+
     output_dir = ROOT / "outputs" / "debug" / "hsi_gt_depth_scale_boxfree_data_smoke"
     output_dir.mkdir(parents=True, exist_ok=True)
     summary = {
@@ -97,6 +109,14 @@ def main() -> None:
         "depth_perturb_scale": scale.reshape(-1).tolist(),
         "boxes_root_key": config["data"].get("boxes_root_key", ""),
         "matching_mode": config["matching"].get("mode"),
+        "coarse_residual": {
+            "valid_frames": int(coarse_valid.sum()),
+            "absolute_scale_target": absolute_target.reshape(-1).tolist(),
+            "coarse_scale_estimate": coarse_estimate.reshape(-1).tolist(),
+            "coarse_scale_used": coarse_diagnostics["hsi_coarse_scale_used"][coarse_valid].reshape(-1).tolist(),
+            "residual_scale_target": coarse_diagnostics["hsi_residual_scale_target"][coarse_valid].reshape(-1).tolist(),
+            "coarse_log_l1": coarse_log_l1,
+        },
         "runtime": runtime_summary,
     }
     summary_path = output_dir / "summary.json"

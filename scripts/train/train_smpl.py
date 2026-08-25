@@ -110,6 +110,7 @@ def main() -> None:
         load_overlay_checkpoint(model, overlay_path, device, config)
     frozen_hashes = hash_model_prefixes(model, normalize_string_list(config.get("checkpoint", {}).get("frozen_hash_prefixes", [])))
     wandb_run = init_wandb(config, output_dir)
+    wandb_scale_history: list[dict[str, float]] = []
 
     epochs = int(config["optim"]["epochs"])
     train_started_at = time.monotonic()
@@ -139,6 +140,7 @@ def main() -> None:
             progress_done_offset=(epoch - start_epoch) * len(train_loader),
             total_epochs=epochs,
             wandb_run=wandb_run,
+            wandb_scale_history=wandb_scale_history,
         )
         assert_model_prefix_hashes(model, frozen_hashes)
         monitor_losses = train_losses
@@ -281,6 +283,27 @@ def validate_gt_scale_box_free_contract(config: dict[str, Any]) -> None:
         ) == float(loss_cfg.get("hsi_smpl_scale_teacher_max_z_m", -1.0)),
     }
     failed = [label for label, valid in checks.items() if not valid]
+    scale_training_mode = str(prior_cfg.get("hsi_scale_training_mode", "direct_perturb") or "direct_perturb").lower()
+    if scale_training_mode == "coarse_residual_stratified":
+        absolute_probability = sum(
+            float(prior_cfg.get(key, 0.0) or 0.0)
+            for key in ("hsi_abs_identity_prob", "hsi_abs_near_prob", "hsi_abs_hard_prob", "hsi_abs_extreme_prob")
+        )
+        coarse_probability = sum(
+            float(prior_cfg.get(key, 0.0) or 0.0)
+            for key in ("hsi_coarse_identity_prob", "hsi_coarse_near_prob", "hsi_coarse_medium_prob", "hsi_coarse_hard_prob")
+        )
+        coarse_checks = {
+            "model.hsi_scene_affine_mode=per_frame": str(model_cfg.get("hsi_scene_affine_mode", "")).lower() == "per_frame",
+            "absolute bucket probabilities sum to 1": abs(absolute_probability - 1.0) < 1e-6,
+            "coarse-error bucket probabilities sum to 1": abs(coarse_probability - 1.0) < 1e-6,
+            "coarse scale range is positive": (
+                float(prior_cfg.get("hsi_coarse_scale_min", 0.0) or 0.0) > 0.0
+                and float(prior_cfg.get("hsi_coarse_scale_max", 0.0) or 0.0)
+                >= float(prior_cfg.get("hsi_coarse_scale_min", 0.0) or 0.0)
+            ),
+        }
+        failed.extend(label for label, valid in coarse_checks.items() if not valid)
     if failed:
         raise ValueError(f"Invalid box-free GT scale training contract: {failed}")
 
@@ -1017,6 +1040,153 @@ def filter_wandb_scalars(
     return {key: float(scalars[key]) for key in keys if key in scalars}
 
 
+def append_wandb_scale_history(
+    history: list[dict[str, float]],
+    global_step: int,
+    scalars: dict[str, float],
+    config: dict[str, Any],
+) -> None:
+    keys = (
+        "metric_scale_pipeline_absolute_teacher",
+        "metric_scale_pipeline_coarse_used",
+        "metric_scale_pipeline_residual_teacher",
+        "metric_scale_pipeline_residual_pred",
+        "metric_scale_pipeline_final_pred",
+    )
+    if any(key not in scalars for key in keys):
+        return
+    history.append({"global_step": float(global_step), **{key: float(scalars[key]) for key in keys}})
+    max_points = int(config.get("logging", {}).get("wandb", {}).get("scale_chart_max_points", 1200) or 1200)
+    if len(history) > max_points:
+        del history[: len(history) - max_points]
+
+
+def build_wandb_scale_charts(
+    history: list[dict[str, float]],
+    config: dict[str, Any],
+) -> dict[str, Any]:
+    if len(history) < 2:
+        return {}
+    try:
+        import wandb
+    except ImportError:
+        return {}
+    steps = [row["global_step"] for row in history]
+    residual_keys = (
+        "metric_scale_pipeline_residual_teacher",
+        "metric_scale_pipeline_residual_pred",
+    )
+    pipeline_keys = (
+        "metric_scale_pipeline_absolute_teacher",
+        "metric_scale_pipeline_coarse_used",
+        "metric_scale_pipeline_final_pred",
+    )
+    return {
+        "charts/residual_teacher_vs_pred": wandb.plot.line_series(
+            xs=steps,
+            ys=[[row[key] for row in history] for key in residual_keys],
+            keys=["residual teacher", "residual pred"],
+            title="HSI residual scale: teacher vs prediction",
+            xname="global_step",
+        ),
+        "charts/absolute_scale_pipeline": wandb.plot.line_series(
+            xs=steps,
+            ys=[[row[key] for row in history] for key in pipeline_keys],
+            keys=["GT absolute scale", "traditional coarse used", "final predicted scale"],
+            title="Absolute scale contribution: GT vs coarse vs final",
+            xname="global_step",
+        ),
+    }
+
+
+def build_wandb_person_contribution_table(
+    predictions: dict[str, torch.Tensor],
+    global_step: int,
+    config: dict[str, Any],
+) -> Any | None:
+    required = (
+        "hsi_per_query_scene_log_scale",
+        "pred_confs",
+        "hsi_coarse_valid_mask",
+        "hsi_coarse_scale_used",
+        "hsi_residual_scale_target",
+        "hsi_absolute_scale_target",
+        "hsi_scene_scale",
+    )
+    if any(not isinstance(predictions.get(key), torch.Tensor) for key in required):
+        return None
+    try:
+        import wandb
+    except ImportError:
+        return None
+    person_log = predictions["hsi_per_query_scene_log_scale"].detach().float()
+    confs = predictions["pred_confs"].detach().float().clamp(min=0.0)
+    weights = confs / confs.sum(dim=2, keepdim=True).clamp(min=1e-6)
+    valid_frames = predictions["hsi_coarse_valid_mask"].detach().bool().reshape(*person_log.shape[:2])
+    coarse = predictions["hsi_coarse_scale_used"].detach().float().reshape(*person_log.shape[:2])
+    residual_teacher = predictions["hsi_residual_scale_target"].detach().float().reshape(*person_log.shape[:2])
+    absolute_teacher = predictions["hsi_absolute_scale_target"].detach().float().reshape(*person_log.shape[:2])
+    residual_pred = predictions["hsi_scene_scale"].detach().float().reshape(*person_log.shape[:2])
+    max_rows = int(config.get("logging", {}).get("wandb", {}).get("person_table_max_rows", 64) or 64)
+    rows: list[list[Any]] = []
+    for batch_idx in range(person_log.shape[0]):
+        for frame_idx in range(person_log.shape[1]):
+            if not bool(valid_frames[batch_idx, frame_idx]):
+                continue
+            order = torch.argsort(confs[batch_idx, frame_idx, :, 0], descending=True).tolist()
+            for query_idx in order:
+                confidence = float(confs[batch_idx, frame_idx, query_idx, 0].cpu())
+                if confidence <= 0.0:
+                    continue
+                log_value = float(person_log[batch_idx, frame_idx, query_idx, 0].cpu())
+                weight = float(weights[batch_idx, frame_idx, query_idx, 0].cpu())
+                coarse_value = float(coarse[batch_idx, frame_idx].cpu())
+                residual_pred_value = float(residual_pred[batch_idx, frame_idx].cpu())
+                rows.append(
+                    [
+                        global_step,
+                        batch_idx,
+                        frame_idx,
+                        query_idx,
+                        confidence,
+                        math.exp(max(-5.0, min(5.0, log_value))),
+                        weight,
+                        weight * log_value,
+                        coarse_value,
+                        float(residual_teacher[batch_idx, frame_idx].cpu()),
+                        residual_pred_value,
+                        float(absolute_teacher[batch_idx, frame_idx].cpu()),
+                        coarse_value * residual_pred_value,
+                    ]
+                )
+                if len(rows) >= max_rows:
+                    break
+            if len(rows) >= max_rows:
+                break
+        if len(rows) >= max_rows:
+            break
+    if not rows:
+        return None
+    return wandb.Table(
+        columns=[
+            "global_step",
+            "batch",
+            "frame",
+            "person_query",
+            "confidence",
+            "person_residual_scale",
+            "normalized_weight",
+            "weighted_log_contribution",
+            "traditional_coarse_used",
+            "residual_teacher",
+            "residual_pred",
+            "GT_absolute_scale",
+            "final_pred_scale",
+        ],
+        data=rows,
+    )
+
+
 def load_initial_checkpoint(model: torch.nn.Module, config: dict[str, Any], device: torch.device) -> None:
     ckpt_cfg = config.get("checkpoint", {})
     if not ckpt_cfg.get("load_vggt_baseline", False):
@@ -1288,6 +1458,7 @@ def train_one_epoch(
     progress_done_offset: int = 0,
     total_epochs: int | None = None,
     wandb_run: Any | None = None,
+    wandb_scale_history: list[dict[str, float]] | None = None,
 ) -> tuple[int, dict[str, float]]:
     model.train()
     apply_freeze_policy(model, config)
@@ -1350,6 +1521,7 @@ def train_one_epoch(
 
         step_scalars = scalarize_losses(losses)
         step_scalars.update(depth_perturbation_scalars(predictions))
+        step_scalars.update(scale_pipeline_scalars(predictions))
         step_scalars.update(gradient_scalars)
         for key, value in step_scalars.items():
             totals[key] = totals.get(key, 0.0) + float(value)
@@ -1360,13 +1532,21 @@ def train_one_epoch(
         )
         if wandb_run is not None and global_step % max(wandb_log_interval, 1) == 0:
             wandb_scalars = filter_wandb_scalars(step_scalars, config)
-            wandb_run.log(
-                {
-                    "global_step": global_step,
-                    **{f"train/{key}": float(value) for key, value in wandb_scalars.items()},
-                },
-                step=global_step,
-            )
+            wandb_payload: dict[str, Any] = {
+                "global_step": global_step,
+                **{f"train/{key}": float(value) for key, value in wandb_scalars.items()},
+            }
+            if wandb_scale_history is not None:
+                append_wandb_scale_history(wandb_scale_history, global_step, step_scalars, config)
+                chart_interval = int(config.get("logging", {}).get("wandb", {}).get("scale_chart_interval", 200) or 200)
+                if global_step % max(chart_interval, 1) == 0:
+                    wandb_payload.update(build_wandb_scale_charts(wandb_scale_history, config))
+            person_table_interval = int(config.get("logging", {}).get("wandb", {}).get("person_table_interval", 1000) or 0)
+            if person_table_interval > 0 and global_step % person_table_interval == 0:
+                person_table = build_wandb_person_contribution_table(predictions, global_step, config)
+                if person_table is not None:
+                    wandb_payload["diagnostics/person_scale_contributions"] = person_table
+            wandb_run.log(wandb_payload, step=global_step)
         if global_step % log_interval == 0:
             if log_style in {"progress", "compact"}:
                 line = format_progress_log(
@@ -1957,13 +2137,204 @@ def resolve_hsi_geometry_inputs(
         intrinsics = batch.get("K_scal3r")
         if depth is None or intrinsics is None:
             raise ValueError("gt_metric geometry requires batch['gt_depth'] and batch['K_scal3r']")
-        depth, diagnostics = maybe_perturb_gt_metric_depth(depth, config, epoch=epoch, is_training=is_training)
+        scale_training_mode = str(
+            config.get("training_prior", {}).get("hsi_scale_training_mode", "direct_perturb") or "direct_perturb"
+        ).lower()
+        if is_training and scale_training_mode == "coarse_residual_stratified":
+            depth, diagnostics = build_coarse_residual_training_depth(batch, config)
+        else:
+            depth, diagnostics = maybe_perturb_gt_metric_depth(depth, config, epoch=epoch, is_training=is_training)
         return {"mode": mode, "depth": depth, "intrinsics": intrinsics, "depth_is_metric": True, "diagnostics": diagnostics}
     if mode == "real_inference":
         if using_gt_override:
             raise ValueError("GT SMPL override cannot be paired with real_inference geometry")
         return {"mode": mode, "depth": None, "intrinsics": None, "depth_is_metric": False}
     raise ValueError(f"Unsupported model.hsi_geometry_mode: {mode!r}")
+
+
+@torch.no_grad()
+def build_coarse_residual_training_depth(
+    batch: dict[str, torch.Tensor],
+    config: dict[str, Any],
+) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    clean_depth = batch["gt_depth"].float()
+    prior_cfg = config.get("training_prior", {})
+    batch_size, num_frames = clean_depth.shape[:2]
+    sequence_shape = (batch_size, 1, 1, 1)
+
+    absolute_scale = sample_stratified_log_uniform(
+        clean_depth,
+        sequence_shape,
+        buckets=(
+            (float(prior_cfg.get("hsi_abs_identity_prob", 0.10)), 1.0, 1.0),
+            (float(prior_cfg.get("hsi_abs_near_prob", 0.20)),
+             float(prior_cfg.get("hsi_abs_near_min", 0.25)),
+             float(prior_cfg.get("hsi_abs_near_max", 2.0))),
+            (float(prior_cfg.get("hsi_abs_hard_prob", 0.50)),
+             float(prior_cfg.get("hsi_abs_hard_min", 2.0)),
+             float(prior_cfg.get("hsi_abs_hard_max", 12.0))),
+            (float(prior_cfg.get("hsi_abs_extreme_prob", 0.20)),
+             float(prior_cfg.get("hsi_abs_extreme_min", 12.0)),
+             float(prior_cfg.get("hsi_abs_extreme_max", 20.0))),
+        ),
+    ).expand(batch_size, num_frames, 1, 1)
+    disturbed_depth = clean_depth / absolute_scale.unsqueeze(2)
+    coarse_estimate, coarse_valid, anchor_count, ratio_mad = estimate_training_coarse_scale(
+        batch=batch,
+        depth=disturbed_depth,
+        config=config,
+    )
+
+    coarse_error = sample_stratified_log_uniform(
+        clean_depth,
+        sequence_shape,
+        buckets=(
+            (float(prior_cfg.get("hsi_coarse_identity_prob", 0.30)), 1.0, 1.0),
+            (float(prior_cfg.get("hsi_coarse_near_prob", 0.40)),
+             float(prior_cfg.get("hsi_coarse_near_min", 0.67)),
+             float(prior_cfg.get("hsi_coarse_near_max", 1.50))),
+            (float(prior_cfg.get("hsi_coarse_medium_prob", 0.25)),
+             float(prior_cfg.get("hsi_coarse_medium_min", 0.40)),
+             float(prior_cfg.get("hsi_coarse_medium_max", 2.50))),
+            (float(prior_cfg.get("hsi_coarse_hard_prob", 0.05)),
+             float(prior_cfg.get("hsi_coarse_hard_min", 0.25)),
+             float(prior_cfg.get("hsi_coarse_hard_max", 4.0))),
+        ),
+    ).expand(batch_size, num_frames, 1, 1)
+    coarse_used = torch.where(coarse_valid, coarse_estimate * coarse_error, torch.ones_like(coarse_estimate))
+    coarse_depth = disturbed_depth * coarse_used.unsqueeze(2)
+    residual_target = torch.where(coarse_valid, absolute_scale / coarse_used.clamp(min=1e-6), torch.ones_like(coarse_used))
+    net_depth_multiplier = coarse_used / absolute_scale.clamp(min=1e-6)
+    return coarse_depth, {
+        "hsi_gt_depth_perturb_scale": net_depth_multiplier,
+        "hsi_gt_depth_perturb_target_scale": residual_target,
+        "hsi_absolute_scale_target": absolute_scale,
+        "hsi_coarse_scale_estimate": coarse_estimate,
+        "hsi_coarse_scale_used": coarse_used,
+        "hsi_coarse_error_factor": coarse_error,
+        "hsi_coarse_valid_mask": coarse_valid,
+        "hsi_coarse_anchor_count": anchor_count,
+        "hsi_coarse_ratio_mad": ratio_mad,
+        "hsi_residual_scale_target": residual_target,
+    }
+
+
+def sample_stratified_log_uniform(
+    reference: torch.Tensor,
+    shape: tuple[int, ...],
+    buckets: tuple[tuple[float, float, float], ...],
+) -> torch.Tensor:
+    probabilities = reference.new_tensor([max(float(item[0]), 0.0) for item in buckets])
+    if float(probabilities.sum().cpu()) <= 0.0:
+        raise ValueError("Stratified scale buckets must have positive total probability")
+    probabilities = probabilities / probabilities.sum()
+    bucket_idx = torch.multinomial(probabilities, int(math.prod(shape)), replacement=True).reshape(shape)
+    output = reference.new_ones(shape)
+    for index, (_, low, high) in enumerate(buckets):
+        low = float(low)
+        high = float(high)
+        if low <= 0.0 or high < low:
+            raise ValueError(f"Invalid log-uniform scale bucket: [{low}, {high}]")
+        mask = bucket_idx == index
+        if not bool(mask.any()):
+            continue
+        if high == low:
+            output[mask] = low
+        else:
+            samples = reference.new_empty(int(mask.sum())).uniform_(math.log10(low), math.log10(high))
+            output[mask] = torch.pow(reference.new_tensor(10.0), samples)
+    return output
+
+
+@torch.no_grad()
+def estimate_training_coarse_scale(
+    batch: dict[str, torch.Tensor],
+    depth: torch.Tensor,
+    config: dict[str, Any],
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    pose6d = batch["gt_pose_6d"].float()
+    betas = batch["gt_betas"].float()
+    transl = batch.get("gt_transl_cam", batch.get("gt_cam_trans"))
+    if transl is None:
+        raise ValueError("Coarse residual training requires GT SMPL translation")
+    transl = transl.float()
+    smpl_mask = batch["smpl_mask"].bool()
+    batch_size, num_frames, num_queries = smpl_mask.shape
+    output = depth.new_ones(batch_size, num_frames, 1, 1)
+    valid_output = torch.zeros_like(output, dtype=torch.bool)
+    anchor_count = depth.new_zeros(batch_size, num_frames, 1, 1)
+    ratio_mad = depth.new_zeros(batch_size, num_frames, 1, 1)
+
+    flat_mask = smpl_mask.reshape(-1)
+    selected = torch.nonzero(flat_mask, as_tuple=False).reshape(-1)
+    if selected.numel() == 0:
+        return output, valid_output, anchor_count, ratio_mad
+    smpl = _get_cached_smpl_layer(config, pose6d.device)
+    flat_pose = pose6d.reshape(-1, pose6d.shape[-1])
+    flat_betas = betas.reshape(-1, betas.shape[-1])
+    flat_transl = transl.reshape(-1, 3)
+    axis_angle = rot6d_to_axis_angle(flat_pose[selected].reshape(-1, 24, 6)).reshape(-1, 72)
+    vertices, _ = smpl(axis_angle.float(), flat_betas[selected].float())
+    vertices = vertices.to(dtype=depth.dtype) + flat_transl[selected, None, :]
+    person_frame_idx = torch.div(selected, num_queries, rounding_mode="floor")
+
+    prior_cfg = config.get("training_prior", {})
+    stride = max(int(prior_cfg.get("hsi_coarse_anchor_stride", 8) or 8), 1)
+    min_pixels = max(int(prior_cfg.get("hsi_coarse_min_anchor_pixels", 32) or 32), 1)
+    scale_min = float(prior_cfg.get("hsi_coarse_scale_min", 0.05) or 0.05)
+    scale_max = float(prior_cfg.get("hsi_coarse_scale_max", 25.0) or 25.0)
+    max_relative_mad = float(prior_cfg.get("hsi_coarse_max_relative_mad", 0.50) or 0.50)
+    depth_hw = _canonical_training_depth(depth)
+    flat_depth = depth_hw.reshape(batch_size * num_frames, *depth_hw.shape[-2:])
+    flat_k = batch["K_scal3r"].float().reshape(batch_size * num_frames, 3, 3)
+    height, width = depth_hw.shape[-2:]
+
+    for flat_frame in range(batch_size * num_frames):
+        people = person_frame_idx == flat_frame
+        if not bool(people.any()):
+            continue
+        points = vertices[people, ::stride].reshape(-1, 3)
+        z = points[:, 2]
+        k = flat_k[flat_frame].to(device=points.device, dtype=points.dtype)
+        px = (k[0, 0] * points[:, 0] / z.clamp(min=1e-6) + k[0, 2]).round().long()
+        py = (k[1, 1] * points[:, 1] / z.clamp(min=1e-6) + k[1, 2]).round().long()
+        point_valid = (
+            torch.isfinite(points).all(dim=-1) & (z > 1e-6)
+            & (px >= 0) & (px < width) & (py >= 0) & (py < height)
+        )
+        if not bool(point_valid.any()):
+            continue
+        px = px[point_valid]
+        py = py[point_valid]
+        z = z[point_valid]
+        pixel_idx = py * width + px
+        unique_pixels, inverse = torch.unique(pixel_idx, return_inverse=True)
+        nearest_z = torch.full(
+            (unique_pixels.numel(),), float("inf"), device=z.device, dtype=z.dtype
+        ).scatter_reduce_(0, inverse, z, reduce="amin", include_self=True)
+        unique_py = torch.div(unique_pixels, width, rounding_mode="floor")
+        unique_px = unique_pixels % width
+        sampled_depth = flat_depth[flat_frame, unique_py, unique_px]
+        ratios = nearest_z / sampled_depth.clamp(min=1e-6)
+        ratio_valid = (
+            torch.isfinite(ratios) & torch.isfinite(sampled_depth) & (sampled_depth > 1e-6)
+            & (ratios >= scale_min) & (ratios <= scale_max)
+        )
+        ratios = ratios[ratio_valid]
+        batch_idx = flat_frame // num_frames
+        frame_idx = flat_frame % num_frames
+        anchor_count[batch_idx, frame_idx, 0, 0] = float(ratios.numel())
+        if ratios.numel() < min_pixels:
+            continue
+        median = ratios.median()
+        mad = torch.abs(ratios - median).median()
+        relative_mad = mad / median.clamp(min=1e-6)
+        ratio_mad[batch_idx, frame_idx, 0, 0] = relative_mad
+        if not torch.isfinite(median) or float(relative_mad.cpu()) > max_relative_mad:
+            continue
+        output[batch_idx, frame_idx, 0, 0] = median
+        valid_output[batch_idx, frame_idx, 0, 0] = True
+    return output, valid_output, anchor_count, ratio_mad
 
 
 def maybe_perturb_gt_metric_depth(
@@ -2060,6 +2431,69 @@ def depth_perturbation_scalars(predictions: dict[str, torch.Tensor]) -> dict[str
         scalars["metric_gt_smpl_visibility_keep_ratio"] = float(
             (visible_count / original_count.clamp(min=1.0)).cpu()
         )
+    return scalars
+
+
+def scale_pipeline_scalars(predictions: dict[str, torch.Tensor]) -> dict[str, float]:
+    required = (
+        "hsi_absolute_scale_target",
+        "hsi_coarse_scale_estimate",
+        "hsi_coarse_scale_used",
+        "hsi_residual_scale_target",
+        "hsi_coarse_valid_mask",
+        "hsi_scene_scale",
+    )
+    if any(not isinstance(predictions.get(key), torch.Tensor) for key in required):
+        return {}
+    valid = predictions["hsi_coarse_valid_mask"].detach().bool().reshape(-1)
+    if not bool(valid.any()):
+        return {"metric_scale_pipeline_coarse_valid_rate": 0.0}
+
+    def valid_flat(key: str) -> torch.Tensor:
+        return predictions[key].detach().float().reshape(-1)[valid]
+
+    absolute_teacher = valid_flat("hsi_absolute_scale_target").clamp(min=1e-6)
+    coarse_estimate = valid_flat("hsi_coarse_scale_estimate").clamp(min=1e-6)
+    coarse_used = valid_flat("hsi_coarse_scale_used").clamp(min=1e-6)
+    residual_teacher = valid_flat("hsi_residual_scale_target").clamp(min=1e-6)
+    residual_pred = predictions["hsi_scene_scale"].detach().float().reshape(-1)[valid].clamp(min=1e-6)
+    final_pred = coarse_used * residual_pred
+    anchors = valid_flat("hsi_coarse_anchor_count") if isinstance(predictions.get("hsi_coarse_anchor_count"), torch.Tensor) else coarse_used.new_zeros(coarse_used.shape)
+    coarse_error = valid_flat("hsi_coarse_error_factor") if isinstance(predictions.get("hsi_coarse_error_factor"), torch.Tensor) else coarse_used.new_ones(coarse_used.shape)
+    scalars = {
+        "metric_scale_pipeline_coarse_valid_rate": float(valid.float().mean().cpu()),
+        "metric_scale_pipeline_absolute_teacher": float(absolute_teacher.mean().cpu()),
+        "metric_scale_pipeline_coarse_estimate": float(coarse_estimate.mean().cpu()),
+        "metric_scale_pipeline_coarse_used": float(coarse_used.mean().cpu()),
+        "metric_scale_pipeline_coarse_error_factor": float(coarse_error.mean().cpu()),
+        "metric_scale_pipeline_residual_teacher": float(residual_teacher.mean().cpu()),
+        "metric_scale_pipeline_residual_pred": float(residual_pred.mean().cpu()),
+        "metric_scale_pipeline_final_teacher": float(absolute_teacher.mean().cpu()),
+        "metric_scale_pipeline_final_pred": float(final_pred.mean().cpu()),
+        "metric_scale_pipeline_anchor_count": float(anchors.mean().cpu()),
+        "metric_scale_pipeline_coarse_log_l1": float(torch.abs(torch.log(coarse_estimate) - torch.log(absolute_teacher)).mean().cpu()),
+        "metric_scale_pipeline_coarse_used_log_l1": float(torch.abs(torch.log(coarse_used) - torch.log(absolute_teacher)).mean().cpu()),
+        "metric_scale_pipeline_final_log_l1": float(torch.abs(torch.log(final_pred) - torch.log(absolute_teacher)).mean().cpu()),
+    }
+    per_query_log = predictions.get("hsi_per_query_scene_log_scale")
+    confs = predictions.get("pred_confs")
+    if isinstance(per_query_log, torch.Tensor) and isinstance(confs, torch.Tensor):
+        frame_valid = predictions["hsi_coarse_valid_mask"].detach().bool().reshape(*per_query_log.shape[:2], 1, 1)
+        active = frame_valid & (confs.detach() > 0)
+        if bool(active.any()):
+            person_scales = torch.exp(per_query_log.detach().float().clamp(min=-5.0, max=5.0))[active]
+            frame_weights = confs.detach().float().clamp(min=0.0)
+            normalized = frame_weights / frame_weights.sum(dim=2, keepdim=True).clamp(min=1e-6)
+            contributions = (normalized * per_query_log.detach().float())[active]
+            scalars.update(
+                {
+                    "metric_scale_pipeline_person_scale_min": float(person_scales.min().cpu()),
+                    "metric_scale_pipeline_person_scale_mean": float(person_scales.mean().cpu()),
+                    "metric_scale_pipeline_person_scale_max": float(person_scales.max().cpu()),
+                    "metric_scale_pipeline_person_scale_std": float(person_scales.std(unbiased=False).cpu()),
+                    "metric_scale_pipeline_person_log_contribution_std": float(contributions.std(unbiased=False).cpu()),
+                }
+            )
     return scalars
 
 

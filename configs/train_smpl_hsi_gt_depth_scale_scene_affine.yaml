@@ -95,7 +95,7 @@ optim:
   log_interval: 20
   log_style: progress
   progress_bar_width: 28
-  progress_max_loss_items: 15
+  progress_max_loss_items: 20
   progress_log_keys:
     - loss_total
     - loss_hsi_smpl_scale_teacher
@@ -119,6 +119,13 @@ optim:
     - metric_train_skipped_batch_rate
     - metric_grad_norm_hsi_scale_delta
     - metric_grad_norm_hsi_bias_delta
+    - metric_scale_pipeline_absolute_teacher
+    - metric_scale_pipeline_coarse_used
+    - metric_scale_pipeline_residual_teacher
+    - metric_scale_pipeline_residual_pred
+    - metric_scale_pipeline_final_pred
+    - metric_scale_pipeline_final_log_l1
+    - metric_scale_pipeline_coarse_valid_rate
   save_interval: 1
   max_steps_per_epoch: 0
   drop_no_visible_gt_samples: true
@@ -137,6 +144,7 @@ optim:
     hsi_bias_delta: hsi_refinement_head.bias_delta.
 
 training_prior:
+  hsi_scale_training_mode: direct_perturb
   center_noise: 0.0
   size_noise: 0.0
   drop_prob: 0.0
@@ -158,6 +166,31 @@ training_prior:
   gt_smpl_visibility_tolerance_m: 0.20
   gt_smpl_visibility_max_z_m: 20.0
   gt_smpl_visibility_min_points: 32
+  hsi_abs_identity_prob: 0.10
+  hsi_abs_near_prob: 0.20
+  hsi_abs_near_min: 0.25
+  hsi_abs_near_max: 2.0
+  hsi_abs_hard_prob: 0.50
+  hsi_abs_hard_min: 2.0
+  hsi_abs_hard_max: 12.0
+  hsi_abs_extreme_prob: 0.20
+  hsi_abs_extreme_min: 12.0
+  hsi_abs_extreme_max: 20.0
+  hsi_coarse_identity_prob: 0.30
+  hsi_coarse_near_prob: 0.40
+  hsi_coarse_near_min: 0.67
+  hsi_coarse_near_max: 1.50
+  hsi_coarse_medium_prob: 0.25
+  hsi_coarse_medium_min: 0.40
+  hsi_coarse_medium_max: 2.50
+  hsi_coarse_hard_prob: 0.05
+  hsi_coarse_hard_min: 0.25
+  hsi_coarse_hard_max: 4.0
+  hsi_coarse_anchor_stride: 8
+  hsi_coarse_min_anchor_pixels: 32
+  hsi_coarse_scale_min: 0.05
+  hsi_coarse_scale_max: 25.0
+  hsi_coarse_max_relative_mad: 0.50
 
 logging:
   wandb:
@@ -168,6 +201,10 @@ logging:
     group: hsi_scene_scale_finetune
     mode: online
     log_interval: 20
+    scale_chart_interval: 200
+    scale_chart_max_points: 1200
+    person_table_interval: 1000
+    person_table_max_rows: 64
     log_keys:
       - loss_total
       - loss_hsi_smpl_scale_teacher
@@ -194,6 +231,24 @@ logging:
       - metric_train_skipped_no_supervision_batches
       - metric_train_skipped_batch_rate
       - metric_train_optimizer_steps
+      - metric_scale_pipeline_coarse_valid_rate
+      - metric_scale_pipeline_absolute_teacher
+      - metric_scale_pipeline_coarse_estimate
+      - metric_scale_pipeline_coarse_used
+      - metric_scale_pipeline_coarse_error_factor
+      - metric_scale_pipeline_residual_teacher
+      - metric_scale_pipeline_residual_pred
+      - metric_scale_pipeline_final_teacher
+      - metric_scale_pipeline_final_pred
+      - metric_scale_pipeline_anchor_count
+      - metric_scale_pipeline_coarse_log_l1
+      - metric_scale_pipeline_coarse_used_log_l1
+      - metric_scale_pipeline_final_log_l1
+      - metric_scale_pipeline_person_scale_min
+      - metric_scale_pipeline_person_scale_mean
+      - metric_scale_pipeline_person_scale_max
+      - metric_scale_pipeline_person_scale_std
+      - metric_scale_pipeline_person_log_contribution_std
     tags:
       - hsi
       - scene-scale
