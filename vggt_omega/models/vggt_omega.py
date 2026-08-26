@@ -20,6 +20,7 @@ from vggt_omega.models.heads import (
     HSIFootContactIntentHead,
     HSIGroundingHead,
     HSIRefinementHead,
+    HSIRegionalTranslationRefiner,
     HSITranslationRefineV4Head,
     SMPLIdentityHead,
     SMPLROIIdentityHead,
@@ -112,6 +113,16 @@ class VGGTOmega(nn.Module):
         hsi_transl_delta_mode: str = "xyz",
         hsi_use_affine_depth_for_transl: bool = False,
         hsi_affine_depth_detach: bool = True,
+        enable_hsi_trstr: bool = False,
+        hsi_trstr_hidden_dim: int = 256,
+        hsi_trstr_region_embedding_dim: int = 32,
+        hsi_trstr_num_regions: int = 96,
+        hsi_trstr_representative_vertices: int = 8,
+        hsi_trstr_num_iters: int = 2,
+        hsi_trstr_min_valid_ratio: float = 0.25,
+        hsi_trstr_max_ray_delta_m: float = 0.35,
+        hsi_trstr_max_tangent_delta_m: float = 0.20,
+        hsi_trstr_max_person_delta_m: float = 0.50,
         enable_hsi_human_scene_align: bool = False,
         hsi_align_hidden_dim: int = 256,
         hsi_align_num_sample_vertices: int = 96,
@@ -429,6 +440,23 @@ class VGGTOmega(nn.Module):
             if enable_hsi_contact_refine
             else None
         )
+        self.hsi_trstr_head = (
+            HSIRegionalTranslationRefiner(
+                smpl_model_dir=smpl_model_dir,
+                hidden_dim=hsi_trstr_hidden_dim,
+                region_embedding_dim=hsi_trstr_region_embedding_dim,
+                num_regions=hsi_trstr_num_regions,
+                representative_vertices=hsi_trstr_representative_vertices,
+                num_iters=hsi_trstr_num_iters,
+                min_valid_ratio=hsi_trstr_min_valid_ratio,
+                max_ray_delta_m=hsi_trstr_max_ray_delta_m,
+                max_tangent_delta_m=hsi_trstr_max_tangent_delta_m,
+                max_person_delta_m=hsi_trstr_max_person_delta_m,
+                image_size=image_size,
+            )
+            if enable_hsi_trstr
+            else None
+        )
         self.hsi_foot_contact_intent_head = (
             HSIFootContactIntentHead(
                 smpl_model_dir=smpl_model_dir,
@@ -468,9 +496,22 @@ class VGGTOmega(nn.Module):
             if enable_hsi_grounding
             else None
         )
+        if enable_hsi_trstr and any(
+            head is not None
+            for head in (
+                self.hsi_human_scene_align_head,
+                self.hsi_translation_refine_v4_head,
+                self.hsi_contact_refine_head,
+                self.hsi_grounding_head,
+            )
+        ):
+            raise ValueError(
+                "enable_hsi_trstr is mutually exclusive with legacy HSI translation/contact/grounding heads"
+            )
         has_runtime_smpl_provider = self.smpl_provider == "gt_perturbed"
         if (
             self.hsi_refinement_head is not None
+            or self.hsi_trstr_head is not None
             or self.hsi_human_scene_align_head is not None
             or self.hsi_translation_refine_v4_head is not None
             or self.hsi_contact_refine_head is not None
@@ -726,6 +767,27 @@ class VGGTOmega(nn.Module):
                     mode=self.hsi_scene_affine_mode,
                     ema_alpha=self.hsi_scene_affine_ema_alpha,
                 )
+            if self.hsi_trstr_head is not None:
+                predictions.update(
+                    self.hsi_trstr_head(
+                        predictions=predictions,
+                        depth=hsi_depth_override if hsi_depth_override is not None else predictions["depth"],
+                        pose_enc=predictions.get("pose_enc"),
+                        image_size_hw=image_size_hw,
+                        intrinsics_override=hsi_intrinsics_override,
+                        depth_is_metric=bool(hsi_depth_is_metric),
+                        person_valid=predictions.get("pred_confs", None)[..., 0] > 0.0
+                        if isinstance(predictions.get("pred_confs"), torch.Tensor)
+                        else None,
+                        track_ids=predictions.get("assigned_track_ids"),
+                        track_quality=predictions.get("assigned_track_quality"),
+                        track_gap=predictions.get("assigned_track_gap"),
+                    )
+                )
+                predictions["hsi_refined_pred_transl_cam"] = predictions["hsi_trstr_refined_pred_transl_cam"]
+                predictions["hsi_refined_pred_pose_6d"] = predictions["pred_pose_6d"]
+                predictions["hsi_refined_pred_poses"] = predictions["pred_poses"]
+                predictions["hsi_refined_pred_betas"] = predictions["pred_betas"]
             if self.hsi_human_scene_align_head is not None:
                 if hsi_intrinsics_override is not None:
                     predictions["hsi_intrinsics_override"] = hsi_intrinsics_override

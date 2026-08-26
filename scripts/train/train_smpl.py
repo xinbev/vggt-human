@@ -592,6 +592,19 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_transl_delta_mode=str(model_cfg.get("hsi_transl_delta_mode", "xyz")),
         hsi_use_affine_depth_for_transl=bool(model_cfg.get("hsi_use_affine_depth_for_transl", False)),
         hsi_affine_depth_detach=bool(model_cfg.get("hsi_affine_depth_detach", True)),
+        enable_hsi_trstr=bool(model_cfg.get("enable_hsi_trstr", False)),
+        hsi_trstr_hidden_dim=int(model_cfg.get("hsi_trstr_hidden_dim", 256)),
+        hsi_trstr_region_embedding_dim=int(model_cfg.get("hsi_trstr_region_embedding_dim", 32)),
+        hsi_trstr_num_regions=int(model_cfg.get("hsi_trstr_num_regions", 96)),
+        hsi_trstr_representative_vertices=int(model_cfg.get("hsi_trstr_representative_vertices", 8)),
+        hsi_trstr_num_iters=int(model_cfg.get("hsi_trstr_num_iters", 2)),
+        hsi_trstr_patch_sizes=tuple(
+            int(size) for size in model_cfg.get("hsi_trstr_patch_sizes", [3, 7])
+        ),
+        hsi_trstr_min_valid_ratio=float(model_cfg.get("hsi_trstr_min_valid_ratio", 0.25)),
+        hsi_trstr_max_ray_delta_m=float(model_cfg.get("hsi_trstr_max_ray_delta_m", 0.35)),
+        hsi_trstr_max_tangent_delta_m=float(model_cfg.get("hsi_trstr_max_tangent_delta_m", 0.20)),
+        hsi_trstr_max_person_delta_m=float(model_cfg.get("hsi_trstr_max_person_delta_m", 0.50)),
         enable_hsi_human_scene_align=bool(model_cfg.get("enable_hsi_human_scene_align", False)),
         hsi_align_hidden_dim=int(model_cfg.get("hsi_align_hidden_dim", 256)),
         hsi_align_num_sample_vertices=int(model_cfg.get("hsi_align_num_sample_vertices", 96)),
@@ -783,6 +796,8 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
                 unfreeze_module(module)
     hsi_head = getattr(model, "hsi_refinement_head", None)
     if hsi_head is not None:
+        if bool(model_cfg.get("freeze_hsi_refinement", False)):
+            freeze_module(hsi_head)
         if bool(model_cfg.get("freeze_hsi_scene_affine", False)):
             for name in ("scale_delta", "bias_delta"):
                 module = getattr(hsi_head, name, None)
@@ -899,6 +914,26 @@ def apply_freeze_policy(model: torch.nn.Module, config: dict[str, Any]) -> None:
                     freeze_module(module)
             unfreeze_module(hsi_grounding_head)
             freeze_module(hsi_grounding_head.smpl)
+    hsi_trstr_head = getattr(model, "hsi_trstr_head", None)
+    if hsi_trstr_head is not None and bool(model_cfg.get("train_hsi_trstr_only", False)):
+        for module_name in (
+            "aggregator",
+            "camera_head",
+            "dense_head",
+            "smpl_head",
+            "nlf_smpl_provider",
+            "hsi_refinement_head",
+            "hsi_human_scene_align_head",
+            "hsi_translation_refine_v4_head",
+            "hsi_contact_refine_head",
+            "hsi_foot_contact_intent_head",
+            "hsi_grounding_head",
+        ):
+            module = getattr(model, module_name, None)
+            if module is not None:
+                freeze_module(module)
+        unfreeze_module(hsi_trstr_head)
+        freeze_module(hsi_trstr_head.smpl)
     hsi_contact_intent_head = getattr(model, "hsi_foot_contact_intent_head", None)
     if hsi_contact_intent_head is not None:
         if bool(model_cfg.get("freeze_hsi_foot_contact_intent", False)):

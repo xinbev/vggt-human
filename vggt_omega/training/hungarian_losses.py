@@ -105,6 +105,10 @@ class HungarianSMPLLoss(nn.Module):
         hsi_smpl_scale_teacher_log_loss: bool = True,
         hsi_smpl_scale_teacher_bias_reg_weight: float = 0.05,
         hsi_smpl_scale_teacher_max_z_m: float = 0.0,
+        hsi_trstr_vote_weight: float = 0.0,
+        hsi_trstr_translation_weight: float = 0.0,
+        hsi_trstr_gate_weight: float = 0.0,
+        hsi_trstr_delta_reg_weight: float = 0.0,
         hsi_anchor_depth_weight: float = 0.0,
         hsi_anchor_scene_xyz_weight: float = 0.0,
         hsi_anchor_scene_window: int = 5,
@@ -269,6 +273,10 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_smpl_scale_teacher_log_loss = hsi_smpl_scale_teacher_log_loss
         self.hsi_smpl_scale_teacher_bias_reg_weight = hsi_smpl_scale_teacher_bias_reg_weight
         self.hsi_smpl_scale_teacher_max_z_m = hsi_smpl_scale_teacher_max_z_m
+        self.hsi_trstr_vote_weight = float(hsi_trstr_vote_weight)
+        self.hsi_trstr_translation_weight = float(hsi_trstr_translation_weight)
+        self.hsi_trstr_gate_weight = float(hsi_trstr_gate_weight)
+        self.hsi_trstr_delta_reg_weight = float(hsi_trstr_delta_reg_weight)
         self.hsi_anchor_depth_weight = hsi_anchor_depth_weight
         self.hsi_anchor_scene_xyz_weight = hsi_anchor_scene_xyz_weight
         self.hsi_anchor_scene_window = hsi_anchor_scene_window
@@ -531,6 +539,7 @@ class HungarianSMPLLoss(nn.Module):
             projected = self._projected_bbox_losses(predictions, batch, pred_betas, pred_transl_cam, frame_idx, src_idx, target_boxes)
             losses.update(projected)
             losses.update(self._hsi_refined_losses(predictions, batch, frame_idx, src_idx, matched))
+            losses.update(self._hsi_trstr_losses(predictions, frame_idx, src_idx, matched))
             losses.update(
                 self._hsi_foot_contact_intent_losses(
                     predictions=predictions,
@@ -589,6 +598,10 @@ class HungarianSMPLLoss(nn.Module):
             + self.hsi_projected_joints2d_weight * losses["loss_hsi_projected_joints2d"]
             + self.hsi_depth_teacher_weight * losses["loss_hsi_depth_teacher"]
             + self.hsi_smpl_scale_teacher_weight * losses["loss_hsi_smpl_scale_teacher"]
+            + self.hsi_trstr_vote_weight * losses["loss_hsi_trstr_vote"]
+            + self.hsi_trstr_translation_weight * losses["loss_hsi_trstr_translation"]
+            + self.hsi_trstr_gate_weight * losses["loss_hsi_trstr_gate"]
+            + self.hsi_trstr_delta_reg_weight * losses["loss_hsi_trstr_delta_reg"]
             + self.hsi_anchor_depth_weight * losses["loss_hsi_anchor_depth"]
             + self.hsi_anchor_scene_xyz_weight * losses["loss_hsi_anchor_scene_xyz"]
             + self.hsi_delta_reg_weight * losses["loss_hsi_delta_reg"]
@@ -1274,6 +1287,10 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_projected_joints2d": zero,
             "loss_hsi_depth_teacher": zero,
             "loss_hsi_smpl_scale_teacher": zero,
+            "loss_hsi_trstr_vote": zero,
+            "loss_hsi_trstr_translation": zero,
+            "loss_hsi_trstr_gate": zero,
+            "loss_hsi_trstr_delta_reg": zero,
             "loss_hsi_anchor_depth": zero,
             "loss_hsi_anchor_scene_xyz": zero,
             "loss_hsi_delta_reg": zero,
@@ -1453,6 +1470,13 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_smpl_scale_teacher_identity_improvement": zero.detach(),
             "metric_hsi_smpl_scale_teacher_bias": zero.detach(),
             "metric_hsi_smpl_scale_teacher_pred_bias": zero.detach(),
+            "metric_hsi_trstr_vote_l1": zero.detach(),
+            "metric_hsi_trstr_translation_l1": zero.detach(),
+            "metric_hsi_trstr_base_translation_l1": zero.detach(),
+            "metric_hsi_trstr_translation_improvement": zero.detach(),
+            "metric_hsi_trstr_region_valid_ratio": zero.detach(),
+            "metric_hsi_trstr_region_gate_mean": zero.detach(),
+            "metric_hsi_trstr_person_gate_mean": zero.detach(),
             "metric_hsi_contact_pos_frac": zero.detach(),
         }
 
@@ -1551,6 +1575,91 @@ class HungarianSMPLLoss(nn.Module):
                 + 0.25 * torch.quantile(active_candidate.float(), 0.90).to(dtype=candidate.dtype)
                 + 0.5 * (1.0 - active_eligible.to(dtype=candidate.dtype).mean())
             ).detach()
+        return out
+
+    def _hsi_trstr_losses(
+        self,
+        predictions: dict[str, torch.Tensor],
+        frame_idx: torch.Tensor,
+        src_idx: torch.Tensor,
+        matched: dict[str, torch.Tensor],
+    ) -> dict[str, torch.Tensor]:
+        anchor = _require_prediction(predictions, "pred_transl_cam")
+        zero = anchor.sum() * 0.0
+        out = {
+            "loss_hsi_trstr_vote": zero,
+            "loss_hsi_trstr_translation": zero,
+            "loss_hsi_trstr_gate": zero,
+            "loss_hsi_trstr_delta_reg": zero,
+            "metric_hsi_trstr_vote_l1": zero.detach(),
+            "metric_hsi_trstr_translation_l1": zero.detach(),
+            "metric_hsi_trstr_base_translation_l1": zero.detach(),
+            "metric_hsi_trstr_translation_improvement": zero.detach(),
+            "metric_hsi_trstr_region_valid_ratio": zero.detach(),
+            "metric_hsi_trstr_region_gate_mean": zero.detach(),
+            "metric_hsi_trstr_person_gate_mean": zero.detach(),
+        }
+        required = (
+            "hsi_trstr_refined_pred_transl_cam",
+            "hsi_trstr_delta_transl_cam",
+            "hsi_trstr_region_vote",
+            "hsi_trstr_region_gate",
+            "hsi_trstr_region_valid",
+            "hsi_trstr_person_gate",
+        )
+        if any(key not in predictions for key in required):
+            return out
+
+        base = _flatten_prediction(predictions["pred_transl_cam"], unframed_ndim=3)
+        refined = _flatten_prediction(predictions["hsi_trstr_refined_pred_transl_cam"], unframed_ndim=3)
+        target = matched["transl_cam"].to(device=base.device, dtype=base.dtype)
+        base_matched = base[frame_idx, src_idx]
+        refined_matched = refined[frame_idx, src_idx]
+        target_delta = target - base_matched.detach()
+        translation_error = refined_matched - target
+        base_error = base_matched.detach() - target
+
+        region_vote = predictions["hsi_trstr_region_vote"].reshape(
+            -1,
+            predictions["hsi_trstr_region_vote"].shape[2],
+            predictions["hsi_trstr_region_vote"].shape[3],
+            3,
+        )
+        region_gate = predictions["hsi_trstr_region_gate"].reshape(
+            -1,
+            predictions["hsi_trstr_region_gate"].shape[2],
+            predictions["hsi_trstr_region_gate"].shape[3],
+            1,
+        )
+        region_valid = predictions["hsi_trstr_region_valid"].reshape(
+            -1,
+            predictions["hsi_trstr_region_valid"].shape[2],
+            predictions["hsi_trstr_region_valid"].shape[3],
+        )
+        selected_vote = region_vote[frame_idx, src_idx]
+        selected_gate = region_gate[frame_idx, src_idx]
+        selected_valid = region_valid[frame_idx, src_idx]
+        vote_target = target_delta[:, None, :].expand_as(selected_vote)
+        vote_mask = selected_valid
+        if bool(vote_mask.any()):
+            out["loss_hsi_trstr_vote"] = F.smooth_l1_loss(selected_vote[vote_mask], vote_target[vote_mask])
+            out["metric_hsi_trstr_vote_l1"] = (selected_vote[vote_mask] - vote_target[vote_mask]).abs().mean().detach()
+        out["loss_hsi_trstr_translation"] = F.smooth_l1_loss(refined_matched, target)
+        out["loss_hsi_trstr_delta_reg"] = _smooth_l1_abs(refined_matched - base_matched).mean()
+        out["metric_hsi_trstr_translation_l1"] = translation_error.abs().mean().detach()
+        out["metric_hsi_trstr_base_translation_l1"] = base_error.abs().mean().detach()
+        out["metric_hsi_trstr_translation_improvement"] = (
+            base_error.abs().mean() - translation_error.abs().mean()
+        ).detach()
+        out["loss_hsi_trstr_gate"] = F.binary_cross_entropy(
+            selected_gate.clamp(1e-5, 1.0 - 1e-5),
+            selected_valid[..., None].to(dtype=selected_gate.dtype),
+        )
+        out["metric_hsi_trstr_region_valid_ratio"] = selected_valid.float().mean().detach()
+        out["metric_hsi_trstr_region_gate_mean"] = selected_gate.detach().mean()
+        person_gate = predictions["hsi_trstr_person_gate"]
+        person_gate = person_gate.reshape(-1, person_gate.shape[2], 1)
+        out["metric_hsi_trstr_person_gate_mean"] = person_gate[frame_idx, src_idx].detach().mean()
         return out
 
     def _hsi_refined_losses(

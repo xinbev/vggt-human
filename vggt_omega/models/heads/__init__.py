@@ -12,6 +12,7 @@ from .hsi_foot_contact_intent_head import HSIFootContactIntentHead
 from .hsi_grounding_head import HSIGroundingHead
 from .hsi_refinement_head import HSIRefinementHead
 from .hsi_translation_refine_v4_head import HSITranslationRefineV4Head
+from .hsi_regional_translation_refiner import HSIRegionalTranslationRefiner
 from .smpl_head import AggregatorSMPLHead, CameraRayTranslationRefiner, SMPLIdentityHead, SMPLROIIdentityHead, SMPLRegressionHead
 from .text_alignment_head import TextAlignmentHead
 
@@ -28,6 +29,7 @@ __all__ = [
     "HSIGroundingHead",
     "HSIRefinementHead",
     "HSITranslationRefineV4Head",
+    "HSIRegionalTranslationRefiner",
     "SMPLRegressionHead",
     "TextAlignmentHead",
 ]
