@@ -53,7 +53,9 @@ COARSE_SCALE_MIN="${COARSE_SCALE_MIN:-0.10}"
 COARSE_SCALE_MAX="${COARSE_SCALE_MAX:-10.0}"
 COARSE_ANCHOR_STRIDE="${COARSE_ANCHOR_STRIDE:-8}"
 COARSE_MIN_ANCHOR_PIXELS="${COARSE_MIN_ANCHOR_PIXELS:-32}"
+COARSE_FALLBACK="${COARSE_FALLBACK:-unit}"
 SMPL_USE_AGGREGATOR_QUERIES="${SMPL_USE_AGGREGATOR_QUERIES:-}"
+HSI_SCENE_AFFINE_MODE="${HSI_SCENE_AFFINE_MODE:-}"
 SMOKE_ONLY="${SMOKE_ONLY:-false}"
 
 cd "${REPO_ROOT}"
@@ -100,6 +102,7 @@ echo "HSI vis scale: ${HSI_VISUAL_SCALE} (viewer-only; GUI adjustable)"
 echo "Scale prealign: ${SCENE_SCALE_PREALIGN}"
 if [[ "${SCENE_SCALE_PREALIGN}" == "smpl_median" ]]; then
   echo "Coarse scale : range=[${COARSE_SCALE_MIN},${COARSE_SCALE_MAX}] stride=${COARSE_ANCHOR_STRIDE} min_pixels=${COARSE_MIN_ANCHOR_PIXELS}"
+  echo "Coarse fallback: ${COARSE_FALLBACK}"
 fi
 echo "HSI overlay : ${HSI_OVERLAY_CHECKPOINT:-<none>}"
 echo "Human mask  : projected SMPL triangles + ${HUMAN_MASK_DILATION_PX}px dilation (unconditional removal)"
@@ -146,6 +149,7 @@ ARGS=(
   --coarse-scale-max "${COARSE_SCALE_MAX}"
   --coarse-anchor-stride "${COARSE_ANCHOR_STRIDE}"
   --coarse-min-anchor-pixels "${COARSE_MIN_ANCHOR_PIXELS}"
+  --coarse-fallback "${COARSE_FALLBACK}"
   --human-mask-dilation-px "${HUMAN_MASK_DILATION_PX}"
   --env-mesh-depth-edge-rtol "${ENV_MESH_DEPTH_EDGE_RTOL}"
   --env-mesh-color-groups "${ENV_MESH_COLOR_GROUPS}"
@@ -195,6 +199,9 @@ if [[ -n "${HSI_ALIGN_FEATURE_VERSION}" ]]; then
 fi
 if [[ -n "${SMPL_USE_AGGREGATOR_QUERIES}" ]]; then
   ARGS+=(--override "model.smpl_use_aggregator_queries=${SMPL_USE_AGGREGATOR_QUERIES}")
+fi
+if [[ -n "${HSI_SCENE_AFFINE_MODE}" ]]; then
+  ARGS+=(--override "model.hsi_scene_affine_mode=${HSI_SCENE_AFFINE_MODE}")
 fi
 if [[ "${SMOKE_ONLY}" == "1" || "${SMOKE_ONLY}" == "true" || "${SMOKE_ONLY}" == "TRUE" ]]; then
   ARGS+=(--smoke-only)

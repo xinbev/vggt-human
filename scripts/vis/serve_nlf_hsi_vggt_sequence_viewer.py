@@ -260,6 +260,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--coarse-scale-max", type=float, default=10.0)
     parser.add_argument("--coarse-anchor-stride", type=int, default=8)
     parser.add_argument("--coarse-min-anchor-pixels", type=int, default=32)
+    parser.add_argument("--coarse-fallback", choices=["unit", "sequence_median"], default="unit")
     parser.add_argument("--smoke-only", action="store_true", help="Run inference, validation, and summary export, then exit without serving Viser.")
     parser.add_argument("--override", action="append", default=[])
     return parser.parse_args()
@@ -544,6 +545,24 @@ def run_smpl_coarse_hsi_cascade(
             coarse_scale[0, frame_idx] = float(record["scale"])
         coarse_records.append(record)
 
+    if str(args.coarse_fallback) == "sequence_median":
+        applied_mask = torch.tensor(
+            [bool(record.get("applied", False)) for record in coarse_records],
+            device=coarse_scale.device,
+            dtype=torch.bool,
+        )
+        if bool(applied_mask.any()):
+            sequence_scale = torch.exp(torch.log(coarse_scale[0, applied_mask].clamp(min=1e-6)).median())
+            for frame_idx, record in enumerate(coarse_records):
+                if bool(record.get("applied", False)):
+                    continue
+                coarse_scale[0, frame_idx] = sequence_scale
+                record["fallback_applied"] = True
+                record["fallback_mode"] = "sequence_median"
+                record["fallback_scale"] = float(sequence_scale.detach().cpu())
+        else:
+            print("[coarse-hsi] warning: no valid coarse frame; sequence-median fallback unavailable", flush=True)
+
     coarse_depth = raw_depth * coarse_scale[..., None, None]
     cascade = model(
         images,
@@ -574,6 +593,7 @@ def run_smpl_coarse_hsi_cascade(
             f"bias={bias_value:.6g} "
             f"anchors={int(record.get('num_anchor_pixels', 0) or 0)} "
             f"applied={bool(record.get('applied', False))} "
+            f"fallback={record.get('fallback_mode', 'none')} "
             f"reason={record.get('reason', 'unknown')}",
             flush=True,
         )
