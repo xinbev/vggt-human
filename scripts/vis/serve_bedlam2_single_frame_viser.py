@@ -78,7 +78,7 @@ def main() -> None:
     add_camera_frustum(scene, vtf, extrinsic, intrinsics, args.camera_scale)
     mesh_count = 0
     if smpl is not None:
-        mesh_count = add_smpl_overlays(scene, smpl, smpl_faces, persons, args.mesh_opacity)
+        mesh_count = add_smpl_overlays(scene, smpl, smpl_faces, persons, args.mesh_opacity, extrinsic)
 
     summary = {
         "sequence_dir": str(sequence_dir),
@@ -202,10 +202,19 @@ def add_camera_frustum(scene: Any, transforms: Any, extrinsic: np.ndarray, intri
         scene.add_camera_frustum("camera", fov_y, aspect, float(scale), wxyz, position)
 
 
-def add_smpl_overlays(scene: Any, smpl: SMPLLayer, faces: np.ndarray | None, persons: list[dict[str, Any]], opacity: float) -> int:
+def add_smpl_overlays(
+    scene: Any,
+    smpl: SMPLLayer,
+    faces: np.ndarray | None,
+    persons: list[dict[str, Any]],
+    opacity: float,
+    extrinsic: np.ndarray,
+) -> int:
     if faces is None or len(persons) == 0:
         return 0
     vertices, joints = smpl_persons_to_meshes(smpl, persons)
+    vertices = [camera_points_to_world_np(value, extrinsic) for value in vertices]
+    joints = [camera_points_to_world_np(value, extrinsic) for value in joints]
     count = 0
     for idx, (verts, jnts) in enumerate(zip(vertices, joints, strict=False)):
         color = palette_color(idx)

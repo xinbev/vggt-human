@@ -1,16 +1,16 @@
 {
-  "sequence_dir": "/home/zhw/xyb_space/bedlam2/bedlam2_processed/Training/20241213_1_250_rome_tracking_seq_000002",
-  "frame_id": "seq_000002_0000",
-  "depth_path": "/home/zhw/xyb_space/bedlam2/bedlam2_processed/Training/20241213_1_250_rome_tracking_seq_000002/depth/seq_000002_0000.npy",
-  "cam_path": "/home/zhw/xyb_space/bedlam2/bedlam2_processed/Training/20241213_1_250_rome_tracking_seq_000002/cam/seq_000002_0000.npz",
-  "smpl_path": "/home/zhw/xyb_space/bedlam2/bedlam2_processed/Training/20241213_1_250_rome_tracking_seq_000002/smpl/seq_000002_0000.pkl",
-  "person_count": 1,
-  "depth_point_count": 57600,
-  "mesh_count": 1,
+  "sequence_dir": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+  "frame_id": "seq_000000_0000",
+  "depth_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/depth/seq_000000_0000.npy",
+  "cam_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/cam/seq_000000_0000.npz",
+  "smpl_path": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/smpl/seq_000000_0000.pkl",
+  "person_count": 7,
+  "depth_point_count": 31765,
+  "mesh_count": 7,
   "camera_position": [
-    -0.003953024744987488,
-    -1.620154619216919,
-    -2.004420757293701
+    -0.34360283613204956,
+    2.1427695751190186,
+    9.845386505126953
   ],
   "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/bedlam2_single_frame_viser"
 }
