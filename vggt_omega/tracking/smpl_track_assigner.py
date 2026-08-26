@@ -35,6 +35,7 @@ class BaseSMPLTrackAssigner:
         external_prior_iou_min: float = 0.50,
         id_weight: float = 0.0,
         max_id_distance: float = 0.70,
+        persistent: bool = False,
     ) -> None:
         self.max_age = int(max_age)
         self.min_track_quality = float(min_track_quality)
@@ -44,6 +45,10 @@ class BaseSMPLTrackAssigner:
         self.external_prior_iou_min = float(external_prior_iou_min)
         self.id_weight = min(max(float(id_weight), 0.0), 1.0)
         self.max_id_distance = max(float(max_id_distance), 0.0)
+        self.persistent = bool(persistent)
+        self._persistent_tracks: dict[int, dict[int, _TrackState]] = {}
+        self._persistent_next_ids: dict[int, int] = {}
+        self._persistent_frame_offsets: dict[int, int] = {}
 
     @torch.no_grad()
     def assign(
@@ -92,9 +97,11 @@ class BaseSMPLTrackAssigner:
         external_conf = external_track_confidence.to(device=device).float() if external_track_confidence is not None else None
 
         for batch_idx in range(batch_size):
-            tracks: dict[int, _TrackState] = {}
-            next_id = 0
+            tracks = self._persistent_tracks.setdefault(batch_idx, {}) if self.persistent else {}
+            next_id = self._persistent_next_ids.get(batch_idx, 0) if self.persistent else 0
+            frame_offset = self._persistent_frame_offsets.get(batch_idx, 0) if self.persistent else 0
             for frame_idx in range(num_frames):
+                absolute_frame = frame_offset + frame_idx
                 candidates = []
                 for query_idx in range(num_queries):
                     if not bool(query_mask[batch_idx, frame_idx, query_idx]):
@@ -106,7 +113,7 @@ class BaseSMPLTrackAssigner:
                     best_gap = 0
                     best_source = TRACK_SOURCE_MATCHED
                     for track in tracks.values():
-                        gap = frame_idx - track.last_frame
+                        gap = absolute_frame - track.last_frame
                         if gap <= 0 or gap > self.max_age:
                             continue
                         score = self._score(
@@ -142,7 +149,7 @@ class BaseSMPLTrackAssigner:
 
                     tracks[track_id] = _TrackState(
                         track_id=track_id,
-                        last_frame=frame_idx,
+                        last_frame=absolute_frame,
                         box=boxes_f[batch_idx, frame_idx, query_idx].detach(),
                         transl=transl_f[batch_idx, frame_idx, query_idx].detach(),
                         betas=betas_f[batch_idx, frame_idx, query_idx].detach(),
@@ -156,9 +163,12 @@ class BaseSMPLTrackAssigner:
                     assigned_gap[batch_idx, frame_idx, query_idx] = int(max(gap, 0))
                     assigned_source[batch_idx, frame_idx, query_idx] = int(source)
 
-                dead = [track_id for track_id, track in tracks.items() if frame_idx - track.last_frame > self.max_age]
+                dead = [track_id for track_id, track in tracks.items() if absolute_frame - track.last_frame > self.max_age]
                 for track_id in dead:
                     del tracks[track_id]
+            if self.persistent:
+                self._persistent_next_ids[batch_idx] = next_id
+                self._persistent_frame_offsets[batch_idx] = frame_offset + num_frames
 
         return {
             "assigned_track_ids": assigned_ids,
@@ -167,6 +177,16 @@ class BaseSMPLTrackAssigner:
             "assigned_track_gap": assigned_gap,
             "assigned_track_source": assigned_source,
         }
+
+    def reset(self, batch_idx: int | None = None) -> None:
+        if batch_idx is None:
+            self._persistent_tracks.clear()
+            self._persistent_next_ids.clear()
+            self._persistent_frame_offsets.clear()
+            return
+        self._persistent_tracks.pop(int(batch_idx), None)
+        self._persistent_next_ids.pop(int(batch_idx), None)
+        self._persistent_frame_offsets.pop(int(batch_idx), None)
 
     def _score(
         self,

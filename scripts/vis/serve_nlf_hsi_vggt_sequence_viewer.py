@@ -315,7 +315,11 @@ def load_config(args: argparse.Namespace) -> dict[str, Any]:
     model_cfg["smpl_query_patch_pool"] = False
     model_cfg["nlf_use_detector"] = args.query_source == "nlf_detector"
     model_cfg["nlf_require_boxes"] = args.query_source == "bedlam_sidecar"
-    model_cfg["smpl_track_assignment_mode"] = "gt" if args.query_source == "bedlam_sidecar" else "none"
+    trstr_enabled = bool(model_cfg.get("enable_hsi_trstr", False))
+    model_cfg["hsi_trstr_fast_gt"] = False
+    model_cfg["smpl_track_assignment_mode"] = (
+        "gt" if args.query_source == "bedlam_sidecar" else ("base" if trstr_enabled else "none")
+    )
     model_cfg["smpl_use_external_track_prior"] = False
     if args.smpl_model_dir:
         config.setdefault("assets", {})["smpl_model_dir"] = str(resolve_project_path(args.smpl_model_dir))

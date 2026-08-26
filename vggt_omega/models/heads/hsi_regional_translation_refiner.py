@@ -5,8 +5,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from vggt_omega.models.smpl_layer import SMPLLayer
-from vggt_omega.models.geometry import SMPLRegionBank
+from vggt_omega.models.geometry import RegionalSceneProbe, SMPLRegionBank
 from vggt_omega.models.geometry.smpl_region_bank import DEFAULT_REGION_COUNTS
+from vggt_omega.tracking.hsi_trstr_memory import HSITRSTRTrackMemory, TRSTRTrackState
 from vggt_omega.utils.pose_enc import encoding_to_camera
 from vggt_omega.utils.rotation import rot6d_to_axis_angle
 
@@ -27,6 +28,15 @@ class HSIRegionalTranslationRefiner(nn.Module):
         representative_vertices: int = 8,
         num_iters: int = 2,
         patch_sizes: tuple[int, ...] = (3, 7),
+        probe_token_dim: int = 16,
+        adaptive_radius_max: int = 5,
+        annulus_width: int = 2,
+        human_depth_tolerance_m: float = 0.15,
+        human_depth_dilation_px: int = 2,
+        enable_temporal: bool = False,
+        temporal_quality_min: float = 0.25,
+        temporal_gap_max: int = 8,
+        temporal_use_world: bool = False,
         min_valid_ratio: float = 0.25,
         max_ray_delta_m: float = 0.35,
         max_tangent_delta_m: float = 0.20,
@@ -60,9 +70,31 @@ class HSIRegionalTranslationRefiner(nn.Module):
         self.max_tangent_delta_m = float(max_tangent_delta_m)
         self.max_person_delta_m = max(float(max_person_delta_m), 1e-4)
         self.image_size = int(image_size)
+        self.enable_temporal = bool(enable_temporal)
+        self.temporal_quality_min = float(temporal_quality_min)
+        self.temporal_gap_max = max(int(temporal_gap_max), 1)
+        self.temporal_use_world = bool(temporal_use_world)
+
+        self.scene_probe = RegionalSceneProbe(
+            token_dim=probe_token_dim,
+            fixed_patch_sizes=patch_sizes,
+            adaptive_radius_max=adaptive_radius_max,
+            annulus_width=annulus_width,
+            human_depth_tolerance_m=human_depth_tolerance_m,
+            human_depth_dilation_px=human_depth_dilation_px,
+            min_valid_ratio=self.min_valid_ratio,
+        )
 
         self.region_embedding = nn.Embedding(self.num_regions, int(region_embedding_dim))
-        feature_dim = 3 + 3 + 3 + 2 * len(self.patch_sizes) + 4 + int(region_embedding_dim)
+        feature_dim = (
+            3
+            + 3
+            + 2
+            + self.scene_probe.num_tokens * self.scene_probe.token_dim
+            + self.scene_probe.num_tokens
+            + 2
+            + int(region_embedding_dim)
+        )
         self.feature_mlp = nn.Sequential(
             nn.Linear(feature_dim, hidden_dim),
             nn.GELU(),
@@ -81,6 +113,19 @@ class HSIRegionalTranslationRefiner(nn.Module):
             nn.Sequential(nn.Linear(hidden_dim, hidden_dim), nn.GELU(), nn.Linear(hidden_dim, 1)),
             bias=2.0,
         )
+        self.temporal_gate_head = (
+            _biased_last_linear(
+                nn.Sequential(
+                    nn.Linear(hidden_dim + 10, hidden_dim),
+                    nn.GELU(),
+                    nn.LayerNorm(hidden_dim),
+                    nn.Linear(hidden_dim, 1),
+                ),
+                bias=2.0,
+            )
+            if self.enable_temporal
+            else None
+        )
 
     def forward(
         self,
@@ -95,8 +140,8 @@ class HSIRegionalTranslationRefiner(nn.Module):
         track_quality: torch.Tensor | None = None,
         track_gap: torch.Tensor | None = None,
         track_memory: object | None = None,
+        frame_offset: int = 0,
     ) -> dict[str, torch.Tensor]:
-        del track_ids, track_quality, track_gap, track_memory
         pose6d = _require(predictions, "pred_pose_6d").float()
         betas = _require(predictions, "pred_betas").float()
         transl = _require(predictions, "pred_transl_cam").float()
@@ -130,33 +175,42 @@ class HSIRegionalTranslationRefiner(nn.Module):
 
         current = transl
         iteration_transl = [current]
+        iteration_votes = []
+        iteration_gates = []
+        iteration_valid = []
         last = None
         for _ in range(self.num_iters):
             vertices = self._decode_vertices(pose6d, betas, current)
             pooled, _ = self.region_bank.pool_vertices(vertices)
             representatives = self.region_bank.representative_points(vertices)
-            flat_depth = depth_hw.reshape(batch_size * num_frames, height, width).repeat_interleave(num_queries, dim=0)
-            flat_intrinsics = intrinsics.repeat_interleave(num_queries, dim=0)
-            probe = _probe_regions(
-                centers=pooled,
-                representatives=representatives,
-                depth=flat_depth,
-                intrinsics=flat_intrinsics,
+            probe = self.scene_probe(
+                centers=pooled.reshape(batch_size * num_frames, num_queries, self.num_regions, 3),
+                representatives=representatives.reshape(
+                    batch_size * num_frames,
+                    num_queries,
+                    self.num_regions,
+                    representatives.shape[2],
+                    3,
+                ),
+                vertices_by_frame=vertices.reshape(batch_size * num_frames, num_queries, vertices.shape[1], 3),
+                depth_by_frame=depth_hw.reshape(batch_size * num_frames, height, width),
+                intrinsics_by_frame=intrinsics,
+                person_valid=person_valid.reshape(batch_size * num_frames, num_queries),
                 image_size_hw=image_size_hw,
-                patch_sizes=self.patch_sizes,
-                min_valid_ratio=self.min_valid_ratio,
             )
+            probe_tokens = probe["tokens"].reshape(pooled.shape[0], self.num_regions, -1)
             region_group = self.region_bank.region_group_ids.to(device=transl.device)
             group_embedding = self.region_embedding(region_group).unsqueeze(0).expand(pooled.shape[0], -1, -1)
             features = torch.cat(
                 [
                     pooled.clamp(-20.0, 20.0) / 20.0,
                     representatives.std(dim=2, unbiased=False).clamp(max=5.0) / 5.0,
-                    probe["scene_delta"].clamp(-5.0, 5.0) / 5.0,
-                    probe["depth_medians"].clamp(-5.0, 5.0) / 5.0,
-                    probe["depth_mads"].clamp(min=0.0, max=5.0) / 5.0,
-                    probe["valid_ratios"],
                     probe["projected_norm"],
+                    probe_tokens,
+                    probe["valid_ratios"],
+                    probe["other_human_ratio"].unsqueeze(-1),
+                    probe["adaptive_radius"].to(dtype=pooled.dtype).unsqueeze(-1)
+                    / float(self.scene_probe.adaptive_radius_max),
                     group_embedding,
                 ],
                 dim=-1,
@@ -182,30 +236,96 @@ class HSIRegionalTranslationRefiner(nn.Module):
             current = current.reshape(-1, 3) + update
             current = current.reshape(batch_size, num_frames, num_queries, 3)
             iteration_transl.append(current)
+            iteration_votes.append(vote.reshape(batch_size, num_frames, num_queries, self.num_regions, 3))
+            iteration_gates.append(gate.reshape(batch_size, num_frames, num_queries, self.num_regions, 1))
+            iteration_valid.append(valid.reshape(batch_size, num_frames, num_queries, self.num_regions))
             last = {
                 "region_vote": vote,
                 "region_gate": gate,
                 "region_logvar": logvar,
                 "region_valid": valid,
                 "person_gate": person_gate.reshape(batch_size, num_frames, num_queries, 1),
-                "scene_delta": probe["scene_delta"],
-                "depth_medians": probe["depth_medians"],
                 "valid_ratios": probe["valid_ratios"],
+                "other_human_ratio": probe["other_human_ratio"],
+                "self_surface_ratio": probe["self_surface_ratio"],
+                "environment_ratio": probe["environment_ratio"],
+                "person_hidden": person_hidden.reshape(batch_size, num_frames, num_queries, -1),
             }
 
         if last is None:
             raise RuntimeError("TRSTR produced no refinement iteration")
+        spatial_refined = current
+        temporal_gate = current.new_ones(batch_size, num_frames, num_queries, 1)
+        temporal_valid = torch.zeros_like(temporal_gate, dtype=torch.bool)
+        temporal_velocity = current.new_zeros(batch_size, num_frames, num_queries, 3)
+        if self.enable_temporal:
+            fused_delta, temporal_gate, temporal_valid, temporal_velocity = self._fuse_temporal_update(
+                current=transl,
+                proposed_update=spatial_refined - transl,
+                person_hidden=last["person_hidden"],
+                person_valid=person_valid,
+                track_ids=track_ids,
+                track_quality=track_quality,
+                track_gap=track_gap,
+                pose_enc=pose_enc,
+                predictions=predictions,
+                external_memory=track_memory,
+                frame_offset=int(frame_offset),
+            )
+            current = transl + fused_delta
+        final_probe = self._final_probe(
+            pose6d=pose6d,
+            betas=betas,
+            transl=current,
+            depth_hw=depth_hw,
+            intrinsics=intrinsics,
+            person_valid=person_valid,
+            image_size_hw=image_size_hw,
+        )
+        if self.enable_temporal and isinstance(track_memory, HSITRSTRTrackMemory):
+            self._write_external_memory(
+                memory=track_memory,
+                translation=current,
+                velocity=last["temporal_velocity"],
+                person_hidden=last["person_hidden"],
+                person_valid=person_valid,
+                track_ids=track_ids,
+                track_quality=track_quality,
+                frame_offset=int(frame_offset),
+                pose_enc=pose_enc,
+                predictions=predictions,
+            )
         outputs = {
             "hsi_trstr_refined_pred_transl_cam": current,
+            "hsi_trstr_spatial_refined_pred_transl_cam": spatial_refined,
             "hsi_trstr_delta_transl_cam": current - transl,
             "hsi_trstr_iteration_transl": torch.stack(iteration_transl, dim=0),
+            "hsi_trstr_iteration_region_vote": torch.stack(iteration_votes, dim=0),
+            "hsi_trstr_iteration_region_gate": torch.stack(iteration_gates, dim=0),
+            "hsi_trstr_iteration_region_valid": torch.stack(iteration_valid, dim=0),
             "hsi_trstr_region_vote": last["region_vote"].reshape(batch_size, num_frames, num_queries, self.num_regions, 3),
             "hsi_trstr_region_gate": last["region_gate"].reshape(batch_size, num_frames, num_queries, self.num_regions, 1),
             "hsi_trstr_region_logvar": last["region_logvar"].reshape(batch_size, num_frames, num_queries, self.num_regions, 1),
             "hsi_trstr_region_valid": last["region_valid"].reshape(batch_size, num_frames, num_queries, self.num_regions),
             "hsi_trstr_person_gate": last["person_gate"],
             "hsi_trstr_person_uncertainty": torch.exp(last["region_logvar"].mean(dim=1)).reshape(batch_size, num_frames, num_queries, 1),
-            "hsi_trstr_region_scene_delta": last["scene_delta"].reshape(batch_size, num_frames, num_queries, self.num_regions, 3),
+            "hsi_trstr_region_valid_ratios": last["valid_ratios"].reshape(
+                batch_size, num_frames, num_queries, self.num_regions, self.scene_probe.num_tokens
+            ),
+            "hsi_trstr_other_human_ratio": last["other_human_ratio"].reshape(
+                batch_size, num_frames, num_queries, self.num_regions
+            ),
+            "hsi_trstr_self_surface_ratio": last["self_surface_ratio"].reshape(
+                batch_size, num_frames, num_queries, self.num_regions
+            ),
+            "hsi_trstr_environment_ratio": last["environment_ratio"].reshape(
+                batch_size, num_frames, num_queries, self.num_regions
+            ),
+            "hsi_trstr_temporal_gate": temporal_gate,
+            "hsi_trstr_temporal_valid": temporal_valid,
+            "hsi_trstr_temporal_velocity": temporal_velocity,
+            "hsi_trstr_final_region_valid": final_probe["region_valid"],
+            "hsi_trstr_final_other_human_ratio": final_probe["other_human_ratio"],
         }
         return outputs
 
@@ -230,69 +350,195 @@ class HSIRegionalTranslationRefiner(nn.Module):
         coeff = raw * centers.new_tensor([self.max_ray_delta_m, self.max_tangent_delta_m, self.max_tangent_delta_m])
         return coeff[..., :1] * ray + coeff[..., 1:2] * tangent_x + coeff[..., 2:3] * tangent_y
 
+    @torch.no_grad()
+    def _final_probe(
+        self,
+        pose6d: torch.Tensor,
+        betas: torch.Tensor,
+        transl: torch.Tensor,
+        depth_hw: torch.Tensor,
+        intrinsics: torch.Tensor,
+        person_valid: torch.Tensor,
+        image_size_hw: tuple[int, int],
+    ) -> dict[str, torch.Tensor]:
+        batch_size, num_frames, num_queries = transl.shape[:3]
+        vertices = self._decode_vertices(pose6d, betas, transl)
+        centers, _ = self.region_bank.pool_vertices(vertices)
+        representatives = self.region_bank.representative_points(vertices)
+        probe = self.scene_probe(
+            centers=centers.reshape(batch_size * num_frames, num_queries, self.num_regions, 3),
+            representatives=representatives.reshape(
+                batch_size * num_frames,
+                num_queries,
+                self.num_regions,
+                representatives.shape[2],
+                3,
+            ),
+            vertices_by_frame=vertices.reshape(batch_size * num_frames, num_queries, vertices.shape[1], 3),
+            depth_by_frame=depth_hw.reshape(batch_size * num_frames, *depth_hw.shape[-2:]),
+            intrinsics_by_frame=intrinsics,
+            person_valid=person_valid.reshape(batch_size * num_frames, num_queries),
+            image_size_hw=image_size_hw,
+        )
+        return {
+            "region_valid": probe["region_valid"].reshape(
+                batch_size, num_frames, num_queries, self.num_regions
+            ),
+            "other_human_ratio": probe["other_human_ratio"].reshape(
+                batch_size, num_frames, num_queries, self.num_regions
+            ),
+        }
 
-def _probe_regions(
-    centers: torch.Tensor,
-    representatives: torch.Tensor,
-    depth: torch.Tensor,
-    intrinsics: torch.Tensor,
-    image_size_hw: tuple[int, int],
-    patch_sizes: tuple[int, ...],
-    min_valid_ratio: float,
-) -> dict[str, torch.Tensor]:
-    n, num_regions = centers.shape[:2]
-    height, width = depth.shape[-2:]
-    z = centers[..., 2].clamp(min=1e-5)
-    px = intrinsics[:, None, 0, 0] * centers[..., 0] / z + intrinsics[:, None, 0, 2]
-    py = intrinsics[:, None, 1, 1] * centers[..., 1] / z + intrinsics[:, None, 1, 2]
-    projected_norm = torch.stack([px / max(float(image_size_hw[1] - 1), 1.0), py / max(float(image_size_hw[0] - 1), 1.0)], dim=-1)
-    median_depths = []
-    mad_depths = []
-    valid_ratios = []
-    scene_points = []
-    for size in patch_sizes:
-        radius = size // 2
-        offsets = torch.arange(-radius, radius + 1, device=centers.device)
-        oy, ox = torch.meshgrid(offsets, offsets, indexing="ij")
-        xs_raw = px.round().long()[..., None] + ox.reshape(1, 1, -1)
-        ys_raw = py.round().long()[..., None] + oy.reshape(1, 1, -1)
-        valid = (xs_raw >= 0) & (xs_raw < width) & (ys_raw >= 0) & (ys_raw < height)
-        xs = xs_raw.clamp(0, width - 1)
-        ys = ys_raw.clamp(0, height - 1)
-        frame_idx = torch.arange(n, device=centers.device).view(n, 1, 1).expand_as(xs)
-        values = depth[frame_idx, ys, xs]
-        valid = valid & torch.isfinite(values) & (values > 1e-5)
-        count = valid.sum(dim=-1)
-        safe = torch.where(valid, values, torch.full_like(values, float("inf")))
-        sorted_values, _ = safe.sort(dim=-1)
-        median = sorted_values.gather(-1, ((count.clamp(min=1) - 1) // 2).unsqueeze(-1)).squeeze(-1)
-        median = torch.where(count > 0, median, torch.zeros_like(median))
-        deviations = torch.where(valid, (values - median.unsqueeze(-1)).abs(), torch.full_like(values, float("inf")))
-        sorted_dev, _ = deviations.sort(dim=-1)
-        mad = sorted_dev.gather(-1, ((count.clamp(min=1) - 1) // 2).unsqueeze(-1)).squeeze(-1)
-        mad = torch.where(count > 0, mad, torch.zeros_like(mad))
-        valid_ratio = count.to(dtype=centers.dtype) / float(values.shape[-1])
-        scene_x = (px - intrinsics[:, None, 0, 2]) * median / intrinsics[:, None, 0, 0].clamp(min=1e-5)
-        scene_y = (py - intrinsics[:, None, 1, 2]) * median / intrinsics[:, None, 1, 1].clamp(min=1e-5)
-        scene_points.append(torch.stack([scene_x, scene_y, median], dim=-1))
-        median_depths.append((median - z).unsqueeze(-1))
-        mad_depths.append(mad.unsqueeze(-1))
-        valid_ratios.append(valid_ratio.unsqueeze(-1))
-    scene = torch.stack(scene_points, dim=2)
-    valid_ratios_tensor = torch.cat(valid_ratios, dim=-1)
-    median_tensor = torch.cat(median_depths, dim=-1)
-    mad_tensor = torch.cat(mad_depths, dim=-1)
-    robust_scene = scene.mean(dim=2)
-    scene_delta = robust_scene - centers
-    region_valid = (valid_ratios_tensor.min(dim=-1).values >= float(min_valid_ratio)) & torch.isfinite(scene_delta).all(dim=-1) & (z > 1e-5)
-    return {
-        "scene_delta": torch.nan_to_num(scene_delta),
-        "depth_medians": torch.nan_to_num(median_tensor),
-        "depth_mads": torch.nan_to_num(mad_tensor),
-        "valid_ratios": torch.nan_to_num(valid_ratios_tensor),
-        "projected_norm": torch.nan_to_num(projected_norm),
-        "region_valid": region_valid,
-    }
+    def _fuse_temporal_update(
+        self,
+        current: torch.Tensor,
+        proposed_update: torch.Tensor,
+        person_hidden: torch.Tensor,
+        person_valid: torch.Tensor,
+        track_ids: torch.Tensor | None,
+        track_quality: torch.Tensor | None,
+        track_gap: torch.Tensor | None,
+        pose_enc: torch.Tensor | None,
+        predictions: dict[str, torch.Tensor],
+        external_memory: object | None,
+        frame_offset: int,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        if self.temporal_gate_head is None or track_ids is None:
+            ones = proposed_update.new_ones(*proposed_update.shape[:-1], 1)
+            return proposed_update, ones, torch.zeros_like(ones, dtype=torch.bool), torch.zeros_like(proposed_update)
+        track_ids = track_ids.to(device=current.device).long()
+        quality = (
+            track_quality.to(device=current.device, dtype=current.dtype)
+            if isinstance(track_quality, torch.Tensor)
+            else torch.ones_like(track_ids, dtype=current.dtype)
+        )
+        configured_gap = (
+            track_gap.to(device=current.device).long()
+            if isinstance(track_gap, torch.Tensor)
+            else torch.ones_like(track_ids)
+        )
+        current_work, rotation = _to_temporal_work_coords(
+            current,
+            pose_enc=pose_enc,
+            predictions=predictions,
+            use_world=self.temporal_use_world,
+        )
+        update_work = _camera_delta_to_work(proposed_update, rotation)
+        fused_work = update_work.clone()
+        gate_out = proposed_update.new_ones(*proposed_update.shape[:-1], 1)
+        valid_out = torch.zeros_like(gate_out, dtype=torch.bool)
+        velocity_out = torch.zeros_like(proposed_update)
+        local_states: dict[tuple[int, int], TRSTRTrackState] = {}
+        batch_size, num_frames, num_queries = current.shape[:3]
+        for batch_idx in range(batch_size):
+            for frame_idx in range(num_frames):
+                global_frame = int(frame_offset) + frame_idx
+                for query_idx in range(num_queries):
+                    if not bool(person_valid[batch_idx, frame_idx, query_idx]):
+                        continue
+                    track_id = int(track_ids[batch_idx, frame_idx, query_idx].detach().cpu())
+                    if track_id < 0:
+                        continue
+                    key = (batch_idx, track_id)
+                    state = local_states.get(key)
+                    if state is None and batch_idx == 0 and isinstance(external_memory, HSITRSTRTrackMemory):
+                        state = external_memory.get(
+                            track_id=track_id,
+                            frame_index=global_frame,
+                            device=current.device,
+                            dtype=current.dtype,
+                        )
+                    gap = global_frame - int(state.last_frame) if state is not None else int(configured_gap[batch_idx, frame_idx, query_idx])
+                    quality_value = quality[batch_idx, frame_idx, query_idx]
+                    state_valid = (
+                        state is not None
+                        and 0 < gap <= self.temporal_gap_max
+                        and float(quality_value.detach().cpu()) >= self.temporal_quality_min
+                    )
+                    current_item = current_work[batch_idx, frame_idx, query_idx]
+                    proposal_item = update_work[batch_idx, frame_idx, query_idx]
+                    if state_valid:
+                        prior_position = state.translation + float(gap) * state.velocity
+                        prior_delta = (prior_position - current_item).clamp(
+                            min=-self.max_person_delta_m,
+                            max=self.max_person_delta_m,
+                        )
+                        temporal_input = torch.cat(
+                            [
+                                person_hidden[batch_idx, frame_idx, query_idx],
+                                proposal_item,
+                                prior_delta,
+                                quality_value.reshape(1),
+                                proposal_item.new_tensor([state.confidence]),
+                                F.cosine_similarity(
+                                    person_hidden[batch_idx, frame_idx, query_idx],
+                                    state.region_token,
+                                    dim=0,
+                                ).reshape(1)
+                                if state.region_token is not None
+                                else proposal_item.new_zeros(1),
+                                proposal_item.new_tensor([min(float(gap) / float(self.temporal_gap_max), 1.0)]),
+                            ],
+                            dim=-1,
+                        )
+                        current_gate = torch.sigmoid(self.temporal_gate_head(temporal_input))
+                        fused_item = current_gate * proposal_item + (1.0 - current_gate) * prior_delta
+                        gate_out[batch_idx, frame_idx, query_idx] = current_gate
+                        valid_out[batch_idx, frame_idx, query_idx] = True
+                        velocity = (current_item + fused_item - state.translation) / float(gap)
+                    else:
+                        fused_item = proposal_item
+                        velocity = torch.zeros_like(fused_item)
+                    fused_work[batch_idx, frame_idx, query_idx] = fused_item
+                    velocity_out[batch_idx, frame_idx, query_idx] = velocity
+                    local_states[key] = TRSTRTrackState(
+                        track_id=track_id,
+                        last_frame=global_frame,
+                        translation=current_item + fused_item,
+                        velocity=velocity,
+                        confidence=float(quality_value.detach().cpu()),
+                        region_token=person_hidden[batch_idx, frame_idx, query_idx],
+                    )
+        return _work_delta_to_camera(fused_work, rotation), gate_out, valid_out, velocity_out
+
+    @torch.no_grad()
+    def _write_external_memory(
+        self,
+        memory: HSITRSTRTrackMemory,
+        translation: torch.Tensor,
+        velocity: torch.Tensor,
+        person_hidden: torch.Tensor,
+        person_valid: torch.Tensor,
+        track_ids: torch.Tensor | None,
+        track_quality: torch.Tensor | None,
+        frame_offset: int,
+        pose_enc: torch.Tensor | None,
+        predictions: dict[str, torch.Tensor],
+    ) -> None:
+        if track_ids is None or translation.shape[0] != 1:
+            return
+        quality = track_quality if isinstance(track_quality, torch.Tensor) else torch.ones_like(track_ids, dtype=translation.dtype)
+        translation_work, _ = _to_temporal_work_coords(
+            translation,
+            pose_enc=pose_enc,
+            predictions=predictions,
+            use_world=self.temporal_use_world,
+        )
+        for frame_idx in range(translation.shape[1]):
+            for query_idx in range(translation.shape[2]):
+                if not bool(person_valid[0, frame_idx, query_idx]):
+                    continue
+                track_id = int(track_ids[0, frame_idx, query_idx].detach().cpu())
+                if track_id < 0:
+                    continue
+                memory.update(
+                    track_id=track_id,
+                    frame_index=int(frame_offset) + frame_idx,
+                    translation=translation_work[0, frame_idx, query_idx],
+                    velocity=velocity[0, frame_idx, query_idx],
+                    confidence=float(quality[0, frame_idx, query_idx].detach().cpu()),
+                    region_token=person_hidden[0, frame_idx, query_idx],
+                )
 
 
 def _canonical_depth(depth: torch.Tensor) -> torch.Tensor:
@@ -382,3 +628,38 @@ def _scaled_region_counts(num_regions: int) -> dict[str, int]:
     if int(counts.sum()) != num_regions:
         raise RuntimeError(f"Could not allocate region budget {num_regions}: {counts.tolist()}")
     return {name: int(count) for name, count in zip(names, counts.tolist(), strict=True)}
+
+
+def _to_temporal_work_coords(
+    translation: torch.Tensor,
+    pose_enc: torch.Tensor | None,
+    predictions: dict[str, torch.Tensor],
+    use_world: bool,
+) -> tuple[torch.Tensor, torch.Tensor | None]:
+    if not use_world or pose_enc is None:
+        return translation, None
+    extrinsics, _ = encoding_to_camera(pose_enc.float(), image_size_hw=(1, 1), build_intrinsics=False)
+    extrinsics = extrinsics.to(device=translation.device, dtype=translation.dtype)
+    rotation = extrinsics[..., :3, :3]
+    camera_translation = extrinsics[..., :3, 3]
+    scale = predictions.get("hsi_scene_scale")
+    if isinstance(scale, torch.Tensor):
+        scale_value = scale.to(device=translation.device, dtype=translation.dtype)
+        while scale_value.ndim > 3:
+            scale_value = scale_value.squeeze(-1)
+        camera_translation = camera_translation * scale_value.reshape(*camera_translation.shape[:-1], 1)
+    centered = translation - camera_translation[:, :, None, :]
+    world = torch.einsum("bsij,bsqj->bsqi", rotation.transpose(-1, -2), centered)
+    return world, rotation
+
+
+def _camera_delta_to_work(delta: torch.Tensor, rotation: torch.Tensor | None) -> torch.Tensor:
+    if rotation is None:
+        return delta
+    return torch.einsum("bsij,bsqj->bsqi", rotation.transpose(-1, -2), delta)
+
+
+def _work_delta_to_camera(delta: torch.Tensor, rotation: torch.Tensor | None) -> torch.Tensor:
+    if rotation is None:
+        return delta
+    return torch.einsum("bsij,bsqj->bsqi", rotation, delta)

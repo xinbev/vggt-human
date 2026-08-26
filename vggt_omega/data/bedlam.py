@@ -174,7 +174,7 @@ class BedlamDataset(Dataset):
 
         smpl = _build_smpl_targets(persons_per_frame, self.max_humans)
         boxes = (
-            _build_box_free_slot_targets(smpl["smpl_mask"])
+            _build_box_free_slot_targets(smpl["smpl_mask"], persons_per_frame)
             if self.box_free_gt_slots
             else _build_box_targets(boxes_per_frame, persons_per_frame, geometries, self.max_humans, self.require_boxes)
         )
@@ -574,25 +574,44 @@ def _build_box_targets(
     }
 
 
-def _build_box_free_slot_targets(smpl_mask: torch.Tensor) -> dict[str, torch.Tensor]:
+def _build_box_free_slot_targets(
+    smpl_mask: torch.Tensor,
+    persons_per_frame: list[list[dict[str, Any]]],
+) -> dict[str, torch.Tensor]:
     num_frames, max_humans = smpl_mask.shape
     boxes = torch.zeros(num_frames, max_humans, 4, dtype=torch.float32)
     boxes_mask = torch.zeros(num_frames, max_humans, dtype=torch.bool)
-    slot_ids = torch.arange(max_humans, dtype=torch.long).view(1, max_humans).expand(num_frames, -1).clone()
     valid = smpl_mask.bool().clone()
-    slot_ids = torch.where(valid, slot_ids, torch.full_like(slot_ids, -1))
-    track_source = torch.where(
-        valid,
-        torch.full_like(slot_ids, TRACK_SOURCE_SLOT),
-        torch.full_like(slot_ids, -1),
+    track_ids = torch.full((num_frames, max_humans), -1, dtype=torch.long)
+    track_source = torch.full_like(track_ids, -1)
+    for frame_idx, persons in enumerate(persons_per_frame):
+        for person_idx, person in enumerate(persons[:max_humans]):
+            if not bool(valid[frame_idx, person_idx]):
+                continue
+            explicit_id, explicit_valid = _extract_explicit_person_id(None, person)
+            if explicit_valid:
+                track_ids[frame_idx, person_idx] = _namespaced_track_id(
+                    TRACK_SOURCE_EXPLICIT_ID, explicit_id
+                )
+                track_source[frame_idx, person_idx] = TRACK_SOURCE_EXPLICIT_ID
+            else:
+                track_ids[frame_idx, person_idx] = _namespaced_track_id(
+                    TRACK_SOURCE_SLOT, person_idx
+                )
+                track_source[frame_idx, person_idx] = TRACK_SOURCE_SLOT
+    track_quality = _compute_track_quality(
+        persons_per_frame,
+        [track_ids[frame_idx] for frame_idx in range(num_frames)],
+        [valid[frame_idx] for frame_idx in range(num_frames)],
+        [track_source[frame_idx] for frame_idx in range(num_frames)],
+        max_humans,
     )
-    track_quality = valid.to(dtype=torch.float32)
     return {
         "boxes": boxes,
         "boxes_mask": boxes_mask,
-        "person_ids": slot_ids,
+        "person_ids": track_ids,
         "person_id_mask": valid,
-        "gt_track_ids": slot_ids,
+        "gt_track_ids": track_ids,
         "gt_track_mask": valid,
         "gt_track_source": track_source,
         "gt_track_quality": track_quality,

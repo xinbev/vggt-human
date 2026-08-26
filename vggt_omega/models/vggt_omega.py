@@ -83,6 +83,7 @@ class VGGTOmega(nn.Module):
         smpl_track_assign_external_iou_min: float = 0.50,
         smpl_track_assign_id_weight: float = 0.0,
         smpl_track_assign_max_id_distance: float = 0.70,
+        smpl_track_assign_persistent: bool = False,
         smpl_enable_temporal_translation: bool = False,
         smpl_temporal_translation_hidden_dim: int = 512,
         smpl_temporal_translation_max_velocity_delta_m: float = 0.25,
@@ -114,11 +115,22 @@ class VGGTOmega(nn.Module):
         hsi_use_affine_depth_for_transl: bool = False,
         hsi_affine_depth_detach: bool = True,
         enable_hsi_trstr: bool = False,
+        hsi_trstr_fast_gt: bool = False,
         hsi_trstr_hidden_dim: int = 256,
         hsi_trstr_region_embedding_dim: int = 32,
         hsi_trstr_num_regions: int = 96,
         hsi_trstr_representative_vertices: int = 8,
         hsi_trstr_num_iters: int = 2,
+        hsi_trstr_patch_sizes: tuple[int, ...] = (3, 7),
+        hsi_trstr_probe_token_dim: int = 16,
+        hsi_trstr_adaptive_radius_max: int = 5,
+        hsi_trstr_annulus_width: int = 2,
+        hsi_trstr_human_depth_tolerance_m: float = 0.15,
+        hsi_trstr_human_depth_dilation_px: int = 2,
+        hsi_trstr_enable_temporal: bool = False,
+        hsi_trstr_temporal_quality_min: float = 0.25,
+        hsi_trstr_temporal_gap_max: int = 8,
+        hsi_trstr_temporal_use_world: bool = False,
         hsi_trstr_min_valid_ratio: float = 0.25,
         hsi_trstr_max_ray_delta_m: float = 0.35,
         hsi_trstr_max_tangent_delta_m: float = 0.20,
@@ -264,6 +276,7 @@ class VGGTOmega(nn.Module):
                 external_prior_iou_min=smpl_track_assign_external_iou_min,
                 id_weight=smpl_track_assign_id_weight,
                 max_id_distance=smpl_track_assign_max_id_distance,
+                persistent=smpl_track_assign_persistent,
             )
             if enable_smpl
             else None
@@ -448,6 +461,16 @@ class VGGTOmega(nn.Module):
                 num_regions=hsi_trstr_num_regions,
                 representative_vertices=hsi_trstr_representative_vertices,
                 num_iters=hsi_trstr_num_iters,
+                patch_sizes=hsi_trstr_patch_sizes,
+                probe_token_dim=hsi_trstr_probe_token_dim,
+                adaptive_radius_max=hsi_trstr_adaptive_radius_max,
+                annulus_width=hsi_trstr_annulus_width,
+                human_depth_tolerance_m=hsi_trstr_human_depth_tolerance_m,
+                human_depth_dilation_px=hsi_trstr_human_depth_dilation_px,
+                enable_temporal=hsi_trstr_enable_temporal,
+                temporal_quality_min=hsi_trstr_temporal_quality_min,
+                temporal_gap_max=hsi_trstr_temporal_gap_max,
+                temporal_use_world=hsi_trstr_temporal_use_world,
                 min_valid_ratio=hsi_trstr_min_valid_ratio,
                 max_ray_delta_m=hsi_trstr_max_ray_delta_m,
                 max_tangent_delta_m=hsi_trstr_max_tangent_delta_m,
@@ -457,6 +480,7 @@ class VGGTOmega(nn.Module):
             if enable_hsi_trstr
             else None
         )
+        self.hsi_trstr_fast_gt = bool(hsi_trstr_fast_gt)
         self.hsi_foot_contact_intent_head = (
             HSIFootContactIntentHead(
                 smpl_model_dir=smpl_model_dir,
@@ -532,6 +556,7 @@ class VGGTOmega(nn.Module):
         smpl_query_patch_masks: torch.Tensor | None = None,
         smpl_track_ids: torch.Tensor | None = None,
         smpl_track_mask: torch.Tensor | None = None,
+        smpl_track_quality: torch.Tensor | None = None,
         external_track_ids: torch.Tensor | None = None,
         external_track_mask: torch.Tensor | None = None,
         external_track_confidence: torch.Tensor | None = None,
@@ -540,9 +565,56 @@ class VGGTOmega(nn.Module):
         hsi_depth_override: torch.Tensor | None = None,
         hsi_depth_is_metric: bool = False,
         hsi_geometry_mode: str = "real_inference",
+        hsi_trstr_track_memory: object | None = None,
+        hsi_trstr_frame_offset: int = 0,
     ) -> dict[str, torch.Tensor]:
         if len(images.shape) == 4:
             images = images.unsqueeze(0)
+        if self.hsi_trstr_fast_gt:
+            if self.hsi_trstr_head is None or smpl_override_outputs is None:
+                raise ValueError("TRSTR fast GT path requires hsi_trstr_head and smpl_override_outputs")
+            if hsi_depth_override is None or hsi_intrinsics_override is None or not hsi_depth_is_metric:
+                raise ValueError("TRSTR fast GT path requires metric GT depth and GT intrinsics")
+            if str(hsi_geometry_mode) != "gt_metric":
+                raise ValueError("TRSTR fast GT path only supports hsi_geometry_mode='gt_metric'")
+            predictions = dict(smpl_override_outputs)
+            predictions.update(
+                self._assign_smpl_tracks(
+                    predictions=predictions,
+                    reference_boxes=None,
+                    query_mask=None,
+                    smpl_track_ids=smpl_track_ids,
+                    smpl_track_mask=smpl_track_mask,
+                    smpl_track_quality=smpl_track_quality,
+                    external_track_ids=external_track_ids,
+                    external_track_mask=external_track_mask,
+                    external_track_confidence=external_track_confidence,
+                )
+            )
+            predictions.update(
+                self.hsi_trstr_head(
+                    predictions=predictions,
+                    depth=hsi_depth_override,
+                    pose_enc=None,
+                    image_size_hw=(int(images.shape[-2]), int(images.shape[-1])),
+                    intrinsics_override=hsi_intrinsics_override,
+                    depth_is_metric=True,
+                    person_valid=predictions["pred_confs"][..., 0] > 0.0,
+                    track_ids=predictions.get("assigned_track_ids"),
+                    track_quality=predictions.get("assigned_track_quality"),
+                    track_gap=predictions.get("assigned_track_gap"),
+                    track_memory=hsi_trstr_track_memory,
+                    frame_offset=int(hsi_trstr_frame_offset),
+                )
+            )
+            predictions["hsi_refined_pred_transl_cam"] = predictions["hsi_trstr_refined_pred_transl_cam"]
+            predictions["hsi_refined_pred_pose_6d"] = predictions["pred_pose_6d"]
+            predictions["hsi_refined_pred_poses"] = predictions["pred_poses"]
+            predictions["hsi_refined_pred_betas"] = predictions["pred_betas"]
+            predictions["hsi_trstr_fast_gt_active"] = predictions["pred_transl_cam"].new_ones(())
+            predictions["hsi_geometry_is_metric"] = predictions["pred_transl_cam"].new_ones(())
+            predictions["hsi_geometry_mode_id"] = predictions["pred_transl_cam"].new_ones(())
+            return predictions
         if self.hsi_foot_contact_intent_fast_gt:
             if self.hsi_foot_contact_intent_head is None or smpl_override_outputs is None:
                 raise ValueError("HSI contact-intent fast GT path requires its head and SMPL override outputs")
@@ -565,6 +637,7 @@ class VGGTOmega(nn.Module):
                     query_mask=smpl_query_boxes_mask,
                     smpl_track_ids=smpl_track_ids,
                     smpl_track_mask=smpl_track_mask,
+                    smpl_track_quality=smpl_track_quality,
                     external_track_ids=external_track_ids,
                     external_track_mask=external_track_mask,
                     external_track_confidence=external_track_confidence,
@@ -719,6 +792,7 @@ class VGGTOmega(nn.Module):
                     query_mask=smpl_query_boxes_mask,
                     smpl_track_ids=smpl_track_ids,
                     smpl_track_mask=smpl_track_mask,
+                    smpl_track_quality=smpl_track_quality,
                     external_track_ids=external_track_ids,
                     external_track_mask=external_track_mask,
                     external_track_confidence=external_track_confidence,
@@ -768,26 +842,35 @@ class VGGTOmega(nn.Module):
                     ema_alpha=self.hsi_scene_affine_ema_alpha,
                 )
             if self.hsi_trstr_head is not None:
+                trstr_depth = predictions.get("hsi_translation_depth")
+                trstr_depth_is_metric = isinstance(trstr_depth, torch.Tensor)
+                if not trstr_depth_is_metric:
+                    trstr_depth = hsi_depth_override if hsi_depth_override is not None else predictions["depth"]
                 predictions.update(
                     self.hsi_trstr_head(
                         predictions=predictions,
-                        depth=hsi_depth_override if hsi_depth_override is not None else predictions["depth"],
+                        depth=trstr_depth,
                         pose_enc=predictions.get("pose_enc"),
                         image_size_hw=image_size_hw,
                         intrinsics_override=hsi_intrinsics_override,
-                        depth_is_metric=bool(hsi_depth_is_metric),
+                        depth_is_metric=bool(trstr_depth_is_metric or hsi_depth_is_metric),
                         person_valid=predictions.get("pred_confs", None)[..., 0] > 0.0
                         if isinstance(predictions.get("pred_confs"), torch.Tensor)
                         else None,
                         track_ids=predictions.get("assigned_track_ids"),
                         track_quality=predictions.get("assigned_track_quality"),
                         track_gap=predictions.get("assigned_track_gap"),
+                        track_memory=hsi_trstr_track_memory,
+                        frame_offset=int(hsi_trstr_frame_offset),
                     )
                 )
                 predictions["hsi_refined_pred_transl_cam"] = predictions["hsi_trstr_refined_pred_transl_cam"]
                 predictions["hsi_refined_pred_pose_6d"] = predictions["pred_pose_6d"]
                 predictions["hsi_refined_pred_poses"] = predictions["pred_poses"]
                 predictions["hsi_refined_pred_betas"] = predictions["pred_betas"]
+                predictions["hsi_trstr_depth_source_id"] = predictions["pred_transl_cam"].new_tensor(
+                    2.0 if trstr_depth_is_metric else (1.0 if hsi_depth_is_metric else 0.0)
+                )
             if self.hsi_human_scene_align_head is not None:
                 if hsi_intrinsics_override is not None:
                     predictions["hsi_intrinsics_override"] = hsi_intrinsics_override
@@ -868,6 +951,7 @@ class VGGTOmega(nn.Module):
         query_mask: torch.Tensor | None,
         smpl_track_ids: torch.Tensor | None,
         smpl_track_mask: torch.Tensor | None,
+        smpl_track_quality: torch.Tensor | None,
         external_track_ids: torch.Tensor | None,
         external_track_mask: torch.Tensor | None,
         external_track_confidence: torch.Tensor | None,
@@ -881,7 +965,10 @@ class VGGTOmega(nn.Module):
         batch_size, num_frames, num_queries = pred_transl.shape[:3]
         device = pred_transl.device
         if query_mask is None:
-            query_mask = torch.ones(batch_size, num_frames, num_queries, dtype=torch.bool, device=device)
+            confidence = pred_confs.detach().float()
+            while confidence.ndim > 3:
+                confidence = confidence.mean(dim=-1)
+            query_mask = confidence.to(device=device) > 0.0
         else:
             query_mask = query_mask.to(device=device).bool()
         mode = self.smpl_track_assignment_mode
@@ -896,10 +983,15 @@ class VGGTOmega(nn.Module):
             }
         if mode == "gt" and smpl_track_ids is not None:
             mask = smpl_track_mask.to(device=device).bool() if smpl_track_mask is not None else query_mask
+            quality = (
+                smpl_track_quality.to(device=device, dtype=torch.float32)
+                if smpl_track_quality is not None
+                else (mask & query_mask).to(dtype=torch.float32)
+            )
             return {
                 "assigned_track_ids": smpl_track_ids.to(device=device).long(),
                 "assigned_track_mask": mask & query_mask,
-                "assigned_track_quality": (mask & query_mask).to(dtype=torch.float32),
+                "assigned_track_quality": quality * (mask & query_mask).to(dtype=quality.dtype),
                 "assigned_track_gap": torch.zeros(batch_size, num_frames, num_queries, dtype=torch.long, device=device),
                 "assigned_track_source": torch.full((batch_size, num_frames, num_queries), 3, dtype=torch.long, device=device),
             }

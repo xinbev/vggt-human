@@ -562,6 +562,7 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         smpl_track_assign_external_iou_min=float(model_cfg.get("smpl_track_assign_external_iou_min", 0.50)),
         smpl_track_assign_id_weight=float(model_cfg.get("smpl_track_assign_id_weight", 0.0)),
         smpl_track_assign_max_id_distance=float(model_cfg.get("smpl_track_assign_max_id_distance", 0.70)),
+        smpl_track_assign_persistent=bool(model_cfg.get("smpl_track_assign_persistent", False)),
         smpl_enable_temporal_translation=bool(model_cfg.get("smpl_enable_temporal_translation", False)),
         smpl_temporal_translation_hidden_dim=int(model_cfg.get("smpl_temporal_translation_hidden_dim", 512)),
         smpl_temporal_translation_max_velocity_delta_m=float(model_cfg.get("smpl_temporal_translation_max_velocity_delta_m", 0.25)),
@@ -593,6 +594,7 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_use_affine_depth_for_transl=bool(model_cfg.get("hsi_use_affine_depth_for_transl", False)),
         hsi_affine_depth_detach=bool(model_cfg.get("hsi_affine_depth_detach", True)),
         enable_hsi_trstr=bool(model_cfg.get("enable_hsi_trstr", False)),
+        hsi_trstr_fast_gt=bool(model_cfg.get("hsi_trstr_fast_gt", False)),
         hsi_trstr_hidden_dim=int(model_cfg.get("hsi_trstr_hidden_dim", 256)),
         hsi_trstr_region_embedding_dim=int(model_cfg.get("hsi_trstr_region_embedding_dim", 32)),
         hsi_trstr_num_regions=int(model_cfg.get("hsi_trstr_num_regions", 96)),
@@ -601,6 +603,15 @@ def build_model(config: dict[str, Any]) -> VGGTOmega:
         hsi_trstr_patch_sizes=tuple(
             int(size) for size in model_cfg.get("hsi_trstr_patch_sizes", [3, 7])
         ),
+        hsi_trstr_probe_token_dim=int(model_cfg.get("hsi_trstr_probe_token_dim", 16)),
+        hsi_trstr_adaptive_radius_max=int(model_cfg.get("hsi_trstr_adaptive_radius_max", 5)),
+        hsi_trstr_annulus_width=int(model_cfg.get("hsi_trstr_annulus_width", 2)),
+        hsi_trstr_human_depth_tolerance_m=float(model_cfg.get("hsi_trstr_human_depth_tolerance_m", 0.15)),
+        hsi_trstr_human_depth_dilation_px=int(model_cfg.get("hsi_trstr_human_depth_dilation_px", 2)),
+        hsi_trstr_enable_temporal=bool(model_cfg.get("hsi_trstr_enable_temporal", False)),
+        hsi_trstr_temporal_quality_min=float(model_cfg.get("hsi_trstr_temporal_quality_min", 0.25)),
+        hsi_trstr_temporal_gap_max=int(model_cfg.get("hsi_trstr_temporal_gap_max", 8)),
+        hsi_trstr_temporal_use_world=bool(model_cfg.get("hsi_trstr_temporal_use_world", False)),
         hsi_trstr_min_valid_ratio=float(model_cfg.get("hsi_trstr_min_valid_ratio", 0.25)),
         hsi_trstr_max_ray_delta_m=float(model_cfg.get("hsi_trstr_max_ray_delta_m", 0.35)),
         hsi_trstr_max_tangent_delta_m=float(model_cfg.get("hsi_trstr_max_tangent_delta_m", 0.20)),
@@ -1078,7 +1089,10 @@ def filter_wandb_scalars(
     return {key: float(scalars[key]) for key in keys if key in scalars}
 
 
-def wandb_scale_comparison_aliases(scalars: dict[str, float]) -> dict[str, float]:
+def wandb_scale_comparison_aliases(
+    scalars: dict[str, float],
+    config: dict[str, Any] | None = None,
+) -> dict[str, float]:
     aliases = {
         "metric_scale_pipeline_residual_teacher": "scale_compare/residual_teacher",
         "metric_scale_pipeline_residual_pred": "scale_compare/residual_pred",
@@ -1087,10 +1101,12 @@ def wandb_scale_comparison_aliases(scalars: dict[str, float]) -> dict[str, float
         "metric_scale_pipeline_final_pred": "scale_compare/final_pred",
         "metric_scale_pipeline_final_log_l1": "scale_compare/final_log_l1",
     }
+    configured = (config or {}).get("logging", {}).get("wandb", {}).get("log_keys")
+    allowed = None if configured is None else set(normalize_string_list(configured))
     return {
         alias: float(scalars[source])
         for source, alias in aliases.items()
-        if source in scalars
+        if source in scalars and (allowed is None or source in allowed or alias in allowed)
     }
 
 
@@ -1589,7 +1605,7 @@ def train_one_epoch(
             wandb_payload: dict[str, Any] = {
                 "global_step": global_step,
                 **{f"train/{key}": float(value) for key, value in wandb_scalars.items()},
-                **wandb_scale_comparison_aliases(step_scalars),
+                **wandb_scale_comparison_aliases(step_scalars, config),
             }
             chart_interval = int(config.get("logging", {}).get("wandb", {}).get("scale_chart_interval", 0) or 0)
             if wandb_scale_history is not None and chart_interval > 0:
@@ -2082,6 +2098,7 @@ def forward_model(
         smpl_query_patch_masks=batch.get("smpl_query_patch_masks"),
         smpl_track_ids=batch.get("gt_track_ids", batch.get("person_ids")),
         smpl_track_mask=batch.get("gt_track_mask", batch.get("person_id_mask")),
+        smpl_track_quality=batch.get("gt_track_quality"),
         external_track_ids=batch.get("external_track_ids"),
         external_track_mask=batch.get("external_track_mask"),
         external_track_confidence=batch.get("external_track_confidence"),
@@ -2735,6 +2752,7 @@ def build_smpl_override_outputs(
                 valid,
                 config,
                 epoch=epoch,
+                track_ids=batch.get("gt_track_ids", batch.get("person_ids")),
             )
             noise_category = torch.full_like(clean_mask, -1, dtype=torch.long)
         else:
@@ -2793,32 +2811,69 @@ def apply_smpl_translation_noise(
     valid: torch.Tensor,
     config: dict[str, Any],
     epoch: int = 0,
+    track_ids: torch.Tensor | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     prior_cfg = config.get("training_prior", {})
     schedule = parse_float_schedule(prior_cfg.get("smpl_transl_ray_noise_schedule", "0.0"))
     ratio = schedule[min(max(int(epoch), 0), len(schedule) - 1)] if schedule else 0.0
     clean_prob = min(max(float(prior_cfg.get("smpl_transl_ray_noise_clean_prob", 0.0) or 0.0), 0.0), 1.0)
     mode = str(prior_cfg.get("smpl_transl_ray_noise_mode", "uniform") or "uniform").lower()
-    if ratio <= 0.0:
+    temporal_rho = min(max(float(prior_cfg.get("smpl_transl_noise_temporal_rho", 1.0)), 0.0), 1.0)
+    metric_schedule = parse_float_schedule(prior_cfg.get("smpl_transl_ray_noise_schedule_m", "0.0"))
+    metric_max = metric_schedule[min(max(int(epoch), 0), len(metric_schedule) - 1)] if metric_schedule else 0.0
+    if mode in {"metric_normal", "metric_gaussian"}:
+        ray_delta_m = _sample_clipped_gaussian_translation_noise(
+            transl,
+            channels=1,
+            max_abs=float(metric_max),
+            temporal_rho=temporal_rho,
+            track_ids=track_ids,
+            valid=valid,
+        )
+        ray_scale = 1.0 + ray_delta_m / torch.linalg.norm(transl, dim=-1, keepdim=True).clamp(min=1e-4)
+    elif ratio <= 0.0:
         ray_scale = torch.ones(*transl.shape[:-1], 1, dtype=transl.dtype, device=transl.device)
     elif mode == "uniform":
         clip_shape = (transl.shape[0], 1, transl.shape[2], 1) if transl.ndim == 4 else (*transl.shape[:-1], 1)
         eps = transl.new_empty(*clip_shape).uniform_(-float(ratio), float(ratio))
         ray_scale = 1.0 + eps.expand(*transl.shape[:-1], 1)
     elif mode in {"normal", "gaussian"}:
-        clip_shape = (transl.shape[0], 1, transl.shape[2], 1) if transl.ndim == 4 else (*transl.shape[:-1], 1)
-        eps = transl.new_empty(*clip_shape).normal_(mean=0.0, std=float(ratio) / 2.0).clamp(-float(ratio), float(ratio))
-        ray_scale = 1.0 + eps.expand(*transl.shape[:-1], 1)
+        eps = _sample_clipped_gaussian_translation_noise(
+            transl,
+            channels=1,
+            max_abs=float(ratio),
+            temporal_rho=temporal_rho,
+            track_ids=track_ids,
+            valid=valid,
+        )
+        ray_scale = 1.0 + eps
     else:
         raise ValueError(f"Unsupported training_prior.smpl_transl_ray_noise_mode: {mode!r}")
     tangent_schedule = parse_float_schedule(prior_cfg.get("smpl_transl_tangent_noise_schedule_m", "0.0"))
     tangent_max = tangent_schedule[min(max(int(epoch), 0), len(tangent_schedule) - 1)] if tangent_schedule else 0.0
-    clip_shape_2 = (transl.shape[0], 1, transl.shape[2], 2) if transl.ndim == 4 else (*transl.shape[:-1], 2)
-    tangent_coeff = transl.new_empty(*clip_shape_2).uniform_(-float(tangent_max), float(tangent_max))
-    tangent_coeff = tangent_coeff.expand(*transl.shape[:-1], 2)
+    tangent_mode = str(prior_cfg.get("smpl_transl_tangent_noise_mode", "uniform") or "uniform").lower()
+    if tangent_mode in {"normal", "gaussian", "metric_normal", "metric_gaussian"}:
+        tangent_coeff = _sample_clipped_gaussian_translation_noise(
+            transl,
+            channels=2,
+            max_abs=float(tangent_max),
+            temporal_rho=temporal_rho,
+            track_ids=track_ids,
+            valid=valid,
+        )
+    elif tangent_mode == "uniform":
+        clip_shape_2 = (transl.shape[0], 1, transl.shape[2], 2) if transl.ndim == 4 else (*transl.shape[:-1], 2)
+        tangent_coeff = transl.new_empty(*clip_shape_2).uniform_(-float(tangent_max), float(tangent_max))
+        tangent_coeff = tangent_coeff.expand(*transl.shape[:-1], 2)
+    else:
+        raise ValueError(f"Unsupported training_prior.smpl_transl_tangent_noise_mode: {tangent_mode!r}")
     if clean_prob > 0.0:
-        clean_shape = (transl.shape[0], 1, transl.shape[2], 1) if transl.ndim == 4 else (*transl.shape[:-1], 1)
-        noisy_slot = (torch.rand(*clean_shape, device=transl.device) >= clean_prob).expand(*transl.shape[:-1], 1)
+        noisy_slot = _sample_track_consistent_noisy_mask(
+            transl,
+            clean_prob=clean_prob,
+            track_ids=track_ids,
+            valid=valid,
+        )
     else:
         noisy_slot = torch.ones(*transl.shape[:-1], 1, dtype=torch.bool, device=transl.device)
     valid_f = valid.unsqueeze(-1).to(dtype=transl.dtype)
@@ -2830,6 +2885,79 @@ def apply_smpl_translation_noise(
     noisy = transl * ray_scale + tangent_delta
     clean_mask = (~noisy_slot | ~valid.unsqueeze(-1)).to(dtype=transl.dtype)
     return noisy, ray_scale, tangent_coeff, clean_mask
+
+
+def _sample_clipped_gaussian_translation_noise(
+    reference: torch.Tensor,
+    channels: int,
+    max_abs: float,
+    temporal_rho: float,
+    track_ids: torch.Tensor | None = None,
+    valid: torch.Tensor | None = None,
+) -> torch.Tensor:
+    """Sample metric Gaussian noise, optionally correlated across video frames."""
+    max_abs = max(float(max_abs), 0.0)
+    output_shape = (*reference.shape[:-1], int(channels))
+    if max_abs <= 0.0:
+        return reference.new_zeros(*output_shape)
+    std = max_abs / 2.0
+    if reference.ndim != 4:
+        return reference.new_empty(*output_shape).normal_(0.0, std).clamp(-max_abs, max_abs)
+    batch_size, num_frames, num_queries = reference.shape[:3]
+    rho = min(max(float(temporal_rho), 0.0), 1.0)
+    if num_frames <= 1 or rho >= 1.0 - 1e-6:
+        value = reference.new_empty(batch_size, 1, num_queries, channels).normal_(0.0, std)
+        return value.expand(*output_shape).clamp(-max_abs, max_abs)
+    innovations = reference.new_empty(batch_size, num_frames, num_queries, channels).normal_(0.0, std)
+    states = [innovations[:, 0]]
+    innovation_scale = max(1.0 - rho * rho, 0.0) ** 0.5
+    for frame_idx in range(1, num_frames):
+        previous = states[-1]
+        if isinstance(track_ids, torch.Tensor) and track_ids.shape == reference.shape[:3]:
+            ids = track_ids.to(device=reference.device).long()
+            valid_ids = ids >= 0
+            if isinstance(valid, torch.Tensor):
+                valid_ids = valid_ids & valid.to(device=reference.device).bool()
+            same_track = (
+                ids[:, frame_idx, :, None] == ids[:, frame_idx - 1, None, :]
+            ) & valid_ids[:, frame_idx, :, None] & valid_ids[:, frame_idx - 1, None, :]
+            has_previous = same_track.any(dim=-1)
+            previous_index = same_track.to(dtype=torch.int64).argmax(dim=-1)
+            gather_index = previous_index[..., None].expand(batch_size, num_queries, channels)
+            previous = previous.gather(1, gather_index)
+            current = rho * previous + innovation_scale * innovations[:, frame_idx]
+            current = torch.where(has_previous[..., None], current, innovations[:, frame_idx])
+        else:
+            current = rho * previous + innovation_scale * innovations[:, frame_idx]
+        states.append(current)
+    return torch.stack(states, dim=1).clamp(-max_abs, max_abs)
+
+
+def _sample_track_consistent_noisy_mask(
+    reference: torch.Tensor,
+    clean_prob: float,
+    track_ids: torch.Tensor | None,
+    valid: torch.Tensor,
+) -> torch.Tensor:
+    if reference.ndim != 4:
+        return torch.rand(*reference.shape[:-1], 1, device=reference.device) >= float(clean_prob)
+    batch_size, num_frames, num_queries = reference.shape[:3]
+    if not isinstance(track_ids, torch.Tensor) or track_ids.shape != reference.shape[:3]:
+        initial = torch.rand(batch_size, 1, num_queries, 1, device=reference.device) >= float(clean_prob)
+        return initial.expand(batch_size, num_frames, num_queries, 1)
+    ids = track_ids.to(device=reference.device).long()
+    valid_ids = (ids >= 0) & valid.to(device=reference.device).bool()
+    random_mask = torch.rand(batch_size, num_frames, num_queries, 1, device=reference.device) >= float(clean_prob)
+    states = [random_mask[:, 0]]
+    for frame_idx in range(1, num_frames):
+        same_track = (
+            ids[:, frame_idx, :, None] == ids[:, frame_idx - 1, None, :]
+        ) & valid_ids[:, frame_idx, :, None] & valid_ids[:, frame_idx - 1, None, :]
+        has_previous = same_track.any(dim=-1)
+        previous_index = same_track.to(dtype=torch.int64).argmax(dim=-1)
+        previous = states[-1].gather(1, previous_index[..., None])
+        states.append(torch.where(has_previous[..., None], previous, random_mask[:, frame_idx]))
+    return torch.stack(states, dim=1)
 
 
 def _translation_camera_basis(transl: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:

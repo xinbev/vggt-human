@@ -109,6 +109,10 @@ class HungarianSMPLLoss(nn.Module):
         hsi_trstr_translation_weight: float = 0.0,
         hsi_trstr_gate_weight: float = 0.0,
         hsi_trstr_delta_reg_weight: float = 0.0,
+        hsi_trstr_monotonic_weight: float = 0.0,
+        hsi_trstr_temporal_velocity_weight: float = 0.0,
+        hsi_trstr_temporal_no_worse_weight: float = 0.0,
+        hsi_trstr_temporal_no_worse_margin_m: float = 0.002,
         hsi_anchor_depth_weight: float = 0.0,
         hsi_anchor_scene_xyz_weight: float = 0.0,
         hsi_anchor_scene_window: int = 5,
@@ -277,6 +281,10 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_trstr_translation_weight = float(hsi_trstr_translation_weight)
         self.hsi_trstr_gate_weight = float(hsi_trstr_gate_weight)
         self.hsi_trstr_delta_reg_weight = float(hsi_trstr_delta_reg_weight)
+        self.hsi_trstr_monotonic_weight = float(hsi_trstr_monotonic_weight)
+        self.hsi_trstr_temporal_velocity_weight = float(hsi_trstr_temporal_velocity_weight)
+        self.hsi_trstr_temporal_no_worse_weight = float(hsi_trstr_temporal_no_worse_weight)
+        self.hsi_trstr_temporal_no_worse_margin_m = float(hsi_trstr_temporal_no_worse_margin_m)
         self.hsi_anchor_depth_weight = hsi_anchor_depth_weight
         self.hsi_anchor_scene_xyz_weight = hsi_anchor_scene_xyz_weight
         self.hsi_anchor_scene_window = hsi_anchor_scene_window
@@ -602,6 +610,9 @@ class HungarianSMPLLoss(nn.Module):
             + self.hsi_trstr_translation_weight * losses["loss_hsi_trstr_translation"]
             + self.hsi_trstr_gate_weight * losses["loss_hsi_trstr_gate"]
             + self.hsi_trstr_delta_reg_weight * losses["loss_hsi_trstr_delta_reg"]
+            + self.hsi_trstr_monotonic_weight * losses["loss_hsi_trstr_monotonic"]
+            + self.hsi_trstr_temporal_velocity_weight * losses["loss_hsi_trstr_temporal_velocity"]
+            + self.hsi_trstr_temporal_no_worse_weight * losses["loss_hsi_trstr_temporal_no_worse"]
             + self.hsi_anchor_depth_weight * losses["loss_hsi_anchor_depth"]
             + self.hsi_anchor_scene_xyz_weight * losses["loss_hsi_anchor_scene_xyz"]
             + self.hsi_delta_reg_weight * losses["loss_hsi_delta_reg"]
@@ -1291,6 +1302,9 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_trstr_translation": zero,
             "loss_hsi_trstr_gate": zero,
             "loss_hsi_trstr_delta_reg": zero,
+            "loss_hsi_trstr_monotonic": zero,
+            "loss_hsi_trstr_temporal_velocity": zero,
+            "loss_hsi_trstr_temporal_no_worse": zero,
             "loss_hsi_anchor_depth": zero,
             "loss_hsi_anchor_scene_xyz": zero,
             "loss_hsi_delta_reg": zero,
@@ -1474,9 +1488,23 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_trstr_translation_l1": zero.detach(),
             "metric_hsi_trstr_base_translation_l1": zero.detach(),
             "metric_hsi_trstr_translation_improvement": zero.detach(),
+            "metric_hsi_trstr_improvement_rate": zero.detach(),
+            "metric_hsi_trstr_base_l2_p90_m": zero.detach(),
+            "metric_hsi_trstr_refined_l2_p90_m": zero.detach(),
+            "metric_hsi_trstr_clean_displacement_l1": zero.detach(),
+            "metric_hsi_trstr_noisy_translation_l1": zero.detach(),
             "metric_hsi_trstr_region_valid_ratio": zero.detach(),
             "metric_hsi_trstr_region_gate_mean": zero.detach(),
             "metric_hsi_trstr_person_gate_mean": zero.detach(),
+            "metric_hsi_trstr_other_human_ratio": zero.detach(),
+            "metric_hsi_trstr_temporal_valid_ratio": zero.detach(),
+            "metric_hsi_trstr_temporal_gate_mean": zero.detach(),
+            "metric_hsi_trstr_temporal_velocity_l1": zero.detach(),
+            "metric_hsi_trstr_temporal_no_worse_rate": zero.detach(),
+            "metric_hsi_trstr_spatial_translation_l1": zero.detach(),
+            "metric_hsi_trstr_pose_passthrough_max_abs": zero.detach(),
+            "metric_hsi_trstr_betas_passthrough_max_abs": zero.detach(),
+            "metric_hsi_trstr_monotonic_violation_rate": zero.detach(),
             "metric_hsi_contact_pos_frac": zero.detach(),
         }
 
@@ -1591,13 +1619,30 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_trstr_translation": zero,
             "loss_hsi_trstr_gate": zero,
             "loss_hsi_trstr_delta_reg": zero,
+            "loss_hsi_trstr_monotonic": zero,
+            "loss_hsi_trstr_temporal_velocity": zero,
+            "loss_hsi_trstr_temporal_no_worse": zero,
             "metric_hsi_trstr_vote_l1": zero.detach(),
             "metric_hsi_trstr_translation_l1": zero.detach(),
             "metric_hsi_trstr_base_translation_l1": zero.detach(),
             "metric_hsi_trstr_translation_improvement": zero.detach(),
+            "metric_hsi_trstr_improvement_rate": zero.detach(),
+            "metric_hsi_trstr_base_l2_p90_m": zero.detach(),
+            "metric_hsi_trstr_refined_l2_p90_m": zero.detach(),
+            "metric_hsi_trstr_clean_displacement_l1": zero.detach(),
+            "metric_hsi_trstr_noisy_translation_l1": zero.detach(),
             "metric_hsi_trstr_region_valid_ratio": zero.detach(),
             "metric_hsi_trstr_region_gate_mean": zero.detach(),
             "metric_hsi_trstr_person_gate_mean": zero.detach(),
+            "metric_hsi_trstr_other_human_ratio": zero.detach(),
+            "metric_hsi_trstr_temporal_valid_ratio": zero.detach(),
+            "metric_hsi_trstr_temporal_gate_mean": zero.detach(),
+            "metric_hsi_trstr_temporal_velocity_l1": zero.detach(),
+            "metric_hsi_trstr_temporal_no_worse_rate": zero.detach(),
+            "metric_hsi_trstr_spatial_translation_l1": zero.detach(),
+            "metric_hsi_trstr_pose_passthrough_max_abs": zero.detach(),
+            "metric_hsi_trstr_betas_passthrough_max_abs": zero.detach(),
+            "metric_hsi_trstr_monotonic_violation_rate": zero.detach(),
         }
         required = (
             "hsi_trstr_refined_pred_transl_cam",
@@ -1619,31 +1664,49 @@ class HungarianSMPLLoss(nn.Module):
         translation_error = refined_matched - target
         base_error = base_matched.detach() - target
 
-        region_vote = predictions["hsi_trstr_region_vote"].reshape(
-            -1,
-            predictions["hsi_trstr_region_vote"].shape[2],
-            predictions["hsi_trstr_region_vote"].shape[3],
-            3,
-        )
-        region_gate = predictions["hsi_trstr_region_gate"].reshape(
-            -1,
-            predictions["hsi_trstr_region_gate"].shape[2],
-            predictions["hsi_trstr_region_gate"].shape[3],
-            1,
-        )
-        region_valid = predictions["hsi_trstr_region_valid"].reshape(
-            -1,
-            predictions["hsi_trstr_region_valid"].shape[2],
-            predictions["hsi_trstr_region_valid"].shape[3],
-        )
-        selected_vote = region_vote[frame_idx, src_idx]
-        selected_gate = region_gate[frame_idx, src_idx]
-        selected_valid = region_valid[frame_idx, src_idx]
-        vote_target = target_delta[:, None, :].expand_as(selected_vote)
-        vote_mask = selected_valid
-        if bool(vote_mask.any()):
-            out["loss_hsi_trstr_vote"] = F.smooth_l1_loss(selected_vote[vote_mask], vote_target[vote_mask])
-            out["metric_hsi_trstr_vote_l1"] = (selected_vote[vote_mask] - vote_target[vote_mask]).abs().mean().detach()
+        iteration_votes = predictions.get("hsi_trstr_iteration_region_vote")
+        iteration_gates = predictions.get("hsi_trstr_iteration_region_gate")
+        iteration_valid = predictions.get("hsi_trstr_iteration_region_valid")
+        iteration_transl = predictions.get("hsi_trstr_iteration_transl")
+        if not all(isinstance(value, torch.Tensor) for value in (iteration_votes, iteration_gates, iteration_valid, iteration_transl)):
+            iteration_votes = predictions["hsi_trstr_region_vote"].unsqueeze(0)
+            iteration_gates = predictions["hsi_trstr_region_gate"].unsqueeze(0)
+            iteration_valid = predictions["hsi_trstr_region_valid"].unsqueeze(0)
+            iteration_transl = torch.stack([predictions["pred_transl_cam"], predictions["hsi_trstr_refined_pred_transl_cam"]], dim=0)
+        vote_losses = []
+        vote_l1_values = []
+        gate_losses = []
+        selected_gate = None
+        selected_valid = None
+        for iteration_idx in range(iteration_votes.shape[0]):
+            vote_i = iteration_votes[iteration_idx].reshape(
+                -1, iteration_votes.shape[3], iteration_votes.shape[4], 3
+            )[frame_idx, src_idx]
+            gate_i = iteration_gates[iteration_idx].reshape(
+                -1, iteration_gates.shape[3], iteration_gates.shape[4], 1
+            )[frame_idx, src_idx]
+            valid_i = iteration_valid[iteration_idx].reshape(
+                -1, iteration_valid.shape[3], iteration_valid.shape[4]
+            )[frame_idx, src_idx]
+            base_i = iteration_transl[iteration_idx].reshape(
+                -1, iteration_transl.shape[3], 3
+            )[frame_idx, src_idx]
+            remaining_target = (target - base_i.detach())[:, None, :].expand_as(vote_i)
+            if bool(valid_i.any()):
+                vote_losses.append(F.smooth_l1_loss(vote_i[valid_i], remaining_target[valid_i]))
+                vote_l1_values.append((vote_i[valid_i] - remaining_target[valid_i]).abs().mean())
+            gate_losses.append(
+                F.binary_cross_entropy(
+                    gate_i.clamp(1e-5, 1.0 - 1e-5),
+                    valid_i[..., None].to(dtype=gate_i.dtype),
+                )
+            )
+            selected_gate = gate_i
+            selected_valid = valid_i
+        if vote_losses:
+            out["loss_hsi_trstr_vote"] = torch.stack(vote_losses).mean()
+            out["metric_hsi_trstr_vote_l1"] = torch.stack(vote_l1_values).mean().detach()
+        out["loss_hsi_trstr_gate"] = torch.stack(gate_losses).mean()
         out["loss_hsi_trstr_translation"] = F.smooth_l1_loss(refined_matched, target)
         out["loss_hsi_trstr_delta_reg"] = _smooth_l1_abs(refined_matched - base_matched).mean()
         out["metric_hsi_trstr_translation_l1"] = translation_error.abs().mean().detach()
@@ -1651,15 +1714,117 @@ class HungarianSMPLLoss(nn.Module):
         out["metric_hsi_trstr_translation_improvement"] = (
             base_error.abs().mean() - translation_error.abs().mean()
         ).detach()
-        out["loss_hsi_trstr_gate"] = F.binary_cross_entropy(
-            selected_gate.clamp(1e-5, 1.0 - 1e-5),
-            selected_valid[..., None].to(dtype=selected_gate.dtype),
-        )
+        base_l2 = torch.linalg.norm(base_error, dim=-1)
+        refined_l2 = torch.linalg.norm(translation_error, dim=-1)
+        out["metric_hsi_trstr_improvement_rate"] = (refined_l2 < base_l2).float().mean().detach()
+        out["metric_hsi_trstr_base_l2_p90_m"] = torch.quantile(base_l2.float(), 0.90).to(
+            dtype=base.dtype
+        ).detach()
+        out["metric_hsi_trstr_refined_l2_p90_m"] = torch.quantile(refined_l2.float(), 0.90).to(
+            dtype=base.dtype
+        ).detach()
+        clean_value = predictions.get("transl_noise_is_clean")
+        if isinstance(clean_value, torch.Tensor):
+            clean = _flatten_prediction(clean_value, unframed_ndim=3)[frame_idx, src_idx, 0] > 0.5
+            if bool(clean.any()):
+                out["metric_hsi_trstr_clean_displacement_l1"] = (
+                    refined_matched[clean] - base_matched[clean]
+                ).abs().mean().detach()
+            noisy = ~clean
+            if bool(noisy.any()):
+                out["metric_hsi_trstr_noisy_translation_l1"] = translation_error[noisy].abs().mean().detach()
+        state_errors = []
+        for state_idx in range(iteration_transl.shape[0]):
+            state = iteration_transl[state_idx].reshape(-1, iteration_transl.shape[3], 3)[frame_idx, src_idx]
+            state_errors.append((state - target).abs().mean(dim=-1))
+        state_errors_tensor = torch.stack(state_errors, dim=0)
+        monotonic_excess = F.relu(state_errors_tensor[1:] - state_errors_tensor[:-1])
+        out["loss_hsi_trstr_monotonic"] = _smooth_l1_abs(monotonic_excess).mean()
+        out["metric_hsi_trstr_monotonic_violation_rate"] = (
+            monotonic_excess > 1e-6
+        ).float().mean().detach()
+        if selected_gate is None or selected_valid is None:
+            return out
         out["metric_hsi_trstr_region_valid_ratio"] = selected_valid.float().mean().detach()
         out["metric_hsi_trstr_region_gate_mean"] = selected_gate.detach().mean()
         person_gate = predictions["hsi_trstr_person_gate"]
         person_gate = person_gate.reshape(-1, person_gate.shape[2], 1)
         out["metric_hsi_trstr_person_gate_mean"] = person_gate[frame_idx, src_idx].detach().mean()
+        other_human = predictions.get("hsi_trstr_other_human_ratio")
+        if isinstance(other_human, torch.Tensor):
+            other_human = other_human.reshape(-1, other_human.shape[2], other_human.shape[3])
+            out["metric_hsi_trstr_other_human_ratio"] = other_human[frame_idx, src_idx].mean().detach()
+        temporal_valid = predictions.get("hsi_trstr_temporal_valid")
+        temporal_gate = predictions.get("hsi_trstr_temporal_gate")
+        if isinstance(temporal_valid, torch.Tensor):
+            temporal_valid = temporal_valid.reshape(-1, temporal_valid.shape[2], 1)[frame_idx, src_idx]
+            out["metric_hsi_trstr_temporal_valid_ratio"] = temporal_valid.float().mean().detach()
+            if isinstance(temporal_gate, torch.Tensor) and bool(temporal_valid.any()):
+                temporal_gate = temporal_gate.reshape(-1, temporal_gate.shape[2], 1)[frame_idx, src_idx]
+                out["metric_hsi_trstr_temporal_gate_mean"] = temporal_gate[temporal_valid].mean().detach()
+        spatial_value = predictions.get("hsi_trstr_spatial_refined_pred_transl_cam")
+        clean_value = predictions.get("base_clean_pred_transl_cam")
+        track_ids = predictions.get("assigned_track_ids")
+        pred_confs = predictions.get("pred_confs")
+        temporal_valid_full = predictions.get("hsi_trstr_temporal_valid")
+        if isinstance(spatial_value, torch.Tensor):
+            spatial = _flatten_prediction(spatial_value, unframed_ndim=3)[frame_idx, src_idx]
+            out["metric_hsi_trstr_spatial_translation_l1"] = (spatial - target).abs().mean().detach()
+        if all(
+            isinstance(value, torch.Tensor)
+            for value in (spatial_value, clean_value, track_ids, pred_confs, temporal_valid_full)
+        ) and refined.ndim == 3:
+            refined_full = predictions["hsi_trstr_refined_pred_transl_cam"]
+            if refined_full.ndim == 4 and refined_full.shape[1] > 1:
+                valid_full = pred_confs
+                while valid_full.ndim > 3:
+                    valid_full = valid_full.mean(dim=-1)
+                valid_full = valid_full > 0.0
+                ids = track_ids.long()
+                same_track = (
+                    ids[:, 1:, :, None] == ids[:, :-1, None, :]
+                ) & valid_full[:, 1:, :, None] & valid_full[:, :-1, None, :] & (ids[:, 1:, :, None] >= 0)
+                has_previous = same_track.any(dim=-1)
+                previous_index = same_track.to(dtype=torch.int64).argmax(dim=-1)
+
+                def gather_previous(value: torch.Tensor) -> torch.Tensor:
+                    index = previous_index[..., None].expand(*previous_index.shape, value.shape[-1])
+                    return value[:, :-1].gather(2, index)
+
+                temporal_pair = temporal_valid_full[:, 1:, :, 0].bool() & has_previous
+                if bool(temporal_pair.any()):
+                    pred_velocity = refined_full[:, 1:] - gather_previous(refined_full)
+                    target_velocity = clean_value[:, 1:] - gather_previous(clean_value)
+                    velocity_error = pred_velocity - target_velocity
+                    out["loss_hsi_trstr_temporal_velocity"] = F.smooth_l1_loss(
+                        pred_velocity[temporal_pair], target_velocity[temporal_pair]
+                    )
+                    out["metric_hsi_trstr_temporal_velocity_l1"] = (
+                        velocity_error[temporal_pair].abs().mean().detach()
+                    )
+                    final_error = torch.linalg.norm(refined_full - clean_value, dim=-1)
+                    spatial_error = torch.linalg.norm(spatial_value - clean_value, dim=-1)
+                    valid_temporal = temporal_valid_full[..., 0].bool()
+                    excess = F.relu(
+                        final_error[valid_temporal]
+                        - spatial_error[valid_temporal]
+                        - self.hsi_trstr_temporal_no_worse_margin_m
+                    )
+                    out["loss_hsi_trstr_temporal_no_worse"] = _smooth_l1_abs(excess).mean()
+                    out["metric_hsi_trstr_temporal_no_worse_rate"] = (
+                        final_error[valid_temporal]
+                        <= spatial_error[valid_temporal] + self.hsi_trstr_temporal_no_worse_margin_m
+                    ).float().mean().detach()
+        refined_pose = predictions.get("hsi_refined_pred_pose_6d")
+        refined_betas = predictions.get("hsi_refined_pred_betas")
+        if isinstance(refined_pose, torch.Tensor):
+            out["metric_hsi_trstr_pose_passthrough_max_abs"] = (
+                refined_pose - predictions["pred_pose_6d"]
+            ).abs().max().detach()
+        if isinstance(refined_betas, torch.Tensor):
+            out["metric_hsi_trstr_betas_passthrough_max_abs"] = (
+                refined_betas - predictions["pred_betas"]
+            ).abs().max().detach()
         return out
 
     def _hsi_refined_losses(
