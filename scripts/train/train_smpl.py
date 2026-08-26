@@ -27,15 +27,14 @@ if not hasattr(inspect, "getargspec"):
         return ArgSpec(spec.args, spec.varargs, spec.varkw, spec.defaults)
 
     inspect.getargspec = getargspec
-import numpy as np
 
-if not hasattr(np, "bool"):
+if "bool" not in np.__dict__:
     np.bool = bool
-if not hasattr(np, "int"):
+if "int" not in np.__dict__:
     np.int = int
-if not hasattr(np, "float"):
+if "float" not in np.__dict__:
     np.float = float
-if not hasattr(np, "complex"):
+if "complex" not in np.__dict__:
     np.complex = complex
 #==============================================================================
 ROOT = Path(__file__).resolve().parents[2]
@@ -260,6 +259,7 @@ def validate_gt_scale_box_free_contract(config: dict[str, Any]) -> None:
     optim_cfg = config.get("optim", {})
     prior_cfg = config.get("training_prior", {})
     loss_cfg = config.get("loss", {})
+    is_trstr_training = bool(model_cfg.get("train_hsi_trstr_only", False))
     checks = {
         "model.smpl_provider=gt_perturbed": str(model_cfg.get("smpl_provider", "")).lower() == "gt_perturbed",
         "model.gt_smpl_online_visibility=true": bool(model_cfg.get("gt_smpl_online_visibility", False)),
@@ -269,25 +269,56 @@ def validate_gt_scale_box_free_contract(config: dict[str, Any]) -> None:
         ),
         "data.boxes_root_key empty": not bool(data_cfg.get("boxes_root_key")),
         "data.require_boxes=false": not bool(data_cfg.get("require_boxes", False)),
+        "data.require_depth=true": bool(data_cfg.get("require_depth", False)),
         "data.box_free_gt_slots=true": bool(data_cfg.get("box_free_gt_slots", False)),
         "matching.mode=gt_slots": str(matching_cfg.get("mode", "")).lower() == "gt_slots",
         "optim.drop_no_visible_gt_samples=true": bool(optim_cfg.get("drop_no_visible_gt_samples", False)),
-        "optim.required_supervision_metric=scale-valid-points": str(
-            optim_cfg.get("required_supervision_metric", "")
-        ) == "metric_hsi_smpl_scale_teacher_valid_points",
-        "loss.hsi_depth_teacher_require_matched_frame=true": bool(
-            loss_cfg.get("hsi_depth_teacher_require_matched_frame", False)
-        ),
-        "visibility min-points matches scale teacher": int(
-            prior_cfg.get("gt_smpl_visibility_min_points", 0) or 0
-        ) == int(loss_cfg.get("hsi_smpl_scale_teacher_min_points_per_person", -1)),
-        "visibility max-z matches scale teacher": float(
-            prior_cfg.get("gt_smpl_visibility_max_z_m", 0.0) or 0.0
-        ) == float(loss_cfg.get("hsi_smpl_scale_teacher_max_z_m", -1.0)),
     }
+    if is_trstr_training:
+        checks.update(
+            {
+                "model.enable_hsi_trstr=true": bool(model_cfg.get("enable_hsi_trstr", False)),
+                "model.hsi_trstr_fast_gt=true": bool(model_cfg.get("hsi_trstr_fast_gt", False)),
+                "model.hsi_geometry_mode=gt_metric": str(
+                    model_cfg.get("hsi_geometry_mode", "")
+                ).lower() == "gt_metric",
+                "optim.required_supervision_metric=trstr-region-valid": str(
+                    optim_cfg.get("required_supervision_metric", "")
+                ) == "metric_hsi_trstr_region_valid_ratio",
+                "loss.hsi_trstr_translation_weight>0": float(
+                    loss_cfg.get("hsi_trstr_translation_weight", 0.0) or 0.0
+                ) > 0.0,
+                "legacy HSI correction heads disabled": not any(
+                    bool(model_cfg.get(key, False))
+                    for key in (
+                        "enable_hsi_human_scene_align",
+                        "enable_hsi_translation_refine_v4",
+                        "enable_hsi_contact_refine",
+                        "enable_hsi_grounding",
+                    )
+                ),
+            }
+        )
+    else:
+        checks.update(
+            {
+                "optim.required_supervision_metric=scale-valid-points": str(
+                    optim_cfg.get("required_supervision_metric", "")
+                ) == "metric_hsi_smpl_scale_teacher_valid_points",
+                "loss.hsi_depth_teacher_require_matched_frame=true": bool(
+                    loss_cfg.get("hsi_depth_teacher_require_matched_frame", False)
+                ),
+                "visibility min-points matches scale teacher": int(
+                    prior_cfg.get("gt_smpl_visibility_min_points", 0) or 0
+                ) == int(loss_cfg.get("hsi_smpl_scale_teacher_min_points_per_person", -1)),
+                "visibility max-z matches scale teacher": float(
+                    prior_cfg.get("gt_smpl_visibility_max_z_m", 0.0) or 0.0
+                ) == float(loss_cfg.get("hsi_smpl_scale_teacher_max_z_m", -1.0)),
+            }
+        )
     failed = [label for label, valid in checks.items() if not valid]
     scale_training_mode = str(prior_cfg.get("hsi_scale_training_mode", "direct_perturb") or "direct_perturb").lower()
-    if scale_training_mode == "coarse_residual_stratified":
+    if not is_trstr_training and scale_training_mode == "coarse_residual_stratified":
         absolute_probability = sum(
             float(prior_cfg.get(key, 0.0) or 0.0)
             for key in ("hsi_abs_identity_prob", "hsi_abs_near_prob", "hsi_abs_hard_prob", "hsi_abs_extreme_prob")
@@ -308,7 +339,8 @@ def validate_gt_scale_box_free_contract(config: dict[str, Any]) -> None:
         }
         failed.extend(label for label, valid in coarse_checks.items() if not valid)
     if failed:
-        raise ValueError(f"Invalid box-free GT scale training contract: {failed}")
+        task_name = "TRSTR" if is_trstr_training else "scale"
+        raise ValueError(f"Invalid box-free GT {task_name} training contract: {failed}")
 
 
 def build_loader(config: dict[str, Any], split: str, shuffle: bool, role: str = "train") -> DataLoader:

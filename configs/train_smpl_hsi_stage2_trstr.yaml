@@ -35,6 +35,7 @@ model:
   num_smpl_queries: 20
   smpl_query_box_prior: false
   smpl_query_patch_pool: false
+  smpl_use_aggregator_queries: false
   smpl_track_assignment_mode: gt
   smpl_use_external_track_prior: false
   freeze_aggregator: true
