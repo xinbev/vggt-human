@@ -1,0 +1,4 @@
+[wandb] enabled project=vggt-human name=smpl_hsi_coarse_residual_stratified_v2 mode=online
+[data] train_samples=91220 batch_size=20 steps_per_epoch=4561 start_epoch=0 total_epochs=5 remaining_steps=22805
+[grad] required prefix verified: hsi_refinement_head.scale_delta.
+[K[train] ep 1/5 step 180/4561 gs=180 [............................]   0.8% 0.54it/s elapsed=00:05:35 eta=11:41:59 total=0.02405 smplScale=0.003312 scaleT=1.316 scaleP=1.245 scaleLog=0.05641 scaleRel=0.05439 scaleTStd10=0.2081 scalePStd10=0.183 scaleCorr=0.994 scaleIdLog=0.3592 scaleGain=0.3028 smplPts=841 depth=0.108 hsi_depth_teacher_l1=0.2952.25112

@@ -1,0 +1,29 @@
+{"time":"2026-08-25T18:06:25.614496497+08:00","level":"INFO","msg":"wandb-core"}
+{"time":"2026-08-25T18:06:25.615441826+08:00","level":"INFO","msg":"stream: starting","core version":"0.28.2"}
+{"time":"2026-08-25T18:06:25.842105469+08:00","level":"INFO","msg":"stream: created new stream","id":"2eutoblv"}
+{"time":"2026-08-25T18:06:25.842197234+08:00","level":"INFO","msg":"handler: started"}
+{"time":"2026-08-25T18:06:25.842353803+08:00","level":"INFO","msg":"stream: started"}
+{"time":"2026-08-25T18:06:25.842394007+08:00","level":"INFO","msg":"sender: started"}
+{"time":"2026-08-25T18:06:25.842388167+08:00","level":"INFO","msg":"writer: started","stream_id":"2eutoblv"}
+{"time":"2026-08-25T18:06:27.55113701+08:00","level":"INFO","msg":"filestream: sending request","total_files":1,"console_offset":0,"console_lines":1}
+{"time":"2026-08-25T18:06:28.366175764+08:00","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-08-25T18:06:42.5514568+08:00","level":"INFO","msg":"filestream: sending request","total_files":2,"events_offset":0,"events_lines":2,"console_offset":0,"console_lines":3,"uploaded_len":2}
+{"time":"2026-08-25T18:06:43.228783003+08:00","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-08-25T18:06:57.551522643+08:00","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":2,"events_lines":2}
+{"time":"2026-08-25T18:06:58.14873847+08:00","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-08-25T18:07:12.551551589+08:00","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":4,"events_lines":2}
+{"time":"2026-08-25T18:07:13.153197064+08:00","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-08-25T18:07:27.551271148+08:00","level":"INFO","msg":"filestream: sending request","total_files":2,"events_offset":6,"events_lines":2,"console_offset":3,"console_lines":1}
+{"time":"2026-08-25T18:07:28.259708077+08:00","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-08-25T18:07:42.552175135+08:00","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":8,"events_lines":2}
+{"time":"2026-08-25T18:07:42.992476381+08:00","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-08-25T18:07:57.551666309+08:00","level":"INFO","msg":"filestream: sending request","total_files":4,"history_offset":0,"history_lines":1,"events_offset":10,"events_lines":2,"console_offset":3,"console_lines":1}
+{"time":"2026-08-25T18:07:58.218492852+08:00","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-08-25T18:08:01.310652962+08:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-08-25T18:08:01.311347838+08:00","level":"INFO","msg":"filestream: sending request","total_files":3,"history_offset":1,"history_lines":1,"console_offset":4,"console_lines":67,"uploaded_len":3,"complete":true,"exit_code":255}
+{"time":"2026-08-25T18:08:01.93747071+08:00","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-08-25T18:08:01.937774051+08:00","level":"INFO","msg":"stream: finishing up"}
+{"time":"2026-08-25T18:08:01.937808261+08:00","level":"INFO","msg":"handler: closed"}
+{"time":"2026-08-25T18:08:01.937935308+08:00","level":"INFO","msg":"sender: closed"}
+{"time":"2026-08-25T18:08:01.937951381+08:00","level":"INFO","msg":"stream: all finished"}
+{"time":"2026-08-25T18:08:03.93867559+08:00","level":"ERROR","msg":"stream: failed to shut down analytics","error":"shutdown errors: [failed to upload metrics: context deadline exceeded: retry-able request failure: Post \"https://api.wandb.ai/sdk/otel/v1/metrics\": net/http: request canceled (Client.Timeout exceeded while awaiting headers) context deadline exceeded]"}

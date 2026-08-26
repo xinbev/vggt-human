@@ -286,3 +286,143 @@ BEDLAM_ROOT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/
 6. 已运行的服务器 `.sh` 脚本与 loader smoke result；
 7. 未消除的风险，尤其 RGB/depth camera metadata 是否完全一致。
 
+## 2026-08-25 当前服务器诊断结果
+
+已在服务器执行只读诊断：
+
+```bash
+cd /home/zhw/lab_users/xyb/home/projects/vggt-human
+bash scripts/diagnostics/inspect_bedlam2_world_depth.sh
+```
+
+诊断帧：
+
+```text
+seq_000002/seq_000002_0000.png
+```
+
+实际 EXR channel：
+
+```text
+FinalImageMovieRenderQueue_WorldDepth
+```
+
+实际 payload：
+
+```text
+(720, 1280, 4), float16
+```
+
+其中前三个分量有数值，第四个分量全为 0。该 channel 不是可直接写入 loader 的标量 Z-depth。
+
+已测试的解释包括：
+
+```text
+raw XYZ 作为 camera XYZ
+Unreal XYZ -> OpenCV XYZ
+world XYZ -> depth CSV camera world-to-camera
+world XYZ -> inverse camera transform
+标签 cam_ext 作为 world-to-camera 或 camera-to-world
+raw scale = 1.0 和 0.01
+```
+
+没有候选满足交接要求：
+
+```text
+positive_z_fraction >= 0.99
+median_reprojection_error_px <= 2.0
+```
+
+原始诊断中最优候选仍约为：
+
+```text
+positive_z_fraction: 1.0
+median_z: 7.113 m (仅按 0.01 缩放后的候选)
+median_reprojection_error_px: 424.5 px
+p95_reprojection_error_px: 1230.8 px
+```
+
+使用项目已有的 `prepare_bedlam_raw_scene.py:get_frame_w2c`，基于 depth 侧
+`meta_exr_depth_csv/seq_000002_camera.csv` 重建相机外参后，最优误差仍约为
+380 px。使用 EXR header 中的真实相机位置和旋转进行常见 Unreal 轴变换也没有达到
+可接受误差。
+
+RGB 与 depth 的 camera CSV 数值几乎完全一致。例如首帧两侧都为：
+
+```text
+x=3544.677
+y=1415.285
+z=163.030
+yaw=-14.5035
+pitch=-17.8091
+roll=0.3587
+focal_length=15.487783
+```
+
+因此当前阻塞点不是 RGB/depth camera CSV 数值不一致，而是
+`FinalImageMovieRenderQueue_WorldDepth` 的 vector 语义与当前相机变换/像素投影约定尚未确认。
+
+EXR header 也确认包含同一帧相机信息：
+
+```text
+unreal/camera/curPos/{x,y,z}
+unreal/camera/curRot/{yaw,pitch,roll}
+unreal/camera/FinalImage/focalLength
+unreal/camera/FinalImage/fov
+```
+
+当前不得执行以下转换：
+
+```text
+WorldDepth[..., 0] / 100
+WorldDepth[..., 1] / 100
+WorldDepth[..., 2] / 100
+WorldDepth[..., :3] 直接当 camera XYZ
+```
+
+因此尚未生成：
+
+```text
+outputs/preprocess/bedlam2_processed/
+```
+
+也没有写入任何 `.npy` depth 或新的 processed tree。原始 RGB、EXR、SMPL 标签和 metadata
+均保持不变。
+
+当前已确认可用的 SMPL label 仍为：
+
+```text
+/home/zhw/xyb_space/bedlam2/bedlam_data/labels_smpl_6fps/20241213_1_250_rome_tracking.npz
+```
+
+后续官方信息已澄清：BEDLAM2 EXR depth sequences 为 1280x720、30fps，depth 是
+`FinalImageMovieRenderQueue_WorldDepth.R` 中的 16-bit float 标量深度。此前把前三个分量
+当作 vector/point 做重投影诊断是不适用的；正确读取方式是 channel
+`FinalImageMovieRenderQueue_WorldDepth` 的 component 0。
+
+已按官方说明执行只读 inspection：
+
+```bash
+EXR_CHANNEL=FinalImageMovieRenderQueue_WorldDepth DEPTH_COMPONENT=0 INSPECT_ONLY=true \
+  bash scripts/preprocess/prepare_bedlam2_scene.sh
+```
+
+前三个抽样 label 帧均为 720x1280，component 0 统计如下：
+
+```text
+seq_000002_0000: min=172.0, median=485.5, max=2050.0
+seq_000002_0005: min=171.875, median=488.5, max=2045.0
+seq_000002_0010: min=171.5, median=489.75, max=2047.0
+```
+
+结合 Unreal/BEDLAM 常用厘米单位，当前 materialization 采用：
+
+```text
+EXR_CHANNEL=FinalImageMovieRenderQueue_WorldDepth
+DEPTH_COMPONENT=0
+DEPTH_SCALE=0.01
+```
+
+即保存 `WorldDepth.R * 0.01` 为 meter-scale `float32` HxW `.npy`。注意：camera ground truth
+仍为 Unreal coordinates，类似 BEDLAM；processed `cam/*.npz` 当前仍沿用已有 adapter 的
+NPZ `cam_int` 和 `cam_ext` 字段约定，后续如要严格使用 depth-side Unreal camera GT，需要单独做相机约定审计。

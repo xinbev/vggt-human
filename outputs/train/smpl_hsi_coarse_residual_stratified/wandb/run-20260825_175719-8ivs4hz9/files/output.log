@@ -1,0 +1,46 @@
+[wandb] enabled project=vggt-human name=smpl_hsi_coarse_residual_stratified mode=online
+[data] train_samples=91220 batch_size=20 steps_per_epoch=4561 start_epoch=0 total_epochs=5 remaining_steps=22805
+Traceback (most recent call last):
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/train/train_smpl.py", line 3430, in <module>
+    main()
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/train/train_smpl.py", line 128, in main
+    global_step, train_losses = train_one_epoch(
+                                ^^^^^^^^^^^^^^^^
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/train/train_smpl.py", line 1498, in train_one_epoch
+    losses = criterion(predictions, batch)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/.conda/envs/zhw_env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1776, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/.conda/envs/zhw_env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1787, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/vggt_omega/training/hungarian_losses.py", line 533, in forward
+    losses.update(self._hsi_refined_losses(predictions, batch, frame_idx, src_idx, matched))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/vggt_omega/training/hungarian_losses.py", line 1849, in _hsi_refined_losses
+    depth_losses = self._hsi_depth_losses(
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/vggt_omega/training/hungarian_losses.py", line 3002, in _hsi_depth_losses
+    self._hsi_smpl_scale_teacher_losses(
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/vggt_omega/training/hungarian_losses.py", line 3172, in _hsi_smpl_scale_teacher_losses
+    coarse_valid = predictions.get("hsi_coarse_valid_mask")
+                   ^^^^^^^^^^^
+NameError: name 'predictions' is not defined
+Exception ignored in atexit callback: <function _MultiProcessingDataLoaderIter._clean_up_worker at 0x7b14355bafc0>
+Traceback (most recent call last):
+  File "/home/zhw/.conda/envs/zhw_env/lib/python3.11/site-packages/torch/utils/data/dataloader.py", line 1701, in _clean_up_worker
+    w.join(timeout=_utils.MP_STATUS_CHECK_INTERVAL)
+  File "/home/zhw/.conda/envs/zhw_env/lib/python3.11/multiprocessing/process.py", line 149, in join
+    res = self._popen.wait(timeout)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/.conda/envs/zhw_env/lib/python3.11/multiprocessing/popen_fork.py", line 40, in wait
+    if not wait([self.sentinel], timeout):
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/.conda/envs/zhw_env/lib/python3.11/multiprocessing/connection.py", line 948, in wait
+    ready = selector.select(timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/.conda/envs/zhw_env/lib/python3.11/selectors.py", line 415, in select
+    fd_event_list = self._selector.poll(timeout)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt:

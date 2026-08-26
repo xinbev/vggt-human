@@ -1,0 +1,71 @@
+[wandb] enabled project=vggt-human name=smpl_hsi_coarse_residual_stratified_v2 mode=online
+[data] train_samples=91220 batch_size=20 steps_per_epoch=4561 start_epoch=0 total_epochs=5 remaining_steps=22805
+[grad] required prefix verified: hsi_refinement_head.scale_delta.
+[K[train] ep 1/5 step 40/4561 gs=40 [............................]   0.2% 0.48it/s elapsed=00:01:23 eta=13:09:43 total=0.007173 smplScale=0.0005746 scaleT=1.012 scaleP=1.001 scaleLog=0.02733 scaleRel=0.02735 scaleTStd10=0.1739 scalePStd10=0.1678 scaleCorr=0.9971 scaleIdLog=0.254 scaleGain=0.2267 smplPts=948.9 depth=0.04875 hsi_depth_teacher_l1=0.2262
+Traceback (most recent call last):
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/train/train_smpl.py", line 3430, in <module>
+    main()
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/train/train_smpl.py", line 128, in main
+    global_step, train_losses = train_one_epoch(
+                                ^^^^^^^^^^^^^^^^
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/train/train_smpl.py", line 1495, in train_one_epoch
+    predictions = forward_model(model, batch, config, epoch=epoch)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/train/train_smpl.py", line 2018, in forward_model
+    predictions = model(
+                  ^^^^^^
+  File "/home/zhw/.conda/envs/zhw_env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1776, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/.conda/envs/zhw_env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1787, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/vggt_omega/models/vggt_omega.py", line 549, in forward
+    aggregated_tokens_list, token_layout, smpl_reference_boxes = self.aggregator(
+                                                                 ^^^^^^^^^^^^^^^^
+  File "/home/zhw/.conda/envs/zhw_env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1776, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/.conda/envs/zhw_env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1787, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/vggt_omega/models/aggregator.py", line 212, in forward
+    tokens, frame_tokens = self._run_frame_block(
+                           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/vggt_omega/models/aggregator.py", line 437, in _run_frame_block
+    tokens = self.frame_blocks[block_idx](tokens, rope_sincos)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/.conda/envs/zhw_env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1776, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/.conda/envs/zhw_env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1787, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/vggt_omega/models/layers/block.py", line 210, in forward
+    return self._forward_list([x_or_x_list], rope_list=[rope_or_rope_list])[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/vggt_omega/models/layers/block.py", line 198, in _forward_list
+    x_attn = x + self.ls1(self.attn(self.norm1(x), rope=rope))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/.conda/envs/zhw_env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1776, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/.conda/envs/zhw_env/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1787, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/vggt_omega/models/layers/attention.py", line 106, in forward
+    attn_v = self.compute_attention(qkv=qkv, attn_bias=attn_bias, rope=rope)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/vggt_omega/models/layers/attention.py", line 135, in compute_attention
+    q, k = self.apply_rope(q, k, rope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/vggt_omega/models/layers/attention.py", line 95, in apply_rope
+    q = rope_apply(q[:, :, prefix:, :], sin, cos)  # [B, head, hw, D//head]
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/vggt_omega/models/layers/attention.py", line 34, in rope_apply
+    return (x * cos) + (rope_rotate_half(x) * sin)
+                        ^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/vggt_omega/models/layers/attention.py", line 27, in rope_rotate_half
+    return torch.cat([-x2, x1], dim=-1)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt

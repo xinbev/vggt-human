@@ -1,0 +1,544 @@
+_wandb:
+    value:
+        cli_version: 0.28.2
+        e:
+            1661z5c8mdk5rv6x5cu0k7osv0uk047y:
+                args:
+                    - --path-config
+                    - /home/zhw/lab_users/xyb/home/projects/vggt-human/configs/path.yaml
+                    - --train-config
+                    - /home/zhw/lab_users/xyb/home/projects/vggt-human/configs/train_smpl_hsi_gt_depth_scale_scene_affine.yaml
+                    - --override
+                    - checkpoints.vggt_baseline=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt
+                    - --override
+                    - assets.smpl_model_dir=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/body_models/smpl
+                    - --override
+                    - datasets.bedlam_root=/home/zhw/xyb_space/bedlam/processed_bedlam
+                    - --override
+                    - experiment.output_dir=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified
+                    - --override
+                    - checkpoint.resume=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_gt_depth_scale_scene_affine_boxfree/checkpoint_top_train_epoch_0005_loss_total_0.010738.pt
+                    - --override
+                    - checkpoint.reset_epoch=true
+                    - --override
+                    - checkpoint.save_top_k=1
+                    - --override
+                    - checkpoint.save_latest=true
+                    - --override
+                    - data.sequence_length=2
+                    - --override
+                    - data.max_humans=20
+                    - --override
+                    - data.num_workers=12
+                    - --override
+                    - model.num_smpl_queries=20
+                    - --override
+                    - model.hsi_scene_log_scale_min=-5.0
+                    - --override
+                    - model.hsi_scene_log_scale_max=5.0
+                    - --override
+                    - optim.batch_size=20
+                    - --override
+                    - optim.epochs=5
+                    - --override
+                    - optim.lr=5e-6
+                    - --override
+                    - optim.max_steps_per_epoch=0
+                    - --override
+                    - training_prior.hsi_gt_depth_log_scale_std_schedule=0.30
+                    - --override
+                    - training_prior.hsi_gt_depth_scale_noise_mode=lognormal
+                    - --override
+                    - training_prior.hsi_gt_depth_scale_noise_unit=sequence
+                    - --override
+                    - training_prior.hsi_gt_depth_scale_clean_prob=0.0
+                    - --override
+                    - training_prior.hsi_scale_training_mode=coarse_residual_stratified
+                    - --override
+                    - logging.wandb.enabled=true
+                    - --override
+                    - logging.wandb.project=vggt-human
+                    - --override
+                    - logging.wandb.entity=
+                    - --override
+                    - logging.wandb.name=smpl_hsi_coarse_residual_stratified
+                    - --override
+                    - logging.wandb.group=hsi_coarse_residual
+                    - --override
+                    - logging.wandb.mode=online
+                    - --override
+                    - loss.hsi_smpl_scale_teacher_weight=4.0
+                    - --override
+                    - loss.hsi_depth_teacher_weight=0.10
+                codePath: scripts/train/train_smpl.py
+                codePathLocal: scripts/train/train_smpl.py
+                cpu_count: 64
+                cpu_count_logical: 128
+                cudaVersion: "13.1"
+                disk:
+                    /:
+                        total: "470353559552"
+                        used: "172810543104"
+                email: xinbev@126.com
+                executable: /home/zhw/.conda/envs/zhw_env/bin/python
+                git:
+                    commit: 8d0d94ab2145e76eff6825d73455211503ec43c0
+                    remote: git@github.com:xinbev/vggt-human.git
+                gpu: NVIDIA A800-SXM4-80GB
+                gpu_count: 8
+                gpu_nvidia:
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-b28eab61-bd95-3310-66a2-0d73de22090e
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-4fb4c092-371b-e644-44d6-54ca99f5b0ec
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-46a302d1-32c9-b3c0-05f0-587d99cad2e7
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-7b2533a9-7e30-112a-4854-8ff224186939
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-2f0838cc-293f-1ba7-6549-70876e7462b3
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-c5e03e39-8eba-6c8d-ced8-2dc13ff9f615
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-4677cd9b-846b-ada8-e629-a3197a4f58a4
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-8d9fa29e-5fe2-d8f4-611a-7b031415c50f
+                host: beishida-R5500-G5
+                memory:
+                    total: "1081800237056"
+                os: Linux-6.8.0-136-generic-x86_64-with-glibc2.35
+                program: /home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/train/train_smpl.py
+                python: CPython 3.11.14
+                root: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified
+                startedAt: "2026-08-25T09:57:19.780820Z"
+                writerId: 1661z5c8mdk5rv6x5cu0k7osv0uk047y
+        m:
+            - "2": train/*
+              "5": 2
+              "6":
+                - 1
+              "7": []
+            - "1": global_step
+              "6": []
+              "7": []
+            - "2": train_epoch/*
+              "5": 4
+              "6":
+                - 1
+              "7": []
+            - "1": epoch
+              "6": []
+              "7": []
+            - "2": val/*
+              "5": 4
+              "6":
+                - 1
+              "7": []
+        python_version: 3.11.14
+        t:
+            "1":
+                - 1
+            "2":
+                - 1
+            "3":
+                - 7
+                - 13
+                - 15
+                - 16
+            "4": 3.11.14
+            "5": 0.28.2
+            "12": 0.28.2
+            "13": linux-x86_64
+assets:
+    value:
+        smpl_mean_params: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/body_models/smpl/smpl/smpl_mean_params.npz
+        smpl_model_dir: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/body_models/smpl
+checkpoint:
+    value:
+        load_vggt_baseline: true
+        monitor: loss_total
+        monitor_mode: min
+        reset_epoch: true
+        resume: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_gt_depth_scale_scene_affine_boxfree/checkpoint_top_train_epoch_0005_loss_total_0.010738.pt
+        resume_optimizer: false
+        resume_required_prefixes:
+            - hsi_refinement_head.
+        resume_strict: false
+        save_epoch_checkpoint: false
+        save_final: false
+        save_latest: true
+        save_optimizer: false
+        save_prefixes:
+            - hsi_refinement_head.
+        save_scope: hsi
+        save_top_k: 1
+        save_top_k_from_train: true
+        strict: false
+        topk_create_stable_copies: false
+checkpoints:
+    value:
+        nlf_smpl: /home/zhw/lab_users/xyb/home/projects/vggt-human/third_party/weights/nlf/nlf_l_multi_0.3.2.torchscript
+        sat_hmr_smpl: /home/zhw/xyb_space/SAT-HMR/weights/sat_hmr/sat_644.pth
+        vggt_baseline: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt
+        yolo8x: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/yolov8x.torchscript
+data:
+    value:
+        box_free_gt_slots: true
+        boxes_root_key: ""
+        dataset: bedlam
+        image_resolution: 512
+        image_size: 518
+        max_humans: 20
+        num_workers: 12
+        pin_memory: true
+        require_boxes: false
+        require_depth: true
+        require_smpl: true
+        resize_mode: balanced
+        root_key: datasets.bedlam_root
+        sequence_length: 2
+        stride: 1
+        train_split: Training
+        val_split: ""
+datasets:
+    value:
+        bedlam_boxes_root: outputs/preprocess/bedlam_boxes
+        bedlam_root: /home/zhw/xyb_space/bedlam/processed_bedlam
+        bedlam_tracks_root: outputs/preprocess/video_tracks
+        emdb_hmr4d_support_root: /home/zhw/xyb_space/EMDB/hmr4d_support
+        hf_bedlam_images_root: /home/zhw/xyb_space/bedlam/hf_bedlam/training_images
+        hf_bedlam_npz_root: /home/zhw/xyb_space/bedlam/all_npz_12_training
+        hf_bedlam_sam2_patch_masks_root: outputs/preprocess/hf_bedlam_sam2_patch_masks
+        hmr4d_eval_frames_root: outputs/preprocess/hmr4d_eval_frames
+        hmr4d_eval_tracks_root: outputs/preprocess/hmr4d_eval_tracks
+        rich_hmr4d_support_root: /home/zhw/xyb_space/RICH/hmr4d_support
+        threedpw_hmr4d_support_root: /home/zhw/xyb_space/3DPW/hmr4d_support
+        threedpw_root: /home/zhw/xyb_space/3DPW
+        threedpw_sam2_patch_masks_root: outputs/preprocess/3dpw_sam2_patch_masks
+        threedpw_smpl_base_root: outputs/preprocess/3dpw_smpl_base
+experiment:
+    value:
+        name: smpl_hsi_gt_depth_scale_scene_affine_boxfree
+        output_dir: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified
+        seed: 42
+logging:
+    value:
+        wandb:
+            enabled: true
+            entity: ""
+            group: hsi_coarse_residual
+            log_interval: 20
+            log_keys:
+                - loss_total
+                - loss_hsi_smpl_scale_teacher
+                - metric_hsi_smpl_scale_teacher_log_l1
+                - metric_hsi_smpl_scale_teacher_rel_l1
+                - metric_hsi_smpl_scale_teacher_scale
+                - metric_hsi_smpl_scale_teacher_pred_scale
+                - metric_hsi_smpl_scale_teacher_valid_points
+                - metric_hsi_smpl_scale_teacher_log10_std
+                - metric_hsi_smpl_scale_teacher_pred_log10_std
+                - metric_hsi_smpl_scale_teacher_log_correlation
+                - metric_hsi_smpl_scale_teacher_identity_log_l1
+                - metric_hsi_smpl_scale_teacher_identity_improvement
+                - loss_hsi_depth_teacher
+                - metric_hsi_depth_teacher_l1
+                - metric_hsi_gt_depth_perturb_scale_mean
+                - metric_hsi_gt_depth_perturb_target_scale_mean
+                - metric_hsi_gt_depth_perturb_log10_scale_std
+                - metric_gt_smpl_visible_people
+                - metric_gt_smpl_visibility_keep_ratio
+                - metric_grad_norm_hsi_scale_delta
+                - metric_grad_norm_hsi_bias_delta
+                - metric_train_dropped_no_visible_sample_rate
+                - metric_train_skipped_no_supervision_batches
+                - metric_train_skipped_batch_rate
+                - metric_train_optimizer_steps
+                - metric_scale_pipeline_coarse_valid_rate
+                - metric_scale_pipeline_absolute_teacher
+                - metric_scale_pipeline_coarse_estimate
+                - metric_scale_pipeline_coarse_used
+                - metric_scale_pipeline_coarse_error_factor
+                - metric_scale_pipeline_residual_teacher
+                - metric_scale_pipeline_residual_pred
+                - metric_scale_pipeline_final_teacher
+                - metric_scale_pipeline_final_pred
+                - metric_scale_pipeline_anchor_count
+                - metric_scale_pipeline_coarse_log_l1
+                - metric_scale_pipeline_coarse_used_log_l1
+                - metric_scale_pipeline_final_log_l1
+                - metric_scale_pipeline_person_scale_min
+                - metric_scale_pipeline_person_scale_mean
+                - metric_scale_pipeline_person_scale_max
+                - metric_scale_pipeline_person_scale_std
+                - metric_scale_pipeline_person_log_contribution_std
+            mode: online
+            name: smpl_hsi_coarse_residual_stratified
+            person_table_interval: 1000
+            person_table_max_rows: 64
+            project: vggt-human
+            scale_chart_interval: 200
+            scale_chart_max_points: 1200
+            tags:
+                - hsi
+                - scene-scale
+                - gt-depth-perturb
+                - finetune
+loss:
+    value:
+        bbox_weight: 0
+        betas_weight: 0
+        conf_weight: 0
+        giou_weight: 0
+        hsi_align_delta_reg_weight: 0
+        hsi_align_no_worse_weight: 0
+        hsi_align_point_weight: 0
+        hsi_anchor_depth_weight: 0
+        hsi_anchor_scene_xyz_weight: 0
+        hsi_betas_velocity_weight: 0
+        hsi_betas_weight: 0
+        hsi_contact_weight: 0
+        hsi_delta_reg_weight: 0
+        hsi_depth_teacher_error_clip_m: 0
+        hsi_depth_teacher_max_m: 20
+        hsi_depth_teacher_min_valid_pixels: 2048
+        hsi_depth_teacher_require_matched_frame: true
+        hsi_depth_teacher_roi_expand: 0.85
+        hsi_depth_teacher_use_human_roi: false
+        hsi_depth_teacher_weight: 0.1
+        hsi_foot_contact_weight: 0
+        hsi_foot_sliding_weight: 0
+        hsi_foot_sole_contact_weight: 0
+        hsi_gate_reg_weight: 0
+        hsi_joints_acceleration_weight: 0
+        hsi_joints_velocity_weight: 0
+        hsi_joints3d_weight: 0
+        hsi_no_worse_margin_m: 0.005
+        hsi_no_worse_weight: 0
+        hsi_pose_velocity_weight: 0
+        hsi_pose_weight: 0
+        hsi_projected_joints2d_weight: 0
+        hsi_ray_delta_weight: 0
+        hsi_scene_bias_sequence_weight: 0
+        hsi_scene_bias_temporal_weight: 0
+        hsi_scene_scale_sequence_weight: 0
+        hsi_scene_scale_temporal_weight: 0
+        hsi_smpl_scale_teacher_bias_reg_weight: 0.05
+        hsi_smpl_scale_teacher_log_loss: true
+        hsi_smpl_scale_teacher_mad_multiplier: 2.5
+        hsi_smpl_scale_teacher_max_points_per_person: 512
+        hsi_smpl_scale_teacher_max_z_m: 20
+        hsi_smpl_scale_teacher_min_points_per_person: 32
+        hsi_smpl_scale_teacher_min_visible_points: 128
+        hsi_smpl_scale_teacher_source: vertices
+        hsi_smpl_scale_teacher_use_bias: false
+        hsi_smpl_scale_teacher_visibility_tolerance_m: 0.2
+        hsi_smpl_scale_teacher_weight: 4
+        hsi_smpl_scale_teacher_window: 3
+        hsi_support_plane_contact_weight: 0
+        hsi_tangent_delta_weight: 0
+        hsi_temporal_no_worse_weight: 0
+        hsi_transl_cam_weight: 0
+        hsi_transl_velocity_weight: 0
+        hsi_vertices_weight: 0
+        id_temperature: 0.07
+        id_weight: 0
+        joints3d_weight: 0
+        pose_weight: 0
+        projected_bbox_source: joints
+        projected_bbox_weight: 0
+        projected_giou_weight: 0
+        projected_joints2d_weight: 0
+        projection_camera_source: gt
+        transl_cam_weight: 0
+        type: hungarian
+        use_vggt_camera_projection: true
+matching:
+    value:
+        cost_bbox: 8
+        cost_conf: 0.5
+        cost_giou: 4
+        cost_kpts: 0
+        enabled: true
+        mode: gt_slots
+model:
+    value:
+        embed_dim: 1024
+        enable_alignment: false
+        enable_camera: true
+        enable_depth: true
+        enable_hsi_human_scene_align: false
+        enable_hsi_refine: true
+        enable_smpl: true
+        freeze_aggregator: true
+        freeze_aggregator_forward: true
+        freeze_camera_head: true
+        freeze_dense_head: true
+        freeze_hsi_backbone: true
+        freeze_hsi_scene_affine: false
+        gt_smpl_box_free: true
+        gt_smpl_online_visibility: true
+        hsi_affine_probe_mode: local_nearest
+        hsi_enable_temporal_momentum: false
+        hsi_geometry_mode: gt_metric
+        hsi_hidden_dim: 512
+        hsi_num_heads: 8
+        hsi_num_iters: 3
+        hsi_num_layers: 5
+        hsi_probe_mode: local_nearest
+        hsi_probe_window: 9
+        hsi_scene_affine_mode: per_frame
+        hsi_scene_log_scale_max: 5
+        hsi_scene_log_scale_min: -5
+        hsi_scene_window: 3
+        num_smpl_queries: 20
+        patch_size: 16
+        predict_boxes: false
+        predict_id_embed: false
+        smpl_provider: gt_perturbed
+        smpl_query_box_prior: false
+        smpl_query_patch_pool: false
+        smpl_return_aux: false
+        smpl_track_assignment_mode: gt
+        smpl_use_aggregator_queries: false
+        smpl_use_external_track_prior: false
+        train_hsi_scene_affine_only: true
+optim:
+    value:
+        allowed_trainable_prefixes:
+            - hsi_refinement_head.scale_delta.
+            - hsi_refinement_head.bias_delta.
+        batch_size: 20
+        drop_no_visible_gt_samples: true
+        epochs: 5
+        grad_clip_norm: 1
+        gradient_monitor_prefixes:
+            hsi_bias_delta: hsi_refinement_head.bias_delta.
+            hsi_scale_delta: hsi_refinement_head.scale_delta.
+        log_interval: 20
+        log_style: progress
+        lr: 5e-06
+        max_steps_per_epoch: 0
+        progress_bar_width: 28
+        progress_log_keys:
+            - loss_total
+            - loss_hsi_smpl_scale_teacher
+            - metric_hsi_smpl_scale_teacher_scale
+            - metric_hsi_smpl_scale_teacher_pred_scale
+            - metric_hsi_smpl_scale_teacher_log_l1
+            - metric_hsi_smpl_scale_teacher_rel_l1
+            - metric_hsi_smpl_scale_teacher_log10_std
+            - metric_hsi_smpl_scale_teacher_pred_log10_std
+            - metric_hsi_smpl_scale_teacher_log_correlation
+            - metric_hsi_smpl_scale_teacher_identity_log_l1
+            - metric_hsi_smpl_scale_teacher_identity_improvement
+            - metric_hsi_smpl_scale_teacher_valid_points
+            - metric_gt_smpl_visible_people
+            - metric_gt_smpl_visibility_keep_ratio
+            - metric_hsi_gt_depth_perturb_scale_mean
+            - loss_hsi_depth_teacher
+            - metric_hsi_depth_teacher_l1
+            - metric_train_dropped_no_visible_sample_rate
+            - metric_train_skipped_no_supervision_batches
+            - metric_train_skipped_batch_rate
+            - metric_grad_norm_hsi_scale_delta
+            - metric_grad_norm_hsi_bias_delta
+            - metric_scale_pipeline_absolute_teacher
+            - metric_scale_pipeline_coarse_used
+            - metric_scale_pipeline_residual_teacher
+            - metric_scale_pipeline_residual_pred
+            - metric_scale_pipeline_final_pred
+            - metric_scale_pipeline_final_log_l1
+            - metric_scale_pipeline_coarse_valid_rate
+        progress_max_loss_items: 20
+        required_gradient_prefixes:
+            - hsi_refinement_head.scale_delta.
+        required_supervision_metric: metric_hsi_smpl_scale_teacher_valid_points
+        required_supervision_min: 0
+        required_trainable_prefixes:
+            - hsi_refinement_head.scale_delta.
+            - hsi_refinement_head.bias_delta.
+        save_interval: 1
+        weight_decay: 0.05
+third_party:
+    value:
+        Omnieraser_checkpoint: third_party/weights/Omnieraser/controlnet_flux_pytorch_lora_weights.safetensors
+        Omnieraser_root: third_party/Omnieraser
+        boosttrack_root: third_party/BoostTrack
+        boosttrack_weights_root: third_party/weights/BoostTrack
+        nlf_root: third_party/nlf
+        sam2_checkpoint: third_party/weights/sam/sam2.1_hiera_large.pt
+        sam2_root: third_party/sam2
+training_prior:
+    value:
+        center_noise: 0
+        drop_prob: 0
+        gt_smpl_visibility_decode_batch_size: 128
+        gt_smpl_visibility_max_points: 512
+        gt_smpl_visibility_max_z_m: 20
+        gt_smpl_visibility_min_points: 32
+        gt_smpl_visibility_tolerance_m: 0.2
+        gt_smpl_visibility_window: 3
+        hsi_abs_extreme_max: 20
+        hsi_abs_extreme_min: 12
+        hsi_abs_extreme_prob: 0.2
+        hsi_abs_hard_max: 12
+        hsi_abs_hard_min: 2
+        hsi_abs_hard_prob: 0.5
+        hsi_abs_identity_prob: 0.1
+        hsi_abs_near_max: 2
+        hsi_abs_near_min: 0.25
+        hsi_abs_near_prob: 0.2
+        hsi_coarse_anchor_stride: 8
+        hsi_coarse_hard_max: 4
+        hsi_coarse_hard_min: 0.25
+        hsi_coarse_hard_prob: 0.05
+        hsi_coarse_identity_prob: 0.3
+        hsi_coarse_max_relative_mad: 0.5
+        hsi_coarse_medium_max: 2.5
+        hsi_coarse_medium_min: 0.4
+        hsi_coarse_medium_prob: 0.25
+        hsi_coarse_min_anchor_pixels: 32
+        hsi_coarse_near_max: 1.5
+        hsi_coarse_near_min: 0.67
+        hsi_coarse_near_prob: 0.4
+        hsi_coarse_scale_max: 25
+        hsi_coarse_scale_min: 0.05
+        hsi_gt_depth_log_scale_mean: 0
+        hsi_gt_depth_log_scale_std_schedule: 0.3
+        hsi_gt_depth_scale_clean_prob: 0
+        hsi_gt_depth_scale_max: 0
+        hsi_gt_depth_scale_min: 0
+        hsi_gt_depth_scale_noise_mode: lognormal
+        hsi_gt_depth_scale_noise_unit: sequence
+        hsi_scale_training_mode: coarse_residual_stratified
+        size_noise: 0
+        smpl_gt_override_prob: 0
+        smpl_perturb_mode: translation
+        smpl_transl_ray_noise_clean_prob: 1
+        smpl_transl_ray_noise_schedule: 0
+        smpl_transl_tangent_noise_schedule_m: 0

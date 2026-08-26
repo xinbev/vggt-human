@@ -1,0 +1,386 @@
+{
+  "status": "passed",
+  "sequence_dir": "/home/zhw/xyb_space/bedlam2/bedlam2_processed/Training/20241213_1_250_rome_tracking_seq_000002",
+  "dataset_root": "/home/zhw/xyb_space/bedlam2/bedlam2_processed",
+  "split": "Training",
+  "dataset_windows": 219,
+  "file_check": {
+    "frame_count_checked": 220,
+    "first_frame": "seq_000002_0000",
+    "last_frame": "seq_000002_0219",
+    "image_shapes_hw": [
+      [
+        720,
+        1280
+      ]
+    ],
+    "depth_shapes": [
+      [
+        720,
+        1280
+      ]
+    ],
+    "depth_finite_values": 202752000,
+    "depth_positive_values": 202752000,
+    "person_count_min": 1,
+    "person_count_max": 1
+  },
+  "sample": {
+    "dataset_index": {
+      "shape": [],
+      "dtype": "torch.int64"
+    },
+    "sequence_index": {
+      "shape": [],
+      "dtype": "torch.int64"
+    },
+    "window_start_index": {
+      "shape": [],
+      "dtype": "torch.int64"
+    },
+    "images": {
+      "shape": [
+        2,
+        3,
+        384,
+        688
+      ],
+      "dtype": "torch.float32"
+    },
+    "gt_depth": {
+      "shape": [
+        2,
+        1,
+        384,
+        688
+      ],
+      "dtype": "torch.float32"
+    },
+    "K_scal3r": {
+      "shape": [
+        2,
+        3,
+        3
+      ],
+      "dtype": "torch.float32"
+    },
+    "gt_pose_6d": {
+      "shape": [
+        2,
+        20,
+        144
+      ],
+      "dtype": "torch.float32"
+    },
+    "gt_betas": {
+      "shape": [
+        2,
+        20,
+        10
+      ],
+      "dtype": "torch.float32"
+    },
+    "gt_transl_cam": {
+      "shape": [
+        2,
+        20,
+        3
+      ],
+      "dtype": "torch.float32"
+    },
+    "gt_cam_trans": {
+      "shape": [
+        2,
+        20,
+        3
+      ],
+      "dtype": "torch.float32"
+    },
+    "smpl_mask": {
+      "shape": [
+        2,
+        20
+      ],
+      "dtype": "torch.bool"
+    },
+    "gt_boxes": {
+      "shape": [
+        2,
+        20,
+        4
+      ],
+      "dtype": "torch.float32"
+    },
+    "boxes_mask": {
+      "shape": [
+        2,
+        20
+      ],
+      "dtype": "torch.bool"
+    },
+    "person_ids": {
+      "shape": [
+        2,
+        20
+      ],
+      "dtype": "torch.int64"
+    },
+    "person_id_mask": {
+      "shape": [
+        2,
+        20
+      ],
+      "dtype": "torch.bool"
+    },
+    "gt_track_ids": {
+      "shape": [
+        2,
+        20
+      ],
+      "dtype": "torch.int64"
+    },
+    "gt_track_mask": {
+      "shape": [
+        2,
+        20
+      ],
+      "dtype": "torch.bool"
+    },
+    "gt_track_source": {
+      "shape": [
+        2,
+        20
+      ],
+      "dtype": "torch.int64"
+    },
+    "gt_track_quality": {
+      "shape": [
+        2,
+        20
+      ],
+      "dtype": "torch.float32"
+    },
+    "valid_hw": {
+      "shape": [
+        2,
+        2
+      ],
+      "dtype": "torch.int64"
+    },
+    "image_hw": {
+      "shape": [
+        2,
+        2
+      ],
+      "dtype": "torch.int64"
+    },
+    "orig_hw": {
+      "shape": [
+        2,
+        2
+      ],
+      "dtype": "torch.int64"
+    },
+    "patch_size": {
+      "shape": [],
+      "dtype": "torch.int64"
+    }
+  },
+  "batch": {
+    "images": {
+      "shape": [
+        1,
+        2,
+        3,
+        384,
+        688
+      ],
+      "dtype": "torch.float32"
+    },
+    "gt_depth": {
+      "shape": [
+        1,
+        2,
+        1,
+        384,
+        688
+      ],
+      "dtype": "torch.float32"
+    },
+    "dataset_index": {
+      "shape": [
+        1
+      ],
+      "dtype": "torch.int64"
+    },
+    "sequence_index": {
+      "shape": [
+        1
+      ],
+      "dtype": "torch.int64"
+    },
+    "window_start_index": {
+      "shape": [
+        1
+      ],
+      "dtype": "torch.int64"
+    },
+    "gt_pose_6d": {
+      "shape": [
+        1,
+        2,
+        20,
+        144
+      ],
+      "dtype": "torch.float32"
+    },
+    "gt_betas": {
+      "shape": [
+        1,
+        2,
+        20,
+        10
+      ],
+      "dtype": "torch.float32"
+    },
+    "gt_transl_cam": {
+      "shape": [
+        1,
+        2,
+        20,
+        3
+      ],
+      "dtype": "torch.float32"
+    },
+    "gt_cam_trans": {
+      "shape": [
+        1,
+        2,
+        20,
+        3
+      ],
+      "dtype": "torch.float32"
+    },
+    "smpl_mask": {
+      "shape": [
+        1,
+        2,
+        20
+      ],
+      "dtype": "torch.bool"
+    },
+    "boxes_mask": {
+      "shape": [
+        1,
+        2,
+        20
+      ],
+      "dtype": "torch.bool"
+    },
+    "person_ids": {
+      "shape": [
+        1,
+        2,
+        20
+      ],
+      "dtype": "torch.int64"
+    },
+    "person_id_mask": {
+      "shape": [
+        1,
+        2,
+        20
+      ],
+      "dtype": "torch.bool"
+    },
+    "gt_track_ids": {
+      "shape": [
+        1,
+        2,
+        20
+      ],
+      "dtype": "torch.int64"
+    },
+    "gt_track_mask": {
+      "shape": [
+        1,
+        2,
+        20
+      ],
+      "dtype": "torch.bool"
+    },
+    "gt_track_source": {
+      "shape": [
+        1,
+        2,
+        20
+      ],
+      "dtype": "torch.int64"
+    },
+    "gt_track_quality": {
+      "shape": [
+        1,
+        2,
+        20
+      ],
+      "dtype": "torch.float32"
+    },
+    "orig_hw": {
+      "shape": [
+        1,
+        2,
+        2
+      ],
+      "dtype": "torch.int64"
+    },
+    "patch_size": {
+      "shape": [
+        1
+      ],
+      "dtype": "torch.int64"
+    },
+    "K_scal3r": {
+      "shape": [
+        1,
+        2,
+        3,
+        3
+      ],
+      "dtype": "torch.float32"
+    },
+    "gt_boxes": {
+      "shape": [
+        1,
+        2,
+        20,
+        4
+      ],
+      "dtype": "torch.float32"
+    },
+    "valid_hw": {
+      "shape": [
+        1,
+        2,
+        2
+      ],
+      "dtype": "torch.int64"
+    },
+    "image_hw": {
+      "shape": [
+        1,
+        2,
+        2
+      ],
+      "dtype": "torch.int64"
+    },
+    "pad_xyxy": {
+      "shape": [
+        1,
+        2,
+        4
+      ],
+      "dtype": "torch.int64"
+    }
+  },
+  "batch_smpl_valid_count": 2
+}
