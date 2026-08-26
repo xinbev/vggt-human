@@ -225,9 +225,16 @@ class HSIRegionalTranslationRefiner(nn.Module):
             gate = torch.sigmoid(self.gate_head(hidden))
             logvar = self.logvar_head(hidden).clamp(-4.0, 4.0)
             valid = probe["region_valid"] & person_valid.reshape(-1, 1)
-            weight = valid.to(dtype=vote.dtype) * gate * torch.exp(-logvar)
-            denom = weight.sum(dim=1, keepdim=True).clamp(min=1e-5)
+            if valid.shape != gate.shape[:-1] or gate.shape != logvar.shape:
+                raise RuntimeError(
+                    "TRSTR region aggregation shape mismatch: "
+                    f"valid={tuple(valid.shape)} gate={tuple(gate.shape)} logvar={tuple(logvar.shape)}"
+                )
+            weight = valid.unsqueeze(-1).to(dtype=vote.dtype) * gate * torch.exp(-logvar)
+            denom = weight.sum(dim=1).clamp(min=1e-5)
             aggregate = (vote * weight).sum(dim=1) / denom
+            if aggregate.shape != (pooled.shape[0], 3):
+                raise RuntimeError(f"TRSTR person aggregate has invalid shape: {tuple(aggregate.shape)}")
             aggregate = aggregate.clamp(min=-self.max_person_delta_m, max=self.max_person_delta_m)
             person_hidden = (hidden * valid.unsqueeze(-1).to(hidden.dtype)).sum(dim=1) / valid.sum(dim=1, keepdim=True).clamp(min=1).to(hidden.dtype)
             person_gate = torch.sigmoid(self.person_gate_head(person_hidden))
