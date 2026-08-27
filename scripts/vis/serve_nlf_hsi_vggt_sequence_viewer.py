@@ -12,6 +12,7 @@ import argparse
 import json
 import pickle
 import sys
+import threading
 import time
 from contextlib import nullcontext
 from dataclasses import replace
@@ -261,6 +262,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--coarse-anchor-stride", type=int, default=8)
     parser.add_argument("--coarse-min-anchor-pixels", type=int, default=32)
     parser.add_argument("--coarse-fallback", choices=["unit", "sequence_median"], default="unit")
+    parser.add_argument(
+        "--cascade-effective-affine-mode",
+        choices=["per_frame", "clip_median"],
+        default="per_frame",
+        help="How the composed coarse*HSI scale/bias is applied to the shared sequence world.",
+    )
     parser.add_argument("--smoke-only", action="store_true", help="Run inference, validation, and summary export, then exit without serving Viser.")
     parser.add_argument("--override", action="append", default=[])
     return parser.parse_args()
@@ -582,14 +589,72 @@ def run_smpl_coarse_hsi_cascade(
             print("[coarse-hsi] warning: no valid coarse frame; sequence-median fallback unavailable", flush=True)
 
     coarse_depth = raw_depth * coarse_scale[..., None, None]
-    cascade = model(
-        images,
-        **model_kwargs,
-        hsi_depth_override=coarse_depth,
-        hsi_depth_is_metric=True,
-        hsi_geometry_mode="smpl_coarse_metric",
-    )
-    if getattr(model, "hsi_trstr_head", None) is not None:
+    trstr_head = getattr(model, "hsi_trstr_head", None)
+    effective_affine_mode = str(getattr(args, "cascade_effective_affine_mode", "per_frame"))
+    delay_trstr_until_global_depth = trstr_head is not None and effective_affine_mode == "clip_median"
+    if delay_trstr_until_global_depth:
+        model.hsi_trstr_head = None
+    try:
+        cascade = model(
+            images,
+            **model_kwargs,
+            hsi_depth_override=coarse_depth,
+            hsi_depth_is_metric=True,
+            hsi_geometry_mode="smpl_coarse_metric",
+        )
+    finally:
+        if delay_trstr_until_global_depth:
+            model.hsi_trstr_head = trstr_head
+
+    residual_scale = cascade["hsi_scene_scale"].detach().clone()
+    residual_bias = cascade["hsi_scene_depth_bias"].detach().clone()
+    residual_frame_scale = cascade.get("hsi_frame_scene_scale", residual_scale).detach().clone()
+    residual_frame_bias = cascade.get("hsi_frame_scene_depth_bias", residual_bias).detach().clone()
+    coarse_scale_tensor = coarse_scale[..., None].to(device=residual_scale.device, dtype=residual_scale.dtype)
+    frame_effective_scale = coarse_scale_tensor * residual_frame_scale
+    frame_effective_bias = residual_frame_bias
+    if effective_affine_mode == "clip_median":
+        global_log_scale = torch.log(frame_effective_scale.float().clamp(min=1e-6)).median(dim=1, keepdim=True).values
+        global_bias = frame_effective_bias.float().median(dim=1, keepdim=True).values
+        effective_scale = torch.exp(global_log_scale).to(dtype=residual_scale.dtype).expand_as(frame_effective_scale)
+        effective_bias = global_bias.to(dtype=residual_bias.dtype).expand_as(frame_effective_bias)
+    else:
+        effective_scale = coarse_scale_tensor * residual_scale
+        effective_bias = residual_bias
+    final_metric_depth = raw_depth * effective_scale[..., None] + effective_bias[..., None]
+
+    cascade["hsi_residual_scene_scale"] = residual_scale
+    cascade["hsi_residual_scene_depth_bias"] = residual_bias
+    cascade["hsi_residual_frame_scene_scale"] = residual_frame_scale
+    cascade["hsi_residual_frame_scene_depth_bias"] = residual_frame_bias
+    cascade["hsi_coarse_scene_scale"] = coarse_scale_tensor
+    cascade["hsi_scene_scale"] = effective_scale
+    cascade["hsi_scene_depth_bias"] = effective_bias
+    cascade["hsi_frame_scene_scale"] = frame_effective_scale
+    cascade["hsi_frame_scene_depth_bias"] = frame_effective_bias
+    cascade["hsi_translation_depth"] = final_metric_depth
+    cascade["hsi_cascade_effective_affine_mode"] = effective_affine_mode
+
+    if delay_trstr_until_global_depth:
+        trstr_outputs = trstr_head(
+            predictions=cascade,
+            depth=final_metric_depth,
+            pose_enc=cascade.get("pose_enc"),
+            image_size_hw=(int(images.shape[-2]), int(images.shape[-1])),
+            depth_is_metric=True,
+            person_valid=cascade["pred_confs"][..., 0] > 0.0,
+            track_ids=cascade.get("assigned_track_ids"),
+            track_quality=cascade.get("assigned_track_quality"),
+            track_gap=cascade.get("assigned_track_gap"),
+        )
+        cascade.update(trstr_outputs)
+        cascade["hsi_refined_pred_transl_cam"] = cascade["hsi_trstr_refined_pred_transl_cam"]
+        cascade["hsi_refined_pred_pose_6d"] = cascade["pred_pose_6d"]
+        cascade["hsi_refined_pred_poses"] = cascade["pred_poses"]
+        cascade["hsi_refined_pred_betas"] = cascade["pred_betas"]
+        cascade["hsi_trstr_depth_source_id"] = cascade["pred_transl_cam"].new_tensor(2.0)
+
+    if trstr_head is not None:
         required_trstr = (
             "hsi_trstr_refined_pred_transl_cam",
             "hsi_trstr_delta_transl_cam",
@@ -614,7 +679,7 @@ def run_smpl_coarse_hsi_cascade(
         )
         trstr_summary = {
             "active": True,
-            "temporal_enabled": bool(getattr(model.hsi_trstr_head, "enable_temporal", False)),
+            "temporal_enabled": bool(getattr(trstr_head, "enable_temporal", False)),
             "depth_source": "hsi_translation_depth",
             "valid_people": int(person_valid.sum().detach().cpu()),
             "delta_l2_mean_m": float(valid_delta.mean().cpu()) if valid_delta.numel() else 0.0,
@@ -634,43 +699,38 @@ def run_smpl_coarse_hsi_cascade(
             "depth=hsi_translation_depth",
             flush=True,
         )
-    residual_scale = cascade["hsi_scene_scale"].detach().clone()
-    residual_bias = cascade["hsi_scene_depth_bias"].detach().clone()
-    residual_frame_scale = cascade.get("hsi_frame_scene_scale", residual_scale).detach().clone()
-    residual_frame_bias = cascade.get("hsi_frame_scene_depth_bias", residual_bias).detach().clone()
-    coarse_scale_tensor = coarse_scale[..., None].to(device=residual_scale.device, dtype=residual_scale.dtype)
-    effective_scale = coarse_scale_tensor * residual_scale
-
     print("[coarse-hsi] final_depth = raw_vggt_depth * coarse_scale * hsi_residual_scale + hsi_residual_bias", flush=True)
+    if effective_affine_mode == "clip_median":
+        print(
+            "[coarse-hsi] shared-world application: clip_median of composed effective scale/bias "
+            f"scale={float(effective_scale[0, 0, 0].detach().cpu()):.6g} "
+            f"bias={float(effective_bias[0, 0, 0].detach().cpu()):.6g}",
+            flush=True,
+        )
     for frame_idx, record in enumerate(coarse_records):
         coarse_value = float(coarse_scale_tensor[0, frame_idx, 0].detach().cpu())
         residual_value = float(residual_scale[0, frame_idx, 0].detach().cpu())
+        frame_effective_value = float(frame_effective_scale[0, frame_idx, 0].detach().cpu())
         effective_value = float(effective_scale[0, frame_idx, 0].detach().cpu())
-        bias_value = float(residual_bias[0, frame_idx, 0].detach().cpu())
+        frame_bias_value = float(frame_effective_bias[0, frame_idx, 0].detach().cpu())
+        bias_value = float(effective_bias[0, frame_idx, 0].detach().cpu())
         print(
             "[coarse-hsi] "
             f"frame={frame_idx:04d} "
             f"coarse={coarse_value:.6g} "
             f"hsi_residual={residual_value:.6g} "
-            f"effective={effective_value:.6g} "
-            f"bias={bias_value:.6g} "
+            f"frame_effective={frame_effective_value:.6g} "
+            f"applied_effective={effective_value:.6g} "
+            f"frame_bias={frame_bias_value:.6g} "
+            f"applied_bias={bias_value:.6g} "
             f"anchors={int(record.get('num_anchor_pixels', 0) or 0)} "
             f"applied={bool(record.get('applied', False))} "
             f"fallback={record.get('fallback_mode', 'none')} "
             f"reason={record.get('reason', 'unknown')}",
             flush=True,
         )
-    print_coarse_hsi_scale_summary(coarse_scale_tensor, residual_scale, effective_scale, residual_bias)
+    print_coarse_hsi_scale_summary(coarse_scale_tensor, residual_scale, effective_scale, effective_bias)
 
-    cascade["hsi_residual_scene_scale"] = residual_scale
-    cascade["hsi_residual_scene_depth_bias"] = residual_bias
-    cascade["hsi_residual_frame_scene_scale"] = residual_frame_scale
-    cascade["hsi_residual_frame_scene_depth_bias"] = residual_frame_bias
-    cascade["hsi_coarse_scene_scale"] = coarse_scale_tensor
-    cascade["hsi_scene_scale"] = effective_scale
-    cascade["hsi_scene_depth_bias"] = residual_bias
-    cascade["hsi_frame_scene_scale"] = coarse_scale_tensor * residual_frame_scale
-    cascade["hsi_frame_scene_depth_bias"] = residual_frame_bias
     cascade["hsi_coarse_scale_applied"] = torch.tensor(
         [bool(record.get("applied", False)) for record in coarse_records],
         device=residual_scale.device,
@@ -919,7 +979,12 @@ def build_scene_data(
         "camera_trajectory": hsi_camera_trajectory,
         "camera_trajectory_raw": raw_camera_trajectory,
         "camera_trajectory_hsi": hsi_camera_trajectory,
-        "hsi_scene_affine_mode": str(getattr(args, "hsi_scene_affine_mode", "per_frame")),
+        "hsi_scene_affine_mode": str(
+            predictions.get(
+                "hsi_cascade_effective_affine_mode",
+                getattr(args, "hsi_scene_affine_mode", "per_frame"),
+            )
+        ),
         "hsi_scene_affine_ema_alpha": float(getattr(args, "hsi_scene_affine_ema_alpha", 0.25)),
         "scene_scale_prealign": str(getattr(args, "scene_scale_prealign", "none")),
         "trstr_active": bool(predictions.get("_viewer_trstr_summary", {}).get("active", False)),
@@ -1524,6 +1589,7 @@ class SequenceViewer:
         self.env_mesh_color_groups = max(1, int(getattr(args, "env_mesh_color_groups", 216)))
         self.env_mesh_color_mode = str(getattr(args, "env_mesh_color_mode", "point_overlay"))
         self.env_mesh_overlay_point_size = max(0.0005, float(args.point_size) * float(getattr(args, "env_mesh_overlay_point_size_scale", 0.75)))
+        self._scene_rebuild_lock = threading.RLock()
         self._rebuilding_points = False
         self.hsi_calibration_active = False
         self._switching_hsi_calibration = False
@@ -1901,7 +1967,16 @@ class SequenceViewer:
         source: str,
     ) -> Any:
         points_np = np.asarray(points, dtype=np.float32).reshape(-1, 3)
-        return add_point_cloud(self.server, name, points_np, colors, self.point_size_value)
+        colors_np = np.asarray(colors, dtype=np.uint8)
+        if colors_np.ndim == 1:
+            if colors_np.shape != (3,):
+                raise RuntimeError(f"Invalid point-cloud color shape for {name}: {tuple(colors_np.shape)}")
+        elif colors_np.shape != (points_np.shape[0], 3):
+            raise RuntimeError(
+                f"Point/color count mismatch for {name}: "
+                f"points={tuple(points_np.shape)} colors={tuple(colors_np.shape)}"
+            )
+        return add_point_cloud(self.server, name, points_np, colors_np, self.point_size_value)
 
     def _on_measurement_enabled_update(self, _: Any = None) -> None:
         if bool(self.measurement_enabled.value):
@@ -2302,16 +2377,17 @@ class SequenceViewer:
             self._follow_pred_camera(self.current_step)
 
     def _on_trstr_correction_update(self, _: Any = None) -> None:
-        if not self.trstr_active or self._rebuilding_points or self._switching_hsi_calibration:
-            return
-        enabled = bool(self.apply_trstr_correction.value)
-        if enabled == self.trstr_correction_enabled_value:
-            self._update_visibility()
-            return
-        self.trstr_correction_enabled_value = enabled
-        self.show_hsi.value = enabled
-        self.show_base.value = not enabled
-        self._rebuild_human_filter_masks_and_points()
+        with self._scene_rebuild_lock:
+            if not self.trstr_active or self._rebuilding_points or self._switching_hsi_calibration:
+                return
+            enabled = bool(self.apply_trstr_correction.value)
+            if enabled == self.trstr_correction_enabled_value:
+                self._update_visibility()
+                return
+            self.trstr_correction_enabled_value = enabled
+            self.show_hsi.value = enabled
+            self.show_base.value = not enabled
+            self._rebuild_human_filter_masks_and_points()
 
     def _prev_frame(self, _: Any = None) -> None:
         self.timestep.value = (int(self.timestep.value) - 1) % len(self.scene["frames"])
@@ -2344,21 +2420,23 @@ class SequenceViewer:
         self._on_depth_sampling_update()
 
     def _on_depth_sampling_update(self, _: Any = None) -> None:
-        if self._rebuilding_points:
-            return
-        self.depth_point_stride_value = max(1, int(self.depth_point_stride.value))
-        self.max_scene_depth_value = float(self.max_scene_depth.value)
-        self._rebuild_depth_point_clouds()
+        with self._scene_rebuild_lock:
+            if self._rebuilding_points:
+                return
+            self.depth_point_stride_value = max(1, int(self.depth_point_stride.value))
+            self.max_scene_depth_value = float(self.max_scene_depth.value)
+            self._rebuild_depth_point_clouds()
 
     def _on_filter_human_points_update(self, _: Any = None) -> None:
-        if self._switching_hsi_calibration or self.hsi_calibration_active:
-            return
-        requested = bool(self.filter_human_points.value)
-        if requested == self.filter_human_points_value:
-            self._update_info_text(int(self.timestep.value))
-            return
-        self.filter_human_points_value = requested
-        self._rebuild_environment_point_handles()
+        with self._scene_rebuild_lock:
+            if self._switching_hsi_calibration or self.hsi_calibration_active or self._rebuilding_points:
+                return
+            requested = bool(self.filter_human_points.value)
+            if requested == self.filter_human_points_value:
+                self._update_info_text(int(self.timestep.value))
+                return
+            self.filter_human_points_value = requested
+            self._rebuild_environment_point_handles()
 
     def _requested_human_filter_dilation(self) -> int:
         return min(
@@ -2370,14 +2448,15 @@ class SequenceViewer:
         self._update_info_text(int(self.timestep.value))
 
     def _apply_human_filter_dilation(self, _: Any = None) -> None:
-        if self._rebuilding_points or self.hsi_calibration_active:
-            return
-        requested = self._requested_human_filter_dilation()
-        if requested == self.human_mask_dilation_px_value:
-            self._update_info_text(int(self.timestep.value))
-            return
-        self.human_mask_dilation_px_value = requested
-        self._rebuild_human_filter_masks_and_points()
+        with self._scene_rebuild_lock:
+            if self._rebuilding_points or self.hsi_calibration_active:
+                return
+            requested = self._requested_human_filter_dilation()
+            if requested == self.human_mask_dilation_px_value:
+                self._update_info_text(int(self.timestep.value))
+                return
+            self.human_mask_dilation_px_value = requested
+            self._rebuild_human_filter_masks_and_points()
 
     def _reset_human_filter_dilation(self, _: Any = None) -> None:
         if self.hsi_calibration_active:
@@ -2434,24 +2513,35 @@ class SequenceViewer:
         tracking_only = bool(getattr(self.args, "tracking_only", False))
         for frame, frame_handles in zip(self.scene["frames"], self.handles, strict=True):
             idx = int(frame["frame_index"])
-            for handle in frame_handles.get("raw", []) + frame_handles.get("hsi", []):
+            old_handles = list(frame_handles.get("raw", [])) + list(frame_handles.get("hsi", []))
+            frame_handles["raw"] = []
+            frame_handles["hsi"] = []
+            for handle in old_handles:
                 remove_handle(handle)
+            use_filtered = self.filter_human_points_value
+            raw_key = "raw_points" if use_filtered else "raw_points_full"
+            raw_color_key = "raw_colors" if use_filtered else "raw_colors_full"
+            hsi_key = "hsi_points" if use_filtered else "hsi_points_full"
+            hsi_color_key = "hsi_colors" if use_filtered else "hsi_colors_full"
+            raw_points = np.asarray(frame[raw_key], dtype=np.float32)
+            raw_colors = np.asarray(frame[raw_color_key], dtype=np.uint8)
+            hsi_points = np.asarray(frame[hsi_key], dtype=np.float32) * np.float32(self.hsi_visual_scale_value)
+            hsi_colors = np.asarray(frame[hsi_color_key], dtype=np.uint8)
             frame_handles["raw"] = [
                 self._add_environment_point_cloud(
                     f"/frames/{idx:04d}/points_raw_depth",
-                    self._raw_display_points(frame),
-                    self._raw_display_colors(frame),
+                    raw_points,
+                    raw_colors,
                     frame_index=idx,
                     source="raw",
                 )
             ]
-            frame_handles["hsi"] = []
             if not tracking_only:
                 frame_handles["hsi"] = [
                     self._add_environment_point_cloud(
                         f"/frames/{idx:04d}/points_hsi_depth",
-                        self._scaled_hsi_points(frame),
-                        self._hsi_point_colors(frame),
+                        hsi_points,
+                        hsi_colors,
                         frame_index=idx,
                         source="hsi",
                     )
@@ -2467,14 +2557,15 @@ class SequenceViewer:
         self._update_hsi_scale_info(int(self.timestep.value))
 
     def _apply_hsi_visual_scale(self, _: Any = None) -> None:
-        if self.hsi_calibration_active:
-            return
-        requested = self._requested_hsi_visual_scale()
-        if abs(requested - self.hsi_visual_scale_value) <= 1e-7:
-            self._update_hsi_scale_info(int(self.timestep.value))
-            return
-        self.hsi_visual_scale_value = requested
-        self._rebuild_hsi_visual_geometry()
+        with self._scene_rebuild_lock:
+            if self.hsi_calibration_active or self._rebuilding_points:
+                return
+            requested = self._requested_hsi_visual_scale()
+            if abs(requested - self.hsi_visual_scale_value) <= 1e-7:
+                self._update_hsi_scale_info(int(self.timestep.value))
+                return
+            self.hsi_visual_scale_value = requested
+            self._rebuild_hsi_visual_geometry()
 
     def _reset_hsi_visual_scale(self, _: Any = None) -> None:
         self.hsi_visual_scale.value = hsi_visual_scale_to_slider(1.0)
@@ -2857,6 +2948,16 @@ class SequenceViewer:
         hsi_full_count = int(np.asarray(frame.get("hsi_points_full", frame["hsi_points"])).shape[0])
         hsi_filtered_count = int(frame["hsi_points"].shape[0])
         hsi_mask_pixels = int(np.count_nonzero(frame.get("hsi_human_exclusion_mask", np.zeros((0,), dtype=bool))))
+        frame_trstr_deltas = []
+        for person in frame["people"]:
+            base_vertices = person.get("base_vertices_cam")
+            hsi_vertices = person.get("hsi_vertices_cam")
+            if base_vertices is None or hsi_vertices is None:
+                continue
+            base_center = np.asarray(base_vertices, dtype=np.float32).reshape(-1, 3).mean(axis=0)
+            hsi_center = np.asarray(hsi_vertices, dtype=np.float32).reshape(-1, 3).mean(axis=0)
+            frame_trstr_deltas.append(float(np.linalg.norm(hsi_center - base_center)))
+        trstr_delta_mean = float(np.mean(frame_trstr_deltas)) if frame_trstr_deltas else 0.0
         filter_active = self.filter_human_points_value and not self.hsi_calibration_active
         hsi_display_count = hsi_filtered_count if filter_active else hsi_full_count
         set_text_value(
@@ -2869,6 +2970,7 @@ class SequenceViewer:
                 f"maskPx={hsi_mask_pixels} "
                 f"people={len(frame['people'])} "
                 f"TRSTR={'on' if self.trstr_correction_enabled_value else 'off'} "
+                f"dTmean={trstr_delta_mean:.3f}m "
                 f"stride={int(frame.get('depth_point_stride', self.depth_point_stride_value))} "
                 f"maxD={float(frame.get('max_scene_depth', self.max_scene_depth_value)):.1f} "
                 f"rawCam=({raw_cam_pos[0]:.3f},{raw_cam_pos[1]:.3f},{raw_cam_pos[2]:.3f}) "
@@ -2932,7 +3034,8 @@ class SequenceViewer:
         else:
             strategy = "per_frame: each frame uses its own predicted scale/bias"
         if str(self.scene.get("scene_scale_prealign", "none")) == "smpl_median":
-            strategy = "SMPL median coarse scale -> HSI residual -> Stage2 align | " + strategy
+            refinement_name = "TRSTR" if self.trstr_active else "Stage2 align"
+            strategy = f"SMPL median coarse scale -> HSI residual -> {refinement_name} | " + strategy
         pending = self._requested_hsi_visual_scale()
         applied = float(self.hsi_visual_scale_value)
         raw_text = "unavailable"

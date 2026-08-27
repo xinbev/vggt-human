@@ -362,4 +362,6 @@ bash scripts/vis/serve_trstr_v3_scale_sequence.sh
 
 该脚本固定执行 `raw VGGT depth -> analytic coarse -> v3 HSI residual -> hsi_translation_depth -> TRSTR spatial`，默认输出到 `outputs/vis/trstr_v3_scale_spatial_sequence`。当前 checkpoint 不含已训练时序 gate；不能跳过 analytic coarse 后直接把 raw VGGT depth 输入 v3 HSI。
 
+序列可视化在保留逐帧 coarse/residual 诊断的同时，对组合后的 `coarse * residual` effective scale 和 bias 使用 clip log-median，整段共享同一最终 scene affine。这样不会对 VGGT 的共享世界坐标逐帧施加不同缩放。TRSTR 在该全局一致的 metric depth 上运行。Viser 的 `Apply TRSTR Translation` 可在 v3 Scale + NLF base translation 与 v3 Scale + TRSTR translation 之间切换，不改变环境 Scale。
+
 已实现持久化 `HSITRSTRTrackMemory` 和可选持久化前置 tracker。真实推理调用方需要为每个视频流各自持有一个 memory，并连续传入 `hsi_trstr_track_memory` 与递增的 `hsi_trstr_frame_offset`；视频切换时必须 reset。尚未完成的是最终 Viser 区域/轨迹可视化增强，以及 NLF + analytic coarse + v3 HSI + TRSTR 的服务器运行验收；这不影响 GT 训练启动，但属于推理发布前的验收项。
