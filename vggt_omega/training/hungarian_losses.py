@@ -113,6 +113,9 @@ class HungarianSMPLLoss(nn.Module):
         hsi_trstr_temporal_velocity_weight: float = 0.0,
         hsi_trstr_temporal_no_worse_weight: float = 0.0,
         hsi_trstr_temporal_no_worse_margin_m: float = 0.002,
+        hsi_trstr_strong_threshold_m: float = 0.50,
+        hsi_trstr_strong_xy_threshold_m: float = 1.00,
+        hsi_trstr_vote_target_mode: str = "full_remaining",
         hsi_anchor_depth_weight: float = 0.0,
         hsi_anchor_scene_xyz_weight: float = 0.0,
         hsi_anchor_scene_window: int = 5,
@@ -285,6 +288,13 @@ class HungarianSMPLLoss(nn.Module):
         self.hsi_trstr_temporal_velocity_weight = float(hsi_trstr_temporal_velocity_weight)
         self.hsi_trstr_temporal_no_worse_weight = float(hsi_trstr_temporal_no_worse_weight)
         self.hsi_trstr_temporal_no_worse_margin_m = float(hsi_trstr_temporal_no_worse_margin_m)
+        self.hsi_trstr_strong_threshold_m = max(float(hsi_trstr_strong_threshold_m), 0.0)
+        self.hsi_trstr_strong_xy_threshold_m = max(float(hsi_trstr_strong_xy_threshold_m), 0.0)
+        self.hsi_trstr_vote_target_mode = str(hsi_trstr_vote_target_mode or "full_remaining").lower()
+        if self.hsi_trstr_vote_target_mode not in {"full_remaining", "staged_remaining"}:
+            raise ValueError(
+                f"Unsupported hsi_trstr_vote_target_mode: {self.hsi_trstr_vote_target_mode!r}"
+            )
         self.hsi_anchor_depth_weight = hsi_anchor_depth_weight
         self.hsi_anchor_scene_xyz_weight = hsi_anchor_scene_xyz_weight
         self.hsi_anchor_scene_window = hsi_anchor_scene_window
@@ -1493,6 +1503,14 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_trstr_refined_l2_p90_m": zero.detach(),
             "metric_hsi_trstr_clean_displacement_l1": zero.detach(),
             "metric_hsi_trstr_noisy_translation_l1": zero.detach(),
+            "metric_hsi_trstr_strong_coverage": zero.detach(),
+            "metric_hsi_trstr_strong_base_l2_mean_m": zero.detach(),
+            "metric_hsi_trstr_strong_refined_l2_mean_m": zero.detach(),
+            "metric_hsi_trstr_strong_improvement_rate": zero.detach(),
+            "metric_hsi_trstr_xy_base_l2_p90_m": zero.detach(),
+            "metric_hsi_trstr_xy_refined_l2_p90_m": zero.detach(),
+            "metric_hsi_trstr_strong_xy_coverage": zero.detach(),
+            "metric_hsi_trstr_strong_xy_improvement_rate": zero.detach(),
             "metric_hsi_trstr_region_valid_ratio": zero.detach(),
             "metric_hsi_trstr_region_gate_mean": zero.detach(),
             "metric_hsi_trstr_person_gate_mean": zero.detach(),
@@ -1631,6 +1649,14 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_trstr_refined_l2_p90_m": zero.detach(),
             "metric_hsi_trstr_clean_displacement_l1": zero.detach(),
             "metric_hsi_trstr_noisy_translation_l1": zero.detach(),
+            "metric_hsi_trstr_strong_coverage": zero.detach(),
+            "metric_hsi_trstr_strong_base_l2_mean_m": zero.detach(),
+            "metric_hsi_trstr_strong_refined_l2_mean_m": zero.detach(),
+            "metric_hsi_trstr_strong_improvement_rate": zero.detach(),
+            "metric_hsi_trstr_xy_base_l2_p90_m": zero.detach(),
+            "metric_hsi_trstr_xy_refined_l2_p90_m": zero.detach(),
+            "metric_hsi_trstr_strong_xy_coverage": zero.detach(),
+            "metric_hsi_trstr_strong_xy_improvement_rate": zero.detach(),
             "metric_hsi_trstr_region_valid_ratio": zero.detach(),
             "metric_hsi_trstr_region_gate_mean": zero.detach(),
             "metric_hsi_trstr_person_gate_mean": zero.detach(),
@@ -1657,7 +1683,14 @@ class HungarianSMPLLoss(nn.Module):
 
         base = _flatten_prediction(predictions["pred_transl_cam"], unframed_ndim=3)
         refined = _flatten_prediction(predictions["hsi_trstr_refined_pred_transl_cam"], unframed_ndim=3)
-        target = matched["transl_cam"].to(device=base.device, dtype=base.dtype)
+        alignment_target = predictions.get("trstr_target_transl_cam")
+        target = (
+            _flatten_prediction(alignment_target, unframed_ndim=3)[frame_idx, src_idx].to(
+                device=base.device, dtype=base.dtype
+            )
+            if isinstance(alignment_target, torch.Tensor)
+            else matched["transl_cam"].to(device=base.device, dtype=base.dtype)
+        )
         base_matched = base[frame_idx, src_idx]
         refined_matched = refined[frame_idx, src_idx]
         target_delta = target - base_matched.detach()
@@ -1691,7 +1724,11 @@ class HungarianSMPLLoss(nn.Module):
             base_i = iteration_transl[iteration_idx].reshape(
                 -1, iteration_transl.shape[3], 3
             )[frame_idx, src_idx]
-            remaining_target = (target - base_i.detach())[:, None, :].expand_as(vote_i)
+            remaining_target = target - base_i.detach()
+            if self.hsi_trstr_vote_target_mode == "staged_remaining":
+                remaining_iterations = max(int(iteration_votes.shape[0]) - int(iteration_idx), 1)
+                remaining_target = remaining_target / float(remaining_iterations)
+            remaining_target = remaining_target[:, None, :].expand_as(vote_i)
             if bool(valid_i.any()):
                 vote_losses.append(F.smooth_l1_loss(vote_i[valid_i], remaining_target[valid_i]))
                 vote_l1_values.append((vote_i[valid_i] - remaining_target[valid_i]).abs().mean())
@@ -1723,6 +1760,28 @@ class HungarianSMPLLoss(nn.Module):
         out["metric_hsi_trstr_refined_l2_p90_m"] = torch.quantile(refined_l2.float(), 0.90).to(
             dtype=base.dtype
         ).detach()
+        strong = base_l2 >= self.hsi_trstr_strong_threshold_m
+        out["metric_hsi_trstr_strong_coverage"] = strong.float().mean().detach()
+        if bool(strong.any()):
+            out["metric_hsi_trstr_strong_base_l2_mean_m"] = base_l2[strong].mean().detach()
+            out["metric_hsi_trstr_strong_refined_l2_mean_m"] = refined_l2[strong].mean().detach()
+            out["metric_hsi_trstr_strong_improvement_rate"] = (
+                refined_l2[strong] < base_l2[strong]
+            ).float().mean().detach()
+        base_xy_l2 = torch.linalg.norm(base_error[..., :2], dim=-1)
+        refined_xy_l2 = torch.linalg.norm(translation_error[..., :2], dim=-1)
+        out["metric_hsi_trstr_xy_base_l2_p90_m"] = torch.quantile(
+            base_xy_l2.float(), 0.90
+        ).to(dtype=base.dtype).detach()
+        out["metric_hsi_trstr_xy_refined_l2_p90_m"] = torch.quantile(
+            refined_xy_l2.float(), 0.90
+        ).to(dtype=base.dtype).detach()
+        strong_xy = base_xy_l2 >= self.hsi_trstr_strong_xy_threshold_m
+        out["metric_hsi_trstr_strong_xy_coverage"] = strong_xy.float().mean().detach()
+        if bool(strong_xy.any()):
+            out["metric_hsi_trstr_strong_xy_improvement_rate"] = (
+                refined_xy_l2[strong_xy] < base_xy_l2[strong_xy]
+            ).float().mean().detach()
         clean_value = predictions.get("transl_noise_is_clean")
         if isinstance(clean_value, torch.Tensor):
             clean = _flatten_prediction(clean_value, unframed_ndim=3)[frame_idx, src_idx, 0] > 0.5

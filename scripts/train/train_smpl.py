@@ -299,6 +299,80 @@ def validate_gt_scale_box_free_contract(config: dict[str, Any]) -> None:
                 ),
             }
         )
+        if str(prior_cfg.get("smpl_transl_ray_noise_mode", "")).lower() == "metric_gaussian_mixture":
+            probabilities = parse_float_schedule(
+                prior_cfg.get("smpl_transl_ray_noise_mixture_probabilities", [])
+            )
+            std_m = parse_float_schedule(prior_cfg.get("smpl_transl_ray_noise_mixture_std_m", []))
+            clip_m = parse_float_schedule(prior_cfg.get("smpl_transl_ray_noise_mixture_clip_m", []))
+            checks.update(
+                {
+                    "TRSTR Gaussian-mixture lengths match": (
+                        len(probabilities) > 0
+                        and len(probabilities) == len(std_m) == len(clip_m)
+                    ),
+                    "TRSTR Gaussian-mixture probabilities are positive": (
+                        all(value >= 0.0 for value in probabilities) and sum(probabilities) > 0.0
+                    ),
+                    "TRSTR ray vote covers strongest mixture target": (
+                        bool(clip_m)
+                        and float(model_cfg.get("hsi_trstr_max_ray_delta_m", 0.0) or 0.0)
+                        >= max(clip_m)
+                    ),
+                }
+            )
+        if str(prior_cfg.get("smpl_transl_tangent_noise_mode", "")).lower() == "metric_gaussian_mixture":
+            probabilities = parse_float_schedule(
+                prior_cfg.get("smpl_transl_tangent_noise_mixture_probabilities", [])
+            )
+            std_m = parse_float_schedule(prior_cfg.get("smpl_transl_tangent_noise_mixture_std_m", []))
+            clip_m = parse_float_schedule(prior_cfg.get("smpl_transl_tangent_noise_mixture_clip_m", []))
+            target_m = float(prior_cfg.get("smpl_transl_target_tangent_correction_m", 0.0) or 0.0)
+            checks.update(
+                {
+                    "TRSTR tangent Gaussian-mixture lengths match": (
+                        len(probabilities) > 0
+                        and len(probabilities) == len(std_m) == len(clip_m)
+                    ),
+                    "TRSTR tangent Gaussian-mixture probabilities are positive": (
+                        all(value >= 0.0 for value in probabilities) and sum(probabilities) > 0.0
+                    ),
+                    "TRSTR tangent mixture covers target correction": (
+                        target_m > 0.0 and bool(clip_m) and max(clip_m) >= target_m
+                    ),
+                    "TRSTR two-iteration person update covers tangent target": (
+                        2.0 * float(model_cfg.get("hsi_trstr_max_person_delta_m", 0.0) or 0.0)
+                        >= target_m
+                    ),
+                }
+            )
+        if str(prior_cfg.get("smpl_perturb_mode", "")).lower() == "trstr_scale_alignment":
+            case_probabilities = parse_float_schedule(
+                prior_cfg.get("trstr_alignment_case_probabilities", [])
+            )
+            scale_min = float(prior_cfg.get("trstr_alignment_scale_min", 0.0) or 0.0)
+            scale_max = float(prior_cfg.get("trstr_alignment_scale_max", 0.0) or 0.0)
+            max_target_delta_m = float(
+                prior_cfg.get("trstr_alignment_max_target_delta_m", 0.0) or 0.0
+            )
+            checks.update(
+                {
+                    "TRSTR alignment has four case probabilities": len(case_probabilities) == 4,
+                    "TRSTR alignment case probabilities are positive": (
+                        all(value >= 0.0 for value in case_probabilities)
+                        and sum(case_probabilities) > 0.0
+                    ),
+                    "TRSTR alignment scale range straddles one": 0.0 < scale_min < 1.0 < scale_max,
+                    "TRSTR alignment max target is positive": max_target_delta_m > 0.0,
+                    "TRSTR staged ray capacity covers max scale target": (
+                        2.0 * float(model_cfg.get("hsi_trstr_max_ray_delta_m", 0.0) or 0.0)
+                        >= max_target_delta_m
+                    ),
+                    "TRSTR alignment uses staged remaining vote targets": str(
+                        loss_cfg.get("hsi_trstr_vote_target_mode", "")
+                    ).lower() == "staged_remaining",
+                }
+            )
     else:
         checks.update(
             {
@@ -2094,6 +2168,10 @@ def forward_model(
         return model(batch["images"])
     if uses_gt_override and bool(model_cfg.get("gt_smpl_online_visibility", False)):
         apply_gt_smpl_online_visibility(batch, config)
+    if uses_gt_override and str(
+        config.get("training_prior", {}).get("smpl_perturb_mode", "")
+    ).lower() == "trstr_scale_alignment":
+        prepare_trstr_scale_alignment_batch(batch, config, is_training=model.training)
     boxes = batch.get("smpl_query_boxes", batch.get("gt_boxes")) if needs_query_inputs else None
     mask = batch.get("smpl_query_boxes_mask", batch.get("boxes_mask")) if needs_query_inputs else None
     if model.training:
@@ -2242,14 +2320,25 @@ def resolve_hsi_geometry_inputs(
     if mode == "gt_metric":
         if not using_gt_override:
             raise ValueError("hsi_geometry_mode='gt_metric' requires a GT SMPL override in the same batch")
-        depth = batch.get("gt_depth")
+        depth = batch.get("trstr_metric_depth_input", batch.get("gt_depth"))
         intrinsics = batch.get("K_scal3r")
         if depth is None or intrinsics is None:
             raise ValueError("gt_metric geometry requires batch['gt_depth'] and batch['K_scal3r']")
         scale_training_mode = str(
             config.get("training_prior", {}).get("hsi_scale_training_mode", "direct_perturb") or "direct_perturb"
         ).lower()
-        if is_training and scale_training_mode == "coarse_residual_stratified":
+        if isinstance(batch.get("trstr_metric_depth_input"), torch.Tensor):
+            diagnostics = {
+                key: batch[key]
+                for key in (
+                    "trstr_alignment_scale",
+                    "trstr_alignment_case",
+                    "trstr_alignment_target_delta",
+                    "trstr_alignment_nlf_delta",
+                )
+                if isinstance(batch.get(key), torch.Tensor)
+            }
+        elif is_training and scale_training_mode == "coarse_residual_stratified":
             depth, diagnostics = build_coarse_residual_training_depth(batch, config)
         else:
             depth, diagnostics = maybe_perturb_gt_metric_depth(depth, config, epoch=epoch, is_training=is_training)
@@ -2518,19 +2607,54 @@ def maybe_perturb_gt_metric_depth(
 
 
 def depth_perturbation_scalars(predictions: dict[str, torch.Tensor]) -> dict[str, float]:
+    scalars: dict[str, float] = {}
+    trstr_scale = predictions.get("trstr_alignment_scale")
+    trstr_case = predictions.get("trstr_alignment_case")
+    target_delta = predictions.get("trstr_alignment_target_delta")
+    nlf_delta = predictions.get("trstr_alignment_nlf_delta")
+    if isinstance(trstr_scale, torch.Tensor):
+        values = trstr_scale.detach().float().reshape(-1)
+        scalars.update(
+            {
+                "metric_trstr_alignment_scale_mean": float(values.mean().cpu()),
+                "metric_trstr_alignment_scale_std": float(values.std(unbiased=False).cpu()),
+                "metric_trstr_alignment_scale_min": float(values.min().cpu()),
+                "metric_trstr_alignment_scale_max": float(values.max().cpu()),
+            }
+        )
+    if isinstance(trstr_case, torch.Tensor):
+        cases = trstr_case.detach().long().reshape(-1)
+        for case_id, name in enumerate(("clean", "scale", "nlf", "mixed")):
+            scalars[f"metric_trstr_alignment_case_{name}_rate"] = float(
+                (cases == case_id).float().mean().cpu()
+            )
+    for value, prefix in (
+        (target_delta, "metric_trstr_alignment_target_delta"),
+        (nlf_delta, "metric_trstr_alignment_nlf_delta"),
+    ):
+        if isinstance(value, torch.Tensor):
+            norm = torch.linalg.norm(value.detach().float(), dim=-1).reshape(-1)
+            person_mask = predictions.get("gt_smpl_provider_mask")
+            if isinstance(person_mask, torch.Tensor) and person_mask.numel() == norm.numel():
+                valid_norm = norm[person_mask.detach().bool().reshape(-1)]
+                if valid_norm.numel() > 0:
+                    norm = valid_norm
+            scalars[f"{prefix}_mean_m"] = float(norm.mean().cpu())
+            scalars[f"{prefix}_p90_m"] = float(torch.quantile(norm, 0.90).cpu())
+            scalars[f"{prefix}_max_m"] = float(norm.max().cpu())
     scale = predictions.get("hsi_gt_depth_perturb_scale")
     target = predictions.get("hsi_gt_depth_perturb_target_scale")
     if not isinstance(scale, torch.Tensor) or not isinstance(target, torch.Tensor):
-        return {}
+        return scalars
     scale_f = scale.detach().float().reshape(-1)
     target_f = target.detach().float().reshape(-1)
-    scalars = {
+    scalars.update({
         "metric_hsi_gt_depth_perturb_scale_mean": float(scale_f.mean().cpu()),
         "metric_hsi_gt_depth_perturb_scale_std": float(scale_f.std(unbiased=False).cpu()),
         "metric_hsi_gt_depth_perturb_log_scale_std": float(torch.log(scale_f.clamp(min=1e-6)).std(unbiased=False).cpu()),
         "metric_hsi_gt_depth_perturb_log10_scale_std": float(torch.log10(scale_f.clamp(min=1e-6)).std(unbiased=False).cpu()),
         "metric_hsi_gt_depth_perturb_target_scale_mean": float(target_f.mean().cpu()),
-    }
+    })
     visibility = predictions.get("gt_smpl_online_visibility_mask")
     original = predictions.get("gt_smpl_original_mask")
     if isinstance(visibility, torch.Tensor) and isinstance(original, torch.Tensor):
@@ -2744,6 +2868,187 @@ def _count_visible_smpl_points(
     return visible.sum(dim=-1)
 
 
+@torch.no_grad()
+def prepare_trstr_scale_alignment_batch(
+    batch: dict[str, torch.Tensor],
+    config: dict[str, Any],
+    is_training: bool,
+) -> None:
+    """Build coupled depth-scale, NLF-input, and sole-anchor alignment targets."""
+    pose6d = batch["gt_pose_6d"].float()
+    betas = batch["gt_betas"].float()
+    physical_transl = batch.get("gt_transl_cam", batch["gt_cam_trans"]).float()
+    depth = batch["gt_depth"].float()
+    valid = batch.get("smpl_mask")
+    valid = (
+        torch.ones(physical_transl.shape[:-1], dtype=torch.bool, device=physical_transl.device)
+        if valid is None
+        else valid.bool()
+    )
+    prior_cfg = config.get("training_prior", {})
+    case_probabilities = _normalize_positive_float_list(
+        prior_cfg.get("trstr_alignment_case_probabilities", [0.15, 0.40, 0.25, 0.20]),
+        "TRSTR alignment case probabilities",
+    )
+    if len(case_probabilities) != 4:
+        raise ValueError(
+            "trstr_alignment_case_probabilities must contain clean/scale/nlf/mixed probabilities"
+        )
+    frame_count = int(physical_transl.shape[0] * physical_transl.shape[1])
+    if is_training:
+        category = torch.multinomial(
+            physical_transl.new_tensor(case_probabilities),
+            num_samples=frame_count,
+            replacement=True,
+        ).reshape(*physical_transl.shape[:2], 1)
+        log_std = max(float(prior_cfg.get("trstr_alignment_scale_log_std", 0.08) or 0.0), 0.0)
+        log_scale = physical_transl.new_empty(*physical_transl.shape[:2], 1, 1).normal_(0.0, log_std)
+        scale = torch.exp(log_scale)
+    else:
+        eval_scale = float(prior_cfg.get("trstr_alignment_eval_scale", 1.0) or 1.0)
+        category_value = 1 if abs(eval_scale - 1.0) > 1e-7 else 0
+        category = torch.full(
+            (*physical_transl.shape[:2], 1),
+            category_value,
+            dtype=torch.long,
+            device=physical_transl.device,
+        )
+        scale = physical_transl.new_full((*physical_transl.shape[:2], 1, 1), eval_scale)
+    scale_min = max(float(prior_cfg.get("trstr_alignment_scale_min", 0.85) or 0.85), 1e-4)
+    scale_max = max(float(prior_cfg.get("trstr_alignment_scale_max", 1.15) or 1.15), scale_min)
+    scale = scale.clamp(min=scale_min, max=scale_max)
+    scale_active = (category == 1) | (category == 3)
+    nlf_active = (category == 2) | (category == 3)
+    scale = torch.where(scale_active.unsqueeze(-1), scale, torch.ones_like(scale))
+
+    sole_centers = _decode_sole_centers(
+        pose6d,
+        betas,
+        physical_transl,
+        config,
+        person_mask=valid,
+    )
+    sole_anchor = _select_trstr_scale_alignment_sole_anchor(
+        sole_centers=sole_centers,
+        depth=batch["gt_depth"].float(),
+        intrinsics=batch["K_scal3r"].float(),
+        person_valid=valid,
+    )
+    max_target_delta_m = max(
+        float(prior_cfg.get("trstr_alignment_max_target_delta_m", 2.0) or 0.0), 1e-4
+    )
+    anchor_distance = torch.linalg.norm(sole_anchor, dim=-1)
+    anchor_distance = torch.where(valid, anchor_distance, torch.zeros_like(anchor_distance))
+    frame_max_distance = anchor_distance.amax(dim=2, keepdim=True).unsqueeze(-1).clamp(min=1e-4)
+    max_scale_offset = max_target_delta_m / frame_max_distance
+    scale_offset = scale - 1.0
+    scale_offset = torch.maximum(torch.minimum(scale_offset, max_scale_offset), -max_scale_offset)
+    scale = 1.0 + scale_offset
+    alignment_delta = (scale.squeeze(-1).unsqueeze(2) - 1.0) * sole_anchor
+    alignment_delta = alignment_delta * valid.unsqueeze(-1).to(dtype=alignment_delta.dtype)
+    target_transl = physical_transl + alignment_delta
+
+    ray_delta = _sample_metric_gaussian_mixture_translation_noise(
+        physical_transl,
+        channels=1,
+        probabilities=prior_cfg.get("smpl_transl_ray_noise_mixture_probabilities", [0.30, 0.40, 0.30]),
+        std_m=prior_cfg.get("smpl_transl_ray_noise_mixture_std_m", [0.06, 0.16, 0.30]),
+        clip_m=prior_cfg.get("smpl_transl_ray_noise_mixture_clip_m", [0.15, 0.35, 0.60]),
+        clip_vector_norm=False,
+    )
+    tangent_coeff = _sample_metric_gaussian_mixture_translation_noise(
+        physical_transl,
+        channels=2,
+        probabilities=prior_cfg.get("smpl_transl_tangent_noise_mixture_probabilities", [0.20, 0.35, 0.45]),
+        std_m=prior_cfg.get("smpl_transl_tangent_noise_mixture_std_m", [0.12, 0.55, 1.10]),
+        clip_m=prior_cfg.get("smpl_transl_tangent_noise_mixture_clip_m", [0.35, 1.20, 2.00]),
+        clip_vector_norm=True,
+    )
+    ray, tangent_x, tangent_y = _translation_camera_basis(physical_transl)
+    nlf_delta = (
+        ray_delta * ray
+        + tangent_coeff[..., :1] * tangent_x
+        + tangent_coeff[..., 1:] * tangent_y
+    )
+    nlf_mask = nlf_active.unsqueeze(-1) & valid.unsqueeze(-1)
+    nlf_delta = nlf_delta * nlf_mask.to(dtype=nlf_delta.dtype)
+    base_transl = physical_transl + nlf_delta
+    required_delta = target_transl - base_transl
+    clean = (torch.linalg.norm(required_delta, dim=-1, keepdim=True) <= 1e-7) | ~valid.unsqueeze(-1)
+
+    depth_scale = scale.unsqueeze(2) if depth.ndim == 5 else scale
+    batch["trstr_metric_depth_input"] = depth * depth_scale
+    batch["trstr_base_transl_cam"] = base_transl
+    batch["trstr_target_transl_cam"] = target_transl
+    batch["trstr_physical_gt_transl_cam"] = physical_transl
+    batch["trstr_alignment_scale"] = scale
+    batch["trstr_alignment_case"] = category
+    batch["trstr_alignment_target_delta"] = alignment_delta
+    batch["trstr_alignment_nlf_delta"] = nlf_delta
+    batch["trstr_alignment_sole_anchor"] = sole_anchor
+    batch["trstr_alignment_clean_mask"] = clean.to(dtype=physical_transl.dtype)
+    batch["trstr_alignment_tangent_noise"] = tangent_coeff * nlf_mask.to(dtype=tangent_coeff.dtype)
+
+
+def _select_trstr_scale_alignment_sole_anchor(
+    sole_centers: torch.Tensor,
+    depth: torch.Tensor,
+    intrinsics: torch.Tensor,
+    person_valid: torch.Tensor,
+) -> torch.Tensor:
+    """Select the sole center best supported by clean GT depth in a 3x3 patch."""
+    if sole_centers.ndim != 5 or sole_centers.shape[-2:] != (2, 3):
+        raise ValueError(f"Expected sole centers [B,S,Q,2,3], got {tuple(sole_centers.shape)}")
+    depth_hw = _canonical_training_depth(depth)
+    batch_size, num_frames, num_queries = sole_centers.shape[:3]
+    height, width = depth_hw.shape[-2:]
+    flat_sole = sole_centers.reshape(batch_size * num_frames, num_queries, 2, 3)
+    flat_depth = depth_hw.reshape(batch_size * num_frames, height, width)
+    flat_k = intrinsics.reshape(batch_size * num_frames, 3, 3).to(
+        device=sole_centers.device, dtype=sole_centers.dtype
+    )
+    z = flat_sole[..., 2]
+    px = flat_k[:, None, None, 0, 0] * flat_sole[..., 0] / z.clamp(min=1e-6)
+    px = px + flat_k[:, None, None, 0, 2]
+    py = flat_k[:, None, None, 1, 1] * flat_sole[..., 1] / z.clamp(min=1e-6)
+    py = py + flat_k[:, None, None, 1, 2]
+    center_x = px.round().long()
+    center_y = py.round().long()
+    offsets = torch.arange(-1, 2, device=sole_centers.device)
+    oy, ox = torch.meshgrid(offsets, offsets, indexing="ij")
+    xs = center_x[..., None] + ox.reshape(1, 1, 1, -1)
+    ys = center_y[..., None] + oy.reshape(1, 1, 1, -1)
+    in_image = (xs >= 0) & (xs < width) & (ys >= 0) & (ys < height)
+    frame_idx = torch.arange(batch_size * num_frames, device=sole_centers.device).view(-1, 1, 1, 1)
+    sampled = flat_depth[
+        frame_idx.expand_as(xs),
+        ys.clamp(0, height - 1),
+        xs.clamp(0, width - 1),
+    ]
+    sample_valid = in_image & torch.isfinite(sampled) & (sampled > 1e-6)
+    residual = torch.abs(sampled - z[..., None].to(dtype=sampled.dtype))
+    residual = torch.where(sample_valid, residual, torch.full_like(residual, float("inf"))).amin(dim=-1)
+    sole_valid = (
+        torch.isfinite(flat_sole).all(dim=-1)
+        & (z > 1e-6)
+        & torch.isfinite(residual)
+        & person_valid.reshape(batch_size * num_frames, num_queries, 1)
+    )
+    best_index = torch.where(
+        sole_valid,
+        residual,
+        torch.full_like(residual, float("inf")),
+    ).argmin(dim=-1)
+    selected = flat_sole.gather(
+        2,
+        best_index[..., None, None].expand(batch_size * num_frames, num_queries, 1, 3),
+    )[..., 0, :]
+    fallback = flat_sole.mean(dim=-2)
+    has_supported_sole = sole_valid.any(dim=-1)
+    selected = torch.where(has_supported_sole[..., None], selected, fallback)
+    return selected.reshape(batch_size, num_frames, num_queries, 3)
+
+
 def build_smpl_override_outputs(
     batch: dict[str, torch.Tensor],
     config: dict[str, Any],
@@ -2763,7 +3068,27 @@ def build_smpl_override_outputs(
     if boxes_mask is not None and not box_free:
         valid = valid & boxes_mask.bool()
     perturb_mode = str(config.get("training_prior", {}).get("smpl_perturb_mode", "translation") or "translation").lower()
-    if perturb_mode == "translation":
+    if perturb_mode == "trstr_scale_alignment":
+        required = (
+            "trstr_base_transl_cam",
+            "trstr_target_transl_cam",
+            "trstr_alignment_clean_mask",
+            "trstr_alignment_tangent_noise",
+            "trstr_alignment_case",
+        )
+        missing = [key for key in required if not isinstance(batch.get(key), torch.Tensor)]
+        if missing:
+            raise RuntimeError(f"TRSTR scale-alignment batch was not prepared: {missing}")
+        noisy_transl = batch["trstr_base_transl_cam"].to(dtype=clean_transl.dtype)
+        noisy_pose6d = pose6d
+        clean_mask = batch["trstr_alignment_clean_mask"].to(dtype=clean_transl.dtype)
+        tangent_noise = batch["trstr_alignment_tangent_noise"].to(dtype=clean_transl.dtype)
+        noise_category = batch["trstr_alignment_case"].unsqueeze(-1).expand(
+            *clean_transl.shape[:-1], 1
+        ).long()
+        noise_ratio = clean_transl.new_ones(*clean_transl.shape[:-1], 1)
+        contact_noise_signed = clean_transl.new_zeros(*clean_transl.shape[:-1], 1)
+    elif perturb_mode == "translation":
         prior_cfg = config.get("training_prior", {})
         noise_contract = str(prior_cfg.get("smpl_translation_noise_contract", "legacy_random") or "legacy_random").lower()
         if noise_contract == "v4_deterministic":
@@ -2827,6 +3152,19 @@ def build_smpl_override_outputs(
         "base_clean_pred_pose_6d": pose6d,
         "gt_smpl_provider_mask": valid,
     }
+    if perturb_mode == "trstr_scale_alignment":
+        for key in (
+            "trstr_target_transl_cam",
+            "trstr_physical_gt_transl_cam",
+            "trstr_alignment_scale",
+            "trstr_alignment_case",
+            "trstr_alignment_target_delta",
+            "trstr_alignment_nlf_delta",
+            "trstr_alignment_sole_anchor",
+        ):
+            value = batch.get(key)
+            if isinstance(value, torch.Tensor):
+                outputs[key] = value
     for key in ("gt_smpl_online_visibility_mask", "gt_smpl_original_mask"):
         value = batch.get(key)
         if isinstance(value, torch.Tensor):
@@ -2853,7 +3191,17 @@ def apply_smpl_translation_noise(
     temporal_rho = min(max(float(prior_cfg.get("smpl_transl_noise_temporal_rho", 1.0)), 0.0), 1.0)
     metric_schedule = parse_float_schedule(prior_cfg.get("smpl_transl_ray_noise_schedule_m", "0.0"))
     metric_max = metric_schedule[min(max(int(epoch), 0), len(metric_schedule) - 1)] if metric_schedule else 0.0
-    if mode in {"metric_normal", "metric_gaussian"}:
+    if mode == "metric_gaussian_mixture":
+        ray_delta_m = _sample_metric_gaussian_mixture_translation_noise(
+            transl,
+            channels=1,
+            probabilities=prior_cfg.get("smpl_transl_ray_noise_mixture_probabilities", [0.25, 0.35, 0.40]),
+            std_m=prior_cfg.get("smpl_transl_ray_noise_mixture_std_m", [0.08, 0.30, 0.65]),
+            clip_m=prior_cfg.get("smpl_transl_ray_noise_mixture_clip_m", [0.20, 0.65, 1.00]),
+            clip_vector_norm=False,
+        )
+        ray_scale = 1.0 + ray_delta_m / torch.linalg.norm(transl, dim=-1, keepdim=True).clamp(min=1e-4)
+    elif mode in {"metric_normal", "metric_gaussian"}:
         ray_delta_m = _sample_clipped_gaussian_translation_noise(
             transl,
             channels=1,
@@ -2884,7 +3232,16 @@ def apply_smpl_translation_noise(
     tangent_schedule = parse_float_schedule(prior_cfg.get("smpl_transl_tangent_noise_schedule_m", "0.0"))
     tangent_max = tangent_schedule[min(max(int(epoch), 0), len(tangent_schedule) - 1)] if tangent_schedule else 0.0
     tangent_mode = str(prior_cfg.get("smpl_transl_tangent_noise_mode", "uniform") or "uniform").lower()
-    if tangent_mode in {"normal", "gaussian", "metric_normal", "metric_gaussian"}:
+    if tangent_mode == "metric_gaussian_mixture":
+        tangent_coeff = _sample_metric_gaussian_mixture_translation_noise(
+            transl,
+            channels=2,
+            probabilities=prior_cfg.get("smpl_transl_tangent_noise_mixture_probabilities", [0.20, 0.35, 0.45]),
+            std_m=prior_cfg.get("smpl_transl_tangent_noise_mixture_std_m", [0.12, 0.55, 1.10]),
+            clip_m=prior_cfg.get("smpl_transl_tangent_noise_mixture_clip_m", [0.35, 1.20, 2.00]),
+            clip_vector_norm=True,
+        )
+    elif tangent_mode in {"normal", "gaussian", "metric_normal", "metric_gaussian"}:
         tangent_coeff = _sample_clipped_gaussian_translation_noise(
             transl,
             channels=2,
@@ -2917,6 +3274,60 @@ def apply_smpl_translation_noise(
     noisy = transl * ray_scale + tangent_delta
     clean_mask = (~noisy_slot | ~valid.unsqueeze(-1)).to(dtype=transl.dtype)
     return noisy, ray_scale, tangent_coeff, clean_mask
+
+
+def _sample_metric_gaussian_mixture_translation_noise(
+    reference: torch.Tensor,
+    channels: int,
+    probabilities: Any,
+    std_m: Any,
+    clip_m: Any,
+    clip_vector_norm: bool,
+) -> torch.Tensor:
+    """Sample one zero-mean metric Gaussian component per person slot."""
+    probabilities_f = _normalize_positive_float_list(probabilities, "mixture probabilities")
+    std_f = _positive_float_list(std_m, "mixture std_m", allow_zero=False)
+    clip_f = _positive_float_list(clip_m, "mixture clip_m", allow_zero=False)
+    if not (len(probabilities_f) == len(std_f) == len(clip_f)):
+        raise ValueError(
+            "Translation Gaussian mixture lengths must match: "
+            f"probabilities={len(probabilities_f)} std_m={len(std_f)} clip_m={len(clip_f)}"
+        )
+    probabilities_t = reference.new_tensor(probabilities_f)
+    std_t = reference.new_tensor(std_f)
+    clip_t = reference.new_tensor(clip_f)
+    component_shape = (*reference.shape[:-1], 1)
+    component = torch.multinomial(
+        probabilities_t,
+        num_samples=math.prod(component_shape[:-1]),
+        replacement=True,
+    ).reshape(*component_shape)
+    selected_std = std_t[component]
+    selected_clip = clip_t[component]
+    noise = torch.randn(
+        *reference.shape[:-1], int(channels), device=reference.device, dtype=reference.dtype
+    ) * selected_std
+    if clip_vector_norm and int(channels) > 1:
+        norm = torch.linalg.norm(noise, dim=-1, keepdim=True).clamp(min=1e-8)
+        return noise * torch.minimum(torch.ones_like(norm), selected_clip / norm)
+    return torch.maximum(torch.minimum(noise, selected_clip), -selected_clip)
+
+
+def _positive_float_list(value: Any, name: str, allow_zero: bool) -> list[float]:
+    values = parse_float_schedule(value)
+    if not values:
+        raise ValueError(f"{name} must not be empty")
+    if any(item < 0.0 or (not allow_zero and item <= 0.0) for item in values):
+        raise ValueError(f"{name} contains invalid values: {values}")
+    return [float(item) for item in values]
+
+
+def _normalize_positive_float_list(value: Any, name: str) -> list[float]:
+    values = _positive_float_list(value, name, allow_zero=True)
+    total = sum(values)
+    if total <= 0.0:
+        raise ValueError(f"{name} must have a positive sum")
+    return [item / total for item in values]
 
 
 def _sample_clipped_gaussian_translation_noise(
