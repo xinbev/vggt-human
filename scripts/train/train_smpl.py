@@ -3567,6 +3567,8 @@ def parse_float_schedule(value: Any) -> list[float]:
     text = str(value or "0.0").strip()
     if not text:
         return [0.0]
+    if text.startswith("[") and text.endswith("]"):
+        text = text[1:-1].strip()
     return [float(part.strip()) for part in text.split(",") if part.strip()]
 
 
