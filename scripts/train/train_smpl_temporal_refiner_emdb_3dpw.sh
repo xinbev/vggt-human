@@ -3,6 +3,7 @@ set -euo pipefail
 
 REPO_ROOT="${REPO_ROOT:-/home/zhw/lab_users/xyb/home/projects/vggt-human}"
 cd "${REPO_ROOT}"
+export PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
 
 TRAIN_CONFIG="${TRAIN_CONFIG:-${REPO_ROOT}/configs/train_smpl_temporal_refiner_emdb_3dpw.yaml}"
 PATH_CONFIG="${PATH_CONFIG:-${REPO_ROOT}/configs/path.yaml}"

@@ -3,6 +3,7 @@ set -euo pipefail
 
 REPO_ROOT="${REPO_ROOT:-/home/zhw/lab_users/xyb/home/projects/vggt-human}"
 cd "${REPO_ROOT}"
+export PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
 THREEDPW_ROOT="${THREEDPW_ROOT:-/home/zhw/xyb_space/3DPW/sequenceFiles/train}"
 EMDB_ROOT="${EMDB_ROOT:-/home/zhw/xyb_space/emdb}"
 WINDOW_SIZE="${WINDOW_SIZE:-9}"

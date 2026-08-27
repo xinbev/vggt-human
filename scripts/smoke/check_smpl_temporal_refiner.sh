@@ -3,4 +3,5 @@ set -euo pipefail
 
 REPO_ROOT="${REPO_ROOT:-/home/zhw/lab_users/xyb/home/projects/vggt-human}"
 cd "${REPO_ROOT}"
+export PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
 python scripts/smoke/check_smpl_temporal_refiner.py
