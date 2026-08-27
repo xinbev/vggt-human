@@ -10,6 +10,10 @@ data:
   stride: 1
   validation_fraction: 0.1
   min_valid_frames: 9
+  # EMDB has substantially more overlapping windows than 3DPW. Sample each
+  # source equally without discarding either source.
+  sampling_mode: balanced_dataset
+  samples_per_epoch: 0
   num_workers: 8
   pin_memory: true
 
@@ -24,6 +28,7 @@ model:
   gate_bias: -1.5
 
 noise:
+  # Fallback values for a static run. Curriculum stages below override these.
   translation_drift_std_m: 0.06
   translation_jitter_std_m: 0.025
   translation_outlier_std_m: 0.10
@@ -32,6 +37,31 @@ noise:
   pose_jitter_std_rad: 0.025
   root_pose_multiplier: 1.5
   clean_clip_prob: 0.15
+
+# Two-stage only. Do not add a third/strong stage until medium-stage W&B
+# curves and qualitative sequence results have been reviewed.
+noise_curriculum:
+  enabled: true
+  small_epochs: 10
+  validation_stage: medium
+  small:
+    translation_drift_std_m: 0.06
+    translation_jitter_std_m: 0.025
+    translation_outlier_std_m: 0.10
+    translation_outlier_prob: 0.05
+    pose_drift_std_rad: 0.06
+    pose_jitter_std_rad: 0.025
+    root_pose_multiplier: 1.5
+    clean_clip_prob: 0.15
+  medium:
+    translation_drift_std_m: 0.12
+    translation_jitter_std_m: 0.05
+    translation_outlier_std_m: 0.25
+    translation_outlier_prob: 0.08
+    pose_drift_std_rad: 0.12
+    pose_jitter_std_rad: 0.05
+    root_pose_multiplier: 1.5
+    clean_clip_prob: 0.15
 
 optim:
   batch_size: 64

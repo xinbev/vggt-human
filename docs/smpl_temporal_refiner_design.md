@@ -78,3 +78,14 @@ bash scripts/train/train_smpl_temporal_refiner_emdb_3dpw.sh
 接入点是 [smpl_temporal_refiner.py](C:/Users/ROG/PycharmProjects/vggt-omega/vggt_omega/integrations/smpl_temporal_refiner.py) 的 `SMPLTemporalRefinementAdapter`。它要求离线 batch 内有稳定的 `track_ids`，可处理同一人物跨帧换 slot；缺失、重复匹配或无效位置保持原始单帧输出。
 
 在服务器确认 checkpoint 对真实 NLF/TRSTR 输出不劣化后，再单独新增配置开关并挂到可视化/推理调用方；在此之前，主模型 forward 不会发生任何改变。
+
+## 当前两阶段干扰课程
+
+当前只启用两档，不预设第三档：
+
+| 阶段 | epoch | translation drift / jitter / outlier | pose drift / jitter |
+| --- | --- | --- | --- |
+| small | 1–10 | 6 cm / 2.5 cm / 10 cm | 0.06 / 0.025 rad |
+| medium | 11–结束 | 12 cm / 5 cm / 25 cm | 0.12 / 0.05 rad |
+
+验证集固定使用 medium 干扰，保证不同 epoch 的验证曲线可直接比较。训练控制台、W&B 和 checkpoint 都会记录当前阶段与实际参数。medium 结果和真实序列可视化确认前，不增加第三档或继续扩大修正范围。

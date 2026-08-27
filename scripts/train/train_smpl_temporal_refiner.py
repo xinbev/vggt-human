@@ -12,7 +12,7 @@ from typing import Any
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler
 
 from vggt_omega.data import SMPLTemporalPickleDataset
 from vggt_omega.models import TemporalRefinerConfig, TemporalSMPLRefiner, TemporalSMPLRefinerLoss
@@ -72,6 +72,76 @@ def _move_batch(batch: dict[str, torch.Tensor], device: torch.device) -> dict[st
 
 def _mean_metrics(totals: dict[str, float], count: int) -> dict[str, float]:
     return {key: value / max(count, 1) for key, value in totals.items()}
+
+
+def _build_train_sampler(
+    dataset: SMPLTemporalPickleDataset,
+    mode: str,
+    samples_per_epoch: int,
+    seed: int,
+) -> tuple[WeightedRandomSampler | None, dict[str, Any]]:
+    """Optionally prevent one large source from dominating overlapping windows."""
+    per_dataset_windows: dict[str, int] = {}
+    names: list[str] = []
+    for record_index, _ in dataset.index:
+        name = dataset.records[record_index].dataset_name
+        names.append(name)
+        per_dataset_windows[name] = per_dataset_windows.get(name, 0) + 1
+    mode = mode.lower()
+    if mode == "natural":
+        return None, {"mode": mode, "per_dataset_windows": per_dataset_windows, "samples_per_epoch": len(dataset)}
+    if mode != "balanced_dataset":
+        raise ValueError("data.sampling_mode must be 'natural' or 'balanced_dataset'")
+    if len(per_dataset_windows) < 2:
+        return None, {"mode": "natural_single_source", "per_dataset_windows": per_dataset_windows, "samples_per_epoch": len(dataset)}
+    weights = torch.as_tensor([1.0 / per_dataset_windows[name] for name in names], dtype=torch.double)
+    generator = torch.Generator()
+    generator.manual_seed(seed)
+    epoch_samples = int(samples_per_epoch) if int(samples_per_epoch) > 0 else len(dataset)
+    sampler = WeightedRandomSampler(weights, num_samples=epoch_samples, replacement=True, generator=generator)
+    return sampler, {
+        "mode": mode,
+        "per_dataset_windows": per_dataset_windows,
+        "samples_per_epoch": epoch_samples,
+        "expected_dataset_fraction": {name: 1.0 / len(per_dataset_windows) for name in sorted(per_dataset_windows)},
+    }
+
+
+def _make_noise_config(raw: dict[str, Any]) -> TemporalSMPLNoiseConfig:
+    if not isinstance(raw, dict):
+        raise TypeError("noise configuration must be a mapping")
+    fields = TemporalSMPLNoiseConfig.__dataclass_fields__
+    return TemporalSMPLNoiseConfig(**{key: raw[key] for key in fields if key in raw})
+
+
+def _select_training_noise(config: dict[str, Any], epoch: int) -> tuple[str, TemporalSMPLNoiseConfig]:
+    """Use only the requested small -> medium two-stage curriculum."""
+    base = dict(config.get("noise", {}))
+    curriculum = config.get("noise_curriculum", {})
+    if not bool(curriculum.get("enabled", False)):
+        return "static", _make_noise_config(base)
+    small_epochs = int(curriculum.get("small_epochs", 10))
+    if small_epochs <= 0:
+        raise ValueError("noise_curriculum.small_epochs must be positive")
+    stage_name = "small" if epoch < small_epochs else "medium"
+    stage = curriculum.get(stage_name)
+    if not isinstance(stage, dict):
+        raise ValueError(f"noise_curriculum.{stage_name} must be a mapping")
+    base.update(stage)
+    return stage_name, _make_noise_config(base)
+
+
+def _select_validation_noise(config: dict[str, Any]) -> TemporalSMPLNoiseConfig:
+    """Keep validation corruption fixed so epoch metrics remain comparable."""
+    base = dict(config.get("noise", {}))
+    curriculum = config.get("noise_curriculum", {})
+    stage_name = str(curriculum.get("validation_stage", "medium"))
+    if bool(curriculum.get("enabled", False)):
+        stage = curriculum.get(stage_name)
+        if not isinstance(stage, dict):
+            raise ValueError(f"noise_curriculum.validation_stage={stage_name!r} is not configured")
+        base.update(stage)
+    return _make_noise_config(base)
 
 
 @torch.no_grad()
@@ -174,9 +244,16 @@ def main() -> None:
         "scanned_pickle_files": source_file_counts,
         "raw_person_tracks": len(all_records),
         "raw_by_dataset": raw_by_dataset,
-        "train": train_set.summary(),
-        "val": val_set.summary(),
     }
+    train_sampler, sampling_summary = _build_train_sampler(
+        train_set,
+        mode=str(data_config.get("sampling_mode", "balanced_dataset")),
+        samples_per_epoch=int(data_config.get("samples_per_epoch", 0)),
+        seed=seed,
+    )
+    data_summary["sampling"] = sampling_summary
+    data_summary["train"] = train_set.summary()
+    data_summary["val"] = val_set.summary()
     (output_dir / "data_summary.json").write_text(json.dumps(data_summary, indent=2, ensure_ascii=False), encoding="utf-8")
     print("========== Temporal-refiner data summary ==========")
     print(json.dumps(data_summary, indent=2, ensure_ascii=False))
@@ -186,7 +263,7 @@ def main() -> None:
         "pin_memory": bool(data_config.get("pin_memory", True)),
         "persistent_workers": int(data_config.get("num_workers", 4)) > 0,
     }
-    train_loader = DataLoader(train_set, shuffle=True, drop_last=False, **loader_kwargs)
+    train_loader = DataLoader(train_set, shuffle=train_sampler is None, sampler=train_sampler, drop_last=False, **loader_kwargs)
     val_loader = DataLoader(val_set, shuffle=False, drop_last=False, **loader_kwargs)
 
     architecture = TemporalRefinerConfig(**{key: model_config[key] for key in TemporalRefinerConfig.__dataclass_fields__ if key in model_config})
@@ -194,7 +271,7 @@ def main() -> None:
         raise ValueError("model.window_size and data.window_size must match")
     model = TemporalSMPLRefiner(architecture).to(device)
     criterion = TemporalSMPLRefinerLoss(**{key: loss_config[key] for key in TemporalSMPLRefinerLoss.__init__.__annotations__ if key in loss_config})
-    noise_config = TemporalSMPLNoiseConfig(**{key: config.get("noise", {}).get(key) for key in TemporalSMPLNoiseConfig.__dataclass_fields__ if key in config.get("noise", {})})
+    validation_noise_config = _select_validation_noise(config)
     optimizer = torch.optim.AdamW(model.parameters(), lr=float(optim_config["lr"]), weight_decay=float(optim_config.get("weight_decay", 0.01)))
     amp_enabled = bool(optim_config.get("amp", True)) and device.type == "cuda"
     scaler = torch.amp.GradScaler("cuda", enabled=amp_enabled)
@@ -241,11 +318,13 @@ def main() -> None:
     global_step = 0
     print(f"[temporal-refiner] device={device} train_windows={len(train_set)} val_windows={len(val_set)}")
     for epoch in range(start_epoch, epochs):
+        noise_stage, train_noise_config = _select_training_noise(config, epoch)
+        print(f"[epoch {epoch + 1}/{epochs}] noise_stage={noise_stage} {asdict(train_noise_config)}")
         model.train()
         running: dict[str, float] = {}
         for step, batch in enumerate(train_loader):
             batch = _move_batch(batch, device)
-            noisy = corrupt_smpl_sequence(batch["target_pose_6d"], batch["target_transl"], batch["valid_mask"], noise_config)
+            noisy = corrupt_smpl_sequence(batch["target_pose_6d"], batch["target_transl"], batch["valid_mask"], train_noise_config)
             optimizer.zero_grad(set_to_none=True)
             with torch.autocast(device_type=device.type, enabled=amp_enabled):
                 outputs = model(
@@ -269,8 +348,18 @@ def main() -> None:
                     wandb_run.log({f"train/{key}": value for key, value in current.items()}, step=global_step)
 
         train_metrics = _mean_metrics(running, max(len(train_loader), 1))
-        val_metrics = _evaluate(model, val_loader, criterion, noise_config, device)
-        summary = {"epoch": epoch + 1, **{f"train/{key}": value for key, value in train_metrics.items()}, **{f"val/{key}": value for key, value in val_metrics.items()}}
+        val_metrics = _evaluate(model, val_loader, criterion, validation_noise_config, device)
+        summary = {
+            "epoch": epoch + 1,
+            "noise/stage": noise_stage,
+            "noise/translation_drift_std_m": train_noise_config.translation_drift_std_m,
+            "noise/translation_jitter_std_m": train_noise_config.translation_jitter_std_m,
+            "noise/translation_outlier_std_m": train_noise_config.translation_outlier_std_m,
+            "noise/pose_drift_std_rad": train_noise_config.pose_drift_std_rad,
+            "noise/pose_jitter_std_rad": train_noise_config.pose_jitter_std_rad,
+            **{f"train/{key}": value for key, value in train_metrics.items()},
+            **{f"val/{key}": value for key, value in val_metrics.items()},
+        }
         print(f"[epoch {epoch + 1}] val_loss={val_metrics['loss_total']:.5f} val_trans={val_metrics['metric_transl_l1_m']:.5f}m")
         if wandb_run is not None:
             wandb_run.log(summary, step=global_step)
@@ -278,6 +367,9 @@ def main() -> None:
             "format": "smpl_temporal_refiner_v1",
             "epoch": epoch,
             "best_val_loss": best_val,
+            "noise_stage": noise_stage,
+            "train_noise_config": asdict(train_noise_config),
+            "validation_noise_config": asdict(validation_noise_config),
             "model_config": asdict(architecture),
             "model_state": model.state_dict(),
             "optimizer_state": optimizer.state_dict(),

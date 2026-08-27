@@ -16,6 +16,8 @@ BATCH_SIZE="${BATCH_SIZE:-64}"
 NUM_WORKERS="${NUM_WORKERS:-8}"
 EPOCHS="${EPOCHS:-50}"
 LR="${LR:-2e-4}"
+SAMPLING_MODE="${SAMPLING_MODE:-balanced_dataset}"
+SAMPLES_PER_EPOCH="${SAMPLES_PER_EPOCH:-0}"
 WANDB_ENABLED="${WANDB_ENABLED:-true}"
 WANDB_PROJECT="${WANDB_PROJECT:-vggt-human}"
 WANDB_MODE="${WANDB_MODE:-online}"
@@ -34,6 +36,7 @@ echo "3DPW: ${THREEDPW_ROOT}"
 echo "EMDB : ${EMDB_ROOT}"
 echo "Output: ${OUTPUT_DIR}"
 echo "Window/batch: ${WINDOW_SIZE} / ${BATCH_SIZE}"
+echo "Sampling: ${SAMPLING_MODE}, samples/epoch=${SAMPLES_PER_EPOCH}"
 echo "W&B: enabled=${WANDB_ENABLED}, project=${WANDB_PROJECT}, mode=${WANDB_MODE}"
 
 python scripts/train/train_smpl_temporal_refiner.py \
@@ -48,6 +51,8 @@ python scripts/train/train_smpl_temporal_refiner.py \
   --override "optim.batch_size=${BATCH_SIZE}" \
   --override "optim.epochs=${EPOCHS}" \
   --override "optim.lr=${LR}" \
+  --override "data.sampling_mode=${SAMPLING_MODE}" \
+  --override "data.samples_per_epoch=${SAMPLES_PER_EPOCH}" \
   --override "logging.wandb.enabled=${WANDB_ENABLED}" \
   --override "logging.wandb.project=${WANDB_PROJECT}" \
   --override "logging.wandb.mode=${WANDB_MODE}"
