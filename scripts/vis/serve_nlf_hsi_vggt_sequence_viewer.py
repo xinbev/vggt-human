@@ -318,7 +318,7 @@ def load_config(args: argparse.Namespace) -> dict[str, Any]:
     trstr_enabled = bool(model_cfg.get("enable_hsi_trstr", False))
     model_cfg["hsi_trstr_fast_gt"] = False
     model_cfg["smpl_track_assignment_mode"] = (
-        "gt" if args.query_source == "bedlam_sidecar" else ("base" if trstr_enabled else "none")
+        "gt" if args.query_source == "bedlam_sidecar" else ("base_smpl" if trstr_enabled else "none")
     )
     model_cfg["smpl_use_external_track_prior"] = False
     if args.smpl_model_dir:
@@ -503,7 +503,21 @@ def run_model(
                 "smpl_track_mask": priors["smpl_track_mask"],
             }
         )
-    predictions = model(images, **kwargs)
+    trstr_head = getattr(model, "hsi_trstr_head", None)
+    skip_first_pass_trstr = (
+        args is not None
+        and str(args.scene_scale_prealign) == "smpl_median"
+        and trstr_head is not None
+    )
+    if skip_first_pass_trstr:
+        model.hsi_trstr_head = None
+        try:
+            predictions = model(images, **kwargs)
+        finally:
+            model.hsi_trstr_head = trstr_head
+        predictions["viewer_trstr_skipped_before_metric_depth"] = predictions["pred_transl_cam"].new_ones(())
+    else:
+        predictions = model(images, **kwargs)
     if args is not None and str(args.scene_scale_prealign) == "smpl_median":
         if smpl is None:
             raise ValueError("SMPL-median pre-alignment requires an SMPLLayer")
@@ -575,6 +589,51 @@ def run_smpl_coarse_hsi_cascade(
         hsi_depth_is_metric=True,
         hsi_geometry_mode="smpl_coarse_metric",
     )
+    if getattr(model, "hsi_trstr_head", None) is not None:
+        required_trstr = (
+            "hsi_trstr_refined_pred_transl_cam",
+            "hsi_trstr_delta_transl_cam",
+            "hsi_trstr_region_valid",
+            "hsi_trstr_depth_source_id",
+        )
+        missing_trstr = [key for key in required_trstr if not isinstance(cascade.get(key), torch.Tensor)]
+        if missing_trstr:
+            raise RuntimeError(f"TRSTR inference did not produce required outputs: {missing_trstr}")
+        depth_source_id = float(cascade["hsi_trstr_depth_source_id"].detach().cpu())
+        if depth_source_id != 2.0:
+            raise RuntimeError(
+                "TRSTR must consume v3 hsi_translation_depth after coarse alignment; "
+                f"got depth_source_id={depth_source_id}"
+            )
+        person_valid = cascade["pred_confs"][..., 0] >= float(args.conf_threshold)
+        delta_norm = torch.linalg.norm(cascade["hsi_trstr_delta_transl_cam"].detach().float(), dim=-1)
+        valid_delta = delta_norm[person_valid]
+        region_valid = cascade["hsi_trstr_region_valid"].detach().bool()
+        valid_region_ratio = (
+            float(region_valid[person_valid].float().mean().cpu()) if bool(person_valid.any()) else 0.0
+        )
+        trstr_summary = {
+            "active": True,
+            "temporal_enabled": bool(getattr(model.hsi_trstr_head, "enable_temporal", False)),
+            "depth_source": "hsi_translation_depth",
+            "valid_people": int(person_valid.sum().detach().cpu()),
+            "delta_l2_mean_m": float(valid_delta.mean().cpu()) if valid_delta.numel() else 0.0,
+            "delta_l2_p90_m": float(torch.quantile(valid_delta, 0.90).cpu()) if valid_delta.numel() else 0.0,
+            "delta_l2_max_m": float(valid_delta.max().cpu()) if valid_delta.numel() else 0.0,
+            "region_valid_ratio": valid_region_ratio,
+        }
+        cascade["_viewer_trstr_summary"] = trstr_summary
+        print(
+            "[trstr] "
+            f"people={trstr_summary['valid_people']} "
+            f"delta_mean_m={trstr_summary['delta_l2_mean_m']:.6g} "
+            f"delta_p90_m={trstr_summary['delta_l2_p90_m']:.6g} "
+            f"delta_max_m={trstr_summary['delta_l2_max_m']:.6g} "
+            f"region_valid={trstr_summary['region_valid_ratio']:.4f} "
+            f"temporal={trstr_summary['temporal_enabled']} "
+            "depth=hsi_translation_depth",
+            flush=True,
+        )
     residual_scale = cascade["hsi_scene_scale"].detach().clone()
     residual_bias = cascade["hsi_scene_depth_bias"].detach().clone()
     residual_frame_scale = cascade.get("hsi_frame_scene_scale", residual_scale).detach().clone()
@@ -1333,6 +1392,7 @@ def build_summary(
         "hsi_residual_scene_scale": [frame["hsi_residual_scene_scale"] for frame in scene["frames"]],
         "hsi_residual_scene_depth_bias": [frame["hsi_residual_scene_depth_bias"] for frame in scene["frames"]],
         "hsi_coarse_scale_records": predictions.get("_hsi_coarse_scale_records", []),
+        "trstr": predictions.get("_viewer_trstr_summary", {"active": False}),
         "scene_scale_prealign": str(scene.get("scene_scale_prealign", "none")),
         "hsi_scene_affine_mode": str(scene.get("hsi_scene_affine_mode", "per_frame")),
         "hsi_scene_affine_ema_alpha": float(scene.get("hsi_scene_affine_ema_alpha", 0.25)),
