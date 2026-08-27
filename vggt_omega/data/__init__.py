@@ -2,6 +2,7 @@ from .bedlam import BedlamDataset, bedlam_collate_fn
 from .hf_bedlam import HFBedlamDataset, hf_bedlam_collate_fn
 from .hmr4d_eval import HMR4DSupportEvalDataset, hmr4d_eval_collate_fn
 from .threedpw import ThreeDPWDataset, threedpw_collate_fn
+from .smpl_temporal_pickle import SMPLTemporalPickleDataset
 
 __all__ = [
     "BedlamDataset",
@@ -12,4 +13,5 @@ __all__ = [
     "hf_bedlam_collate_fn",
     "hmr4d_eval_collate_fn",
     "threedpw_collate_fn",
+    "SMPLTemporalPickleDataset",
 ]

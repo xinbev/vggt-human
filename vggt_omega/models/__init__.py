@@ -5,5 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 from .vggt_omega import VGGTOmega
+from .smpl_temporal_refiner import TemporalRefinerConfig, TemporalSMPLRefiner, TemporalSMPLRefinerLoss
 
-__all__ = ["VGGTOmega"]
+__all__ = ["VGGTOmega", "TemporalRefinerConfig", "TemporalSMPLRefiner", "TemporalSMPLRefinerLoss"]

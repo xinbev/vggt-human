@@ -1,0 +1,62 @@
+experiment:
+  name: smpl_temporal_refiner_emdb_3dpw_v1
+  output_dir: outputs/train/smpl_temporal_refiner_emdb_3dpw_v1
+  seed: 42
+
+# Sources are supplied by the server launcher, so this config remains portable.
+data:
+  sources: []
+  window_size: 9
+  stride: 1
+  validation_fraction: 0.1
+  min_valid_frames: 9
+  num_workers: 8
+  pin_memory: true
+
+model:
+  window_size: 9
+  hidden_dim: 384
+  num_heads: 8
+  num_layers: 4
+  dropout: 0.1
+  max_translation_delta_m: 0.25
+  max_pose_delta_rad: 0.35
+  gate_bias: -1.5
+
+noise:
+  translation_drift_std_m: 0.06
+  translation_jitter_std_m: 0.025
+  translation_outlier_std_m: 0.10
+  translation_outlier_prob: 0.05
+  pose_drift_std_rad: 0.06
+  pose_jitter_std_rad: 0.025
+  root_pose_multiplier: 1.5
+  clean_clip_prob: 0.15
+
+optim:
+  batch_size: 64
+  epochs: 50
+  lr: 0.0002
+  weight_decay: 0.01
+  grad_clip_norm: 1.0
+  amp: true
+  log_interval: 20
+
+loss:
+  pose_weight: 1.0
+  transl_weight: 2.0
+  velocity_weight: 0.5
+  acceleration_weight: 0.25
+  no_worse_weight: 0.5
+  clean_residual_weight: 0.1
+  no_worse_margin: 0.002
+
+logging:
+  wandb:
+    enabled: true
+    project: vggt-human
+    entity: ""
+    name: smpl_temporal_refiner_emdb_3dpw_v1
+    group: smpl_temporal_refiner
+    mode: online
+    tags: [smpl, temporal-refiner, 3dpw, emdb, offline]
