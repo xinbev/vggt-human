@@ -1,0 +1,76 @@
+{
+  "sequence_dir": "/home/zhw/xyb_space/bedlam2/bedlam2_processed/Training/20241213_1_250_rome_tracking_seq_000002",
+  "frame_id": "seq_000002_0008",
+  "paths": {
+    "rgb": "/home/zhw/xyb_space/bedlam2/bedlam2_processed/Training/20241213_1_250_rome_tracking_seq_000002/rgb/seq_000002_0008.png",
+    "depth": "/home/zhw/xyb_space/bedlam2/bedlam2_processed/Training/20241213_1_250_rome_tracking_seq_000002/depth/seq_000002_0008.npy",
+    "cam": "/home/zhw/xyb_space/bedlam2/bedlam2_processed/Training/20241213_1_250_rome_tracking_seq_000002/cam/seq_000002_0008.npz",
+    "smpl": "/home/zhw/xyb_space/bedlam2/bedlam2_processed/Training/20241213_1_250_rome_tracking_seq_000002/smpl/seq_000002_0008.pkl"
+  },
+  "coordinate_contract": {
+    "cam_pose": "camera_from_world / world_to_camera: x_cam = R @ x_world + t",
+    "depth": "metric camera Z-depth; RGB shares its pixel grid",
+    "smpl": "decoded canonical mesh + stored smplx_transl in camera coordinates",
+    "world_render": "depth points and SMPL vertices both use x_world = R.T @ (x_cam - t)"
+  },
+  "rgb_hw": [
+    720,
+    1280
+  ],
+  "intrinsics": [
+    [
+      550.6767578125,
+      0.0,
+      640.0
+    ],
+    [
+      0.0,
+      550.6767578125,
+      360.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "camera_center_world": [
+    0.01772400364279747,
+    0.9334381818771362,
+    2.4013795852661133
+  ],
+  "rotation_orthonormal_error": 1.1920928955078125e-07,
+  "depth": {
+    "valid_fraction": 1.0,
+    "median_m": 4.892499923706055,
+    "p05_m": 1.8387500047683716,
+    "p95_m": 16.059999465942383
+  },
+  "person_count": 1,
+  "smpl_translation_cam": [
+    {
+      "person_index": 0,
+      "translation_cam_m": [
+        -0.022967563942074776,
+        0.3837239146232605,
+        2.089343309402466
+      ]
+    }
+  ],
+  "point_count": 57600,
+  "mesh_count": 1,
+  "smpl_projection": [
+    {
+      "person_index": 0,
+      "visible_vertex_fraction": 1.0,
+      "visible_joint_count": 45,
+      "projected_bbox_xyxy": [
+        584.8890991210938,
+        176.5928497314453,
+        696.8004150390625,
+        644.62353515625
+      ]
+    }
+  ],
+  "projection_overlay": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/bedlam_world_geometry_audit/seq_000002_0008_smpl_projection_overlay.png"
+}

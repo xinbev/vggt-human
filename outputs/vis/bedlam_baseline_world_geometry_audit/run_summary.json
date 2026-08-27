@@ -1,0 +1,190 @@
+{
+  "sequence_dir": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000",
+  "frame_id": "seq_000000_0000",
+  "paths": {
+    "rgb": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/rgb/seq_000000_0000.png",
+    "depth": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/depth/seq_000000_0000.npy",
+    "cam": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/cam/seq_000000_0000.npz",
+    "smpl": "/home/zhw/xyb_space/bedlam/processed_bedlam/Training/20221013_3-10_500_batch01hand_static_highSchoolGym_seq_000000/smpl/seq_000000_0000.pkl"
+  },
+  "coordinate_contract": {
+    "cam_pose": "camera_from_world / world_to_camera: x_cam = R @ x_world + t",
+    "depth": "metric camera Z-depth; RGB shares its pixel grid",
+    "smpl": "decoded canonical mesh + stored smplx_transl in camera coordinates",
+    "world_render": "depth points and SMPL vertices both use x_world = R.T @ (x_cam - t)"
+  },
+  "rgb_hw": [
+    720,
+    1280
+  ],
+  "intrinsics": [
+    [
+      1312.177734375,
+      0.0,
+      640.0
+    ],
+    [
+      0.0,
+      1312.177734375,
+      360.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "camera_center_world": [
+    -0.34360283613204956,
+    2.1427695751190186,
+    9.845386505126953
+  ],
+  "rotation_orthonormal_error": 1.1920928955078125e-07,
+  "depth": {
+    "valid_fraction": 1.0,
+    "median_m": 28.72726058959961,
+    "p05_m": 7.948247718811035,
+    "p95_m": 39.89362411499023
+  },
+  "person_count": 7,
+  "smpl_translation_cam": [
+    {
+      "person_index": 0,
+      "translation_cam_m": [
+        1.5385913848876953,
+        1.607522964477539,
+        10.937832832336426
+      ]
+    },
+    {
+      "person_index": 1,
+      "translation_cam_m": [
+        -1.575238823890686,
+        1.2527238130569458,
+        5.5927910804748535
+      ]
+    },
+    {
+      "person_index": 2,
+      "translation_cam_m": [
+        -0.7890424132347107,
+        1.4814000129699707,
+        8.783262252807617
+      ]
+    },
+    {
+      "person_index": 3,
+      "translation_cam_m": [
+        -0.6900528073310852,
+        2.1682839393615723,
+        13.62731647491455
+      ]
+    },
+    {
+      "person_index": 4,
+      "translation_cam_m": [
+        1.2606438398361206,
+        1.521439552307129,
+        9.04473876953125
+      ]
+    },
+    {
+      "person_index": 5,
+      "translation_cam_m": [
+        -3.222600221633911,
+        1.3525750637054443,
+        9.34404182434082
+      ]
+    },
+    {
+      "person_index": 6,
+      "translation_cam_m": [
+        -0.08533303439617157,
+        1.7806885242462158,
+        15.051220893859863
+      ]
+    }
+  ],
+  "point_count": 31765,
+  "mesh_count": 7,
+  "smpl_projection": [
+    {
+      "person_index": 0,
+      "visible_vertex_fraction": 1.0,
+      "visible_joint_count": 45,
+      "projected_bbox_xyxy": [
+        789.7415771484375,
+        430.49310302734375,
+        878.5531005859375,
+        647.2969970703125
+      ]
+    },
+    {
+      "person_index": 1,
+      "visible_vertex_fraction": 0.8886792452830189,
+      "visible_joint_count": 35,
+      "projected_bbox_xyxy": [
+        197.74417114257812,
+        413.9175109863281,
+        341.0237121582031,
+        719.835693359375
+      ]
+    },
+    {
+      "person_index": 2,
+      "visible_vertex_fraction": 1.0,
+      "visible_joint_count": 45,
+      "projected_bbox_xyxy": [
+        485.9228210449219,
+        434.26727294921875,
+        574.5733032226562,
+        682.0615234375
+      ]
+    },
+    {
+      "person_index": 3,
+      "visible_vertex_fraction": 1.0,
+      "visible_joint_count": 45,
+      "projected_bbox_xyxy": [
+        553.1666259765625,
+        494.87139892578125,
+        623.1497192382812,
+        586.7286987304688
+      ]
+    },
+    {
+      "person_index": 4,
+      "visible_vertex_fraction": 1.0,
+      "visible_joint_count": 45,
+      "projected_bbox_xyxy": [
+        770.4454956054688,
+        435.7064514160156,
+        886.503662109375,
+        677.9703369140625
+      ]
+    },
+    {
+      "person_index": 5,
+      "visible_vertex_fraction": 1.0,
+      "visible_joint_count": 45,
+      "projected_bbox_xyxy": [
+        79.5704345703125,
+        410.0659484863281,
+        218.28475952148438,
+        644.7119140625
+      ]
+    },
+    {
+      "person_index": 6,
+      "visible_vertex_fraction": 1.0,
+      "visible_joint_count": 45,
+      "projected_bbox_xyxy": [
+        611.4581909179688,
+        426.37249755859375,
+        651.6682739257812,
+        574.58056640625
+      ]
+    }
+  ],
+  "projection_overlay": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/bedlam_baseline_world_geometry_audit/seq_000000_0000_smpl_projection_overlay.png"
+}

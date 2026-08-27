@@ -1,0 +1,49 @@
+{
+  "status": "ok",
+  "device": "cuda",
+  "region_ablation": {
+    "48": {
+      "vertices": 6890,
+      "probe_tokens": 8
+    },
+    "72": {
+      "vertices": 6890,
+      "probe_tokens": 8
+    },
+    "96": {
+      "vertices": 6890,
+      "probe_tokens": 8
+    }
+  },
+  "probe_scales": [
+    "fixed_3",
+    "fixed_7",
+    "adaptive",
+    "annulus"
+  ],
+  "probe_channels": [
+    "human",
+    "environment"
+  ],
+  "region_vote_shape": [
+    1,
+    1,
+    3,
+    96,
+    3
+  ],
+  "valid_region_ratio": 0.3333333432674408,
+  "other_human_ratio_max": 0.9183673858642578,
+  "temporal_valid_ratio": 0.0,
+  "invalid_person_noop": true,
+  "pose_betas_read_only": true,
+  "gradient_contract": [
+    "vote_head",
+    "gate_head"
+  ],
+  "temporal_checked": false,
+  "persistent_memory": {
+    "checked": false,
+    "reason": "spatial-only smoke"
+  }
+}

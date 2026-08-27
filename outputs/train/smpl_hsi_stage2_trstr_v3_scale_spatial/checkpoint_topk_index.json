@@ -1,0 +1,13 @@
+{
+  "monitor": "loss_total",
+  "monitor_mode": "min",
+  "entries": [
+    {
+      "rank": 1,
+      "metric": 0.001112728924041523,
+      "epoch": 5,
+      "source": "train",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_stage2_trstr_v3_scale_spatial/checkpoint_top_train_epoch_0005_loss_total_0.001113.pt"
+    }
+  ]
+}

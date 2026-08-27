@@ -1,0 +1,90 @@
+{
+  "sequence_dir": "/home/zhw/xyb_space/bedlam2/bedlam2_processed/Training/20241213_1_250_rome_tracking_seq_000002",
+  "coordinate_note": "The viewer enumerates hypotheses; no hypothesis is automatically claimed correct.",
+  "frames": [
+    {
+      "frame_id": "seq_000002_0000",
+      "depth_median": 4.855000019073486,
+      "pose_translation": [
+        -0.003953025210648775,
+        -1.620154619216919,
+        -2.004420757293701
+      ],
+      "smpl_translation": [
+        [
+          -0.028449926525354385,
+          0.3806248903274536,
+          2.085587978363037
+        ]
+      ]
+    },
+    {
+      "frame_id": "seq_000002_0005",
+      "depth_median": 4.884999752044678,
+      "pose_translation": [
+        -0.007268622051924467,
+        -1.6196744441986084,
+        -2.004608154296875
+      ],
+      "smpl_translation": [
+        [
+          -0.024401456117630005,
+          0.3833603858947754,
+          2.086703300476074
+        ]
+      ]
+    },
+    {
+      "frame_id": "seq_000002_0010",
+      "depth_median": 4.897500038146973,
+      "pose_translation": [
+        -0.010023325681686401,
+        -1.6188185214996338,
+        -2.003669500350952
+      ],
+      "smpl_translation": [
+        [
+          -0.014907248318195343,
+          0.3838408589363098,
+          2.0880556106567383
+        ]
+      ]
+    }
+  ],
+  "hypotheses": [
+    {
+      "key": "camera_stored",
+      "label": "1 Camera: stored translation",
+      "description": "Depth and SMPL both remain in camera coordinates. Tests K, depth scale, pose and stored smplx_transl."
+    },
+    {
+      "key": "camera_minus_t",
+      "label": "2 Camera: stored translation - pose.t",
+      "description": "Tests the historical adapter alternative: stored smplx_transl may contain an extra pose translation."
+    },
+    {
+      "key": "world_w2c_stored",
+      "label": "3 World: pose is W2C, stored translation",
+      "description": "x_world = R^T (x_cam - t). Static geometry should align across frames if pose is world-to-camera."
+    },
+    {
+      "key": "world_w2c_minus_t",
+      "label": "4 World: pose is W2C, stored translation - pose.t",
+      "description": "W2C world transform plus the historical extra-translation correction."
+    },
+    {
+      "key": "world_c2w_stored",
+      "label": "5 World: pose is C2W, stored translation",
+      "description": "x_world = R x_cam + t. Static geometry should align across frames only if pose is camera-to-world."
+    },
+    {
+      "key": "world_c2w_minus_t",
+      "label": "6 World: pose is C2W, stored translation - pose.t",
+      "description": "C2W world transform plus the historical extra-translation correction."
+    }
+  ],
+  "projection_overlays": {
+    "stored": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/bedlam2_coordinate_hypothesis_audit/seq_000002_0000_stored_projection_overlay.png",
+    "stored_minus_pose_t": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/bedlam2_coordinate_hypothesis_audit/seq_000002_0000_stored_minus_pose_t_projection_overlay.png"
+  }
+}
