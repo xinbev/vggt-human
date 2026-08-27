@@ -1,0 +1,94 @@
+experiment:
+  name: infer_smpl_hsi_v3_trstr_spatial
+  output_dir: outputs/vis/walking_hsi_v3_trstr_spatial
+  seed: 42
+
+data:
+  dataset: bedlam
+  root_key: datasets.bedlam_root
+  image_size: 518
+  image_resolution: 512
+  resize_mode: balanced
+  max_humans: 20
+
+model:
+  patch_size: 16
+  embed_dim: 1024
+  enable_camera: true
+  enable_depth: true
+  enable_alignment: false
+  enable_smpl: true
+
+  # Keep the already accepted real-inference VGGT/NLF/HSI-scale behavior.
+  smpl_provider: nlf
+  nlf_use_detector: true
+  nlf_require_boxes: false
+  nlf_model_name: smpl
+  nlf_internal_batch_size: 128
+  nlf_num_aug: 1
+  num_smpl_queries: 20
+  smpl_use_aggregator_queries: false
+  smpl_query_box_prior: false
+  smpl_query_patch_pool: false
+  predict_boxes: false
+  predict_id_embed: false
+  smpl_return_aux: false
+  smpl_track_assignment_mode: base_smpl
+  smpl_use_external_track_prior: false
+
+  enable_hsi_refine: true
+  hsi_hidden_dim: 512
+  hsi_num_layers: 5
+  hsi_num_heads: 8
+  hsi_num_iters: 3
+  hsi_scene_window: 3
+  hsi_probe_mode: local_nearest
+  hsi_affine_probe_mode: local_nearest
+  hsi_probe_window: 9
+  hsi_scene_affine_mode: per_frame
+  hsi_scene_log_scale_min: -5.0
+  hsi_scene_log_scale_max: 5.0
+  hsi_enable_temporal_momentum: false
+  freeze_hsi_scene_affine: true
+  freeze_hsi_backbone: true
+
+  # Replace every historical translation/contact correction with TRSTR.
+  enable_hsi_human_scene_align: false
+  enable_hsi_translation_refine_v4: false
+  enable_hsi_contact_refine: false
+  enable_hsi_grounding: false
+  enable_hsi_foot_contact_intent: false
+  enable_hsi_trstr: true
+  hsi_trstr_fast_gt: false
+  hsi_trstr_hidden_dim: 256
+  hsi_trstr_region_embedding_dim: 32
+  hsi_trstr_num_regions: 96
+  hsi_trstr_representative_vertices: 8
+  hsi_trstr_num_iters: 2
+  hsi_trstr_patch_sizes: [3, 7]
+  hsi_trstr_probe_token_dim: 16
+  hsi_trstr_adaptive_radius_max: 8
+  hsi_trstr_annulus_width: 2
+  hsi_trstr_human_depth_tolerance_m: 0.18
+  hsi_trstr_human_depth_dilation_px: 4
+  hsi_trstr_enable_temporal: false
+  hsi_trstr_temporal_quality_min: 0.25
+  hsi_trstr_temporal_gap_max: 8
+  hsi_trstr_temporal_use_world: false
+  hsi_trstr_min_valid_ratio: 0.25
+  hsi_trstr_max_ray_delta_m: 0.20
+  hsi_trstr_max_tangent_delta_m: 0.08
+  hsi_trstr_max_person_delta_m: 0.22
+
+checkpoint:
+  load_vggt_baseline: true
+
+loss:
+  type: hungarian
+
+matching:
+  enabled: true
+  cost_conf: 0.5
+  cost_bbox: 0.0
+  cost_giou: 0.0
+  cost_kpts: 0.0

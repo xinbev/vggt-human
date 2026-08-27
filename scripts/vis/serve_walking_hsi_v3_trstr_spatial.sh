@@ -17,7 +17,8 @@ cd "${REPO_ROOT}"
 [[ -d "${FRAMES_DIR}" ]] || { echo "[ERROR] Missing walking frames: ${FRAMES_DIR}" >&2; exit 1; }
 [[ -d "${TRSTR_DIR}" ]] || { echo "[ERROR] Missing TRSTR output directory: ${TRSTR_DIR}" >&2; exit 1; }
 [[ -f "${SCALE_CHECKPOINT}" ]] || { echo "[ERROR] Missing HSI scale v3 checkpoint: ${SCALE_CHECKPOINT}" >&2; exit 1; }
-[[ -f "${REPO_ROOT}/configs/train_smpl_hsi_stage2_trstr.yaml" ]] || {
+INFERENCE_CONFIG="${INFERENCE_CONFIG:-${REPO_ROOT}/configs/infer_smpl_hsi_v3_trstr_spatial.yaml}"
+[[ -f "${INFERENCE_CONFIG}" ]] || {
   echo "[ERROR] Missing TRSTR model config" >&2
   exit 1
 }
@@ -51,6 +52,7 @@ echo "========== Walking inference: VGGT + NLF + HSI scale v3 + TRSTR spatial ==
 echo "Frames            : ${FRAMES_DIR}"
 echo "TRSTR checkpoint  : ${TRSTR_CHECKPOINT}"
 echo "Scale v3 overlay  : ${SCALE_CHECKPOINT}"
+echo "Inference config  : ${INFERENCE_CONFIG}"
 echo "TRSTR temporal    : disabled"
 echo "Output            : ${OUTPUT_DIR}"
 echo "Viewer            : http://127.0.0.1:${PORT}"
@@ -59,7 +61,7 @@ echo "Pipeline          : raw VGGT -> analytic coarse -> v3 residual -> TRSTR sp
 REPO_ROOT="${REPO_ROOT}" \
 FRAMES_DIR="${FRAMES_DIR}" \
 QUERY_SOURCE=nlf_detector \
-TRAIN_CONFIG="${REPO_ROOT}/configs/train_smpl_hsi_stage2_trstr.yaml" \
+TRAIN_CONFIG="${INFERENCE_CONFIG}" \
 STAGE2_DIR="${TRSTR_DIR}" \
 CHECKPOINT="${TRSTR_CHECKPOINT}" \
 HSI_OVERLAY_CHECKPOINT="${SCALE_CHECKPOINT}" \
