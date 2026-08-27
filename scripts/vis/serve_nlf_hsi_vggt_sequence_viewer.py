@@ -922,6 +922,7 @@ def build_scene_data(
         "hsi_scene_affine_mode": str(getattr(args, "hsi_scene_affine_mode", "per_frame")),
         "hsi_scene_affine_ema_alpha": float(getattr(args, "hsi_scene_affine_ema_alpha", 0.25)),
         "scene_scale_prealign": str(getattr(args, "scene_scale_prealign", "none")),
+        "trstr_active": bool(predictions.get("_viewer_trstr_summary", {}).get("active", False)),
     }
 
 
@@ -1517,6 +1518,8 @@ class SequenceViewer:
         self.max_scene_depth_value = float(args.max_scene_depth)
         self.filter_human_points_value = bool(args.filter_human_points)
         self.human_mask_dilation_px_value = int(args.human_mask_dilation_px)
+        self.trstr_active = bool(scene.get("trstr_active", False))
+        self.trstr_correction_enabled_value = self.trstr_active
         self.env_mesh_depth_edge_rtol = float(getattr(args, "env_mesh_depth_edge_rtol", 0.08))
         self.env_mesh_color_groups = max(1, int(getattr(args, "env_mesh_color_groups", 216)))
         self.env_mesh_color_mode = str(getattr(args, "env_mesh_color_mode", "point_overlay"))
@@ -1782,6 +1785,18 @@ class SequenceViewer:
         self.camera_size = add_slider(self.server, "Camera Size", 0.01, 1.00, 0.01, self.camera_scale_value)
         self.show_hsi = add_checkbox(self.server, "Show HSI SMPL", not tracking_only)
         self.show_base = add_checkbox(self.server, "Show Base SMPL", tracking_only)
+        self.apply_trstr_correction = add_checkbox(
+            self.server,
+            "Apply TRSTR Translation",
+            self.trstr_correction_enabled_value,
+        )
+        if not self.trstr_active:
+            set_handle_disabled(self.apply_trstr_correction, True)
+        else:
+            self.show_hsi.value = True
+            self.show_base.value = False
+            set_handle_disabled(self.show_hsi, True)
+            set_handle_disabled(self.show_base, True)
         self.show_track_ids = add_checkbox(self.server, "Show Track IDs", bool(getattr(self.args, "show_track_ids", True)))
         self.smpl_opacity = add_slider(self.server, "SMPL Opacity", 0.05, 1.00, 0.05, self.smpl_opacity_value)
         self.smpl_color = add_rgb(self.server, "SMPL Color", (204, 51, 51))
@@ -1822,6 +1837,7 @@ class SequenceViewer:
             self.follow_camera,
         ]:
             bind_update(handle, self._on_gui_update)
+        bind_update(self.apply_trstr_correction, self._on_trstr_correction_update)
         bind_update(self.point_size, self._on_point_size_update)
         bind_update(self.density_preset, self._on_density_preset_update)
         bind_update(self.depth_point_stride, self._on_depth_sampling_update)
@@ -2285,6 +2301,18 @@ class SequenceViewer:
         if bool(self.follow_camera.value):
             self._follow_pred_camera(self.current_step)
 
+    def _on_trstr_correction_update(self, _: Any = None) -> None:
+        if not self.trstr_active or self._rebuilding_points or self._switching_hsi_calibration:
+            return
+        enabled = bool(self.apply_trstr_correction.value)
+        if enabled == self.trstr_correction_enabled_value:
+            self._update_visibility()
+            return
+        self.trstr_correction_enabled_value = enabled
+        self.show_hsi.value = enabled
+        self.show_base.value = not enabled
+        self._rebuild_human_filter_masks_and_points()
+
     def _prev_frame(self, _: Any = None) -> None:
         self.timestep.value = (int(self.timestep.value) - 1) % len(self.scene["frames"])
         self._on_gui_update()
@@ -2372,11 +2400,12 @@ class SequenceViewer:
                     self.args,
                     dilation_px_override=self.human_mask_dilation_px_value,
                 )
+                hsi_vertex_key = "hsi_vertices_cam" if self.trstr_correction_enabled_value else "base_vertices_cam"
                 frame["hsi_human_exclusion_mask"] = projected_human_exclusion_mask(
                     hsi_depth,
                     frame["people"],
                     intrinsic,
-                    "hsi_vertices_cam",
+                    hsi_vertex_key,
                     self.args,
                     dilation_px_override=self.human_mask_dilation_px_value,
                 )
@@ -2478,6 +2507,7 @@ class SequenceViewer:
             "filter_human_points": self.filter_human_points,
             "show_hsi": self.show_hsi,
             "show_base": self.show_base,
+            "apply_trstr_correction": self.apply_trstr_correction,
             "show_cameras": self.show_cameras,
             "camera_source": self.camera_source,
             "show_camera_trajectory": self.show_camera_trajectory,
@@ -2527,6 +2557,7 @@ class SequenceViewer:
                 "filter_human_points": self.filter_human_points,
                 "show_hsi": self.show_hsi,
                 "show_base": self.show_base,
+                "apply_trstr_correction": self.apply_trstr_correction,
                 "show_cameras": self.show_cameras,
                 "camera_source": self.camera_source,
                 "show_camera_trajectory": self.show_camera_trajectory,
@@ -2538,6 +2569,10 @@ class SequenceViewer:
                     handle.value = restore_state[key]
             self.play.value = False
             self.filter_human_points_value = bool(restore_state.get("filter_human_points", True))
+            if self.trstr_active:
+                self.trstr_correction_enabled_value = bool(self.apply_trstr_correction.value)
+                set_handle_disabled(self.show_hsi, True)
+                set_handle_disabled(self.show_base, True)
             set_handle_disabled(self.apply_hsi_visual_scale, False)
             set_handle_disabled(self.human_filter_dilation, False)
             set_handle_disabled(self.apply_human_filter_dilation, False)
@@ -2731,8 +2766,15 @@ class SequenceViewer:
             set_group_visible(frame_handles["hsi"], show_points and show_env_points and depth_source in {"hsi_depth", "both"})
             set_group_visible(frame_handles["raw_mesh"], show_points and show_env_mesh and depth_source in {"raw_depth", "both"})
             set_group_visible(frame_handles["hsi_mesh"], show_points and show_env_mesh and depth_source in {"hsi_depth", "both"})
-            set_group_visible(frame_handles["base_humans"], show_humans and show_decimated_smpl and bool(self.show_base.value))
-            set_group_visible(frame_handles["hsi_humans"], show_humans and show_decimated_smpl and bool(self.show_hsi.value))
+            if self.trstr_active and not self.hsi_calibration_active:
+                use_trstr = self.trstr_correction_enabled_value
+                show_base_smpl = not use_trstr
+                show_hsi_smpl = use_trstr
+            else:
+                show_base_smpl = bool(self.show_base.value)
+                show_hsi_smpl = bool(self.show_hsi.value)
+            set_group_visible(frame_handles["base_humans"], show_humans and show_decimated_smpl and show_base_smpl)
+            set_group_visible(frame_handles["hsi_humans"], show_humans and show_decimated_smpl and show_hsi_smpl)
             set_group_visible(frame_handles["track_labels"], show_humans and show_decimated_smpl and bool(self.show_track_ids.value))
             set_group_visible(frame_handles["cameras_raw"], bool(self.show_cameras.value) and show_raw_camera and show_camera_frame and show_decimated_camera)
             set_group_visible(frame_handles["cameras_hsi"], bool(self.show_cameras.value) and show_hsi_camera and show_camera_frame and show_decimated_camera)
@@ -2826,6 +2868,7 @@ class SequenceViewer:
                 f"maskRemoved={hsi_full_count - hsi_filtered_count} "
                 f"maskPx={hsi_mask_pixels} "
                 f"people={len(frame['people'])} "
+                f"TRSTR={'on' if self.trstr_correction_enabled_value else 'off'} "
                 f"stride={int(frame.get('depth_point_stride', self.depth_point_stride_value))} "
                 f"maxD={float(frame.get('max_scene_depth', self.max_scene_depth_value)):.1f} "
                 f"rawCam=({raw_cam_pos[0]:.3f},{raw_cam_pos[1]:.3f},{raw_cam_pos[2]:.3f}) "
