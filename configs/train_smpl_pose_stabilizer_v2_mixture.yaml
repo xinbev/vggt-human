@@ -1,6 +1,6 @@
 experiment:
-  name: smpl_temporal_stabilizer_v2_pose_mixture
-  output_dir: outputs/train/smpl_temporal_stabilizer_v2_pose_mixture
+  name: smpl_temporal_stabilizer_v2_pose_mixture_v21_focus
+  output_dir: outputs/train/smpl_temporal_stabilizer_v2_pose_mixture_v21_focus
   seed: 42
 
 data:
@@ -16,8 +16,8 @@ data:
 
 model:
   window_size: 9
-  proposal_hidden_dim: 128
-  gate_hidden_dim: 64
+  proposal_hidden_dim: 256
+  gate_hidden_dim: 128
   max_motion_residual_rad: 0.35
   max_blend: 0.5
 
@@ -28,6 +28,9 @@ mixture:
   centre_jitter: 0.30
   small: 0.25
   medium: 0.15
+  # Centre-only samples have one corrupted centre among five refined frames.
+  # Raise only that frame's loss weight; other frames still enforce no-op.
+  centre_jitter_focus_weight: 5.0
 
 noise:
   centre_jitter:
@@ -64,7 +67,7 @@ logging:
     enabled: true
     project: vggt-human
     entity: ""
-    name: smpl_temporal_stabilizer_v2_pose_mixture
+    name: smpl_temporal_stabilizer_v2_pose_mixture_v21_focus
     group: smpl_temporal_stabilizer_v2
     mode: online
-    tags: [smpl, pose-stabilizer, mixture, clean-identity, centre-jitter, small, medium]
+    tags: [smpl, pose-stabilizer, mixture, centre-focus-weighted, clean-identity, centre-jitter, small, medium]

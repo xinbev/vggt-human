@@ -89,6 +89,7 @@ def _evaluate_case(
     valid_mask: torch.Tensor,
     fast_speed_threshold_rad: float,
     blend_threshold: float,
+    focus_mask: torch.Tensor | None = None,
 ) -> dict[str, Any]:
     outputs = model(observed_pose, valid_mask)
     batch, steps, _ = target_pose.shape
@@ -128,6 +129,22 @@ def _evaluate_case(
         }
     else:
         fast_metrics = {"joint_frame_count": 0, "base_geodesic_rad": None, "final_geodesic_rad": None, "improvement_rad": None, "final_displacement_rad": None}
+    focus_metrics = None
+    if focus_mask is not None:
+        focus = focus_mask.to(device=target.device, dtype=torch.bool) & context
+        focus_groups: dict[str, dict[str, float]] = {}
+        for name, joint_ids in GROUPS.items():
+            index = torch.as_tensor(joint_ids, device=target.device)
+            base_group = base_error.index_select(-1, index).mean(dim=-1)
+            final_group = final_error.index_select(-1, index).mean(dim=-1)
+            focus_groups[name] = {
+                "base_geodesic_rad": _mean(base_group, focus),
+                "final_geodesic_rad": _mean(final_group, focus),
+                "improvement_rad": _mean(base_group - final_group, focus),
+                "improvement_rate": _mean((final_group < base_group).to(target.dtype), focus),
+                "final_displacement_rad": _mean(displacement.index_select(-1, index).mean(dim=-1), focus),
+            }
+        focus_metrics = {"frame_count": int(focus.sum().detach().cpu()), "groups": focus_groups}
     return {
         "context_frames": int(context.sum().detach().cpu()),
         "context_fraction": float(context.to(dtype=target.dtype).mean().detach().cpu()),
@@ -135,6 +152,7 @@ def _evaluate_case(
         "blend_active_rate": _mean((outputs["blend"].mean(dim=-2).squeeze(-1) > blend_threshold).to(target.dtype), context),
         "groups": per_group,
         "fast_motion": fast_metrics,
+        "corrupted_centre": focus_metrics,
     }
 
 
@@ -188,7 +206,7 @@ def main() -> None:
     model.eval()
     cases = config["cases"]
     generator = torch.Generator(device=device)
-    generated: dict[str, torch.Tensor] = {"clean": target}
+    generated: dict[str, tuple[torch.Tensor, torch.Tensor | None]] = {"clean": (target, None)}
     for name in ("centre_jitter", "small", "medium"):
         item = cases[name]
         generator.manual_seed(seed + int(item.get("noise_seed_offset", 0)))
@@ -197,11 +215,13 @@ def main() -> None:
             observed = target.clone()
             centre = target.shape[1] // 2
             observed[:, centre] = full[:, centre]
-            generated[name] = observed
+            focus_mask = torch.zeros(target.shape[:2], device=device, dtype=torch.bool)
+            focus_mask[:, centre] = True
+            generated[name] = (observed, focus_mask)
         else:
-            generated[name] = full
+            generated[name] = (full, None)
     results: dict[str, Any] = {}
-    for name, observed in generated.items():
+    for name, (observed, focus_mask) in generated.items():
         results[name] = _evaluate_case(
             model,
             target,
@@ -209,6 +229,7 @@ def main() -> None:
             valid,
             fast_speed_threshold_rad=float(config["metrics"]["fast_speed_threshold_rad"]),
             blend_threshold=float(config["metrics"]["blend_active_threshold"]),
+            focus_mask=focus_mask,
         )
     clean = results["clean"]
     pass_rules = {
@@ -265,6 +286,10 @@ def main() -> None:
                         log[f"{case_name}/fast_motion/{metric_name}"] = value
                 log[f"{case_name}/blend_mean"] = result["blend_mean"]
                 log[f"{case_name}/blend_active_rate"] = result["blend_active_rate"]
+                if result["corrupted_centre"] is not None:
+                    for group_name, metrics in result["corrupted_centre"]["groups"].items():
+                        for metric_name, value in metrics.items():
+                            log[f"{case_name}/corrupted_centre/{group_name}/{metric_name}"] = value
             run.log(log)
             run.finish()
         except ImportError as error:

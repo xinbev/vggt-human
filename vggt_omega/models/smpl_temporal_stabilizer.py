@@ -334,8 +334,8 @@ class PoseStabilizerLoss(nn.Module):
         self.max_blend = float(max_blend)
 
     @staticmethod
-    def _mean(value: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-        weight = mask.to(dtype=value.dtype)
+    def _mean(value: torch.Tensor, weight: torch.Tensor) -> torch.Tensor:
+        weight = weight.to(dtype=value.dtype)
         while weight.ndim < value.ndim:
             weight = weight.unsqueeze(-1)
         return (value * weight).sum() / weight.sum().clamp_min(1.0)
@@ -346,6 +346,7 @@ class PoseStabilizerLoss(nn.Module):
         target_pose_6d: torch.Tensor,
         observed_pose_6d: torch.Tensor,
         valid_mask: torch.Tensor,
+        frame_weight: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor]:
         batch, steps, _ = target_pose_6d.shape
         target = rot6d_to_rotmat(target_pose_6d.reshape(batch, steps, 24, 6))
@@ -353,6 +354,15 @@ class PoseStabilizerLoss(nn.Module):
         refined = rot6d_to_rotmat(outputs["refined_pose_6d"].reshape(batch, steps, 24, 6))
         proposal = rot6d_to_rotmat(outputs["motion_proposal_pose_6d"].reshape(batch, steps, 24, 6))
         context = outputs["context_valid"] & valid_mask
+        if frame_weight is None:
+            frame_weight = torch.ones(batch, steps, device=target_pose_6d.device, dtype=target_pose_6d.dtype)
+        else:
+            frame_weight = frame_weight.to(device=target_pose_6d.device, dtype=target_pose_6d.dtype)
+            if frame_weight.shape != (batch, steps):
+                raise ValueError(f"frame_weight must be [B,S], got {tuple(frame_weight.shape)}")
+            if bool((frame_weight < 0).any()):
+                raise ValueError("frame_weight must be non-negative")
+        weighted_context = context.to(dtype=target_pose_6d.dtype) * frame_weight
         direction = _rotation_log(proposal @ observed.transpose(-1, -2))
         target_delta = _rotation_log(target @ observed.transpose(-1, -2))
         oracle = ((target_delta * direction).sum(dim=-1, keepdim=True) / direction.square().sum(dim=-1, keepdim=True).clamp_min(1e-8))
@@ -360,9 +370,9 @@ class PoseStabilizerLoss(nn.Module):
         final_error = _rotation_log(refined @ target.transpose(-1, -2)).norm(dim=-1)
         base_error = _rotation_log(observed @ target.transpose(-1, -2)).norm(dim=-1)
         proposal_error = _rotation_log(proposal @ target.transpose(-1, -2)).norm(dim=-1)
-        final_loss = self._mean(final_error.mean(dim=-1), context)
-        proposal_loss = self._mean(proposal_error.mean(dim=-1), context)
-        blend_loss = self._mean(F.smooth_l1_loss(outputs["blend"], oracle, reduction="none").mean(dim=-2).squeeze(-1), context)
+        final_loss = self._mean(final_error.mean(dim=-1), weighted_context)
+        proposal_loss = self._mean(proposal_error.mean(dim=-1), weighted_context)
+        blend_loss = self._mean(F.smooth_l1_loss(outputs["blend"], oracle, reduction="none").mean(dim=-2).squeeze(-1), weighted_context)
         pair_mask = context[:, 1:] & context[:, :-1]
         if bool(pair_mask.any()):
             final_velocity = _rotation_log(refined[:, 1:] @ refined[:, :-1].transpose(-1, -2))

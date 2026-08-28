@@ -91,9 +91,11 @@ def _make_observations(
     modes: torch.Tensor,
     config: dict[str, Any],
     generator: torch.Generator,
-) -> torch.Tensor:
+    return_centre_mask: bool = False,
+) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
     """Mix clean / centre / full small / full medium observations per sample."""
     observed = target.clone()
+    centre_mask = torch.zeros(target.shape[:2], device=target.device, dtype=torch.bool)
     small = corrupt_pose_sequence(target, valid, PoseNoiseConfig(**config["small"]), generator=generator)
     medium = corrupt_pose_sequence(target, valid, PoseNoiseConfig(**config["medium"]), generator=generator)
     centre_noise = corrupt_pose_sequence(target, valid, PoseNoiseConfig(**config["centre_jitter"]), generator=generator)
@@ -102,9 +104,10 @@ def _make_observations(
         possible_centres = torch.arange(2, target.shape[1] - 2, device=target.device)
         centres = possible_centres[torch.randint(possible_centres.numel(), (rows.numel(),), device=target.device, generator=generator)]
         observed[rows, centres] = centre_noise[rows, centres]
+        centre_mask[rows, centres] = True
     observed[modes == 2] = small[modes == 2]
     observed[modes == 3] = medium[modes == 3]
-    return observed
+    return (observed, centre_mask) if return_centre_mask else observed
 
 
 def _mode_ids(batch_size: int, probabilities: list[float], device: torch.device, generator: torch.Generator) -> torch.Tensor:
@@ -219,10 +222,15 @@ def main() -> None:
             target = batch["target_pose_6d"].to(device, non_blocking=True)
             valid = batch["valid_mask"].to(device, non_blocking=True)
             mode_ids = _mode_ids(target.shape[0], probabilities, device, generator)
-            observed = _make_observations(target, valid, mode_ids, config["noise"], generator)
+            observed, centre_mask = _make_observations(target, valid, mode_ids, config["noise"], generator, return_centre_mask=True)
+            frame_weight = torch.ones(target.shape[:2], dtype=target.dtype, device=device)
+            # Only the deliberately corrupted centre is amplified. Other
+            # centres remain in the loss with weight one, preserving clean
+            # identity supervision inside the same centre-jitter window.
+            frame_weight[centre_mask] = float(config["mixture"]["centre_jitter_focus_weight"])
             optimizer.zero_grad(set_to_none=True)
             with torch.autocast(device_type=device.type, enabled=amp_enabled):
-                losses = criterion(model(observed, valid), target, observed, valid)
+                losses = criterion(model(observed, valid), target, observed, valid, frame_weight=frame_weight)
             scaler.scale(losses["loss_total"]).backward()
             scaler.unscale_(optimizer)
             torch.nn.utils.clip_grad_norm_(model.parameters(), float(config["optim"].get("grad_clip_norm", 1.0)))
