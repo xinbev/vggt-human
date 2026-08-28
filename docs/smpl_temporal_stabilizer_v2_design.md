@@ -245,3 +245,24 @@ final mean joint geodesic error < base error
 ```
 
 Pose E0 通过后仍不直接说明可以发布：下一关必须包含 clean windows、small/medium noise 和真实快速动作的 held-out E1，以验证真实动作没有被过平滑。
+
+## 8. Pose E1：held-out 保守性测试
+
+已实现 E1 evaluator：`scripts/eval/eval_smpl_pose_stabilizer_v2_e1.py`。它加载 E0 checkpoint，但不更新任何参数；从 validation partition 固定抽取 128 个窗口，3DPW 与 EMDB 各 64 个。四种输入工况使用完全相同的 GT track：
+
+| 工况 | 输入含义 | 主要验收 |
+| --- | --- | --- |
+| clean | 输入就是 GT | root/all pose 不应被修改 |
+| centre_jitter | 只有中间帧发生单帧估计闪动 | 应修正异常帧 |
+| small | 整段 small pose flicker | 应有正改善 |
+| medium | 整段 medium pose flicker | 应有正改善 |
+
+每种工况分别报告 root、torso、limbs 和全关节的 base/final geodesic error、improvement、improvement rate、final displacement，以及高角速度关节的独立指标。GT 角速度超过 `0.12 rad/frame` 的关节被标为 fast motion；它们的指标是诊断项，避免平均指标掩盖对真实快速动作的伤害。
+
+服务器运行：
+
+```bash
+bash scripts/eval/eval_smpl_pose_stabilizer_v2_e1.sh
+```
+
+输出为 `outputs/eval/smpl_temporal_stabilizer_v2_pose_e1/e1_summary.json`，并写入 W&B。clean root/all final displacement 均不超过 `0.01 rad`，且三种带噪工况的 all-joint improvement 都至少为 `0.005 rad` 才判为 E1 PASS。
