@@ -116,6 +116,10 @@ class HungarianSMPLLoss(nn.Module):
         hsi_trstr_strong_threshold_m: float = 0.50,
         hsi_trstr_strong_xy_threshold_m: float = 1.00,
         hsi_trstr_vote_target_mode: str = "full_remaining",
+        hsi_trstr_strong_translation_weight: float = 0.0,
+        hsi_trstr_clean_identity_weight: float = 0.0,
+        hsi_trstr_no_worse_weight: float = 0.0,
+        hsi_trstr_no_worse_margin_m: float = 0.0,
         hsi_anchor_depth_weight: float = 0.0,
         hsi_anchor_scene_xyz_weight: float = 0.0,
         hsi_anchor_scene_window: int = 5,
@@ -295,6 +299,10 @@ class HungarianSMPLLoss(nn.Module):
             raise ValueError(
                 f"Unsupported hsi_trstr_vote_target_mode: {self.hsi_trstr_vote_target_mode!r}"
             )
+        self.hsi_trstr_strong_translation_weight = float(hsi_trstr_strong_translation_weight)
+        self.hsi_trstr_clean_identity_weight = float(hsi_trstr_clean_identity_weight)
+        self.hsi_trstr_no_worse_weight = float(hsi_trstr_no_worse_weight)
+        self.hsi_trstr_no_worse_margin_m = max(float(hsi_trstr_no_worse_margin_m), 0.0)
         self.hsi_anchor_depth_weight = hsi_anchor_depth_weight
         self.hsi_anchor_scene_xyz_weight = hsi_anchor_scene_xyz_weight
         self.hsi_anchor_scene_window = hsi_anchor_scene_window
@@ -623,6 +631,9 @@ class HungarianSMPLLoss(nn.Module):
             + self.hsi_trstr_monotonic_weight * losses["loss_hsi_trstr_monotonic"]
             + self.hsi_trstr_temporal_velocity_weight * losses["loss_hsi_trstr_temporal_velocity"]
             + self.hsi_trstr_temporal_no_worse_weight * losses["loss_hsi_trstr_temporal_no_worse"]
+            + self.hsi_trstr_strong_translation_weight * losses["loss_hsi_trstr_strong_translation"]
+            + self.hsi_trstr_clean_identity_weight * losses["loss_hsi_trstr_clean_identity"]
+            + self.hsi_trstr_no_worse_weight * losses["loss_hsi_trstr_no_worse"]
             + self.hsi_anchor_depth_weight * losses["loss_hsi_anchor_depth"]
             + self.hsi_anchor_scene_xyz_weight * losses["loss_hsi_anchor_scene_xyz"]
             + self.hsi_delta_reg_weight * losses["loss_hsi_delta_reg"]
@@ -1315,6 +1326,9 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_trstr_monotonic": zero,
             "loss_hsi_trstr_temporal_velocity": zero,
             "loss_hsi_trstr_temporal_no_worse": zero,
+            "loss_hsi_trstr_strong_translation": zero,
+            "loss_hsi_trstr_clean_identity": zero,
+            "loss_hsi_trstr_no_worse": zero,
             "loss_hsi_anchor_depth": zero,
             "loss_hsi_anchor_scene_xyz": zero,
             "loss_hsi_delta_reg": zero,
@@ -1523,6 +1537,8 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_trstr_pose_passthrough_max_abs": zero.detach(),
             "metric_hsi_trstr_betas_passthrough_max_abs": zero.detach(),
             "metric_hsi_trstr_monotonic_violation_rate": zero.detach(),
+            "metric_hsi_trstr_worsening_rate": zero.detach(),
+            "metric_hsi_trstr_v3_selection": zero.detach(),
             "metric_hsi_contact_pos_frac": zero.detach(),
         }
 
@@ -1640,6 +1656,9 @@ class HungarianSMPLLoss(nn.Module):
             "loss_hsi_trstr_monotonic": zero,
             "loss_hsi_trstr_temporal_velocity": zero,
             "loss_hsi_trstr_temporal_no_worse": zero,
+            "loss_hsi_trstr_strong_translation": zero,
+            "loss_hsi_trstr_clean_identity": zero,
+            "loss_hsi_trstr_no_worse": zero,
             "metric_hsi_trstr_vote_l1": zero.detach(),
             "metric_hsi_trstr_translation_l1": zero.detach(),
             "metric_hsi_trstr_base_translation_l1": zero.detach(),
@@ -1669,6 +1688,8 @@ class HungarianSMPLLoss(nn.Module):
             "metric_hsi_trstr_pose_passthrough_max_abs": zero.detach(),
             "metric_hsi_trstr_betas_passthrough_max_abs": zero.detach(),
             "metric_hsi_trstr_monotonic_violation_rate": zero.detach(),
+            "metric_hsi_trstr_worsening_rate": zero.detach(),
+            "metric_hsi_trstr_v3_selection": zero.detach(),
         }
         required = (
             "hsi_trstr_refined_pred_transl_cam",
@@ -1763,6 +1784,9 @@ class HungarianSMPLLoss(nn.Module):
         strong = base_l2 >= self.hsi_trstr_strong_threshold_m
         out["metric_hsi_trstr_strong_coverage"] = strong.float().mean().detach()
         if bool(strong.any()):
+            out["loss_hsi_trstr_strong_translation"] = F.smooth_l1_loss(
+                refined_matched[strong], target[strong]
+            )
             out["metric_hsi_trstr_strong_base_l2_mean_m"] = base_l2[strong].mean().detach()
             out["metric_hsi_trstr_strong_refined_l2_mean_m"] = refined_l2[strong].mean().detach()
             out["metric_hsi_trstr_strong_improvement_rate"] = (
@@ -1786,12 +1810,20 @@ class HungarianSMPLLoss(nn.Module):
         if isinstance(clean_value, torch.Tensor):
             clean = _flatten_prediction(clean_value, unframed_ndim=3)[frame_idx, src_idx, 0] > 0.5
             if bool(clean.any()):
+                out["loss_hsi_trstr_clean_identity"] = F.smooth_l1_loss(
+                    refined_matched[clean], base_matched[clean]
+                )
                 out["metric_hsi_trstr_clean_displacement_l1"] = (
                     refined_matched[clean] - base_matched[clean]
                 ).abs().mean().detach()
             noisy = ~clean
             if bool(noisy.any()):
                 out["metric_hsi_trstr_noisy_translation_l1"] = translation_error[noisy].abs().mean().detach()
+        no_worse_excess = F.relu(refined_l2 - base_l2 - self.hsi_trstr_no_worse_margin_m)
+        out["loss_hsi_trstr_no_worse"] = _smooth_l1_abs(no_worse_excess).mean()
+        out["metric_hsi_trstr_worsening_rate"] = (
+            refined_l2 > base_l2 + self.hsi_trstr_no_worse_margin_m
+        ).float().mean().detach()
         state_errors = []
         for state_idx in range(iteration_transl.shape[0]):
             state = iteration_transl[state_idx].reshape(-1, iteration_transl.shape[3], 3)[frame_idx, src_idx]
@@ -1802,6 +1834,13 @@ class HungarianSMPLLoss(nn.Module):
         out["metric_hsi_trstr_monotonic_violation_rate"] = (
             monotonic_excess > 1e-6
         ).float().mean().detach()
+        out["metric_hsi_trstr_v3_selection"] = (
+            out["metric_hsi_trstr_xy_refined_l2_p90_m"]
+            + 0.5 * out["metric_hsi_trstr_strong_refined_l2_mean_m"]
+            + 5.0 * out["metric_hsi_trstr_clean_displacement_l1"]
+            + 0.25 * out["metric_hsi_trstr_monotonic_violation_rate"]
+            + 0.25 * out["metric_hsi_trstr_worsening_rate"]
+        ).detach()
         if selected_gate is None or selected_valid is None:
             return out
         out["metric_hsi_trstr_region_valid_ratio"] = selected_valid.float().mean().detach()

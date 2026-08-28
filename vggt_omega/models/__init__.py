@@ -6,5 +6,14 @@
 
 from .vggt_omega import VGGTOmega
 from .smpl_temporal_refiner import TemporalRefinerConfig, TemporalSMPLRefiner, TemporalSMPLRefinerLoss
+from .smpl_temporal_stabilizer import TranslationStabilizerConfig, TranslationTemporalStabilizer, TranslationStabilizerLoss
 
-__all__ = ["VGGTOmega", "TemporalRefinerConfig", "TemporalSMPLRefiner", "TemporalSMPLRefinerLoss"]
+__all__ = [
+    "VGGTOmega",
+    "TemporalRefinerConfig",
+    "TemporalSMPLRefiner",
+    "TemporalSMPLRefinerLoss",
+    "TranslationStabilizerConfig",
+    "TranslationTemporalStabilizer",
+    "TranslationStabilizerLoss",
+]

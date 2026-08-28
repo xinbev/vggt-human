@@ -1,0 +1,52 @@
+experiment:
+  name: smpl_temporal_stabilizer_v2_translation_e0
+  output_dir: outputs/debug/smpl_temporal_stabilizer_v2_translation_e0
+  seed: 42
+
+data:
+  sources: []
+  window_size: 9
+  stride: 1
+  validation_fraction: 0.1
+  min_valid_frames: 9
+  overfit_batch_size: 64
+
+model:
+  window_size: 9
+  proposal_hidden_dim: 128
+  gate_hidden_dim: 64
+  max_motion_residual_m: 0.25
+  max_blend: 0.5
+
+# E0 is deliberately fixed small corruption.  Medium and real-prediction
+# training are disallowed until this exact test passes.
+noise:
+  drift_std_m: 0.06
+  jitter_std_m: 0.025
+  outlier_std_m: 0.10
+  outlier_probability: 0.05
+
+optim:
+  steps: 1000
+  lr: 0.001
+  weight_decay: 0.0
+  grad_clip_norm: 1.0
+  amp: true
+  log_interval: 25
+
+loss:
+  final_weight: 2.0
+  proposal_weight: 1.0
+  blend_weight: 1.0
+  velocity_weight: 0.25
+  oracle_positive_threshold: 0.02
+
+logging:
+  wandb:
+    enabled: true
+    project: vggt-human
+    entity: ""
+    name: smpl_temporal_stabilizer_v2_translation_e0
+    group: smpl_temporal_stabilizer_v2
+    mode: online
+    tags: [smpl, temporal-stabilizer, translation-only, e0-overfit, fixed-noise]

@@ -373,6 +373,46 @@ def validate_gt_scale_box_free_contract(config: dict[str, Any]) -> None:
                     ).lower() == "staged_remaining",
                 }
             )
+        if bool(prior_cfg.get("trstr_require_isolated_loss", False)):
+            isolated_zero_keys = (
+                "pose_weight",
+                "betas_weight",
+                "transl_cam_weight",
+                "conf_weight",
+                "bbox_weight",
+                "giou_weight",
+                "id_weight",
+                "joints3d_weight",
+                "local_joints3d_weight",
+                "local_vertices_weight",
+                "projected_joints2d_weight",
+                "projected_bbox_weight",
+                "projected_giou_weight",
+                "hsi_pose_weight",
+                "hsi_betas_weight",
+                "hsi_transl_cam_weight",
+                "hsi_joints3d_weight",
+                "hsi_vertices_weight",
+                "hsi_projected_joints2d_weight",
+                "hsi_depth_teacher_weight",
+                "hsi_smpl_scale_teacher_weight",
+            )
+            checks.update(
+                {
+                    f"isolated loss {key}=0": float(loss_cfg.get(key, 0.0) or 0.0) == 0.0
+                    for key in isolated_zero_keys
+                }
+            )
+            checks["isolated loss has active TRSTR objective"] = any(
+                float(loss_cfg.get(key, 0.0) or 0.0) > 0.0
+                for key in (
+                    "hsi_trstr_vote_weight",
+                    "hsi_trstr_translation_weight",
+                    "hsi_trstr_strong_translation_weight",
+                    "hsi_trstr_clean_identity_weight",
+                    "hsi_trstr_no_worse_weight",
+                )
+            )
     else:
         checks.update(
             {
@@ -463,9 +503,14 @@ def build_loader(config: dict[str, Any], split: str, shuffle: bool, role: str = 
         contact_only_windows=bool(data_cfg.get(f"{role}_contact_only", False)),
     )
     dataset = maybe_subset_dataset(dataset, data_cfg, split, role=role)
+    loader_batch_size = int(
+        config["optim"].get("val_batch_size", config["optim"]["batch_size"])
+        if role == "val"
+        else config["optim"]["batch_size"]
+    )
     return DataLoader(
         dataset,
-        batch_size=int(config["optim"]["batch_size"]),
+        batch_size=loader_batch_size,
         shuffle=shuffle,
         collate_fn=bedlam_collate_fn,
         drop_last=shuffle,
@@ -568,10 +613,30 @@ def build_dataloader_runtime_kwargs(data_cfg: dict[str, Any]) -> dict[str, Any]:
 def maybe_subset_dataset(dataset: Any, data_cfg: dict[str, Any], split: str, role: str | None = None) -> Any | Subset:
     train_split = str(data_cfg.get("train_split", split))
     resolved_role = role or ("train" if split == train_split else "val")
-    if resolved_role == "val" and not bool(data_cfg.get("subset_apply_to_val", False)):
+    role_subset_csv = str(data_cfg.get(f"{resolved_role}_subset_indices_csv", "") or "").strip()
+    role_subset_count = int(data_cfg.get(f"{resolved_role}_subset_count", 0) or 0)
+    if (
+        resolved_role == "val"
+        and not role_subset_csv
+        and role_subset_count <= 0
+        and not bool(data_cfg.get("subset_apply_to_val", False))
+    ):
         return dataset
-    subset_csv = str(data_cfg.get("subset_indices_csv", "") or "").strip()
+    subset_csv = role_subset_csv or str(data_cfg.get("subset_indices_csv", "") or "").strip()
     if not subset_csv:
+        if role_subset_count > 0:
+            start = max(int(data_cfg.get(f"{resolved_role}_subset_start", 0) or 0), 0)
+            stop = min(start + role_subset_count, len(dataset))
+            if start >= stop:
+                raise ValueError(
+                    f"Invalid {resolved_role} subset range: start={start} count={role_subset_count} "
+                    f"dataset={len(dataset)}"
+                )
+            print(
+                f"[data] deterministic {resolved_role} subset start={start} count={stop - start}",
+                flush=True,
+            )
+            return Subset(dataset, list(range(start, stop)))
         return dataset
     subset_path = Path(subset_csv).expanduser()
     if not subset_path.is_file():
@@ -2895,6 +2960,7 @@ def prepare_trstr_scale_alignment_batch(
             "trstr_alignment_case_probabilities must contain clean/scale/nlf/mixed probabilities"
         )
     frame_count = int(physical_transl.shape[0] * physical_transl.shape[1])
+    noise_generator: torch.Generator | None = None
     if is_training:
         category = torch.multinomial(
             physical_transl.new_tensor(case_probabilities),
@@ -2905,15 +2971,36 @@ def prepare_trstr_scale_alignment_batch(
         log_scale = physical_transl.new_empty(*physical_transl.shape[:2], 1, 1).normal_(0.0, log_std)
         scale = torch.exp(log_scale)
     else:
-        eval_scale = float(prior_cfg.get("trstr_alignment_eval_scale", 1.0) or 1.0)
-        category_value = 1 if abs(eval_scale - 1.0) > 1e-7 else 0
-        category = torch.full(
-            (*physical_transl.shape[:2], 1),
-            category_value,
-            dtype=torch.long,
-            device=physical_transl.device,
-        )
-        scale = physical_transl.new_full((*physical_transl.shape[:2], 1, 1), eval_scale)
+        eval_mode = str(prior_cfg.get("trstr_alignment_eval_case_mode", "single") or "single").lower()
+        if eval_mode == "cycle":
+            dataset_indices = batch.get("dataset_index")
+            if not isinstance(dataset_indices, torch.Tensor):
+                raise ValueError("TRSTR cycle evaluation requires batch['dataset_index']")
+            frame_ids = dataset_indices.long().reshape(-1, 1) * physical_transl.shape[1]
+            frame_ids = frame_ids + torch.arange(physical_transl.shape[1], device=physical_transl.device).reshape(1, -1)
+            category = torch.remainder(frame_ids, 4).unsqueeze(-1)
+            eval_scales = parse_float_schedule(prior_cfg.get("trstr_alignment_eval_scales", [0.90, 1.10]))
+            if len(eval_scales) != 2:
+                raise ValueError("trstr_alignment_eval_scales must contain two values")
+            scale_values = physical_transl.new_tensor(eval_scales)
+            scale_index = torch.remainder(torch.div(frame_ids, 4, rounding_mode="floor"), 2)
+            scale = scale_values[scale_index].unsqueeze(-1).unsqueeze(-1)
+            eval_seed = int(prior_cfg.get("trstr_alignment_eval_seed", 20260828) or 20260828)
+            eval_seed += int(dataset_indices.detach().long().sum().cpu())
+            noise_generator = torch.Generator(device=physical_transl.device)
+            noise_generator.manual_seed(eval_seed)
+        elif eval_mode == "single":
+            eval_scale = float(prior_cfg.get("trstr_alignment_eval_scale", 1.0) or 1.0)
+            category_value = 1 if abs(eval_scale - 1.0) > 1e-7 else 0
+            category = torch.full(
+                (*physical_transl.shape[:2], 1),
+                category_value,
+                dtype=torch.long,
+                device=physical_transl.device,
+            )
+            scale = physical_transl.new_full((*physical_transl.shape[:2], 1, 1), eval_scale)
+        else:
+            raise ValueError(f"Unsupported trstr_alignment_eval_case_mode: {eval_mode!r}")
     scale_min = max(float(prior_cfg.get("trstr_alignment_scale_min", 0.85) or 0.85), 1e-4)
     scale_max = max(float(prior_cfg.get("trstr_alignment_scale_max", 1.15) or 1.15), scale_min)
     scale = scale.clamp(min=scale_min, max=scale_max)
@@ -2955,6 +3042,7 @@ def prepare_trstr_scale_alignment_batch(
         std_m=prior_cfg.get("smpl_transl_ray_noise_mixture_std_m", [0.06, 0.16, 0.30]),
         clip_m=prior_cfg.get("smpl_transl_ray_noise_mixture_clip_m", [0.15, 0.35, 0.60]),
         clip_vector_norm=False,
+        generator=noise_generator,
     )
     tangent_coeff = _sample_metric_gaussian_mixture_translation_noise(
         physical_transl,
@@ -2963,6 +3051,7 @@ def prepare_trstr_scale_alignment_batch(
         std_m=prior_cfg.get("smpl_transl_tangent_noise_mixture_std_m", [0.12, 0.55, 1.10]),
         clip_m=prior_cfg.get("smpl_transl_tangent_noise_mixture_clip_m", [0.35, 1.20, 2.00]),
         clip_vector_norm=True,
+        generator=noise_generator,
     )
     ray, tangent_x, tangent_y = _translation_camera_basis(physical_transl)
     nlf_delta = (
@@ -3283,6 +3372,7 @@ def _sample_metric_gaussian_mixture_translation_noise(
     std_m: Any,
     clip_m: Any,
     clip_vector_norm: bool,
+    generator: torch.Generator | None = None,
 ) -> torch.Tensor:
     """Sample one zero-mean metric Gaussian component per person slot."""
     probabilities_f = _normalize_positive_float_list(probabilities, "mixture probabilities")
@@ -3301,11 +3391,16 @@ def _sample_metric_gaussian_mixture_translation_noise(
         probabilities_t,
         num_samples=math.prod(component_shape[:-1]),
         replacement=True,
+        generator=generator,
     ).reshape(*component_shape)
     selected_std = std_t[component]
     selected_clip = clip_t[component]
     noise = torch.randn(
-        *reference.shape[:-1], int(channels), device=reference.device, dtype=reference.dtype
+        *reference.shape[:-1],
+        int(channels),
+        device=reference.device,
+        dtype=reference.dtype,
+        generator=generator,
     ) * selected_std
     if clip_vector_norm and int(channels) > 1:
         norm = torch.linalg.norm(noise, dim=-1, keepdim=True).clamp(min=1e-8)

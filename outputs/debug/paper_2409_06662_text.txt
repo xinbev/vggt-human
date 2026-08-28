@@ -1,0 +1,877 @@
+World-Grounded Human Motion Recovery via Gravity-View Coordinates
+ZEHONG SHEN∗, State Key Laboratory of CAD&CG, Zhejiang University, China
+HUAIJIN PI∗, The University of Hong Kong, China
+YAN XIA, State Key Laboratory of CAD&CG, Zhejiang University, China
+ZHI CEN, State Key Laboratory of CAD&CG, Zhejiang University, China
+SIDA PENG† , Zhejiang University, China
+ZECHEN HU, Deep Glint, China
+HUJUN BAO, State Key Laboratory of CAD&CG, Zhejiang University, China
+RUIZHEN HU, Shenzhen University, China
+XIAOWEI ZHOU, State Key Laboratory of CAD&CG, Zhejiang University, China
+Fig. 1. Overview. Given an in-the-wild monocular video, our method accurately regresses World-Grounded Human Motion: 4D human poses and shapes
+in a gravity-aware world coordinate system. The proposed network, excluding preprocessing (2D human tracking, feature extraction, relative camera
+rotation estimation), takes 280 ms to process a 1430-frame video (approximately 45 seconds) on an RTX 4090 GPU.
+We present a novel method for recovering world-grounded human motion
+from monocular video. The main challenge lies in the ambiguity of defining
+the world coordinate system, which varies between sequences. Previous
+approaches attempt to alleviate this issue by predicting relative motion in
+an autoregressive manner, but are prone to accumulating errors. Instead, we
+propose estimating human poses in a novel Gravity-View (GV) coordinate
+system, which is defined by the world gravity and the camera view direction.
+The proposed GV system is naturally gravity-aligned and uniquely defined
+for each video frame, largely reducing the ambiguity of learning image-pose
+mapping. The estimated poses can be transformed back to the world coor-
+dinate system using camera rotations, forming a global motion sequence.
+Additionally, the per-frame estimation avoids error accumulation in the au-
+toregressive methods. Experiments on in-the-wild benchmarks demonstrate
+that our method recovers more realistic motion in both the camera space and
+∗Equal contribution.
+†Corresponding author.
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for profit or commercial advantage and that copies bear this notice and the full citation
+on the first page. Copyrights for components of this work owned by others than the
+author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or
+republish, to post on servers or to redistribute to lists, requires prior specific permission
+and/or a fee. Request permissions from permissions@acm.org.
+SA Conference Papers ’24, December 3–6, 2024, Tokyo, Japan
+© 2024 Copyright held by the owner/author(s). Publication rights licensed to ACM.
+ACM ISBN 979-8-4007-1131-2/24/12. . . $15.00
+https://doi.org/10.1145/3680528.3687565
+world-grounded settings, outperforming state-of-the-art methods in both
+accuracy and speed. The code is available at https://zju3dv.github.io/gvhmr.
+CCS Concepts: •Computing methodologies → Motion capture.
+ACM Reference Format:
+Zehong Shen, Huaijin Pi, Yan Xia, Zhi Cen, Sida Peng, Zechen Hu, Hujun
+Bao, Ruizhen Hu, and Xiaowei Zhou. 2024. World-Grounded Human Motion
+Recovery via Gravity-View Coordinates . In SIGGRAPH Asia 2024 Conference
+Papers (SA Conference Papers ’24), December 3–6, 2024, Tokyo, Japan. ACM,
+New York, NY, USA, 11 pages. https://doi.org/10.1145/3680528.3687565
+1 INTRODUCTION
+World-Grounded Human Motion Recovery (HMR) aims to recon-
+struct continuous 3D human motion within a gravity-aware world
+coordinate system. Unlike conventional motion captured in the
+camera frame [Kanazawa et al . 2018], world-grounded motion is
+inherently suitable as foundational data for generative and physical
+models, such as text-to-motion generation [Guo et al. 2022; Tevet
+et al. 2023] and humanoid robot imitation learning [He et al. 2024].
+In these applications, motion sequences must be high-quality and
+consistent in a gravity-aware world coordinate system.
+Most existing HMR methods can recover promising camera-space
+human motion from videos [Kocabas et al. 2020; Shen et al. 2023;
+Wei et al. 2022]. To recover the global motion, a straightforward
+approach is to use camera poses [Teed et al . 2024] to transform
+camera-space motion to world-space. However, the results are not
+1
+arXiv:2409.06662v1  [cs.CV]  10 Sep 2024
+SA Conference Papers ’24, December 3–6, 2024, Tokyo, Japan Zehong Shen, Huaijin Pi, Yan Xia, Zhi Cen, Sida Peng, Zechen Hu, Hujun Bao, Ruizhen Hu, and Xiaowei Zhou
+guaranteed to be gravity-aligned, and errors in translations and
+poses can accumulate over time, resulting in implausible global
+motion. Recent work, WHAM [Shin et al. 2024], attempts to recover
+global motion by autoregressively predicting relative global poses
+with RNN. While this method achieves significant improvements, it
+requires a good initialization and suffers from accumulated errors
+over long sequences, making it challenging to maintain consistency
+in the gravity direction. We believe the inherent challenge stems
+from the ambiguity in defining the world coordinate system. Given
+the world coordinate axes, any rotation around the gravity axis
+defines a valid gravity-aware world coordinate system.
+In this work, we propose GVHMR to estimate gravity-aware
+human poses for each frame and then compose them with gravity
+constraints to avoid accumulated errors in the gravity direction.
+This design is motivated by the observation that, for a person in
+any image, we humans are able to easily infer the gravity-aware
+human pose, as shown in Fig. 2. Additionally, given two consecutive
+frames, it is intuitively easier to estimate the 1-degree-of-freedom
+rotation around the gravity direction, compared to the full 3-degree-
+of-freedom rotation. Therefore, we propose a novel Gravity-View
+(GV) coordinate system, defined by the gravity and camera view
+directions. Using the GV system, we develop a network that predicts
+the gravity-aware human orientation. We also propose a recovery
+algorithm to estimate the relative rotation between GV systems,
+enabling us to align all frames into a consistent gravity-aware world
+coordinate system.
+Thanks to the GV coordinates, we can process human rotations in
+parallel over time. We propose a transformer [Vaswani et al. 2017]
+model enhanced with Rotary Positional Embedding (RoPE) [Su et al.
+2024] to directly regress the entire motion sequence. Compared
+to the commonly used absolute position encoding, RoPE better
+captures the relative relationships between video frames and handles
+long sequences more effectively. During inference, we introduce
+a mask to limit each frame’s receptive field, avoiding the complex
+sliding windows and enabling parallel inference for infinitely long
+sequences. Additionally, we predict stationary labels for hands and
+feet, which are used to refine foot sliding and global trajectories.
+In summary, our contributions are threefold: 1. We propose a
+novel Gravity-View coordinate system and the global orientation
+recovery method to reduce the cumulative errors in the gravity
+direction. 2. We develop a Transformer model enhanced by RoPE to
+generalize to long sequences and improve motion estimation. 3. We
+demonstrate the effectiveness of our approach through extensive
+experiments, showing that it outperforms previous methods in both
+in-camera and world-grounded accuracy.
+2 RELATED WORKS
+Camera-Space Human Motion Recovery. Recent studies in 3D hu-
+man recovery predominantly use parametric human models such as
+SMPL [Loper et al. 2023; Pavlakos et al. 2019]. Given a single image
+or video, the target is to align the human mesh precisely with the
+2D images. Early methods [Bogo et al. 2016; Pavlakos et al. 2019]
+employ optimization-based approaches by minimizing the repro-
+jection error. Recently, regression-based methods [Goel et al. 2023;
+Kanazawa et al. 2018] trained on a large amount of data predict
+Fig. 2. Comparison of coordinate systems . In camera coordinates, a
+person may appear inclined due to the camera’s roll and pitch movement.
+In contrast, in GV coordinates, the person is naturally aligned with gravity.
+the SMPL parameters from the input image directly. Many efforts
+have been made to improve the accuracy by specialized design
+architectures [Li et al. 2023; Zhang et al. 2023], part-based reason-
+ing [Kocabas et al. 2021a; Li et al. 2021], and incorporating camera
+parameters [Kocabas et al. 2021b; Li et al . 2022b]. HMR2.0 [Goel
+et al. 2023] designs a ViT architecture [Vaswani et al . 2017] and
+outperforms the previous methods. To utilize temporal cues, [Shi
+et al. 2020] uses deep networks to predict skeleton pose sequence di-
+rectly from videos. To recover the human mesh, most methods build
+upon the HMR pipeline. [Kanazawa et al. 2019] adopts a convolu-
+tional encoder. [Choi et al. 2021; Kocabas et al. 2020; Luo et al. 2020]
+apply RNN successfully. [Sun et al. 2019] introduces self-attention
+to CNN. [Shen et al. 2023; Wan et al. 2021] employ a transformer
+encoder to extract temporal information.
+Although these methods can accurately estimate human pose,
+their predictions are all in the camera-space. Consequently, when the
+camera moves, the human motion becomes physically implausible.
+World-Grounded Human Motion Recovery. Traditionally, estimat-
+ing human motion in a gravity-aware world coordinate system
+requires additional floor plane calibration or gravity sensors. In
+multi camera capture systems [Huang et al . 2022; Ionescu et al .
+2014], calibration boards are placed on the ground to reconstruct
+the ground plane and global scale. IMU-based methods [Kaufmann
+et al. 2023; von Marcard et al. 2018; Yi et al. 2021] use gyroscopes and
+accelerometers to estimate the gravity direction and then project
+human motion onto the gravity direction. Recently, researchers
+put efforts to estimate global human motion from a monocular
+video. [Yu et al. 2021] reconstructs human motion using physics law
+but requires a provided scene. Methods like [Li et al. 2022a; Yuan
+et al. 2022] predicts the global trajectory from locomotion cues.
+However, the camera motion and human motion are coupled, which
+make the results noisy. SLAHMR [Ye et al. 2023] and PACE [Kocabas
+et al. 2024] further integrate SLAM [Teed and Deng 2021; Teed et al.
+2024] and pre-learned human motion priors [Rempe et al . 2021]
+in an optimization framework. Although these methods achieve
+promising results, the optimization process is time-consuming and
+faces convergence issues with long video sequences. Furthermore,
+these methods do not obtain gravity-aligned human motion.
+The most relevant work is WHAM [Shin et al. 2024], which di-
+rectly regresses per-frame pose and translation in an autoregressive
+manner. However, their method relies on a good initialization and
+the performance drops in long-term motion recovery due to error
+2
+World-Grounded Human Motion Recovery via Gravity-View Coordinates SA Conference Papers ’24, December 3–6, 2024, Tokyo, Japan
+Fig. 3. Overview of the proposed framework. Given a monocular video (left), following WHAM [Shin et al. 2024], GVHMR preprocesses the video by
+tracking the human bounding box, detecting 2D keypoints, extracting image features, and estimating camera relative rotation using visual odometry or a
+gyroscope. GVHMR then fuses these features into per-frame tokens, which are processed with a relative transformer and multitask MLPs. The outputs include:
+(1) intermediate representations (middle), i.e. human orientation in the Gravity-View coordinate system, root velocity in the SMPL coordinate system, and the
+stationary probability for predefined joints; and (2) camera frame SMPL parameters (right-top). Finally, the global trajectory (right-bottom) is recovered by
+transforming the intermediate representations to the world coordinate system, as described in Sec. 3.1.
+accumulation. Two concurrent works also focus on world-grounded
+human motion recovery. WHAC [Yin et al. 2024] uses visual odom-
+etry [Teed et al. 2024] to transform camera coordinate results to a
+world coordinate system and relies on another network to refine
+global trajectory. TRAM [Wang et al. 2024] employs SLAM [Teed
+and Deng 2021] to recover camera motion and uses the scene back-
+ground to derive the motion scale. They also transform the camera
+coordinate results into a world coordinate system. In contrast to
+their methods, GVHMR does not require additional refinement net-
+works and can directly predict the world-grounded human motion.
+3 METHOD
+Given a monocular video {𝐼 𝑡 }𝑇
+𝑡 =0, we formulate the task as predict-
+ing: (1) the local body poses {𝜃𝑡 ∈ R21×3}𝑇
+𝑡 =0 and shape coefficients
+𝛽 ∈ R10 of SMPL-X, (2) the human trajectory from SMPL space to
+the camera space, including the orientation {Γ𝑡𝑐 ∈ R3}𝑇
+𝑡 =0 and trans-
+lation {𝜏𝑡𝑐 ∈ R3}𝑇
+𝑡 =0, (3) the trajectory to the world space, including
+the orientation {Γ𝑡𝑤 ∈ R3}𝑇
+𝑡 =0 and translation {𝜏𝑡𝑤 ∈ R3}𝑇
+𝑡 =0.
+An overview of the proposed pipeline is shown in Fig. 3. In Sec. 3.1,
+we first introduce the global trajectory representation and discuss its
+advantages over previous trajectory representations. Then, Sec. 3.2
+describes a specially designed network architecture as well as post-
+process techniques for predicting the targets. Finally, implementa-
+tion details are presented in Sec. 3.3.
+3.1 Global Trajectory Representation
+Global human trajectory {Γ𝑡𝑤, 𝜏𝑡𝑤 } refers to the transformation from
+SMPL space to the gravity-aware world space 𝑊 . However, the defi-
+nition of𝑊 varies, as any rotation of𝑊 around the gravity direction
+is valid, leading to different Γ𝑤 and 𝜏𝑤. We propose to first recover
+a gravity-aware human pose for each image, then transform these
+poses to a consistent global trajectory. This approach is inspired
+by the observation that humans can easily infer the orientation
+and gravity direction of a person in an image. And for consecutive
+frames, estimating the relative rotation around the gravity direction
+is intuitively easier and more robust.
+Specifically, for each image, we use the world gravity direction
+and the camera’s view direction (i.e., the normal vector of the im-
+age plane) to define Gravity-View (GV) Coordinates. The proposed
+new GV coordinate system is mainly used to resolve the rotation
+ambiguity, so we only predict the per-frame human orientationΓ𝑡
+𝐺𝑉
+relative to the GV system. When the camera moves, we compute the
+relative rotation between the GV systems of two adjacent frames
+with relative camera rotations 𝑅𝑡
+Δ, thus transforming all Γ𝑡
+𝐺𝑉 to a
+consistent gravity-aware global space. For global translation, fol-
+lowing [Rempe et al. 2021; Shin et al. 2024], we predict the human
+displacement in the SMPL coordinate system from time 𝑡 to 𝑡 + 1,
+and finally roll out in the aforementioned world reference frame.
+Gravity-View Coordinate System. As illustrated in Fig. 4, (a) given
+a person with orientation Γ𝑐 and a gravity direction ®𝑔 both described
+3
+SA Conference Papers ’24, December 3–6, 2024, Tokyo, Japan Zehong Shen, Huaijin Pi, Yan Xia, Zhi Cen, Sida Peng, Zechen Hu, Hujun Bao, Ruizhen Hu, and Xiaowei Zhou
+Fig. 4. Gravity-View (GV) coordinate system, defined by the gravity
+direction and the camera view direction. (Refer to Sec. 3.1 for details).
+Fig. 5. Relative rotation between two GV coordinate systems.(a) shows
+two adjacent GV coordinate systems and the camera view directions. (b)
+illustrates the relative rotation between two GV systems. 𝑅Δ𝐺𝑉 occurs
+exclusively around the y-axis (gravity direction).
+in the camera space: (b) the y-axis of the GV coordinate system aligns
+with the gravity direction ®𝑔, i.e., ®𝑦 = ®𝑔; (c) the x-axis is perpendicular
+to both the camera view direction − − − →𝑣𝑖𝑒𝑤 = [0, 0, 1]𝑇 and ®𝑦 by cross-
+product, i.e., ®𝑥 = ®𝑦 × − − − →𝑣𝑖𝑒𝑤 ; (d) finally, the z-axis is calculated by the
+right-hand rule, i.e., ®𝑧 = ®𝑥 × ®𝑦. After obtaining these axes, we can
+re-calculate the person’s orientation in the GV coordinate system
+as our learning target: Γ𝐺𝑉 = 𝑅𝑐2𝐺𝑉 · Γ𝑐 = [ ®𝑥, ®𝑦, ®𝑧]𝑇 · Γ𝑐.
+Recovering Global Trajectory. It is noteworthy that an independent
+𝐺𝑉𝑡 exists for each input frame 𝑡, where we predict the person’s
+orientation Γ𝑡
+𝐺𝑉 . To recover a consistent global trajectory {Γ𝑡𝑤, 𝜏𝑡𝑤 },
+all orientations must be transformed to a common reference system.
+In practice, we use 𝐺𝑉0 as the world reference system 𝑊 .
+To begin with, in the special case of a static camera, the 𝐺𝑉𝑡
+systems are identical across all frames. Therefore, the human global
+orientation {Γ𝑡𝑤 } is equivalent to {Γ𝑡
+𝐺𝑉 }. The translation {𝜏𝑡𝑤 } is
+obtained by transforming all predicted local velocities 𝑣𝑟𝑜𝑜𝑡 into
+the world coordinate system using the orientations {Γ𝑡𝑤 } and then
+performing a cumulative sum:
+𝜏𝑡
+𝑤 =
+(
+[0, 0, 0]𝑇 , 𝑡 = 0,Í𝑡 −1
+𝑖=0 Γ𝑖𝑤𝑣𝑖
+𝑟𝑜𝑜𝑡 , 𝑡 > 0. (1)
+For a moving camera, we first compute the rotation 𝑅𝑡
+Δ𝐺𝑉 be-
+tween the GV coordinate systems of frame 𝑡 to frame 𝑡 − 1 by lever-
+aging the input camera relative rotations 𝑅𝑡
+Δ, the predicted human
+orientations Γ𝑡𝑐 and Γ𝑡
+𝐺𝑉 . As illustrated in Fig. 5, we first calculate the
+rotation from camera to GV coordinate system at frame 𝑡: 𝑅𝑡
+𝑐2𝑔𝑣 =
+Γ𝑡
+𝐺𝑉 · (Γ𝑡𝑐 ) −1. Then, the camera view direction − − − →𝑣𝑖𝑒𝑤 𝑡𝑐 = [0, 0, 1]𝑇 is
+transformed to the GV coordinate system as− − − →𝑣𝑖𝑒𝑤 𝑡
+𝐺𝑉 = 𝑅𝑡
+𝑐2𝑔𝑣 ·− − − →𝑣𝑖𝑒𝑤 𝑡𝑐.
+We use the camera’s relative transformation to rotate this view direc-
+tion to frame 𝑡 − 1, i.e., − − − →𝑣𝑖𝑒𝑤 𝑡 −1 = (𝑅𝑡
+Δ) −1 ·− − − →𝑣𝑖𝑒𝑤 𝑡 . Since the rotation
+<latexit sha1_base64="nt8c9TtCwn5zu1FNI0Jvv8CWyPU=">AAAB9XicbVDLSgNBEOz1GeMr6tHLYBA8hd0g0WNADx6jmAcka5id9CZDZh/MzCph2f/w4kERr/6LN//GSbIHTSxoKKq66e7yYsGVtu1va2V1bX1js7BV3N7Z3dsvHRy2VJRIhk0WiUh2PKpQ8BCbmmuBnVgiDTyBbW98NfXbjygVj8J7PYnRDegw5D5nVBvpwe+nd/20d41C0yzrl8p2xZ6BLBMnJ2XI0eiXvnqDiCUBhpoJqlTXsWPtplRqzgRmxV6iMKZsTIfYNTSkASo3nV2dkVOjDIgfSVOhJjP190RKA6UmgWc6A6pHatGbiv953UT7l27KwzjRGLL5Ij8RREdkGgEZcIlMi4khlElubiVsRCVl2gRVNCE4iy8vk1a14tQqtdvzcr2ax1GAYziBM3DgAupwAw1oAgMJz/AKb9aT9WK9Wx/z1hUrnzmCP7A+fwDMP5Kt</latexit>
+fR 
+<latexit sha1_base64="xKzPLaazzwgVKZQ9FyzOHW7GM9Q=">AAAB73icbVBNS8NAEJ3Ur1q/qh69LBbBU0mKVI8FLx4r2A9oQ9lsN+3SzSbuToQS+ie8eFDEq3/Hm//GbZuDtj4YeLw3w8y8IJHCoOt+O4WNza3tneJuaW//4PCofHzSNnGqGW+xWMa6G1DDpVC8hQIl7yaa0yiQvBNMbud+54lrI2L1gNOE+xEdKREKRtFK3XCQTZLacDYoV9yquwBZJ15OKpCjOSh/9YcxSyOukElqTM9zE/QzqlEwyWelfmp4QtmEjnjPUkUjbvxsce+MXFhlSMJY21JIFurviYxGxkyjwHZGFMdm1ZuL/3m9FMMbPxMqSZErtlwUppJgTObPk6HQnKGcWkKZFvZWwsZUU4Y2opINwVt9eZ20a1WvXq3fX1UatTyOIpzBOVyCB9fQgDtoQgsYSHiGV3hzHp0X5935WLYWnHzmFP7A+fwBDsKP8w==</latexit>
+fkp2d
+<latexit sha1_base64="Uh1Wyf5vb26Pn7HRVfbr3gUxjdI=">AAAB7nicbVDLSgNBEOz1GeMr6tHLYBA8hd0g0WPAi8cI5gFJCLOT2WTIzOwy0yuEJR/hxYMiXv0eb/6Nk2QPmljQUFR1090VJlJY9P1vb2Nza3tnt7BX3D84PDounZy2bJwaxpsslrHphNRyKTRvokDJO4nhVIWSt8PJ3dxvP3FjRawfcZrwvqIjLSLBKDqpHQ0yoUazQansV/wFyDoJclKGHI1B6as3jFmquEYmqbXdwE+wn1GDgkk+K/ZSyxPKJnTEu45qqrjtZ4tzZ+TSKUMSxcaVRrJQf09kVFk7VaHrVBTHdtWbi/953RSj234mdJIi12y5KEolwZjMfydDYThDOXWEMiPcrYSNqaEMXUJFF0Kw+vI6aVUrQa1Se7gu16t5HAU4hwu4ggBuoA730IAmMJjAM7zCm5d4L96797Fs3fDymTP4A+/zB5hrj7U=</latexit>
+fimg
+<latexit sha1_base64="/nfQRnuM3cvlS2UJ/lI9XfCB4B8=">AAAB73icbVDLSgNBEOz1GeMr6tHLYBA8hd0g0WPAi8cI5gHJEmYns8mQeawzs2JY8hNePCji1d/x5t84SfagiQUNRVU33V1Rwpmxvv/tra1vbG5tF3aKu3v7B4elo+OWUakmtEkUV7oTYUM5k7RpmeW0k2iKRcRpOxrfzPz2I9WGKXlvJwkNBR5KFjOCrZM6cT+LIvU07ZfKfsWfA62SICdlyNHol756A0VSQaUlHBvTDfzEhhnWlhFOp8VeamiCyRgPaddRiQU1YTa/d4rOnTJAsdKupEVz9fdEhoUxExG5ToHtyCx7M/E/r5va+DrMmExSSyVZLIpTjqxCs+fRgGlKLJ84golm7lZERlhjYl1ERRdCsPzyKmlVK0GtUru7LNereRwFOIUzuIAArqAOt9CAJhDg8Ayv8OY9eC/eu/exaF3z8pkT+APv8wdm6pAt</latexit>
+fbbox
+Input
+Per-frame                (L, 512)
+Per-frame                (L, 512)
+<latexit sha1_base64="2/RAg3vo49X7C6SxYmCKL1dYoqY=">AAAB8HicbVDLSgNBEOyNrxhfUY9eBoPgKewGiR4DXjxGMA9JljA7mU2GzGOZmRXCkq/w4kERr36ON//GSbIHTSxoKKq66e6KEs6M9f1vr7CxubW9U9wt7e0fHB6Vj0/aRqWa0BZRXOluhA3lTNKWZZbTbqIpFhGnnWhyO/c7T1QbpuSDnSY0FHgkWcwItk56jAeZVRMqZ4Nyxa/6C6B1EuSkAjmag/JXf6hIKqi0hGNjeoGf2DDD2jLC6azUTw1NMJngEe05KrGgJswWB8/QhVOGKFbalbRoof6eyLAwZioi1ymwHZtVby7+5/VSG9+EGZNJaqkky0VxypFVaP49GjJNieVTRzDRzN2KyBhrTKzLqORCCFZfXiftWjWoV+v3V5VGLY+jCGdwDpcQwDU04A6a0AICAp7hFd487b14797HsrXg5TOn8Afe5w9CeJCt</latexit>
+ftoken
+<latexit sha1_base64="LEygbt3z7u91aMG5P0PODA/lz60=">AAAB9XicbVBNS8NAEN3Ur1q/qh69LBbBU0mKVI8FLx4r2FZoY9lsJ+3SzSbsTpQS+j+8eFDEq//Fm//GbZuDtj4YeLw3w8y8IJHCoOt+O4W19Y3NreJ2aWd3b/+gfHjUNnGqObR4LGN9HzADUihooUAJ94kGFgUSOsH4euZ3HkEbEas7nCTgR2yoRCg4Qys99EYMadjPMB6DmvbLFbfqzkFXiZeTCsnR7Je/eoOYpxEo5JIZ0/XcBP2MaRRcwrTUSw0kjI/ZELqWKhaB8bP51VN6ZpUBDWNtSyGdq78nMhYZM4kC2xkxHJllbyb+53VTDK/8TKgkRVB8sShMJcWYziKgA6GBo5xYwrgW9lbKR0wzjjaokg3BW355lbRrVa9erd9eVBq1PI4iOSGn5Jx45JI0yA1pkhbhRJNn8krenCfnxXl3PhatBSefOSZ/4Hz+AKtAkpg=</latexit>
+ˆftoken
+Tokens
+and
+Camera Frame SMPL World-Ground SMPL
+<latexit sha1_base64="z9AHO858HMIkLy3WGJlMYwHIM2Q=">AAAB6XicbVBNS8NAEJ34WetX1aOXxSJ4KkmR6rHgxWMV+wFtKJvtpF262YTdjVJC/4EXD4p49R9589+4bXPQ1gcDj/dmmJkXJIJr47rfztr6xubWdmGnuLu3f3BYOjpu6ThVDJssFrHqBFSj4BKbhhuBnUQhjQKB7WB8M/Pbj6g0j+WDmSToR3QoecgZNVa6Z0/9UtmtuHOQVeLlpAw5Gv3SV28QszRCaZigWnc9NzF+RpXhTOC02Es1JpSN6RC7lkoaofaz+aVTcm6VAQljZUsaMld/T2Q00noSBbYzomakl72Z+J/XTU147WdcJqlByRaLwlQQE5PZ22TAFTIjJpZQpri9lbARVZQZG07RhuAtv7xKWtWKV6vU7i7L9WoeRwFO4QwuwIMrqMMtNKAJDEJ4hld4c8bOi/PufCxa15x85gT+wPn8AZ7ZjWM=</latexit>
+cw
+<latexit sha1_base64="Ok/0+qF6VjTiNYgnMWX7kOyZKiY=">AAAB8XicbVBNS8NAEJ34WetX1aOXYBE8laRI9VjwoMcK9gPbUCbbTbt0dxN2N0IJ/RdePCji1X/jzX/jts1BWx8MPN6bYWZemHCmjed9O2vrG5tb24Wd4u7e/sFh6ei4peNUEdokMY9VJ0RNOZO0aZjhtJMoiiLktB2Ob2Z++4kqzWL5YCYJDQQOJYsYQWOlx94tCoH9jEz7pbJX8eZwV4mfkzLkaPRLX71BTFJBpSEcte76XmKCDJVhhNNpsZdqmiAZ45B2LZUoqA6y+cVT99wqAzeKlS1p3Ln6eyJDofVEhLZToBnpZW8m/ud1UxNdBxmTSWqoJItFUcpdE7uz990BU5QYPrEEiWL2VpeMUCExNqSiDcFffnmVtKoVv1ap3V+W69U8jgKcwhlcgA9XUIc7aEATCEh4hld4c7Tz4rw7H4vWNSefOYE/cD5/AJH4kNI=</latexit>
+ c
+<latexit sha1_base64="l3eeQFvPFqEDckGnS/nFCGaJewM=">AAAB7XicbVBNS8NAEJ3Ur1q/qh69LBbBU0mKVI8FLx4r2A9oQ9lsN+3azSbsToQS+h+8eFDEq//Hm//GbZuDtj4YeLw3w8y8IJHCoOt+O4WNza3tneJuaW//4PCofHzSNnGqGW+xWMa6G1DDpVC8hQIl7yaa0yiQvBNMbud+54lrI2L1gNOE+xEdKREKRtFK7T6OOdJBueJW3QXIOvFyUoEczUH5qz+MWRpxhUxSY3qem6CfUY2CST4r9VPDE8omdMR7lioaceNni2tn5MIqQxLG2pZCslB/T2Q0MmYaBbYzojg2q95c/M/rpRje+JlQSYpcseWiMJUEYzJ/nQyF5gzl1BLKtLC3EjammjK0AZVsCN7qy+ukXat69Wr9/qrSqOVxFOEMzuESPLiGBtxBE1rA4BGe4RXenNh5cd6dj2VrwclnTuEPnM8formPIw==</latexit>
+✓
+<latexit sha1_base64="gA0KHuYAuGeapAQACWiPc2agdEI=">AAAB7HicbVBNS8NAEJ34WetX1aOXxSJ4KkmR6rHgxWMF0xbaUDbbTbt0swm7E6GE/gYvHhTx6g/y5r9x2+agrQ8GHu/NMDMvTKUw6Lrfzsbm1vbObmmvvH9weHRcOTltmyTTjPsskYnuhtRwKRT3UaDk3VRzGoeSd8LJ3dzvPHFtRKIecZryIKYjJSLBKFrJ74cc6aBSdWvuAmSdeAWpQoHWoPLVHyYsi7lCJqkxPc9NMcipRsEkn5X7meEpZRM64j1LFY25CfLFsTNyaZUhiRJtSyFZqL8nchobM41D2xlTHJtVby7+5/UyjG6DXKg0Q67YclGUSYIJmX9OhkJzhnJqCWVa2FsJG1NNGdp8yjYEb/XlddKu17xGrfFwXW3WizhKcA4XcAUe3EAT7qEFPjAQ8Ayv8OYo58V5dz6WrRtOMXMGf+B8/gDCmI6f</latexit>
+ 
+<latexit sha1_base64="mjJr/n6EX3MfUkjU/7uERtXtg8s=">AAAB73icbVBNS8NAEJ34WetX1aOXxSJ4KkmR6rHgxWMF+wFtKJvtpl26ycbdSaGE/gkvHhTx6t/x5r9x2+agrQ8GHu/NMDMvSKQw6Lrfzsbm1vbObmGvuH9weHRcOjltGZVqxptMSaU7ATVcipg3UaDknURzGgWSt4Px3dxvT7g2QsWPOE24H9FhLELBKFqpM+lnWimc9Utlt+IuQNaJl5My5Gj0S1+9gWJpxGNkkhrT9dwE/YxqFEzyWbGXGp5QNqZD3rU0phE3fra4d0YurTIgodK2YiQL9fdERiNjplFgOyOKI7PqzcX/vG6K4a2fiThJkcdsuShMJUFF5s+TgdCcoZxaQpkW9lbCRlRThjaiog3BW315nbSqFa9WqT1cl+vVPI4CnMMFXIEHN1CHe2hAExhIeIZXeHOenBfn3flYtm44+cwZ/IHz+QOl4ZBW</latexit>
+vroot
+Output
+Multitask MLPs
+Cropped Image to 
+Full Camera Frame
+GV to World Frame
+& Post-Processing
+              Early Fusion:
+Operation
+Relative Transformer
+Attention with ROPE
+<latexit sha1_base64="zR/bYGzVGMkezZHWlzE2TuNGbC4=">AAAB8nicbVDLSgNBEOyNrxhfUY9eBoPgKeyKRI8BD/EYwTwgWcLsZDYZMo9lZlYISz7DiwdFvPo13vwbJ8keNLGgoajqprsrSjgz1ve/vcLG5tb2TnG3tLd/cHhUPj5pG5VqQltEcaW7ETaUM0lblllOu4mmWEScdqLJ3dzvPFFtmJKPdprQUOCRZDEj2Dqp129gIfAga7Rng3LFr/oLoHUS5KQCOZqD8ld/qEgqqLSEY2N6gZ/YMMPaMsLprNRPDU0wmeAR7TkqsaAmzBYnz9CFU4YoVtqVtGih/p7IsDBmKiLXKbAdm1VvLv7n9VIb34YZk0lqqSTLRXHKkVVo/j8aMk2J5VNHMNHM3YrIGGtMrEup5EIIVl9eJ+2ralCr1h6uK/XrPI4inME5XEIAN1CHe2hCCwgoeIZXePOs9+K9ex/L1oKXz5zCH3ifPxMZkRg=</latexit>
+ GV
+<latexit sha1_base64="1a0tJDqb1oTi5jbD2US4NqAwAOY=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0mkVI8FLx4r2g9oQ9lsJ+3SzSbsboQS+hO8eFDEq7/Im//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ7dzvPKHSPJaPZpqgH9GR5CFn1FjpIRnoQbniVt0FyDrxclKBHM1B+as/jFkaoTRMUK17npsYP6PKcCZwVuqnGhPKJnSEPUsljVD72eLUGbmwypCEsbIlDVmovycyGmk9jQLbGVEz1qveXPzP66UmvPEzLpPUoGTLRWEqiInJ/G8y5AqZEVNLKFPc3krYmCrKjE2nZEPwVl9eJ+2rqlev1u9rlUYtj6MIZ3AOl+DBNTTgDprQAgYjeIZXeHOE8+K8Ox/L1oKTz5zCHzifP2Lkjdc=</latexit>
+ps
+<latexit sha1_base64="4akF+L/c5TEPU9dghS9IhUUcK1s=">AAACBXicbVC7SgNBFJ31GeNr1VKLxSBYhLArIVoGLLSMYB6QDcvdySQZMrO7zNw1hJDGxl+xsVDE1n+w82+cPApNPHAvh3PuZeaeMBFco+t+Wyura+sbm5mt7PbO7t6+fXBY03GqKKvSWMSqEYJmgkesihwFaySKgQwFq4f964lff2BK8zi6x2HCWhK6Ee9wCmikwD7xsccQ8n447TcgJQSDvI+QBoPAzrkFdwpnmXhzkiNzVAL7y2/HNJUsQipA66bnJtgagUJOBRtn/VSzBGgfuqxpaASS6dZoesXYOTNK2+nEylSEzlT9vTECqfVQhmZSAvb0ojcR//OaKXauWiMeJSmyiM4e6qTCwdiZROK0uWIUxdAQoIqbvzq0BwoomuCyJgRv8eRlUrsoeKVC6a6YKxfncWTIMTkl58Qjl6RMbkmFVAklj+SZvJI368l6sd6tj9noijXfOSJ/YH3+AAWymD8=</latexit>
+✓, , w,⌧w
+<latexit sha1_base64="L0oM7LMOPEIf3iho27M24nYnDW8=">AAACBXicbVDLSsNAFJ34rPVVdamLYBFclJJIqS4LLnRZwT6gCeFmOm2HziRh5kYooRs3/oobF4q49R/c+TdOHwttPXAvh3PuZeaeMBFco+N8Wyura+sbm7mt/PbO7t5+4eCwqeNUUdagsYhVOwTNBI9YAzkK1k4UAxkK1gqH1xO/9cCU5nF0j6OE+RL6Ee9xCmikoHDi4YAhlLxw2m9ASghoyUNIAxoUik7ZmcJeJu6cFMkc9aDw5XVjmkoWIRWgdcd1EvQzUMipYOO8l2qWAB1Cn3UMjUAy7WfTK8b2mVG6di9WpiK0p+rvjQyk1iMZmkkJONCL3kT8z+uk2LvyMx4lKbKIzh7qpcLG2J5EYne5YhTFyBCgipu/2nQACiia4PImBHfx5GXSvCi71XL1rlKsVeZx5MgxOSXnxCWXpEZuSZ00CCWP5Jm8kjfryXqx3q2P2eiKNd85In9gff4AyHeYFw==</latexit>
+✓, , c,⌧c
+<latexit sha1_base64="TQKvlMcJJzsUecR3S1sSmMOkSds=">AAACAnicbVC7SgNBFJ31GeMraiU2gyEQm7BrES2DNhYKEcwDsssyO5lNhsw+mLkrhiXY+BuWNhaK2PoVNuqH2Dt5FJp44MLhnHu59x4vFlyBaX4Zc/MLi0vLmZXs6tr6xmZua7uuokRSVqORiGTTI4oJHrIacBCsGUtGAk+whtc7HfqNayYVj8Ir6MfMCUgn5D6nBLTk5nZtlQRuygfYBnYD6cV5dVD0XX6QdXN5s2SOgGeJNSH5SuH78+M+26m6uXe7HdEkYCFQQZRqWWYMTkokcCrYIGsnisWE9kiHtTQNScCUk45eGOCCVtrYj6SuEPBI/T2RkkCpfuDpzoBAV017Q/E/r5WAf+ykPIwTYCEdL/ITgSHCwzxwm0tGQfQ1IVRyfSumXSIJBZ3aMARr+uVZUj8sWeVS+dLKV07QGBm0h/ZREVnoCFXQGaqiGqLoFj2gJ/Rs3BmPxovxOm6dMyYzO+gPjLcf64ya4A==</latexit>
+P
+i
+MLP( fi)
+(L, 3) (L, 34) (L, 1024) (L, 6)
+<latexit sha1_base64="UIld6Ld4wSsbRTMAWeOBA5nxLeQ=">AAAB8HicbVBNS8NAEJ3Ur1q/qh69LBbBU0mKVI8FLx4r2A9pQ9lsN+3SzSbsToQS+iu8eFDEqz/Hm//GbZuDtj4YeLw3w8y8IJHCoOt+O4WNza3tneJuaW//4PCofHzSNnGqGW+xWMa6G1DDpVC8hQIl7yaa0yiQvBNMbud+54lrI2L1gNOE+xEdKREKRtFKj30UETfEqw3KFbfqLkDWiZeTCuRoDspf/WHM0ogrZJIa0/PcBP2MahRM8lmpnxqeUDahI96zVFG7x88WB8/IhVWGJIy1LYVkof6eyGhkzDQKbGdEcWxWvbn4n9dLMbzxM6GSFLliy0VhKgnGZP49GQrNGcqpJZRpYW8lbEw1ZWgzKtkQvNWX10m7VvXq1fr9VaVRy+MowhmcwyV4cA0NuIMmtIBBBM/wCm+Odl6cd+dj2Vpw8plT+APn8wfyQ4/Q</latexit>
+⇥12
+(L, 3) (L, 6) (L, 21x6+10) (L, 6) (L, 6) (L, 3)
+Fig. 6. Network architecture. The input features are fused into per-frame
+tokens by the early-fusion module, processed by the relative transformer,
+and then output by multitask MLPs as intermediate representations. The
+weak-camera parameter 𝑐𝑤 is restored to the camera frame𝜏𝑐 following [Li
+et al. 2022b]. The predicted Γ𝐺𝑉 and 𝑣𝑟𝑜𝑜𝑡 are converted to the world
+frame Γ𝑤 and 𝜏𝑤, as described in Sec. 3.1. Finally, we use joint stationary
+probabilities 𝑝𝑠 to post-process the global motion.
+between the 𝐺𝑉𝑡 systems is always around the gravity vector, we
+can calculate the rotation matrix 𝑅𝑡
+Δ𝐺𝑉 by projecting the view di-
+rections − − − →𝑣𝑖𝑒𝑤 𝑡 −1 and − − − →𝑣𝑖𝑒𝑤 𝑡 onto the xz-plane and computing the
+angle between them. After obtaining {𝑅𝑡
+Δ𝐺𝑉 } of the entire input
+sequences, we can roll out to the first frame’s GV coordinate system
+for all frames:
+Γ𝑡
+𝑤 =
+(
+Γ0
+𝐺𝑉 , 𝑡 = 0,Î𝑡
+𝑖=1 𝑅𝑖
+Δ𝐺𝑉 · Γ𝑡
+𝐺𝑉 , 𝑡 > 0. (2)
+This formulation also applies to static cameras, as the transforma-
+tion 𝑅𝑡
+Δ𝐺𝑉 is the identity transformation in this case. Finally, the
+translation is obtained using the same method as described in Eq. 1.
+The human orientation in the GV coordinate system is well-suited
+for deep network learning, given that the establishment of the GV co-
+ordinate system is determined from the input images. It also ensures
+that the learned global orientation is naturally gravity-aware. We
+have also found this approach beneficial for learning local pose and
+shape, as demonstrated in the ablation study Tab. 3. In the rotation
+recovery algorithm between GV systems, we utilize the consistency
+of the y-axis in the GV system to systematically avoid cumulative
+errors in the gravity direction. This also mitigates potential errors
+in camera rotation estimation, resulting in our method achieving
+similar results under both GT Gyro and DPVO estimated relative
+camera rotations, as shown in Tab. 1. Compared to WHAM, our
+method does not require initialization and can predict in parallel
+without the need for autoregressive prediction.
+4
+World-Grounded Human Motion Recovery via Gravity-View Coordinates SA Conference Papers ’24, December 3–6, 2024, Tokyo, Japan
+3.2 Network Design
+Input and preprocessing. The network design is shown in Fig. 6.
+Inspired by WHAM [Shin et al. 2024], we first preprocess the input
+video into four types of features: bounding boxes[Jocher et al. 2023;
+Li et al. 2022b], 2D keypoints [Xu et al. 2022], image features [Goel
+et al. 2023], and relative camera rotations [Teed et al. 2024]. Then,
+in the early-fusion module, we use individual MLPs to map these
+features to the same dimension. These vectors are then element-wise
+added to obtain per-frame tokens {𝑓 𝑡
+token ∈ R512}. These tokens are
+processed by a Relative Transformer, where we introduce rotary
+positional encoding (RoPE) [Su et al. 2024] to enable the network
+to focus on relative position features. Additionally, we implement
+a receptive-field-limited attention mask to improve the network’s
+generalization ability when testing on long sequences.
+Rotary positional embedding. Absolute positional embedding is a
+common approach for transformer architectures in human motion
+modeling. However, this implicitly reduces the model’s ability to
+generalize to long sequences because the model is not trained on
+positional encodings beyond the training length. We argue that the
+absolute position of human motions is ambiguous (e.g., the start of a
+motion sequence can be arbitrary). In contrast, the relative position
+is well-defined and can be easily learned.
+Here we introduce rotary positional embedding to inject relative
+features into temporal tokens, where the output o𝑡 of the 𝑡-th token
+after the self-attention layer is calculated via:
+o𝑡 =
+∑︁
+𝑖 ∈𝑇
+Softmax
+𝑠 ∈𝑇
+ 𝑎𝑡𝑠𝑖 W𝑣 𝑓 𝑖
+𝑡𝑜𝑘𝑒𝑛 (3)
+𝑎𝑡𝑠 = (W𝑞 𝑓 𝑡
+𝑡𝑜𝑘𝑒𝑛 )⊤R  p𝑠 − p𝑡 (W𝑘 𝑓 𝑠
+𝑡𝑜𝑘𝑒𝑛 ) (4)
+where Wq, Wk, Wv are the projection matrix, R(·) ∈ R512×512 is
+the rotary encoding of the relative position between two tokens,
+and p𝑡 indicates the temporal index of the 𝑡-th token. Following
+the definition in RoPE, we divide the 512-dimensional space into
+256 subspaces and combine them using the linearity of the inner
+product. R(·) is defined as:
+R(p) =
+©­­­
+«
+ˆR  𝛼 ⊤
+1 p 0
+. . .
+0 ˆR
+
+𝛼 ⊤
+256p
+
+ª®®®
+¬
+, ˆR(𝜃 ) =
+ cos 𝜃 − sin 𝜃
+sin 𝜃 cos 𝜃
+
+,
+(5)
+where 𝛼𝑖 is pre-defined frequency parameters.
+At inference time, we further introduce an attention mask [Press
+et al. 2022] and the self-attention becomes:
+o𝑡 =
+∑︁
+𝑖 ∈𝑇
+Softmax
+𝑠 ∈𝑇
+ 𝑎𝑡𝑠 + 𝑚𝑡𝑠𝑖 W𝑣 𝑓 𝑖
+𝑡𝑜𝑘𝑒𝑛 (6)
+𝑚𝑡𝑠 =
+(
+0, if − 𝐿 < 𝑡 − 𝑠 < 𝐿,
+−∞, otherwise. (7)
+where 𝐿 is the maximum training length. The token𝑡 attends only to
+tokens within 𝐿 relative positions. Consequently, the model can gen-
+eralize to arbitrarily long sequences without needing autoregressive
+inference techniques, such as sliding-window.
+Network outputs. After the relative transformer, the 𝑓 ′
+token are
+processed by multitask MLPs to predict multiple targets, including
+the weak-perspective camera parameters𝑐𝑤 , the human orientation
+in the camera frame Γ𝑐, the SMPL local pose 𝜃, the SMPL shape
+𝛽, the stationary label 𝑝 𝑗 , the global trajectory representation Γ𝐺𝑉
+and 𝑣𝑟𝑜𝑜𝑡 . To get the camera-frame human motion, we follow the
+standard CLIFF [Li et al. 2022b] to transform the weak-perspective
+camera to full-perspective. For the world-grounded human motion,
+we recover the global trajectory as described in Sec. 3.1.
+Post-processing. The proposed network learns smooth and realis-
+tic global movement from the training data. Inspired by WHAM, we
+additionally predict joint stationary probabilities to further refine
+the global motion. Specifically, we predict the stationary proba-
+bilities for the hands, toes, and heels, and then update the global
+translation frame-by-frame to ensure that the static joints remain at
+fixed points in space as much as possible. After updating the global
+translation, we calculate the fine-grained stationary positions for
+each joint (see the algorithm in the supplementary). These target
+joint positions are then passed into an inverse kinematics process to
+solve the local poses, mitigating physically implausible effects like
+foot-sliding. We use a CCD-based IK solver [Aristidou and Lasenby
+2011] with an efficient implementation [Starke et al. 2019].
+Losses. We use the following losses for training: Mean Squared
+Error (MSE) loss on predicted targets except for stationary proba-
+bility, which uses Binary Cross-Entropy (BCE) loss. Additionally,
+we use L2 loss on 3D joints, 2D joints, vertices, translation in the
+camera frame, and translation in the world coordinate system. More
+details are provided in the supplementary material.
+3.3 Implementation details
+GVHMR has 12 layers of transformer encoder. Each attention unit
+has 8 heads. The hidden dimension is 512. The MLP has two linear
+layers with GELU activation. GVHMR is trained from scratch on a
+mixed dataset consisting of AMASS [Mahmood et al. 2019], BED-
+LAM [Black et al. 2023], H36M [Ionescu et al. 2014], and 3DPW [von
+Marcard et al. 2018]. During training, we augment the 2D keypoints
+following WHAM. For AMASS, we simulate static and dynamic
+camera trajectories, generate bounding boxes, normalize the key-
+points using these boxes from -1 to 1, and set image features to
+zero. For other datasets that come with videos, we extract image fea-
+tures using a fixed encoder [Goel et al. 2023]. The training sequence
+length is set to 𝐿 = 120. The model converges after 500 epochs with
+a batch size of 256. Training takes 13 hours on 2 RTX 4090 GPUs.
+4 EXPERIMENTS
+4.1 Datasets and Metrics
+Evaluation datasets. Following WHAM [Shin et al. 2024], we eval-
+uate our method on three in-the-wild benchmarks: 3DPW [von
+Marcard et al. 2018], RICH [Huang et al. 2022], EMDB [Kaufmann
+et al. 2023]. We use RICH and EMDB-2 split to evaluate the global
+performance. The RICH test set contains 191 videos captured with
+static cameras, totaling 59.1 minutes with accurate global human
+motion annotations. The EMDB-2 is captured with moving cam-
+eras and contains 25 sequences totaling 24.0 minutes. Additionally,
+5
+SA Conference Papers ’24, December 3–6, 2024, Tokyo, Japan Zehong Shen, Huaijin Pi, Yan Xia, Zhi Cen, Sida Peng, Zechen Hu, Hujun Bao, Ruizhen Hu, and Xiaowei Zhou
+Table 1. World-grounded metrics. We evaluate the global motion quality on the RICH [Huang et al. 2022] and EMDB-2 [Kaufmann et al. 2023] dataset.
+Parenthesis denotes the number of joints used to compute WA-MPJPE100, W-MPJPE100 and Jitter.
+RICH (24) EMDB (24)
+Models WA-MPJPE100 W-MPJPE100 RTE Jitter Foot-Sliding WA-MPJPE100 W-MPJPE100 RTE Jitter Foot-Sliding
+DPVO[Teed et al. 2024] +HMR2.0[Goel et al. 2023]184.3 338.3 7.7 255.0 38.7 647.8 2231.4 15.8 537.3 107.6
+GLAMR [Yuan et al. 2022] 129.4 236.2 3.8 49.7 18.1 280.8 726.6 11.4 46.3 20.7
+TRACE [Sun et al. 2023] 238.1 925.4 610.4 1578.6 230.7 529.0 1702.3 17.7 2987.6 370.7
+SLAHMR [Ye et al. 2023] 98.1 186.4 28.9 34.3 5.1 326.9 776.1 10.2 31.3 14.5
+WHAM (w/ DPVO) [Shin et al. 2024] 109.9 184.6 4.1 19.7 3.3 135.6 354.8 6.0 22.5 4.4
+WHAM (w/ GT gyro) [Shin et al. 2024] 109.9 184.6 4.1 19.7 3.3 131.1 335.3 4.1 21.0 4.4
+Ours (w/ DPVO) 78.8 126.3 2.4 12.8 3.0 111.0 276.5 2.0 16.7 3.5
+Ours (w/ GT gyro) 78.8 126.3 2.4 12.8 3.0 109.1 274.9 1.9 16.5 3.5
+Table 2. Camera-space metrics. We evaluate the camera-space motion quality on the 3DPW [von Marcard et al . 2018], RICH [Huang et al. 2022] and
+EMDB-1 [Kaufmann et al. 2023] datasets. ∗ denotes models trained with the 3DPW training set.
+3DPW (14) RICH (24) EMDB (24)
+Models PA-MPJPE MPJPE PVE Accel PA-MPJPE MPJPE PVE Accel PA-MPJPE MPJPE PVE Accel
+per-frame
+SPIN [Kolotouros et al. 2019] 59.2 96.9 112.8 31.4 69.7 122.9 144.2 35.2 87.1 140.3 174.9 41.3
+PARE∗ [Kocabas et al. 2021a] 46.5 74.5 88.6 – 60.7 109.2 123.5 – 72.2 113.9 133.2 –
+CLIFF∗ [Li et al. 2022b] 43.0 69.0 81.2 22.5 56.6 102.6 115.0 22.4 68.1 103.3 128.0 24.5
+HybrIK∗ [Li et al. 2021] 41.8 71.6 82.3 – 56.4 96.8 110.4 – 65.6 103.0 122.2 –
+HMR2.0 [Goel et al. 2023] 44.4 69.8 82.2 18.1 48.1 96.0 110.9 18.8 60.6 98.0 120.3 19.8
+ReFit∗ [Wang and Daniilidis 2023]40.5 65.3 75.1 18.5 47.9 80.7 92.9 17.1 58.6 88.0 104.5 20.7
+temporal
+TCMR∗ [Choi et al. 2021] 52.7 86.5 101.4 6.0 65.6 119.1 137.7 5.0 79.6 127.6 147.9 5.3
+VIBE∗ [Kocabas et al. 2020] 51.9 82.9 98.4 18.5 68.4 120.5 140.2 21.8 81.4 125.9 146.8 26.6
+MPS-Net∗ [Wei et al. 2022] 52.1 84.3 99.0 6.5 67.1 118.2 136.7 5.8 81.3 123.1 138.4 6.2
+GLoT∗ [Shen et al. 2023] 50.6 80.7 96.4 6.0 65.6 114.3 132.7 5.2 78.8 119.7 138.4 5.4
+GLAMR [Yuan et al. 2022] 51.1 – – 8.0 79.9 – – 107.7 73.5 113.6 133.4 32.9
+TRACE∗ [Sun et al. 2023] 50.9 79.1 95.4 28.6 – – – – 70.9 109.9 127.4 25.5
+SLAHMR [Ye et al. 2023] 55.9 – – – 52.5 – – 9.4 69.5 93.5 110.7 7.1
+PACE [Kocabas et al. 2024] – – – – 49.3 – – 8.8 – – – –
+WHAM∗ [Shin et al. 2024] 35.9 57.8 68.7 6.6 44.3 80.0 91.2 5.3 50.4 79.7 94.4 5.3
+Ours∗ 36.2 55.6 67.2 5.0 39.5 66.0 74.4 4.1 42.7 72.6 84.2 3.6
+we use RICH, EMDB-1 split, and 3DPW to evaluate the camera-
+coordinate performance. EMDB-1 contains 17 sequences totaling
+13.5 minutes, and 3DPW contains 37 sequences totaling 22.3 min-
+utes. We also test our method on internet videos for qualitative
+results (see supplementary video).
+Metrics. We follow the evaluation protocol of [Shin et al. 2024; Ye
+et al. 2023], using the code released by WHAM to apply FlipEval for
+test-time augmentation and evaluate our model’s performance. To
+compute world-coordinate metrics, we divide the predicted global se-
+quences into shorter segments of 100 frames and align each segment
+to the ground-truth segment. When the alignment is performed
+using the entire segment, we report the World-aligned Mean Per
+Joint Position Error (WA-MPJPE100). When the alignment is per-
+formed using the first two frames, we report the World MPJPE
+(W-MPJPE100). Additionally, to assess the error over the global mo-
+tion, we evaluate the whole sequence for Root Translation Error
+(RTE, in %), motion jittery (Jitter, in 𝑚/𝑠3), and foot sliding (FS,
+in 𝑚𝑚). The camera-coordinate metrics include the widely used
+MPJPE, Procrustes-aligned MPJPE (PA-MPJPE), Per Vertex Error
+(PVE), and Acceleration error (Accel, in 𝑚/𝑠2) [Goel et al. 2023; Li
+et al. 2022b; Shin et al. 2024; Ye et al. 2023].
+4.2 Comparison on Global Motion Recovery
+We compare our method with several state-of-the-art methods that
+recover global motion and a straightforward baseline method that
+combines the state-of-the-art camera-space method HMR2.0 [Goel
+et al. 2023] with a SLAM method (DPVO [Teed et al. 2024]). The GT
+gyro indicates the ground-truth camera rotation data in the EMDB
+dataset provided by the ARKit. For the static camera in the RICH
+dataset, we set the camera transformation to an identity matrix.
+As illustrated in Tab. 1, our method achieves the best performance
+on all metrics. Compared to WHAM, we can better handle errors in
+relative camera rotation estimation. On the EMDB dataset with dy-
+namic camera inputs, using DPVO instead of Gyro results in only a
+1.6mm/0.1% drop in the W-MPJPE100/RTE metrics, while WHAM ex-
+periences a drop of 19.5mm/1.9%. Compared to optimization-based
+algorithms like GLAMR and SLAHMR, our method also achieves
+better smoothness metrics. Although these methods incorporate a
+smoothness loss, they may struggle due to the high difficulty of the
+actions in the dataset. Compared to regression methods like TRACE,
+our algorithm generalizes better to new datasets and achieves supe-
+rior results. An important baseline is HMR2.0+DPVO. We found that,
+although HMR2.0 performs well in camera-space Tab. 2, it performs
+6
+World-Grounded Human Motion Recovery via Gravity-View Coordinates SA Conference Papers ’24, December 3–6, 2024, Tokyo, Japan
+Table 3. Ablation studies. We compare our method with seven variants
+on the RICH [Huang et al . 2022] dataset (Refer to Sec. 4.4 for details). ∗
+denotes the variant that employs the sliding window.
+Variant PA-MPJPE MPJPE WA-MPJPE W-MPJPE RTE Jitter Foot-Sliding
+(1) w/o𝐺𝑉 40.0 67.0 162.6 278.9 5.9 9.7 7.5(2) w/oΓ𝐺𝑉 41.4 70.5 101.2 177.5 4.5 14.9 3.0(3) w/o Transformer43.3 73.9 85.8 138.9 2.7 7.6 3.3(4) w/o Transformer∗ 43.0 72.9 84.2 142.0 2.7 10.6 3.2(5) w/o RoPE 87.5 172.9 191.5 304.4 6.3 22.8 11.5(6) w/o RoPE∗ 40.1 67.9 80.7 133.2 2.4 17.5 3.3(7) w/o PostProcessing39.5 66.0 89.3 145.2 3.0 14.5 6.8
+Full Model 39.5 66.0 78.8 126.3 2.4 12.8 3.0
+poorly in global motion recovery. Particularly on the RICH dataset,
+the camera transformation is identity, indicating that camera-space
+estimation of human pose struggles to recover correct and con-
+sistent translation and scale. Additionally, such methods cannot
+achieve gravity-aligned results. In contrast, our algorithm naturally
+provides gravity-aligned results.
+As shown in Fig. 7, our method can recover more plausible global
+motion than WHAM. To validate the effectiveness of our method,
+we show the global orientation angle error curve in Fig. 9. It can
+be observed that our method maintains a much lower error than
+WHAM, especially in the long-term prediction.
+4.3 Comparison on Camera Space Motion Recovery
+We compare our method with state-of-the-art motion recovery meth-
+ods that predict camera-space results. The results are shown in
+Tab. 2, where our method achieves the best performance on most
+of the metrics with a clear margin, demonstrating the effectiveness
+of our method in camera-space motion recovery. We attribute this
+to the multitask learning strategy that enables our model to use
+global motion information to improve the camera-space motion
+estimation, especially the shape and smoothness of the motion. Our
+PA-MPJPE performance is slightly behind WHAM by 0.3 mm on the
+3DPW dataset. This may be due to the fact that we do not directly
+predict the SMPL parameters, but rather the SMPLX parameters,
+which might introduce some errors. Nevertheless, the numbers are
+still competitive. Fig. 8 demonstrates that our approach estimates
+human motion in the camera space more accurately than WHAM.
+4.4 Understanding GVHMR
+Ablation Studies. To understand the impact of each component in
+our method, we evaluate seven variants of GVHMR using the same
+training and evaluation protocol on the RICH dataset. The results
+are shown in Tab. 3: (1) w/o 𝐺𝑉 : when predicting human motion
+solely in the camera coordinate system, the metrics drop slightly.
+This suggests that gravity alignment improves camera-space human
+motion estimation accuracy. For this variant, we can further re-
+cover a non-gravity-aligned global motion, which performs poorly
+in global metrics. (2) w/o Γ𝐺𝑉 : when predicting the relative global
+orientation from frame to frame, the world-coordinate metrics drop
+substantially, indicating that the model suffers from error accumu-
+lation in this configuration. (3) w/o Transformer : adopting a con-
+volutional architecture yields poor performance, highlighting that
+our transformer architecture is more effective. (4) w/o Transformer∗:
+when applying a convolutional architecture with a sliding window
+Table 4. Dataset and test-time-augmentation ablation on EMDB. B
+denotes BEDLAM [Black et al. 2023] synthetic dataset.
+Method PA-MPJPE MPJPE AccelWA-MPJPE W-MPJPE RTE
+WHAM +B 49.4 78.2 6.0 134.2 338.1 3.8
+WHAM +B+FlipEval47.9 76.9 5.4 132.5 337.7 3.8
+GVHMR +B 44.2 74.0 4.0 110.6 274.9 1.9
+GVHMR +B+FlipEval42.7 72.6 3.6 109.1 272.9 1.9
+inference strategy, the performance remains similarly poor, fur-
+ther validating the superiority of our transformer approach. (5) w/o
+RoPE: substituting RoPE with absolute positional encoding leads
+to very poor results. This is primarily because absolute positional
+embedding struggles to generalize well in long sequences. (6) w/o
+RoPE∗: even when using absolute positional embedding with a slid-
+ing window inference strategy, the results are still worse than our
+approach, confirming the inadequacy of this embedding strategy.
+(7) w/o Post-Processing: Omitting the postprocessing step causes a
+significant increase in global metrics, demonstrating that our post-
+processing strategy substantially enhances global accuracy. Fig. 10
+demonstrates that each component of our approach contributes to
+the overall performance. We find similar conclusion on the EMDB
+dataset, which is presented in the supplementary material.
+In Tab. 4, we provide a comparison with the most relevant baseline
+method, WHAM. When trained on the BEDLAM dataset, with or
+without using FlipEval as a test-time augmentation, GVHMR shows
+a significant performance improvement over WHAM. Additionally,
+we observe that FlipEval offers greater improvements in camera-
+space metrics compared to global-space metrics.
+Running Time. We test the running time with an example video of
+1430 frames (approximately 45 seconds). The preprocessing, which
+includes YOLOv8 detection, ViTPose, Vit feature extraction, and
+DPVO, takes a total of 46.0 seconds (4.9 + 20.0 + 10.1 + 11.0). The
+rest of the GVHMR takes 0.28 seconds. WHAM adopts the same
+preprocessing procedures, and it requires 2.0 seconds for the core
+network. The optimization-based method SLAHMR takes more than
+6 hours to process. All models are tested with an RTX 4090 GPU. The
+improved efficiency enables scalable processing of human motion
+videos, aiding in the creation of foundational datasets.
+5 CONCLUSIONS
+We introduce GVHMR , a novel approach for regressing world-
+grounded human motion from monocular videos. GVHMR defines a
+Gravity-View (GV) coordinate system to leverage gravity priors and
+constraints, avoiding error accumulation along the gravity axis. By
+incorporating a relative transformer with RoPE, GVHMR handles
+sequences of arbitrary length during inference, without the need for
+sliding-window. Extensive experiments demonstrate that GVHMR
+outperforms existing methods across various benchmarks, achieving
+state-of-the-art accuracy and motion plausibility in both camera-
+space and world-grounded metrics.
+ACKNOWLEDGEMENTS
+The authors would like to acknowledge support from NSFC (No.
+62172364), Information Technology Center and State Key Lab of
+CAD&CG, Zhejiang University.
+7
+SA Conference Papers ’24, December 3–6, 2024, Tokyo, Japan Zehong Shen, Huaijin Pi, Yan Xia, Zhi Cen, Sida Peng, Zechen Hu, Hujun Bao, Ruizhen Hu, and Xiaowei Zhou
+REFERENCES
+Andreas Aristidou and Joan Lasenby. 2011. FABRIK: A fast, iterative solver for the
+Inverse Kinematics problem. Graphical Models 73, 5 (2011), 243–260.
+Michael J. Black, Priyanka Patel, Joachim Tesch, and Jinlong Yang. 2023. BEDLAM:
+A Synthetic Dataset of Bodies Exhibiting Detailed Lifelike Animated Motion. In
+Proceedings IEEE/CVF Conf. on Computer Vision and Pattern Recognition (CVPR) .
+8726–8737.
+Federica Bogo, Angjoo Kanazawa, Christoph Lassner, Peter Gehler, Javier Romero, and
+Michael J. Black. 2016. Keep it SMPL: Automatic Estimation of 3D Human Pose
+and Shape from a Single Image. In Computer Vision – ECCV 2016 (Lecture Notes in
+Computer Science). Springer International Publishing, 561–578.
+Hongsuk Choi, Gyeongsik Moon, Ju Yong Chang, and Kyoung Mu Lee. 2021. Beyond
+Static Features for Temporally Consistent 3D Human Pose and Shape from a Video.
+In Conference on Computer Vision and Pattern Recognition (CVPR) .
+Shubham Goel, Georgios Pavlakos, Jathushan Rajasegaran, Angjoo Kanazawa, and
+Jitendra Malik. 2023. Humans in 4D: Reconstructing and tracking humans with
+transformers. In Proceedings of the IEEE/CVF International Conference on Computer
+Vision. 14783–14794.
+Chuan Guo, Shihao Zou, Xinxin Zuo, Sen Wang, Wei Ji, Xingyu Li, and Li Cheng. 2022.
+Generating diverse and natural 3d human motions from text. In Proceedings of the
+IEEE/CVF Conference on Computer Vision and Pattern Recognition . 5152–5161.
+Tairan He, Zhengyi Luo, Wenli Xiao, Chong Zhang, Kris Kitani, Changliu Liu, and
+Guanya Shi. 2024. Learning Human-to-Humanoid Real-Time Whole-Body Teleop-
+eration. In arXiv.
+Chun-Hao P. Huang, Hongwei Yi, Markus Höschle, Matvey Safroshkin, Tsvetelina
+Alexiadis, Senya Polikovsky, Daniel Scharstein, and Michael J. Black. 2022. Capturing
+and Inferring Dense Full-Body Human-Scene Contact. In Proceedings IEEE/CVF
+Conf. on Computer Vision and Pattern Recognition (CVPR) . 13274–13285.
+Catalin Ionescu, Dragos Papava, Vlad Olaru, and Cristian Sminchisescu. 2014. Hu-
+man3.6M: Large Scale Datasets and Predictive Methods for 3D Human Sensing in
+Natural Environments. IEEE Transactions on Pattern Analysis and Machine Intelli-
+gence 36, 7 (jul 2014), 1325–1339.
+Glenn Jocher, Ayush Chaurasia, and Jing Qiu. 2023. Ultralytics YOLOv8. https://github.
+com/ultralytics/ultralytics
+Angjoo Kanazawa, Michael J. Black, David W. Jacobs, and Jitendra Malik. 2018. End-to-
+end Recovery of Human Shape and Pose. InComputer Vision and Pattern Regognition
+(CVPR).
+Angjoo Kanazawa, Jason Y Zhang, Panna Felsen, and Jitendra Malik. 2019. Learning 3d
+human dynamics from video. In Proceedings of the IEEE/CVF conference on computer
+vision and pattern recognition . 5614–5623.
+Manuel Kaufmann, Jie Song, Chen Guo, Kaiyue Shen, Tianjian Jiang, Chengcheng Tang,
+Juan José Zárate, and Otmar Hilliges. 2023. EMDB: The Electromagnetic Database
+of Global 3D Human Pose and Shape in the Wild. In International Conference on
+Computer Vision (ICCV).
+Muhammed Kocabas, Nikos Athanasiou, and Michael J. Black. 2020. VIBE: Video
+Inference for Human Body Pose and Shape Estimation. In Proceedings IEEE Conf. on
+Computer Vision and Pattern Recognition (CVPR) . IEEE, 5252–5262. https://doi.org/
+10.1109/CVPR42600.2020.00530
+Muhammed Kocabas, Chun-Hao P. Huang, Otmar Hilliges, and Michael J. Black. 2021a.
+PARE: Part Attention Regressor for 3D Human Body Estimation. In Proc. Interna-
+tional Conference on Computer Vision (ICCV) . 11127–11137.
+Muhammed Kocabas, Chun-Hao P. Huang, Joachim Tesch, Lea Müller, Otmar Hilliges,
+and Michael J. Black. 2021b. SPEC: Seeing People in the Wild with an Estimated Cam-
+era. In Proc. International Conference on Computer Vision (ICCV) . IEEE, Piscataway,
+NJ, 11015–11025. https://doi.org/10.1109/ICCV48922.2021.01085
+Muhammed Kocabas, Ye Yuan, Pavlo Molchanov, Yunrong Guo, Michael J. Black, Otmar
+Hilliges, Jan Kautz, and Umar Iqbal. 2024. PACE: Human and Motion Estimation
+from in-the-wild Videos. In 3DV.
+Nikos Kolotouros, Georgios Pavlakos, Michael J Black, and Kostas Daniilidis. 2019.
+Learning to Reconstruct 3D Human Pose and Shape via Model-fitting in the Loop.
+In ICCV.
+Jiefeng Li, Siyuan Bian, Qi Liu, Jiasheng Tang, Fan Wang, and Cewu Lu. 2023. NIKI:
+Neural Inverse Kinematics with Invertible Neural Networks for 3D Human Pose
+and Shape Estimation. In Proceedings of the IEEE/CVF Conference on Computer Vision
+and Pattern Recognition (CVPR) .
+Jiefeng Li, Siyuan Bian, Chao Xu, Gang Liu, Gang Yu, and Cewu Lu. 2022a. D &d: Learn-
+ing human dynamics from dynamic camera. In European Conference on Computer
+Vision. Springer, 479–496.
+Jiefeng Li, Chao Xu, Zhicun Chen, Siyuan Bian, Lixin Yang, and Cewu Lu. 2021. Hybrik:
+A hybrid analytical-neural inverse kinematics solution for 3d human pose and shape
+estimation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern
+Recognition. 3383–3393.
+Zhihao Li, Jianzhuang Liu, Zhensong Zhang, Songcen Xu, and Youliang Yan. 2022b.
+CLIFF: Carrying Location Information in Full Frames into Human Pose and Shape
+Estimation. In ECCV.
+Matthew Loper, Naureen Mahmood, Javier Romero, Gerard Pons-Moll, and Michael J
+Black. 2023. SMPL: A skinned multi-person linear model. In Seminal Graphics
+Papers: Pushing the Boundaries, Volume 2 . 851–866.
+Zhengyi Luo, S. Alireza Golestaneh, and Kris M. Kitani. 2020. 3D Human Motion
+Estimation via Motion Compression and Refinement. In Proceedings of the Asian
+Conference on Computer Vision (ACCV) .
+Naureen Mahmood, Nima Ghorbani, Nikolaus F. Troje, Gerard Pons-Moll, and Michael J.
+Black. 2019. AMASS: Archive of Motion Capture as Surface Shapes. In International
+Conference on Computer Vision . 5442–5451.
+Georgios Pavlakos, Vasileios Choutas, Nima Ghorbani, Timo Bolkart, Ahmed A. A.
+Osman, Dimitrios Tzionas, and Michael J. Black. 2019. Expressive Body Capture: 3D
+Hands, Face, and Body from a Single Image. In Proceedings IEEE Conf. on Computer
+Vision and Pattern Recognition (CVPR) . 10975–10985.
+Ofir Press, Noah Smith, and Mike Lewis. 2022. Train Short, Test Long: Attention with
+Linear Biases Enables Input Length Extrapolation. In International Conference on
+Learning Representations. https://openreview.net/forum?id=R8sQPpGCv0
+Davis Rempe, Tolga Birdal, Aaron Hertzmann, Jimei Yang, Srinath Sridhar, and
+Leonidas J. Guibas. 2021. HuMoR: 3D Human Motion Model for Robust Pose
+Estimation. In International Conference on Computer Vision (ICCV) .
+Xiaolong Shen, Zongxin Yang, Xiaohan Wang, Jianxin Ma, Chang Zhou, and Yi Yang.
+2023. Global-to-Local Modeling for Video-Based 3D Human Pose and Shape Esti-
+mation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern
+Recognition (CVPR). 8887–8896.
+Mingyi Shi, Kfir Aberman, Andreas Aristidou, Taku Komura, Dani Lischinski, Daniel
+Cohen-Or, and Baoquan Chen. 2020. Motionet: 3d human motion reconstruction
+from monocular video with skeleton consistency. Acm transactions on graphics (tog)
+40, 1 (2020), 1–15.
+Soyong Shin, Juyong Kim, Eni Halilaj, and Michael J Black. 2024. Wham: Reconstructing
+world-grounded humans with accurate 3d motion. In Proceedings of the IEEE/CVF
+Conference on Computer Vision and Pattern Recognition . 2070–2080.
+Sebastian Starke, He Zhang, Taku Komura, and Jun Saito. 2019. Neural state machine
+for character-scene interactions. ACM Transactions on Graphics 38, 6 (2019), 178.
+Jianlin Su, Murtadha Ahmed, Yu Lu, Shengfeng Pan, Wen Bo, and Yunfeng Liu. 2024.
+Roformer: Enhanced transformer with rotary position embedding. Neurocomputing
+568 (2024), 127063.
+Yu Sun, Qian Bao, Wu Liu, Tao Mei, and Michael J. Black. 2023. TRACE: 5D Temporal
+Regression of Avatars with Dynamic Cameras in 3D Environments. In IEEE/CVF
+Conf. on Computer Vision and Pattern Recognition (CVPR) .
+Yu Sun, Yun Ye, Wu Liu, Wenpeng Gao, YiLi Fu, and Tao Mei. 2019. Human Mesh
+Recovery from Monocular Images via a Skeleton-disentangled Representation. In
+IEEE International Conference on Computer Vision, ICCV .
+Zachary Teed and Jia Deng. 2021. DROID-SLAM: Deep Visual SLAM for Monocular,
+Stereo, and RGB-D Cameras. Advances in neural information processing systems
+(2021).
+Zachary Teed, Lahav Lipson, and Jia Deng. 2024. Deep patch visual odometry.Advances
+in Neural Information Processing Systems 36 (2024).
+Guy Tevet, Sigal Raab, Brian Gordon, Yoni Shafir, Daniel Cohen-or, and Amit Haim
+Bermano. 2023. Human Motion Diffusion Model. In The Eleventh International Con-
+ference on Learning Representations. https://openreview.net/forum?id=SJ1kSyO2jwu
+Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N
+Gomez, Ł ukasz Kaiser, and Illia Polosukhin. 2017. Attention is All you Need.
+In Advances in Neural Information Processing Systems , I. Guyon, U. Von Luxburg,
+S. Bengio, H. Wallach, R. Fergus, S. Vishwanathan, and R. Garnett (Eds.), Vol. 30.
+Curran Associates, Inc. https://proceedings.neurips.cc/paper_files/paper/2017/file/
+3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf
+Timo von Marcard, Roberto Henschel, Michael Black, Bodo Rosenhahn, and Gerard
+Pons-Moll. 2018. Recovering Accurate 3D Human Pose in The Wild Using IMUs
+and a Moving Camera. In European Conference on Computer Vision (ECCV) .
+Ziniu Wan, Zhengjia Li, Maoqing Tian, Jianbo Liu, Shuai Yi, and Hongsheng Li. 2021.
+Encoder-decoder with Multi-level Attention for 3D Human Shape and Pose Estima-
+tion. In The IEEE International Conference on Computer Vision (ICCV) .
+Yufu Wang and Kostas Daniilidis. 2023. Refit: Recurrent fitting network for 3d human
+recovery. In Proceedings of the IEEE/CVF International Conference on Computer Vision .
+14644–14654.
+Yufu Wang, Ziyun Wang, Lingjie Liu, and Kostas Daniilidis. 2024. TRAM: Global
+Trajectory and Motion of 3D Humans from in-the-wild Videos. arXiv preprint
+arXiv:2403.17346 (2024).
+Wen-Li Wei, Jen-Chun Lin, Tyng-Luh Liu, and Hong-Yuan Mark Liao. 2022. Capturing
+Humans in Motion: Temporal-Attentive 3D Human Pose and Shape Estimation
+from Monocular Video. In The IEEE Conference on Computer Vision and Pattern
+Recognition (CVPR).
+Yufei Xu, Jing Zhang, Qiming Zhang, and Dacheng Tao. 2022. ViTPose: Simple Vi-
+sion Transformer Baselines for Human Pose Estimation. In Advances in Neural
+Information Processing Systems.
+Vickie Ye, Georgios Pavlakos, Jitendra Malik, and Angjoo Kanazawa. 2023. Decoupling
+Human and Camera Motion from Videos in the Wild. InIEEE Conference on Computer
+8
+World-Grounded Human Motion Recovery via Gravity-View Coordinates SA Conference Papers ’24, December 3–6, 2024, Tokyo, Japan
+Vision and Pattern Recognition (CVPR) .
+Xinyu Yi, Yuxiao Zhou, and Feng Xu. 2021. TransPose: Real-time 3D Human Translation
+and Pose Estimation with Six Inertial Sensors. ACM Transactions on Graphics 40, 4,
+Article 86 (08 2021).
+Wanqi Yin, Zhongang Cai, Ruisi Wang, Fanzhou Wang, Chen Wei, Haiyi Mei, Weiye
+Xiao, Zhitao Yang, Qingping Sun, Atsushi Yamashita, et al. 2024. WHAC: World-
+grounded Humans and Cameras. arXiv preprint arXiv:2403.12959 (2024).
+Ri Yu, Hwangpil Park, and Jehee Lee. 2021. Human dynamics from monocular video
+with dynamic camera movements. ACM Trans. Graph. 40, 6, Article 208 (dec 2021),
+14 pages. https://doi.org/10.1145/3478513.3480504
+Ye Yuan, Umar Iqbal, Pavlo Molchanov, Kris Kitani, and Jan Kautz. 2022. GLAMR: Global
+Occlusion-Aware Human Mesh Recovery with Dynamic Cameras. In Proceedings of
+the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) .
+Hongwen Zhang, Yating Tian, Yuxiang Zhang, Mengcheng Li, Liang An, Zhenan Sun,
+and Yebin Liu. 2023. PyMAF-X: Towards Well-aligned Full-body Model Regres-
+sion from Monocular Images. IEEE Transactions on Pattern Analysis and Machine
+Intelligence (2023).
+9
+SA Conference Papers ’24, December 3–6, 2024, Tokyo, Japan Zehong Shen, Huaijin Pi, Yan Xia, Zhi Cen, Sida Peng, Zechen Hu, Hujun Bao, Ruizhen Hu, and Xiaowei Zhou
+Fig. 7. Qualitative results of global motion. Our approach produces more accurate global motion than WHAM [Shin et al. 2024].
+Input Image Ground Truth
+ WHAM
+ Ours
+Fig. 8. Qualitative results of motion in camera coordinates. WHAM [Shin et al. 2024] could produce wrong results and fail to capture difficult motion
+(highlighted with red circles) while our approach could predict more plausible results.
+10
+World-Grounded Human Motion Recovery via Gravity-View Coordinates SA Conference Papers ’24, December 3–6, 2024, Tokyo, Japan
+Fig. 9. Global orientation error along time. WHAM [Shin et al. 2024] tends to accumulate more global orientation error as the sequence length increases,
+while our approach maintains a much lower error rate.
+Fig. 10. Qualitative results of ablations. Each component of our method contributes to the final results.
+11
