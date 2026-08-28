@@ -1,0 +1,153 @@
+_wandb:
+    value:
+        cli_version: 0.28.2
+        e:
+            3ck9g33qunpoxcm4yrkbrwaauxzbpx76:
+                args:
+                    - --config
+                    - /home/zhw/lab_users/xyb/home/projects/vggt-human/configs/eval_smpl_pose_stabilizer_v2_e1.yaml
+                    - --path-config
+                    - /home/zhw/lab_users/xyb/home/projects/vggt-human/configs/path.yaml
+                    - --override
+                    - data.sources=[{"name":"3dpw","root":"/home/zhw/xyb_space/3DPW/sequenceFiles/train"},{"name":"emdb","root":"/home/zhw/xyb_space/emdb"}]
+                    - --override
+                    - checkpoint.path=outputs/train/smpl_temporal_stabilizer_v2_pose_mixture/checkpoint_best.pt
+                    - --override
+                    - experiment.output_dir=outputs/eval/smpl_temporal_stabilizer_v2_pose_e1_mixture
+                    - --override
+                    - logging.wandb.enabled=true
+                    - --override
+                    - logging.wandb.mode=online
+                codePath: scripts/eval/eval_smpl_pose_stabilizer_v2_e1.py
+                codePathLocal: scripts/eval/eval_smpl_pose_stabilizer_v2_e1.py
+                email: xinbev@126.com
+                executable: /home/zhw/.conda/envs/zhw_env/bin/python
+                git:
+                    commit: 5f0fc1fdb6d4742607af121496cf10dded531637
+                    remote: git@github.com:xinbev/vggt-human.git
+                host: beishida-R5500-G5
+                os: Linux-6.8.0-136-generic-x86_64-with-glibc2.35
+                program: /home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/eval/eval_smpl_pose_stabilizer_v2_e1.py
+                python: CPython 3.11.14
+                root: /home/zhw/lab_users/xyb/home/projects/vggt-human
+                startedAt: "2026-08-28T12:44:27.589166Z"
+                writerId: 3ck9g33qunpoxcm4yrkbrwaauxzbpx76
+        m: []
+        python_version: 3.11.14
+        t:
+            "1":
+                - 1
+            "2":
+                - 1
+            "3":
+                - 2
+                - 13
+                - 15
+                - 16
+            "4": 3.11.14
+            "5": 0.28.2
+            "12": 0.28.2
+            "13": linux-x86_64
+acceptance:
+    value:
+        centre_jitter_improvement_min_rad: 0.005
+        clean_all_displacement_max_rad: 0.01
+        clean_root_displacement_max_rad: 0.01
+        medium_improvement_min_rad: 0.005
+        small_improvement_min_rad: 0.005
+assets:
+    value:
+        smpl_mean_params: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/body_models/smpl/smpl/smpl_mean_params.npz
+        smpl_model_dir: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/body_models/smpl
+cases:
+    value:
+        centre_jitter:
+            noise:
+                drift_std_rad: 0.06
+                jitter_std_rad: 0.025
+                root_multiplier: 1.5
+            noise_seed_offset: 11
+        medium:
+            noise:
+                drift_std_rad: 0.12
+                jitter_std_rad: 0.05
+                root_multiplier: 1.5
+            noise_seed_offset: 37
+        small:
+            noise:
+                drift_std_rad: 0.06
+                jitter_std_rad: 0.025
+                root_multiplier: 1.5
+            noise_seed_offset: 23
+checkpoint:
+    value:
+        path: outputs/train/smpl_temporal_stabilizer_v2_pose_mixture/checkpoint_best.pt
+checkpoints:
+    value:
+        nlf_smpl: /home/zhw/lab_users/xyb/home/projects/vggt-human/third_party/weights/nlf/nlf_l_multi_0.3.2.torchscript
+        sat_hmr_smpl: /home/zhw/xyb_space/SAT-HMR/weights/sat_hmr/sat_644.pth
+        vggt_baseline: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt
+        yolo8x: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/yolov8x.torchscript
+data:
+    value:
+        eval_batch_size: 128
+        min_valid_frames: 9
+        sources:
+            - name: 3dpw
+              root: /home/zhw/xyb_space/3DPW/sequenceFiles/train
+            - name: emdb
+              root: /home/zhw/xyb_space/emdb
+        stride: 1
+        validation_fraction: 0.1
+        window_size: 9
+datasets:
+    value:
+        bedlam_boxes_root: outputs/preprocess/bedlam_boxes
+        bedlam_root: /home/zhw/xyb_space/bedlam/processed_bedlam/
+        bedlam_tracks_root: outputs/preprocess/video_tracks
+        emdb_hmr4d_support_root: /home/zhw/xyb_space/EMDB/hmr4d_support
+        hf_bedlam_images_root: /home/zhw/xyb_space/bedlam/hf_bedlam/training_images
+        hf_bedlam_npz_root: /home/zhw/xyb_space/bedlam/all_npz_12_training
+        hf_bedlam_sam2_patch_masks_root: outputs/preprocess/hf_bedlam_sam2_patch_masks
+        hmr4d_eval_frames_root: outputs/preprocess/hmr4d_eval_frames
+        hmr4d_eval_tracks_root: outputs/preprocess/hmr4d_eval_tracks
+        rich_hmr4d_support_root: /home/zhw/xyb_space/RICH/hmr4d_support
+        threedpw_hmr4d_support_root: /home/zhw/xyb_space/3DPW/hmr4d_support
+        threedpw_root: /home/zhw/xyb_space/3DPW
+        threedpw_sam2_patch_masks_root: outputs/preprocess/3dpw_sam2_patch_masks
+        threedpw_smpl_base_root: outputs/preprocess/3dpw_smpl_base
+experiment:
+    value:
+        name: smpl_temporal_stabilizer_v2_pose_e1
+        output_dir: outputs/eval/smpl_temporal_stabilizer_v2_pose_e1_mixture
+        seed: 2026
+logging:
+    value:
+        wandb:
+            enabled: true
+            entity: ""
+            group: smpl_temporal_stabilizer_v2
+            mode: online
+            name: smpl_temporal_stabilizer_v2_pose_e1
+            project: vggt-human
+            tags:
+                - smpl
+                - pose-stabilizer
+                - e1-held-out
+                - clean
+                - center-jitter
+                - small
+                - medium
+metrics:
+    value:
+        blend_active_threshold: 0.02
+        fast_speed_threshold_rad: 0.12
+third_party:
+    value:
+        Omnieraser_checkpoint: third_party/weights/Omnieraser/controlnet_flux_pytorch_lora_weights.safetensors
+        Omnieraser_root: third_party/Omnieraser
+        boosttrack_root: third_party/BoostTrack
+        boosttrack_weights_root: third_party/weights/BoostTrack
+        nlf_root: third_party/nlf
+        sam2_checkpoint: third_party/weights/sam/sam2.1_hiera_large.pt
+        sam2_root: third_party/sam2

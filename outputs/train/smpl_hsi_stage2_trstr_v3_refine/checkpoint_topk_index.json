@@ -4,10 +4,10 @@
   "entries": [
     {
       "rank": 1,
-      "metric": 1.239572860300541,
-      "epoch": 1,
+      "metric": 1.2250578105449677,
+      "epoch": 3,
       "source": "val",
-      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_stage2_trstr_v3_refine/checkpoint_top_val_epoch_0001_metric_hsi_trstr_v3_selection_1.239573.pt"
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_stage2_trstr_v3_refine/checkpoint_top_val_epoch_0003_metric_hsi_trstr_v3_selection_1.225058.pt"
     }
   ]
 }

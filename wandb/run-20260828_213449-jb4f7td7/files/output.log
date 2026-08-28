@@ -1,0 +1,159 @@
+[epoch 1/30 step 50/215] total=0.21152 final=0.05122 base=0.05441 improve=0.00712
+[epoch 1/30 step 100/215] total=0.21105 final=0.05069 base=0.05475 improve=0.00766
+[epoch 1/30 step 150/215] total=0.21038 final=0.05045 base=0.05499 improve=0.00798
+[epoch 1/30 step 200/215] total=0.20863 final=0.05028 base=0.05522 improve=0.00830
+[val] clean: final=0.00174 improve=-0.00174 blend=0.236 centre_jitter: final=0.01730 improve=0.00096 blend=0.263 small: final=0.07336 improve=0.01743 blend=0.307 medium: final=0.14080 improve=0.04125 blend=0.371 score=0.23842
+[epoch 2/30 step 35/215] total=0.18319 final=0.04760 base=0.05516 improve=0.01063
+[epoch 2/30 step 85/215] total=0.17625 final=0.04695 base=0.05570 improve=0.01147
+[epoch 2/30 step 135/215] total=0.17119 final=0.04623 base=0.05565 improve=0.01190
+[epoch 2/30 step 185/215] total=0.16802 final=0.04574 base=0.05564 improve=0.01218
+[val] clean: final=0.00096 improve=-0.00096 blend=0.066 centre_jitter: final=0.01500 improve=0.00326 blend=0.195 small: final=0.06897 improve=0.02183 blend=0.386 medium: final=0.13467 improve=0.04737 blend=0.473 score=0.22248
+[epoch 3/30 step 20/215] total=0.15847 final=0.04426 base=0.05595 improve=0.01326
+[epoch 3/30 step 70/215] total=0.15707 final=0.04386 base=0.05541 improve=0.01316
+[epoch 3/30 step 120/215] total=0.15638 final=0.04365 base=0.05515 improve=0.01312
+[epoch 3/30 step 170/215] total=0.15653 final=0.04366 base=0.05526 improve=0.01317
+[val] clean: final=0.00085 improve=-0.00085 blend=0.044 centre_jitter: final=0.01490 improve=0.00336 blend=0.190 small: final=0.06849 improve=0.02231 blend=0.402 medium: final=0.13454 improve=0.04751 blend=0.480 score=0.22134
+[epoch 4/30 step 5/215] total=0.15826 final=0.04402 base=0.05628 improve=0.01348
+[epoch 4/30 step 55/215] total=0.15601 final=0.04347 base=0.05527 improve=0.01327
+[epoch 4/30 step 105/215] total=0.15604 final=0.04344 base=0.05524 improve=0.01326
+[epoch 4/30 step 155/215] total=0.15618 final=0.04347 base=0.05532 improve=0.01328
+[epoch 4/30 step 205/215] total=0.15608 final=0.04344 base=0.05528 improve=0.01328
+[val] clean: final=0.00084 improve=-0.00084 blend=0.039 centre_jitter: final=0.01494 improve=0.00333 blend=0.191 small: final=0.06833 improve=0.02246 blend=0.409 medium: final=0.13451 improve=0.04754 blend=0.481 score=0.22112
+[epoch 5/30 step 40/215] total=0.15821 final=0.04406 base=0.05648 improve=0.01363
+[epoch 5/30 step 90/215] total=0.15706 final=0.04370 base=0.05585 improve=0.01345
+[epoch 5/30 step 140/215] total=0.15632 final=0.04349 base=0.05548 improve=0.01336
+[epoch 5/30 step 190/215] total=0.15625 final=0.04347 base=0.05545 improve=0.01336
+[val] clean: final=0.00080 improve=-0.00080 blend=0.035 centre_jitter: final=0.01486 improve=0.00340 blend=0.187 small: final=0.06835 improve=0.02244 blend=0.407 medium: final=0.13451 improve=0.04754 blend=0.481 score=0.22091
+[epoch 6/30 step 25/215] total=0.15828 final=0.04405 base=0.05654 improve=0.01368
+[epoch 6/30 step 75/215] total=0.15750 final=0.04378 base=0.05602 improve=0.01351
+[epoch 6/30 step 125/215] total=0.15760 final=0.04381 base=0.05606 improve=0.01352
+[epoch 6/30 step 175/215] total=0.15737 final=0.04374 base=0.05595 improve=0.01350
+[val] clean: final=0.00079 improve=-0.00079 blend=0.034 centre_jitter: final=0.01486 improve=0.00340 blend=0.187 small: final=0.06834 improve=0.02245 blend=0.408 medium: final=0.13451 improve=0.04754 blend=0.481 score=0.22087
+[epoch 7/30 step 10/215] total=0.15537 final=0.04312 base=0.05487 improve=0.01320
+[epoch 7/30 step 60/215] total=0.15559 final=0.04325 base=0.05512 improve=0.01329
+[epoch 7/30 step 110/215] total=0.15568 final=0.04325 base=0.05512 improve=0.01327
+[epoch 7/30 step 160/215] total=0.15587 final=0.04328 base=0.05517 improve=0.01328
+[epoch 7/30 step 210/215] total=0.15567 final=0.04324 base=0.05511 improve=0.01328
+[val] clean: final=0.00080 improve=-0.00080 blend=0.035 centre_jitter: final=0.01489 improve=0.00337 blend=0.189 small: final=0.06831 improve=0.02248 blend=0.409 medium: final=0.13450 improve=0.04754 blend=0.481 score=0.22090
+[epoch 8/30 step 45/215] total=0.15587 final=0.04327 base=0.05506 improve=0.01322
+[epoch 8/30 step 95/215] total=0.15609 final=0.04336 base=0.05529 improve=0.01331
+[epoch 8/30 step 145/215] total=0.15647 final=0.04346 base=0.05548 improve=0.01336
+[epoch 8/30 step 195/215] total=0.15600 final=0.04334 base=0.05527 improve=0.01331
+[val] clean: final=0.00079 improve=-0.00079 blend=0.034 centre_jitter: final=0.01489 improve=0.00338 blend=0.188 small: final=0.06831 improve=0.02248 blend=0.409 medium: final=0.13450 improve=0.04754 blend=0.481 score=0.22088
+[epoch 9/30 step 30/215] total=0.15674 final=0.04354 base=0.05564 improve=0.01342
+[epoch 9/30 step 80/215] total=0.15552 final=0.04320 base=0.05510 improve=0.01330
+[epoch 9/30 step 130/215] total=0.15577 final=0.04326 base=0.05519 improve=0.01331
+[epoch 9/30 step 180/215] total=0.15608 final=0.04335 base=0.05533 improve=0.01334
+[val] clean: final=0.00080 improve=-0.00080 blend=0.035 centre_jitter: final=0.01491 improve=0.00335 blend=0.189 small: final=0.06830 improve=0.02249 blend=0.410 medium: final=0.13450 improve=0.04754 blend=0.481 score=0.22091
+[epoch 10/30 step 15/215] total=0.15567 final=0.04325 base=0.05513 improve=0.01327
+[epoch 10/30 step 65/215] total=0.15555 final=0.04323 base=0.05514 improve=0.01330
+[epoch 10/30 step 115/215] total=0.15551 final=0.04321 base=0.05508 improve=0.01328
+[epoch 10/30 step 165/215] total=0.15556 final=0.04323 base=0.05512 improve=0.01329
+[epoch 10/30 step 215/215] total=0.15582 final=0.04329 base=0.05522 improve=0.01331
+[val] clean: final=0.00079 improve=-0.00079 blend=0.035 centre_jitter: final=0.01489 improve=0.00337 blend=0.189 small: final=0.06831 improve=0.02248 blend=0.409 medium: final=0.13451 improve=0.04754 blend=0.481 score=0.22088
+[epoch 11/30 step 50/215] total=0.15578 final=0.04327 base=0.05519 improve=0.01332
+[epoch 11/30 step 100/215] total=0.15715 final=0.04367 base=0.05590 improve=0.01351
+[epoch 11/30 step 150/215] total=0.15682 final=0.04358 base=0.05574 improve=0.01346
+[epoch 11/30 step 200/215] total=0.15675 final=0.04354 base=0.05565 improve=0.01342
+[val] clean: final=0.00080 improve=-0.00080 blend=0.035 centre_jitter: final=0.01492 improve=0.00334 blend=0.190 small: final=0.06829 improve=0.02250 blend=0.410 medium: final=0.13450 improve=0.04754 blend=0.481 score=0.22092
+[epoch 12/30 step 35/215] total=0.15691 final=0.04360 base=0.05581 improve=0.01348
+[epoch 12/30 step 85/215] total=0.15593 final=0.04329 base=0.05523 improve=0.01330
+[epoch 12/30 step 135/215] total=0.15662 final=0.04351 base=0.05558 improve=0.01340
+[epoch 12/30 step 185/215] total=0.15663 final=0.04352 base=0.05561 improve=0.01341
+[val] clean: final=0.00081 improve=-0.00081 blend=0.036 centre_jitter: final=0.01495 improve=0.00331 blend=0.192 small: final=0.06827 improve=0.02252 blend=0.411 medium: final=0.13450 improve=0.04754 blend=0.481 score=0.22096
+[epoch 13/30 step 20/215] total=0.15538 final=0.04315 base=0.05495 improve=0.01321
+[epoch 13/30 step 70/215] total=0.15614 final=0.04333 base=0.05529 improve=0.01331
+[epoch 13/30 step 120/215] total=0.15590 final=0.04327 base=0.05518 improve=0.01328
+[epoch 13/30 step 170/215] total=0.15566 final=0.04322 base=0.05508 improve=0.01326
+[val] clean: final=0.00076 improve=-0.00076 blend=0.032 centre_jitter: final=0.01480 improve=0.00346 blend=0.185 small: final=0.06839 improve=0.02241 blend=0.405 medium: final=0.13452 improve=0.04753 blend=0.480 score=0.22074
+[epoch 14/30 step 5/215] total=0.15417 final=0.04287 base=0.05456 improve=0.01316
+[epoch 14/30 step 55/215] total=0.15732 final=0.04372 base=0.05594 improve=0.01349
+[epoch 14/30 step 105/215] total=0.15661 final=0.04355 base=0.05566 improve=0.01343
+[epoch 14/30 step 155/215] total=0.15682 final=0.04360 base=0.05574 improve=0.01345
+[epoch 14/30 step 205/215] total=0.15640 final=0.04348 base=0.05556 improve=0.01340
+[val] clean: final=0.00077 improve=-0.00077 blend=0.033 centre_jitter: final=0.01483 improve=0.00343 blend=0.186 small: final=0.06836 improve=0.02243 blend=0.406 medium: final=0.13452 improve=0.04753 blend=0.480 score=0.22077
+[epoch 15/30 step 40/215] total=0.15722 final=0.04371 base=0.05592 improve=0.01349
+[epoch 15/30 step 90/215] total=0.15681 final=0.04358 base=0.05569 improve=0.01342
+[epoch 15/30 step 140/215] total=0.15685 final=0.04359 base=0.05571 improve=0.01343
+[epoch 15/30 step 190/215] total=0.15644 final=0.04348 base=0.05553 improve=0.01339
+[val] clean: final=0.00078 improve=-0.00078 blend=0.034 centre_jitter: final=0.01489 improve=0.00338 blend=0.189 small: final=0.06832 improve=0.02247 blend=0.408 medium: final=0.13451 improve=0.04753 blend=0.480 score=0.22085
+[epoch 16/30 step 25/215] total=0.15566 final=0.04325 base=0.05517 improve=0.01331
+[epoch 16/30 step 75/215] total=0.15592 final=0.04332 base=0.05526 improve=0.01332
+[epoch 16/30 step 125/215] total=0.15606 final=0.04338 base=0.05537 improve=0.01336
+[epoch 16/30 step 175/215] total=0.15565 final=0.04327 base=0.05519 improve=0.01332
+[val] clean: final=0.00078 improve=-0.00078 blend=0.035 centre_jitter: final=0.01489 improve=0.00337 blend=0.189 small: final=0.06832 improve=0.02247 blend=0.409 medium: final=0.13451 improve=0.04753 blend=0.480 score=0.22087
+[epoch 17/30 step 10/215] total=0.15805 final=0.04395 base=0.05638 improve=0.01362
+[epoch 17/30 step 60/215] total=0.15641 final=0.04347 base=0.05551 improve=0.01337
+[epoch 17/30 step 110/215] total=0.15593 final=0.04333 base=0.05529 improve=0.01332
+[epoch 17/30 step 160/215] total=0.15557 final=0.04322 base=0.05510 improve=0.01328
+[epoch 17/30 step 210/215] total=0.15606 final=0.04336 base=0.05534 improve=0.01334
+[val] clean: final=0.00075 improve=-0.00075 blend=0.032 centre_jitter: final=0.01480 improve=0.00346 blend=0.185 small: final=0.06840 improve=0.02240 blend=0.404 medium: final=0.13453 improve=0.04752 blend=0.479 score=0.22074
+[epoch 18/30 step 45/215] total=0.15609 final=0.04334 base=0.05528 improve=0.01331
+[epoch 18/30 step 95/215] total=0.15663 final=0.04350 base=0.05556 improve=0.01339
+[epoch 18/30 step 145/215] total=0.15655 final=0.04349 base=0.05553 improve=0.01338
+[epoch 18/30 step 195/215] total=0.15595 final=0.04333 base=0.05527 improve=0.01332
+[val] clean: final=0.00078 improve=-0.00078 blend=0.034 centre_jitter: final=0.01489 improve=0.00337 blend=0.189 small: final=0.06833 improve=0.02246 blend=0.408 medium: final=0.13452 improve=0.04753 blend=0.480 score=0.22085
+[epoch 19/30 step 30/215] total=0.15737 final=0.04366 base=0.05583 improve=0.01343
+[epoch 19/30 step 80/215] total=0.15640 final=0.04342 base=0.05545 improve=0.01335
+[epoch 19/30 step 130/215] total=0.15623 final=0.04340 base=0.05541 improve=0.01335
+[epoch 19/30 step 180/215] total=0.15583 final=0.04331 base=0.05525 improve=0.01332
+[val] clean: final=0.00076 improve=-0.00076 blend=0.033 centre_jitter: final=0.01484 improve=0.00342 blend=0.186 small: final=0.06836 improve=0.02243 blend=0.406 medium: final=0.13452 improve=0.04753 blend=0.480 score=0.22078
+[epoch 20/30 step 15/215] total=0.15711 final=0.04373 base=0.05603 improve=0.01359
+[epoch 20/30 step 65/215] total=0.15608 final=0.04337 base=0.05536 improve=0.01335
+[epoch 20/30 step 115/215] total=0.15607 final=0.04339 base=0.05540 improve=0.01337
+[epoch 20/30 step 165/215] total=0.15591 final=0.04334 base=0.05532 improve=0.01335
+[epoch 20/30 step 215/215] total=0.15622 final=0.04341 base=0.05542 improve=0.01336
+[val] clean: final=0.00079 improve=-0.00079 blend=0.036 centre_jitter: final=0.01493 improve=0.00333 blend=0.191 small: final=0.06830 improve=0.02249 blend=0.410 medium: final=0.13451 improve=0.04753 blend=0.480 score=0.22092
+[epoch 21/30 step 50/215] total=0.15658 final=0.04350 base=0.05561 improve=0.01341
+[epoch 21/30 step 100/215] total=0.15644 final=0.04348 base=0.05559 improve=0.01342
+[epoch 21/30 step 150/215] total=0.15619 final=0.04340 base=0.05544 improve=0.01338
+[epoch 21/30 step 200/215] total=0.15633 final=0.04344 base=0.05550 improve=0.01339
+[val] clean: final=0.00075 improve=-0.00075 blend=0.032 centre_jitter: final=0.01479 improve=0.00347 blend=0.184 small: final=0.06840 improve=0.02239 blend=0.404 medium: final=0.13453 improve=0.04752 blend=0.479 score=0.22072
+[epoch 22/30 step 35/215] total=0.15633 final=0.04347 base=0.05552 improve=0.01339
+[epoch 22/30 step 85/215] total=0.15685 final=0.04362 base=0.05582 improve=0.01349
+[epoch 22/30 step 135/215] total=0.15685 final=0.04360 base=0.05578 improve=0.01347
+[epoch 22/30 step 185/215] total=0.15692 final=0.04362 base=0.05581 improve=0.01348
+[val] clean: final=0.00080 improve=-0.00080 blend=0.036 centre_jitter: final=0.01495 improve=0.00331 blend=0.192 small: final=0.06829 improve=0.02251 blend=0.411 medium: final=0.13451 improve=0.04754 blend=0.481 score=0.22095
+[epoch 23/30 step 20/215] total=0.15659 final=0.04354 base=0.05557 improve=0.01339
+[epoch 23/30 step 70/215] total=0.15700 final=0.04363 base=0.05579 improve=0.01345
+[epoch 23/30 step 120/215] total=0.15615 final=0.04339 base=0.05536 improve=0.01334
+[epoch 23/30 step 170/215] total=0.15660 final=0.04352 base=0.05560 improve=0.01341
+[val] clean: final=0.00076 improve=-0.00076 blend=0.033 centre_jitter: final=0.01483 improve=0.00343 blend=0.186 small: final=0.06838 improve=0.02242 blend=0.405 medium: final=0.13453 improve=0.04752 blend=0.479 score=0.22076
+[epoch 24/30 step 5/215] total=0.15864 final=0.04401 base=0.05662 improve=0.01371
+[epoch 24/30 step 55/215] total=0.15633 final=0.04346 base=0.05550 improve=0.01338
+[epoch 24/30 step 105/215] total=0.15558 final=0.04324 base=0.05510 improve=0.01327
+[epoch 24/30 step 155/215] total=0.15585 final=0.04332 base=0.05526 improve=0.01332
+[epoch 24/30 step 205/215] total=0.15569 final=0.04328 base=0.05519 improve=0.01331
+[val] clean: final=0.00079 improve=-0.00079 blend=0.035 centre_jitter: final=0.01491 improve=0.00335 blend=0.190 small: final=0.06832 improve=0.02248 blend=0.409 medium: final=0.13452 improve=0.04753 blend=0.480 score=0.22089
+[epoch 25/30 step 40/215] total=0.15642 final=0.04349 base=0.05560 improve=0.01343
+[epoch 25/30 step 90/215] total=0.15671 final=0.04353 base=0.05561 improve=0.01340
+[epoch 25/30 step 140/215] total=0.15606 final=0.04336 base=0.05531 improve=0.01333
+[epoch 25/30 step 190/215] total=0.15617 final=0.04340 base=0.05538 improve=0.01335
+[val] clean: final=0.00077 improve=-0.00077 blend=0.033 centre_jitter: final=0.01485 improve=0.00341 blend=0.187 small: final=0.06836 improve=0.02243 blend=0.406 medium: final=0.13453 improve=0.04752 blend=0.479 score=0.22080
+[epoch 26/30 step 25/215] total=0.15633 final=0.04335 base=0.05528 improve=0.01329
+[epoch 26/30 step 75/215] total=0.15571 final=0.04325 base=0.05514 improve=0.01329
+[epoch 26/30 step 125/215] total=0.15519 final=0.04310 base=0.05489 improve=0.01322
+[epoch 26/30 step 175/215] total=0.15516 final=0.04310 base=0.05488 improve=0.01321
+[val] clean: final=0.00076 improve=-0.00076 blend=0.033 centre_jitter: final=0.01483 improve=0.00343 blend=0.186 small: final=0.06838 improve=0.02241 blend=0.405 medium: final=0.13453 improve=0.04752 blend=0.479 score=0.22076
+[epoch 27/30 step 10/215] total=0.15632 final=0.04355 base=0.05568 improve=0.01347
+[epoch 27/30 step 60/215] total=0.15494 final=0.04304 base=0.05477 improve=0.01318
+[epoch 27/30 step 110/215] total=0.15572 final=0.04325 base=0.05514 improve=0.01328
+[epoch 27/30 step 160/215] total=0.15581 final=0.04328 base=0.05521 improve=0.01330
+[epoch 27/30 step 210/215] total=0.15595 final=0.04332 base=0.05527 improve=0.01332
+[val] clean: final=0.00078 improve=-0.00078 blend=0.035 centre_jitter: final=0.01491 improve=0.00335 blend=0.190 small: final=0.06832 improve=0.02247 blend=0.409 medium: final=0.13452 improve=0.04753 blend=0.480 score=0.22088
+[epoch 28/30 step 45/215] total=0.15586 final=0.04333 base=0.05536 improve=0.01337
+[epoch 28/30 step 95/215] total=0.15668 final=0.04356 base=0.05572 improve=0.01345
+[epoch 28/30 step 145/215] total=0.15653 final=0.04352 base=0.05563 improve=0.01343
+[epoch 28/30 step 195/215] total=0.15616 final=0.04341 base=0.05545 improve=0.01338
+[val] clean: final=0.00075 improve=-0.00075 blend=0.032 centre_jitter: final=0.01480 improve=0.00346 blend=0.184 small: final=0.06840 improve=0.02239 blend=0.404 medium: final=0.13453 improve=0.04751 blend=0.479 score=0.22072
+[epoch 29/30 step 30/215] total=0.15553 final=0.04321 base=0.05507 improve=0.01327
+[epoch 29/30 step 80/215] total=0.15559 final=0.04324 base=0.05514 improve=0.01329
+[epoch 29/30 step 130/215] total=0.15622 final=0.04340 base=0.05542 improve=0.01337
+[epoch 29/30 step 180/215] total=0.15656 final=0.04350 base=0.05557 improve=0.01340
+[val] clean: final=0.00077 improve=-0.00077 blend=0.034 centre_jitter: final=0.01488 improve=0.00338 blend=0.188 small: final=0.06835 improve=0.02245 blend=0.407 medium: final=0.13452 improve=0.04752 blend=0.480 score=0.22084
+[epoch 30/30 step 15/215] total=0.15713 final=0.04374 base=0.05608 improve=0.01360
+[epoch 30/30 step 65/215] total=0.15542 final=0.04317 base=0.05501 improve=0.01325
+[epoch 30/30 step 115/215] total=0.15535 final=0.04316 base=0.05500 improve=0.01325
+[epoch 30/30 step 165/215] total=0.15539 final=0.04317 base=0.05500 improve=0.01325
+[epoch 30/30 step 215/215] total=0.15523 final=0.04313 base=0.05496 improve=0.01324
+[val] clean: final=0.00080 improve=-0.00080 blend=0.036 centre_jitter: final=0.01495 improve=0.00331 blend=0.192 small: final=0.06829 improve=0.02250 blend=0.411 medium: final=0.13451 improve=0.04753 blend=0.480 score=0.22094
