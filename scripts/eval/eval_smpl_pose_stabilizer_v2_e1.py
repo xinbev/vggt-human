@@ -207,7 +207,7 @@ def main() -> None:
     cases = config["cases"]
     generator = torch.Generator(device=device)
     generated: dict[str, tuple[torch.Tensor, torch.Tensor | None]] = {"clean": (target, None)}
-    for name in ("centre_jitter", "small", "medium"):
+    for name in ("centre_jitter", "small", "medium", "hard"):
         item = cases[name]
         generator.manual_seed(seed + int(item.get("noise_seed_offset", 0)))
         full = corrupt_pose_sequence(target, valid, PoseNoiseConfig(**item["noise"]), generator=generator)
@@ -245,6 +245,7 @@ def main() -> None:
         and results["centre_jitter"]["groups"]["all"]["improvement_rad"] >= pass_rules["centre_jitter_improvement_min_rad"]
         and results["small"]["groups"]["all"]["improvement_rad"] >= pass_rules["small_improvement_min_rad"]
         and results["medium"]["groups"]["all"]["improvement_rad"] >= pass_rules["medium_improvement_min_rad"]
+        and results["hard"]["groups"]["all"]["improvement_rad"] >= pass_rules["hard_improvement_min_rad"]
     )
     summary = {
         "checkpoint": str(config["checkpoint"]["path"]),

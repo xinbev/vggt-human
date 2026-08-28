@@ -25,7 +25,7 @@ from vggt_omega.training import PoseNoiseConfig, corrupt_pose_sequence
 from vggt_omega.training.config import deep_update, load_yaml_config
 
 
-MODE_NAMES = ("clean", "centre_jitter", "small", "medium")
+MODE_NAMES = ("clean", "centre_jitter", "small", "medium", "hard")
 
 
 def _parse_value(value: str) -> Any:
@@ -98,6 +98,7 @@ def _make_observations(
     centre_mask = torch.zeros(target.shape[:2], device=target.device, dtype=torch.bool)
     small = corrupt_pose_sequence(target, valid, PoseNoiseConfig(**config["small"]), generator=generator)
     medium = corrupt_pose_sequence(target, valid, PoseNoiseConfig(**config["medium"]), generator=generator)
+    hard = corrupt_pose_sequence(target, valid, PoseNoiseConfig(**config["hard"]), generator=generator)
     centre_noise = corrupt_pose_sequence(target, valid, PoseNoiseConfig(**config["centre_jitter"]), generator=generator)
     if bool((modes == 1).any()):
         rows = torch.nonzero(modes == 1, as_tuple=False).squeeze(-1)
@@ -107,13 +108,14 @@ def _make_observations(
         centre_mask[rows, centres] = True
     observed[modes == 2] = small[modes == 2]
     observed[modes == 3] = medium[modes == 3]
+    observed[modes == 4] = hard[modes == 4]
     return (observed, centre_mask) if return_centre_mask else observed
 
 
 def _mode_ids(batch_size: int, probabilities: list[float], device: torch.device, generator: torch.Generator) -> torch.Tensor:
     values = torch.as_tensor(probabilities, dtype=torch.float32, device=device)
     if values.numel() != len(MODE_NAMES) or bool((values < 0).any()) or float(values.sum()) <= 0:
-        raise ValueError("mixture probabilities must be four non-negative values with positive sum")
+        raise ValueError("mixture probabilities must cover every mode, be non-negative, and have positive sum")
     return torch.multinomial(values / values.sum(), batch_size, replacement=True, generator=generator)
 
 
@@ -195,6 +197,19 @@ def main() -> None:
     optimizer = torch.optim.AdamW(model.parameters(), lr=float(config["optim"]["lr"]), weight_decay=float(config["optim"].get("weight_decay", 0.0)))
     amp_enabled = bool(config["optim"].get("amp", True)) and device.type == "cuda"
     scaler = torch.amp.GradScaler("cuda", enabled=amp_enabled)
+    resume_path = str(config.get("checkpoint", {}).get("resume", "")).strip()
+    if resume_path:
+        resume = torch.load(resume_path, map_location="cpu", weights_only=False)
+        if resume.get("format") != "smpl_temporal_stabilizer_v2_pose_mixture":
+            raise ValueError("Hard finetune resume must be a mixed-pose stabilizer checkpoint")
+        saved_config = PoseStabilizerConfig(**resume["model_config"])
+        if saved_config != model_config:
+            raise ValueError(
+                "Resume model_config differs from the requested model config; "
+                "hard finetune must retain the exact trained architecture."
+            )
+        model.load_state_dict(resume["model_state"], strict=True)
+        print(f"[resume] loaded V2 pose mixture checkpoint: {resume_path}")
     generator = torch.Generator(device=device)
     generator.manual_seed(seed + 100)
     mixture = config["mixture"]
@@ -249,7 +264,13 @@ def main() -> None:
         val_cases = _evaluate_fixed_cases(model, criterion, val_target, val_valid, config["noise"], seed)
         # Ensure clean preservation has priority in selection, while requiring
         # all three noisy modes to be useful.
-        score = 4.0 * val_cases["clean"]["metric_final_geodesic_rad"] + sum(val_cases[name]["metric_final_geodesic_rad"] for name in MODE_NAMES[1:])
+        score = (
+            4.0 * val_cases["clean"]["metric_final_geodesic_rad"]
+            + val_cases["centre_jitter"]["metric_final_geodesic_rad"]
+            + val_cases["small"]["metric_final_geodesic_rad"]
+            + val_cases["medium"]["metric_final_geodesic_rad"]
+            + float(config.get("selection", {}).get("hard_weight", 1.0)) * val_cases["hard"]["metric_final_geodesic_rad"]
+        )
         print("[val] " + " ".join(f"{name}: final={item['metric_final_geodesic_rad']:.5f} improve={item['metric_improvement_rad']:.5f} blend={item['metric_blend_mean']:.3f}" for name, item in val_cases.items()) + f" score={score:.5f}")
         checkpoint = {"format": "smpl_temporal_stabilizer_v2_pose_mixture", "epoch": epoch, "model_config": asdict(model_config), "model_state": model.state_dict(), "optimizer_state": optimizer.state_dict(), "mixture": dict(mixture), "train_metrics": train_metrics, "val_cases": val_cases, "selection_score": score}
         torch.save(checkpoint, output_dir / "checkpoint_latest.pt")

@@ -33,6 +33,12 @@ cases:
       drift_std_rad: 0.12
       jitter_std_rad: 0.05
       root_multiplier: 1.5
+  hard:
+    noise_seed_offset: 53
+    noise:
+      drift_std_rad: 0.18
+      jitter_std_rad: 0.075
+      root_multiplier: 1.5
 
 metrics:
   # Target angular speed higher than this is treated as real fast movement.
@@ -46,6 +52,7 @@ acceptance:
   centre_jitter_improvement_min_rad: 0.005
   small_improvement_min_rad: 0.005
   medium_improvement_min_rad: 0.005
+  hard_improvement_min_rad: 0.005
 
 logging:
   wandb:

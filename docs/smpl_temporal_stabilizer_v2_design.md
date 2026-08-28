@@ -293,3 +293,7 @@ bash scripts/train/train_smpl_pose_stabilizer_v2_mixture.sh
 第一轮 mixture 已证明 clean、small、medium 表现良好，但 centre-jitter 的平均改善仍然较小。这不是简单扩容就能解决：centre-jitter 窗口有五个会被稳定器输出的位置，而刻意加入错误的只有一个。因此 V2.1 保留其余位置的 identity loss，同时将**实际被扰动的中心帧**的 final/proposal/blend loss 权重提升为 `5.0`；不会给未扰动位置加权，也不会放宽 `max_blend=0.5`。
 
 同时容量从 proposal/gate `128/64` 温和增至 `256/128`。训练输出改为 `outputs/train/smpl_temporal_stabilizer_v2_pose_mixture_v21_focus/`，避免覆盖首轮结果。E1 evaluator 现在额外写出 `centre_jitter.corrupted_centre`：只针对真实被扰动中心帧统计 root/torso/limbs/all 的改善，不能再被四个无扰动中心帧平均稀释。
+
+### Hard finetune
+
+`configs/train_smpl_pose_stabilizer_v2_hard_finetune.yaml` 从 V2.1 best checkpoint 开始，以 `1e-4` 学习率加练最多 10 epoch。训练比例保持 clean/centre-jitter 主导，仅新增 10% hard pose flicker（drift `0.18 rad`、jitter `0.075 rad`）；不提高 `max_blend`。验证和 E1 现在增加 hard 工况。Hard checkpoint 只能在 clean、centre-jitter、small、medium 不退化，同时 hard improvement 为正时保留。

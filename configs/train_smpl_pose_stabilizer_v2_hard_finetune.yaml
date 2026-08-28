@@ -1,7 +1,7 @@
 experiment:
-  name: smpl_temporal_stabilizer_v2_pose_mixture_v21_focus
-  output_dir: outputs/train/smpl_temporal_stabilizer_v2_pose_mixture_v21_focus
-  seed: 42
+  name: smpl_temporal_stabilizer_v2_pose_hard_finetune
+  output_dir: outputs/train/smpl_temporal_stabilizer_v2_pose_hard_finetune
+  seed: 43
 
 data:
   sources: []
@@ -14,6 +14,7 @@ data:
   num_workers: 8
   pin_memory: true
 
+# Must match the V2.1 checkpoint exactly. This is finetuning, not expansion.
 model:
   window_size: 9
   proposal_hidden_dim: 256
@@ -21,16 +22,15 @@ model:
   max_motion_residual_rad: 0.35
   max_blend: 0.5
 
-# Per-sample probability. Clean + centre_jitter directly supervise the
-# behaviour missing in the former full-noise E0 fit.
+checkpoint:
+  resume: outputs/train/smpl_temporal_stabilizer_v2_pose_mixture_v21_focus/checkpoint_best.pt
+
 mixture:
   clean: 0.30
   centre_jitter: 0.30
-  small: 0.25
-  medium: 0.15
-  hard: 0.0
-  # Centre-only samples have one corrupted centre among five refined frames.
-  # Raise only that frame's loss weight; other frames still enforce no-op.
+  small: 0.20
+  medium: 0.10
+  hard: 0.10
   centre_jitter_focus_weight: 5.0
 
 noise:
@@ -53,8 +53,8 @@ noise:
 
 optim:
   batch_size: 128
-  epochs: 30
-  lr: 0.0003
+  epochs: 10
+  lr: 0.0001
   weight_decay: 0.0001
   grad_clip_norm: 1.0
   amp: true
@@ -67,12 +67,15 @@ loss:
   angular_velocity_weight: 0.25
   oracle_positive_threshold: 0.02
 
+selection:
+  hard_weight: 1.0
+
 logging:
   wandb:
     enabled: true
     project: vggt-human
     entity: ""
-    name: smpl_temporal_stabilizer_v2_pose_mixture_v21_focus
+    name: smpl_temporal_stabilizer_v2_pose_hard_finetune
     group: smpl_temporal_stabilizer_v2
     mode: online
-    tags: [smpl, pose-stabilizer, mixture, centre-focus-weighted, clean-identity, centre-jitter, small, medium]
+    tags: [smpl, pose-stabilizer, hard-finetune, clean-identity, centre-jitter, small, medium, hard]
