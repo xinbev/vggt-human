@@ -181,8 +181,8 @@ def main() -> None:
     target = batch["target_pose_6d"].to(device)
     valid = batch["valid_mask"].to(device)
     checkpoint = torch.load(config["checkpoint"]["path"], map_location=device, weights_only=False)
-    if checkpoint.get("format") != "smpl_temporal_stabilizer_v2_pose_e0":
-        raise ValueError("E1 requires a smpl_temporal_stabilizer_v2_pose_e0 checkpoint")
+    if checkpoint.get("format") not in {"smpl_temporal_stabilizer_v2_pose_e0", "smpl_temporal_stabilizer_v2_pose_mixture"}:
+        raise ValueError("E1 requires a V2 pose E0 or mixed-training checkpoint")
     model = PoseTemporalStabilizer(PoseStabilizerConfig(**checkpoint["model_config"])).to(device)
     model.load_state_dict(checkpoint["model_state"], strict=True)
     model.eval()

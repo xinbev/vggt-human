@@ -266,3 +266,24 @@ bash scripts/eval/eval_smpl_pose_stabilizer_v2_e1.sh
 ```
 
 输出为 `outputs/eval/smpl_temporal_stabilizer_v2_pose_e1/e1_summary.json`，并写入 W&B。clean root/all final displacement 均不超过 `0.01 rad`，且三种带噪工况的 all-joint improvement 都至少为 `0.005 rad` 才判为 E1 PASS。
+
+## 9. 正式 V2 pose mixture 训练
+
+E1 显示 full-noise E0 checkpoint 不能定位 centre-only error，因此正式训练不再只使用整段抖动。`scripts/train/train_smpl_pose_stabilizer_v2.py` 对每个样本在线采样以下四种输入：
+
+```text
+30% clean           GT 不扰动，监督 alpha=0
+30% centre_jitter   仅一个可修正中心帧被扰动
+25% small           全窗口 small pose flicker
+15% medium          全窗口 medium pose flicker
+```
+
+每个 epoch 会在固定 held-out 128-window batch（3DPW/EMDB 各 64）上分别报告四种工况的 final error、improvement 和 blend；best checkpoint 的选择将 clean final error 赋予四倍权重，防止以破坏正确帧换取 noisy 平均指标。
+
+服务器启动：
+
+```bash
+bash scripts/train/train_smpl_pose_stabilizer_v2_mixture.sh
+```
+
+输出在 `outputs/train/smpl_temporal_stabilizer_v2_pose_mixture/`。正式训练的 `checkpoint_best.pt` 可直接作为 E1 evaluator 的 `CHECKPOINT` 输入；通过 E1 后才开始缓存并评估真实 NLF + HSI + TRSTR 输出。
