@@ -1,0 +1,79 @@
+{
+  "device": "cuda",
+  "dataset_summary": {
+    "partition": "train",
+    "window_size": 9,
+    "stride": 1,
+    "min_valid_frames": 9,
+    "total_person_tracks": 100,
+    "total_windows": 109871,
+    "by_dataset": {
+      "3dpw": {
+        "pickle_files": 24,
+        "person_tracks": 29,
+        "frames_total": 20394,
+        "frames_valid": 19664,
+        "frames_invalid": 730,
+        "windows": 18985,
+        "sequences": 21
+      },
+      "emdb": {
+        "pickle_files": 81,
+        "person_tracks": 71,
+        "frames_total": 91864,
+        "frames_valid": 91518,
+        "frames_invalid": 346,
+        "windows": 90886,
+        "sequences": 71
+      }
+    }
+  },
+  "fixed_batch_source_counts": {
+    "3dpw": 32,
+    "emdb": 32
+  },
+  "initial": {
+    "loss_total": 0.15331801772117615,
+    "loss_final_l1": 0.04078107327222824,
+    "loss_proposal_l1": 0.034181009978055954,
+    "loss_blend": 0.027382422238588333,
+    "loss_velocity": 0.040769778192043304,
+    "metric_base_l1_m": 0.048105161637067795,
+    "metric_proposal_l1_m": 0.034181009978055954,
+    "metric_final_l1_m": 0.04078107327222824,
+    "metric_improvement_m": 0.00732409069314599,
+    "metric_improvement_rate": 0.859375,
+    "metric_blend_mean": 0.25,
+    "metric_oracle_blend_mean": 0.413501501083374,
+    "metric_blend_l1": 0.226888507604599,
+    "metric_oracle_positive_fraction": 0.8999999761581421,
+    "metric_false_apply_zero_oracle": 1.0,
+    "metric_context_frame_fraction": 0.5555555820465088
+  },
+  "noise": {
+    "drift_std_m": 0.06,
+    "jitter_std_m": 0.025,
+    "outlier_std_m": 0.1,
+    "outlier_probability": 0.05
+  },
+  "final": {
+    "loss_total": 0.09142810851335526,
+    "loss_final_l1": 0.027898048982024193,
+    "loss_proposal_l1": 0.02392633631825447,
+    "loss_blend": 0.004735798574984074,
+    "loss_velocity": 0.027879517525434494,
+    "metric_base_l1_m": 0.048105161637067795,
+    "metric_proposal_l1_m": 0.02392633631825447,
+    "metric_final_l1_m": 0.027898048982024193,
+    "metric_improvement_m": 0.0202071163803339,
+    "metric_improvement_rate": 0.9437500238418579,
+    "metric_blend_mean": 0.4997328817844391,
+    "metric_oracle_blend_mean": 0.47362184524536133,
+    "metric_blend_l1": 0.026569610461592674,
+    "metric_oracle_positive_fraction": 0.987500011920929,
+    "metric_false_apply_zero_oracle": 1.0,
+    "metric_context_frame_fraction": 0.5555555820465088
+  },
+  "passed": true,
+  "pass_rule": "final_l1 < initial_base_l1 and improvement > 0.002m"
+}
