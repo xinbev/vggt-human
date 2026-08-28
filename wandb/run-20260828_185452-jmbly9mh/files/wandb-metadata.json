@@ -1,0 +1,111 @@
+{
+  "os": "Linux-6.8.0-136-generic-x86_64-with-glibc2.35",
+  "python": "CPython 3.11.14",
+  "startedAt": "2026-08-28T10:54:52.550133Z",
+  "args": [
+    "--config",
+    "/home/zhw/lab_users/xyb/home/projects/vggt-human/configs/train_smpl_pose_stabilizer_v2_mixture.yaml",
+    "--path-config",
+    "/home/zhw/lab_users/xyb/home/projects/vggt-human/configs/path.yaml",
+    "--override",
+    "data.sources=[{\"name\":\"3dpw\",\"root\":\"/home/zhw/xyb_space/3DPW/sequenceFiles/train\"},{\"name\":\"emdb\",\"root\":\"/home/zhw/xyb_space/emdb\"}]",
+    "--override",
+    "experiment.output_dir=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_temporal_stabilizer_v2_pose_mixture",
+    "--override",
+    "data.num_workers=8",
+    "--override",
+    "optim.batch_size=512",
+    "--override",
+    "optim.epochs=30",
+    "--override",
+    "optim.lr=3e-4",
+    "--override",
+    "logging.wandb.enabled=true",
+    "--override",
+    "logging.wandb.mode=online"
+  ],
+  "program": "/home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/train/train_smpl_pose_stabilizer_v2.py",
+  "codePath": "scripts/train/train_smpl_pose_stabilizer_v2.py",
+  "codePathLocal": "scripts/train/train_smpl_pose_stabilizer_v2.py",
+  "git": {
+    "remote": "git@github.com:xinbev/vggt-human.git",
+    "commit": "3646c06ea01b4ec2be6d035513372be477849d8a"
+  },
+  "email": "xinbev@126.com",
+  "root": "/home/zhw/lab_users/xyb/home/projects/vggt-human",
+  "host": "beishida-R5500-G5",
+  "executable": "/home/zhw/.conda/envs/zhw_env/bin/python",
+  "cpu_count": 64,
+  "cpu_count_logical": 128,
+  "gpu": "NVIDIA A800-SXM4-80GB",
+  "gpu_count": 8,
+  "disk": {
+    "/": {
+      "total": "470353559552",
+      "used": "174273867776"
+    }
+  },
+  "memory": {
+    "total": "1081800237056"
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA A800-SXM4-80GB",
+      "memoryTotal": "85899345920",
+      "cudaCores": 6912,
+      "architecture": "Ampere",
+      "uuid": "GPU-b28eab61-bd95-3310-66a2-0d73de22090e"
+    },
+    {
+      "name": "NVIDIA A800-SXM4-80GB",
+      "memoryTotal": "85899345920",
+      "cudaCores": 6912,
+      "architecture": "Ampere",
+      "uuid": "GPU-4fb4c092-371b-e644-44d6-54ca99f5b0ec"
+    },
+    {
+      "name": "NVIDIA A800-SXM4-80GB",
+      "memoryTotal": "85899345920",
+      "cudaCores": 6912,
+      "architecture": "Ampere",
+      "uuid": "GPU-46a302d1-32c9-b3c0-05f0-587d99cad2e7"
+    },
+    {
+      "name": "NVIDIA A800-SXM4-80GB",
+      "memoryTotal": "85899345920",
+      "cudaCores": 6912,
+      "architecture": "Ampere",
+      "uuid": "GPU-7b2533a9-7e30-112a-4854-8ff224186939"
+    },
+    {
+      "name": "NVIDIA A800-SXM4-80GB",
+      "memoryTotal": "85899345920",
+      "cudaCores": 6912,
+      "architecture": "Ampere",
+      "uuid": "GPU-2f0838cc-293f-1ba7-6549-70876e7462b3"
+    },
+    {
+      "name": "NVIDIA A800-SXM4-80GB",
+      "memoryTotal": "85899345920",
+      "cudaCores": 6912,
+      "architecture": "Ampere",
+      "uuid": "GPU-c5e03e39-8eba-6c8d-ced8-2dc13ff9f615"
+    },
+    {
+      "name": "NVIDIA A800-SXM4-80GB",
+      "memoryTotal": "85899345920",
+      "cudaCores": 6912,
+      "architecture": "Ampere",
+      "uuid": "GPU-4677cd9b-846b-ada8-e629-a3197a4f58a4"
+    },
+    {
+      "name": "NVIDIA A800-SXM4-80GB",
+      "memoryTotal": "85899345920",
+      "cudaCores": 6912,
+      "architecture": "Ampere",
+      "uuid": "GPU-8d9fa29e-5fe2-d8f4-611a-7b031415c50f"
+    }
+  ],
+  "cudaVersion": "13.1",
+  "writerId": "kado40drs18p4klzq9rltx7c0hdq49od"
+}

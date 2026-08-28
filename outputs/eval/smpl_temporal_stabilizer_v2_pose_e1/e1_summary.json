@@ -1,0 +1,219 @@
+{
+  "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/debug/smpl_temporal_stabilizer_v2_pose_e0/checkpoint_e0.pt",
+  "device": "cuda",
+  "held_out_dataset_summary": {
+    "partition": "val",
+    "window_size": 9,
+    "stride": 1,
+    "min_valid_frames": 9,
+    "total_person_tracks": 15,
+    "total_windows": 16276,
+    "by_dataset": {
+      "3dpw": {
+        "pickle_files": 24,
+        "person_tracks": 5,
+        "frames_total": 3149,
+        "frames_valid": 3071,
+        "frames_invalid": 78,
+        "windows": 2910,
+        "sequences": 3
+      },
+      "emdb": {
+        "pickle_files": 81,
+        "person_tracks": 10,
+        "frames_total": 13465,
+        "frames_valid": 13454,
+        "frames_invalid": 11,
+        "windows": 13366,
+        "sequences": 10
+      }
+    }
+  },
+  "fixed_batch_source_counts": {
+    "3dpw": 64,
+    "emdb": 64
+  },
+  "metrics": {
+    "clean": {
+      "context_frames": 640,
+      "context_fraction": 0.5555555820465088,
+      "blend_mean": 0.263092041015625,
+      "blend_active_rate": 1.0,
+      "groups": {
+        "all": {
+          "base_geodesic_rad": 0.0,
+          "final_geodesic_rad": 0.0023836817126721144,
+          "improvement_rad": -0.0023836817126721144,
+          "improvement_rate": 0.0,
+          "final_displacement_rad": 0.0023836817126721144
+        },
+        "root": {
+          "base_geodesic_rad": 0.0,
+          "final_geodesic_rad": 0.0017797101754695177,
+          "improvement_rad": -0.0017797101754695177,
+          "improvement_rate": 0.0,
+          "final_displacement_rad": 0.0017797101754695177
+        },
+        "torso": {
+          "base_geodesic_rad": 0.0,
+          "final_geodesic_rad": 0.00116248382255435,
+          "improvement_rad": -0.00116248382255435,
+          "improvement_rate": 0.0,
+          "final_displacement_rad": 0.00116248382255435
+        },
+        "limbs": {
+          "base_geodesic_rad": 0.0,
+          "final_geodesic_rad": 0.0027564573101699352,
+          "improvement_rad": -0.0027564573101699352,
+          "improvement_rate": 0.0,
+          "final_displacement_rad": 0.0027564573101699352
+        }
+      },
+      "fast_motion": {
+        "joint_frame_count": 367,
+        "base_geodesic_rad": 0.0,
+        "final_geodesic_rad": 0.019541068002581596,
+        "improvement_rad": -0.019541068002581596,
+        "final_displacement_rad": 0.019541068002581596
+      }
+    },
+    "centre_jitter": {
+      "context_frames": 640,
+      "context_fraction": 0.5555555820465088,
+      "blend_mean": 0.3512226939201355,
+      "blend_active_rate": 1.0,
+      "groups": {
+        "all": {
+          "base_geodesic_rad": 0.017014633864164352,
+          "final_geodesic_rad": 0.01725812256336212,
+          "improvement_rad": -0.00024348795705009252,
+          "improvement_rate": 0.20000000298023224,
+          "final_displacement_rad": 0.016364073380827904
+        },
+        "root": {
+          "base_geodesic_rad": 0.02392224408686161,
+          "final_geodesic_rad": 0.023843925446271896,
+          "improvement_rad": 7.831740367691964e-05,
+          "improvement_rate": 0.19843749701976776,
+          "final_displacement_rad": 0.023154085502028465
+        },
+        "torso": {
+          "base_geodesic_rad": 0.01673348993062973,
+          "final_geodesic_rad": 0.016179850324988365,
+          "improvement_rad": 0.0005536394310183823,
+          "improvement_rate": 0.20000000298023224,
+          "final_displacement_rad": 0.015266443602740765
+        },
+        "limbs": {
+          "base_geodesic_rad": 0.016708973795175552,
+          "final_geodesic_rad": 0.01719176396727562,
+          "improvement_rad": -0.00048279049224220216,
+          "improvement_rate": 0.20000000298023224,
+          "final_displacement_rad": 0.016291746869683266
+        }
+      },
+      "fast_motion": {
+        "joint_frame_count": 367,
+        "base_geodesic_rad": 0.018588460981845856,
+        "final_geodesic_rad": 0.029635686427354813,
+        "improvement_rad": -0.011047227308154106,
+        "final_displacement_rad": 0.0296881515532732
+      }
+    },
+    "small": {
+      "context_frames": 640,
+      "context_fraction": 0.5555555820465088,
+      "blend_mean": 0.45161789655685425,
+      "blend_active_rate": 1.0,
+      "groups": {
+        "all": {
+          "base_geodesic_rad": 0.09039850533008575,
+          "final_geodesic_rad": 0.06765878945589066,
+          "improvement_rad": 0.022739717736840248,
+          "improvement_rate": 0.996874988079071,
+          "final_displacement_rad": 0.040288254618644714
+        },
+        "root": {
+          "base_geodesic_rad": 0.13324393332004547,
+          "final_geodesic_rad": 0.10050269216299057,
+          "improvement_rad": 0.0327412374317646,
+          "improvement_rate": 0.839062511920929,
+          "final_displacement_rad": 0.058383285999298096
+        },
+        "torso": {
+          "base_geodesic_rad": 0.08818767964839935,
+          "final_geodesic_rad": 0.06581167131662369,
+          "improvement_rad": 0.022376010194420815,
+          "improvement_rate": 0.9906250238418579,
+          "final_displacement_rad": 0.03909219428896904
+        },
+        "limbs": {
+          "base_geodesic_rad": 0.08863232284784317,
+          "final_geodesic_rad": 0.06634721904993057,
+          "improvement_rad": 0.022285107523202896,
+          "improvement_rate": 0.996874988079071,
+          "final_displacement_rad": 0.0396152138710022
+        }
+      },
+      "fast_motion": {
+        "joint_frame_count": 367,
+        "base_geodesic_rad": 0.09109271317720413,
+        "final_geodesic_rad": 0.07381650805473328,
+        "improvement_rad": 0.017276203259825706,
+        "final_displacement_rad": 0.05001497268676758
+      }
+    },
+    "medium": {
+      "context_frames": 640,
+      "context_fraction": 0.5555555820465088,
+      "blend_mean": 0.48669004440307617,
+      "blend_active_rate": 1.0,
+      "groups": {
+        "all": {
+          "base_geodesic_rad": 0.1817699670791626,
+          "final_geodesic_rad": 0.13453149795532227,
+          "improvement_rad": 0.047238461673259735,
+          "improvement_rate": 1.0,
+          "final_displacement_rad": 0.08362837135791779
+        },
+        "root": {
+          "base_geodesic_rad": 0.2748051583766937,
+          "final_geodesic_rad": 0.2020714282989502,
+          "improvement_rad": 0.07273373752832413,
+          "improvement_rate": 0.8609374761581421,
+          "final_displacement_rad": 0.12431583553552628
+        },
+        "torso": {
+          "base_geodesic_rad": 0.17650142312049866,
+          "final_geodesic_rad": 0.1300235241651535,
+          "improvement_rad": 0.04647790268063545,
+          "improvement_rate": 0.989062488079071,
+          "final_displacement_rad": 0.08210402727127075
+        },
+        "limbs": {
+          "base_geodesic_rad": 0.17806482315063477,
+          "final_geodesic_rad": 0.13203148543834686,
+          "improvement_rad": 0.04603332281112671,
+          "improvement_rate": 1.0,
+          "final_displacement_rad": 0.08179138600826263
+        }
+      },
+      "fast_motion": {
+        "joint_frame_count": 367,
+        "base_geodesic_rad": 0.18520191311836243,
+        "final_geodesic_rad": 0.14313480257987976,
+        "improvement_rad": 0.042067110538482666,
+        "final_displacement_rad": 0.08785177022218704
+      }
+    }
+  },
+  "acceptance": {
+    "clean_root_displacement_max_rad": 0.01,
+    "clean_all_displacement_max_rad": 0.01,
+    "centre_jitter_improvement_min_rad": 0.005,
+    "small_improvement_min_rad": 0.005,
+    "medium_improvement_min_rad": 0.005
+  },
+  "passed": false,
+  "note": "Fast-motion metrics are diagnostic in E1; a dedicated real-NLF evaluation is required before deployment."
+}

@@ -1,0 +1,305 @@
+{
+  "epoch": 1,
+  "worst_samples": [
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 2.1559016704559326,
+      "dataset_index": 90012,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000839/rgb/seq_000839_0205.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 2.1559016704559326,
+      "dataset_index": 90013,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000839/rgb/seq_000839_0210.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 2.1559016704559326,
+      "dataset_index": 90014,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000839/rgb/seq_000839_0215.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 2.1559016704559326,
+      "dataset_index": 90015,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000839/rgb/seq_000839_0220.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 2.0077311992645264,
+      "dataset_index": 90092,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000842/rgb/seq_000842_0080.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 2.0077311992645264,
+      "dataset_index": 90093,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000842/rgb/seq_000842_0085.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 2.0077311992645264,
+      "dataset_index": 90094,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000842/rgb/seq_000842_0090.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 2.0077311992645264,
+      "dataset_index": 90095,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000842/rgb/seq_000842_0095.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.9486446380615234,
+      "dataset_index": 90064,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000841/rgb/seq_000841_0090.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.9486446380615234,
+      "dataset_index": 90065,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000841/rgb/seq_000841_0095.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.9486446380615234,
+      "dataset_index": 90066,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000841/rgb/seq_000841_0100.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.9486446380615234,
+      "dataset_index": 90067,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000841/rgb/seq_000841_0105.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.9311047792434692,
+      "dataset_index": 90204,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000846/rgb/seq_000846_0115.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.9311047792434692,
+      "dataset_index": 90205,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000846/rgb/seq_000846_0120.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.9311047792434692,
+      "dataset_index": 90206,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000846/rgb/seq_000846_0125.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.9311047792434692,
+      "dataset_index": 90207,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000846/rgb/seq_000846_0130.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.8676478862762451,
+      "dataset_index": 90052,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000841/rgb/seq_000841_0030.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.8676478862762451,
+      "dataset_index": 90053,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000841/rgb/seq_000841_0035.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.8676478862762451,
+      "dataset_index": 90054,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000841/rgb/seq_000841_0040.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.8676478862762451,
+      "dataset_index": 90055,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000841/rgb/seq_000841_0045.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.804344892501831,
+      "dataset_index": 90044,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000840/rgb/seq_000840_0125.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.804344892501831,
+      "dataset_index": 90045,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000840/rgb/seq_000840_0130.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.804344892501831,
+      "dataset_index": 90046,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000841/rgb/seq_000841_0000.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.804344892501831,
+      "dataset_index": 90047,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000841/rgb/seq_000841_0005.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.756117820739746,
+      "dataset_index": 90228,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000847/rgb/seq_000847_0085.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.756117820739746,
+      "dataset_index": 90229,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000847/rgb/seq_000847_0090.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.756117820739746,
+      "dataset_index": 90230,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000847/rgb/seq_000847_0095.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.756117820739746,
+      "dataset_index": 90231,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000847/rgb/seq_000847_0100.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.7346891164779663,
+      "dataset_index": 90208,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000846/rgb/seq_000846_0135.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.7346891164779663,
+      "dataset_index": 90209,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000846/rgb/seq_000846_0140.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.7346891164779663,
+      "dataset_index": 90210,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000846/rgb/seq_000846_0145.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.7346891164779663,
+      "dataset_index": 90211,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000847/rgb/seq_000847_0000.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.6915299892425537,
+      "dataset_index": 90172,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000845/rgb/seq_000845_0090.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.6915299892425537,
+      "dataset_index": 90173,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000845/rgb/seq_000845_0095.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.6915299892425537,
+      "dataset_index": 90174,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000845/rgb/seq_000845_0100.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.6915299892425537,
+      "dataset_index": 90175,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000845/rgb/seq_000845_0105.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.6648541688919067,
+      "dataset_index": 90224,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000847/rgb/seq_000847_0065.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.6648541688919067,
+      "dataset_index": 90225,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000847/rgb/seq_000847_0070.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.6648541688919067,
+      "dataset_index": 90226,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000847/rgb/seq_000847_0075.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.6648541688919067,
+      "dataset_index": 90227,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000847/rgb/seq_000847_0080.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.6397349834442139,
+      "dataset_index": 90232,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000847/rgb/seq_000847_0105.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.6397349834442139,
+      "dataset_index": 90233,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000847/rgb/seq_000847_0110.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.6397349834442139,
+      "dataset_index": 90234,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000847/rgb/seq_000847_0115.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.6397349834442139,
+      "dataset_index": 90235,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000847/rgb/seq_000847_0120.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.6287070512771606,
+      "dataset_index": 90116,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000843/rgb/seq_000843_0075.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.6287070512771606,
+      "dataset_index": 90117,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000843/rgb/seq_000843_0080.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.6287070512771606,
+      "dataset_index": 90118,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000843/rgb/seq_000843_0085.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.6287070512771606,
+      "dataset_index": 90119,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000843/rgb/seq_000843_0090.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.6197417974472046,
+      "dataset_index": 90168,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000845/rgb/seq_000845_0070.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 1.6197417974472046,
+      "dataset_index": 90169,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000845/rgb/seq_000845_0075.png"
+    }
+  ]
+}

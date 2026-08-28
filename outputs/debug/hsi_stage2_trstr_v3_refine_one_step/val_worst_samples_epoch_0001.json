@@ -1,0 +1,101 @@
+{
+  "epoch": 1,
+  "worst_samples": [
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 2.0974936485290527,
+      "dataset_index": 90012,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000839/rgb/seq_000839_0205.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 2.0974936485290527,
+      "dataset_index": 90013,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000839/rgb/seq_000839_0210.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 2.0974936485290527,
+      "dataset_index": 90014,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000839/rgb/seq_000839_0215.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 2.0974936485290527,
+      "dataset_index": 90015,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000839/rgb/seq_000839_0220.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 0.9386476874351501,
+      "dataset_index": 90000,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000839/rgb/seq_000839_0145.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 0.9386476874351501,
+      "dataset_index": 90001,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000839/rgb/seq_000839_0150.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 0.9386476874351501,
+      "dataset_index": 90002,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000839/rgb/seq_000839_0155.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 0.9386476874351501,
+      "dataset_index": 90003,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000839/rgb/seq_000839_0160.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 0.811965823173523,
+      "dataset_index": 90004,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000839/rgb/seq_000839_0165.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 0.811965823173523,
+      "dataset_index": 90005,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000839/rgb/seq_000839_0170.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 0.811965823173523,
+      "dataset_index": 90006,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000839/rgb/seq_000839_0175.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 0.811965823173523,
+      "dataset_index": 90007,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000839/rgb/seq_000839_0180.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 0.8088634610176086,
+      "dataset_index": 90008,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000839/rgb/seq_000839_0185.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 0.8088634610176086,
+      "dataset_index": 90009,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000839/rgb/seq_000839_0190.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 0.8088634610176086,
+      "dataset_index": 90010,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000839/rgb/seq_000839_0195.png"
+    },
+    {
+      "selection_metric": "metric_hsi_trstr_v3_selection",
+      "selection_value": 0.8088634610176086,
+      "dataset_index": 90011,
+      "sample_path": "Training/20221019_3-8_1000_highbmihand_static_suburb_d_seq_000839/rgb/seq_000839_0200.png"
+    }
+  ]
+}

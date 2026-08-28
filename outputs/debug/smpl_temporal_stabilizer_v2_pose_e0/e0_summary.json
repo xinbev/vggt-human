@@ -1,0 +1,76 @@
+{
+  "device": "cuda",
+  "dataset_summary": {
+    "partition": "train",
+    "window_size": 9,
+    "stride": 1,
+    "min_valid_frames": 9,
+    "total_person_tracks": 100,
+    "total_windows": 109871,
+    "by_dataset": {
+      "3dpw": {
+        "pickle_files": 24,
+        "person_tracks": 29,
+        "frames_total": 20394,
+        "frames_valid": 19664,
+        "frames_invalid": 730,
+        "windows": 18985,
+        "sequences": 21
+      },
+      "emdb": {
+        "pickle_files": 81,
+        "person_tracks": 71,
+        "frames_total": 91864,
+        "frames_valid": 91518,
+        "frames_invalid": 346,
+        "windows": 90886,
+        "sequences": 71
+      }
+    }
+  },
+  "fixed_batch_source_counts": {
+    "3dpw": 32,
+    "emdb": 32
+  },
+  "noise": {
+    "drift_std_rad": 0.06,
+    "jitter_std_rad": 0.025,
+    "root_multiplier": 1.5
+  },
+  "initial": {
+    "loss_total": 0.26732707023620605,
+    "loss_final_geodesic": 0.07706930488348007,
+    "loss_proposal_geodesic": 0.06685767322778702,
+    "loss_blend": 0.02709866128861904,
+    "loss_angular_velocity": 0.0769285261631012,
+    "metric_base_geodesic_rad": 0.0911795049905777,
+    "metric_proposal_geodesic_rad": 0.06685767322778702,
+    "metric_final_geodesic_rad": 0.07706930488348007,
+    "metric_improvement_rad": 0.014110195450484753,
+    "metric_improvement_rate": 0.8764322996139526,
+    "metric_blend_mean": 0.25,
+    "metric_oracle_blend_mean": 0.4129032492637634,
+    "metric_blend_l1": 0.22528067231178284,
+    "metric_oracle_positive_fraction": 0.9033854603767395,
+    "metric_context_frame_fraction": 0.5555555820465088
+  },
+  "final": {
+    "loss_total": 0.22997695207595825,
+    "loss_final_geodesic": 0.06776965409517288,
+    "loss_proposal_geodesic": 0.06685767322778702,
+    "loss_blend": 0.013631472364068031,
+    "loss_angular_velocity": 0.05579394847154617,
+    "metric_base_geodesic_rad": 0.0911795049905777,
+    "metric_proposal_geodesic_rad": 0.06685767322778702,
+    "metric_final_geodesic_rad": 0.06776965409517288,
+    "metric_improvement_rad": 0.023409854620695114,
+    "metric_improvement_rate": 0.844531238079071,
+    "metric_blend_mean": 0.4535403251647949,
+    "metric_oracle_blend_mean": 0.4129032492637634,
+    "metric_blend_l1": 0.10082924365997314,
+    "metric_oracle_positive_fraction": 0.9033854603767395,
+    "metric_context_frame_fraction": 0.5555555820465088
+  },
+  "passed": true,
+  "pass_rule": "final geodesic < base geodesic and mean improvement > 0.01 rad"
+}

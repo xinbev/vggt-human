@@ -1,0 +1,197 @@
+_wandb:
+    value:
+        cli_version: 0.28.2
+        e:
+            45jdrdcfzmuz2qa00iroww5oyav1pcbj:
+                args:
+                    - --config
+                    - /home/zhw/lab_users/xyb/home/projects/vggt-human/configs/overfit_smpl_pose_stabilizer_v2.yaml
+                    - --path-config
+                    - /home/zhw/lab_users/xyb/home/projects/vggt-human/configs/path.yaml
+                    - --override
+                    - data.sources=[{"name":"3dpw","root":"/home/zhw/xyb_space/3DPW/sequenceFiles/train"},{"name":"emdb","root":"/home/zhw/xyb_space/emdb"}]
+                    - --override
+                    - experiment.output_dir=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/debug/smpl_temporal_stabilizer_v2_pose_e0
+                    - --override
+                    - optim.steps=1000
+                    - --override
+                    - logging.wandb.enabled=true
+                    - --override
+                    - logging.wandb.mode=online
+                codePath: scripts/train/overfit_smpl_pose_stabilizer_v2.py
+                codePathLocal: scripts/train/overfit_smpl_pose_stabilizer_v2.py
+                cpu_count: 64
+                cpu_count_logical: 128
+                cudaVersion: "13.1"
+                disk:
+                    /:
+                        total: "470353559552"
+                        used: "174255833088"
+                email: xinbev@126.com
+                executable: /home/zhw/.conda/envs/zhw_env/bin/python
+                git:
+                    commit: d27565aef95d964b969593015aed29effc52ce84
+                    remote: git@github.com:xinbev/vggt-human.git
+                gpu: NVIDIA A800-SXM4-80GB
+                gpu_count: 8
+                gpu_nvidia:
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-b28eab61-bd95-3310-66a2-0d73de22090e
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-4fb4c092-371b-e644-44d6-54ca99f5b0ec
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-46a302d1-32c9-b3c0-05f0-587d99cad2e7
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-7b2533a9-7e30-112a-4854-8ff224186939
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-2f0838cc-293f-1ba7-6549-70876e7462b3
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-c5e03e39-8eba-6c8d-ced8-2dc13ff9f615
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-4677cd9b-846b-ada8-e629-a3197a4f58a4
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-8d9fa29e-5fe2-d8f4-611a-7b031415c50f
+                host: beishida-R5500-G5
+                memory:
+                    total: "1081800237056"
+                os: Linux-6.8.0-136-generic-x86_64-with-glibc2.35
+                program: /home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/train/overfit_smpl_pose_stabilizer_v2.py
+                python: CPython 3.11.14
+                root: /home/zhw/lab_users/xyb/home/projects/vggt-human
+                startedAt: "2026-08-28T10:31:27.644353Z"
+                writerId: 45jdrdcfzmuz2qa00iroww5oyav1pcbj
+        m: []
+        python_version: 3.11.14
+        t:
+            "1":
+                - 1
+            "2":
+                - 1
+            "3":
+                - 2
+                - 13
+                - 15
+                - 16
+                - 61
+            "4": 3.11.14
+            "5": 0.28.2
+            "12": 0.28.2
+            "13": linux-x86_64
+assets:
+    value:
+        smpl_mean_params: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/body_models/smpl/smpl/smpl_mean_params.npz
+        smpl_model_dir: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/body_models/smpl
+checkpoints:
+    value:
+        nlf_smpl: /home/zhw/lab_users/xyb/home/projects/vggt-human/third_party/weights/nlf/nlf_l_multi_0.3.2.torchscript
+        sat_hmr_smpl: /home/zhw/xyb_space/SAT-HMR/weights/sat_hmr/sat_644.pth
+        vggt_baseline: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt
+        yolo8x: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/yolov8x.torchscript
+data:
+    value:
+        min_valid_frames: 9
+        overfit_batch_size: 64
+        sources:
+            - name: 3dpw
+              root: /home/zhw/xyb_space/3DPW/sequenceFiles/train
+            - name: emdb
+              root: /home/zhw/xyb_space/emdb
+        stride: 1
+        validation_fraction: 0.1
+        window_size: 9
+datasets:
+    value:
+        bedlam_boxes_root: outputs/preprocess/bedlam_boxes
+        bedlam_root: /home/zhw/xyb_space/bedlam/processed_bedlam/
+        bedlam_tracks_root: outputs/preprocess/video_tracks
+        emdb_hmr4d_support_root: /home/zhw/xyb_space/EMDB/hmr4d_support
+        hf_bedlam_images_root: /home/zhw/xyb_space/bedlam/hf_bedlam/training_images
+        hf_bedlam_npz_root: /home/zhw/xyb_space/bedlam/all_npz_12_training
+        hf_bedlam_sam2_patch_masks_root: outputs/preprocess/hf_bedlam_sam2_patch_masks
+        hmr4d_eval_frames_root: outputs/preprocess/hmr4d_eval_frames
+        hmr4d_eval_tracks_root: outputs/preprocess/hmr4d_eval_tracks
+        rich_hmr4d_support_root: /home/zhw/xyb_space/RICH/hmr4d_support
+        threedpw_hmr4d_support_root: /home/zhw/xyb_space/3DPW/hmr4d_support
+        threedpw_root: /home/zhw/xyb_space/3DPW
+        threedpw_sam2_patch_masks_root: outputs/preprocess/3dpw_sam2_patch_masks
+        threedpw_smpl_base_root: outputs/preprocess/3dpw_smpl_base
+experiment:
+    value:
+        name: smpl_temporal_stabilizer_v2_pose_e0
+        output_dir: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/debug/smpl_temporal_stabilizer_v2_pose_e0
+        seed: 42
+logging:
+    value:
+        wandb:
+            enabled: true
+            entity: ""
+            group: smpl_temporal_stabilizer_v2
+            mode: online
+            name: smpl_temporal_stabilizer_v2_pose_e0
+            project: vggt-human
+            tags:
+                - smpl
+                - pose-stabilizer
+                - SO3
+                - e0-overfit
+                - fixed-noise
+loss:
+    value:
+        angular_velocity_weight: 0.25
+        blend_weight: 1
+        final_weight: 2
+        oracle_positive_threshold: 0.02
+        proposal_weight: 1
+model:
+    value:
+        gate_hidden_dim: 64
+        max_blend: 0.5
+        max_motion_residual_rad: 0.35
+        proposal_hidden_dim: 128
+        window_size: 9
+noise:
+    value:
+        drift_std_rad: 0.06
+        jitter_std_rad: 0.025
+        root_multiplier: 1.5
+optim:
+    value:
+        amp: true
+        grad_clip_norm: 1
+        log_interval: 25
+        lr: 0.001
+        steps: 1000
+        weight_decay: 0
+third_party:
+    value:
+        Omnieraser_checkpoint: third_party/weights/Omnieraser/controlnet_flux_pytorch_lora_weights.safetensors
+        Omnieraser_root: third_party/Omnieraser
+        boosttrack_root: third_party/BoostTrack
+        boosttrack_weights_root: third_party/weights/BoostTrack
+        nlf_root: third_party/nlf
+        sam2_checkpoint: third_party/weights/sam/sam2.1_hiera_large.pt
+        sam2_root: third_party/sam2

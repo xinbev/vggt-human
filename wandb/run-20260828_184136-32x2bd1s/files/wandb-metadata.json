@@ -1,0 +1,33 @@
+{
+  "os": "Linux-6.8.0-136-generic-x86_64-with-glibc2.35",
+  "python": "CPython 3.11.14",
+  "startedAt": "2026-08-28T10:41:36.908810Z",
+  "args": [
+    "--config",
+    "/home/zhw/lab_users/xyb/home/projects/vggt-human/configs/eval_smpl_pose_stabilizer_v2_e1.yaml",
+    "--path-config",
+    "/home/zhw/lab_users/xyb/home/projects/vggt-human/configs/path.yaml",
+    "--override",
+    "data.sources=[{\"name\":\"3dpw\",\"root\":\"/home/zhw/xyb_space/3DPW/sequenceFiles/train\"},{\"name\":\"emdb\",\"root\":\"/home/zhw/xyb_space/emdb\"}]",
+    "--override",
+    "checkpoint.path=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/debug/smpl_temporal_stabilizer_v2_pose_e0/checkpoint_e0.pt",
+    "--override",
+    "experiment.output_dir=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/smpl_temporal_stabilizer_v2_pose_e1",
+    "--override",
+    "logging.wandb.enabled=true",
+    "--override",
+    "logging.wandb.mode=online"
+  ],
+  "program": "/home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/eval/eval_smpl_pose_stabilizer_v2_e1.py",
+  "codePath": "scripts/eval/eval_smpl_pose_stabilizer_v2_e1.py",
+  "codePathLocal": "scripts/eval/eval_smpl_pose_stabilizer_v2_e1.py",
+  "git": {
+    "remote": "git@github.com:xinbev/vggt-human.git",
+    "commit": "a764cafed7ff842259627bc56cf96cf52356fb99"
+  },
+  "email": "xinbev@126.com",
+  "root": "/home/zhw/lab_users/xyb/home/projects/vggt-human",
+  "host": "beishida-R5500-G5",
+  "executable": "/home/zhw/.conda/envs/zhw_env/bin/python",
+  "writerId": "fplli0knfwbpc66bfj033bfebnkjsl2b"
+}

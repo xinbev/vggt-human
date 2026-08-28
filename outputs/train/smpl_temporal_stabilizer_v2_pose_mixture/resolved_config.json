@@ -1,0 +1,127 @@
+{
+  "checkpoints": {
+    "vggt_baseline": "/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt",
+    "yolo8x": "/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/yolov8x.torchscript",
+    "nlf_smpl": "/home/zhw/lab_users/xyb/home/projects/vggt-human/third_party/weights/nlf/nlf_l_multi_0.3.2.torchscript",
+    "sat_hmr_smpl": "/home/zhw/xyb_space/SAT-HMR/weights/sat_hmr/sat_644.pth"
+  },
+  "assets": {
+    "smpl_model_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/body_models/smpl",
+    "smpl_mean_params": "/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/body_models/smpl/smpl/smpl_mean_params.npz"
+  },
+  "datasets": {
+    "bedlam_root": "/home/zhw/xyb_space/bedlam/processed_bedlam/",
+    "bedlam_boxes_root": "outputs/preprocess/bedlam_boxes",
+    "bedlam_tracks_root": "outputs/preprocess/video_tracks",
+    "hf_bedlam_images_root": "/home/zhw/xyb_space/bedlam/hf_bedlam/training_images",
+    "hf_bedlam_npz_root": "/home/zhw/xyb_space/bedlam/all_npz_12_training",
+    "hf_bedlam_sam2_patch_masks_root": "outputs/preprocess/hf_bedlam_sam2_patch_masks",
+    "emdb_hmr4d_support_root": "/home/zhw/xyb_space/EMDB/hmr4d_support",
+    "rich_hmr4d_support_root": "/home/zhw/xyb_space/RICH/hmr4d_support",
+    "threedpw_hmr4d_support_root": "/home/zhw/xyb_space/3DPW/hmr4d_support",
+    "threedpw_root": "/home/zhw/xyb_space/3DPW",
+    "threedpw_smpl_base_root": "outputs/preprocess/3dpw_smpl_base",
+    "threedpw_sam2_patch_masks_root": "outputs/preprocess/3dpw_sam2_patch_masks",
+    "hmr4d_eval_frames_root": "outputs/preprocess/hmr4d_eval_frames",
+    "hmr4d_eval_tracks_root": "outputs/preprocess/hmr4d_eval_tracks"
+  },
+  "third_party": {
+    "boosttrack_root": "third_party/BoostTrack",
+    "boosttrack_weights_root": "third_party/weights/BoostTrack",
+    "sam2_root": "third_party/sam2",
+    "sam2_checkpoint": "third_party/weights/sam/sam2.1_hiera_large.pt",
+    "Omnieraser_root": "third_party/Omnieraser",
+    "Omnieraser_checkpoint": "third_party/weights/Omnieraser/controlnet_flux_pytorch_lora_weights.safetensors",
+    "nlf_root": "third_party/nlf"
+  },
+  "experiment": {
+    "name": "smpl_temporal_stabilizer_v2_pose_mixture",
+    "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_temporal_stabilizer_v2_pose_mixture",
+    "seed": 42
+  },
+  "data": {
+    "sources": [
+      {
+        "name": "3dpw",
+        "root": "/home/zhw/xyb_space/3DPW/sequenceFiles/train"
+      },
+      {
+        "name": "emdb",
+        "root": "/home/zhw/xyb_space/emdb"
+      }
+    ],
+    "window_size": 9,
+    "stride": 1,
+    "validation_fraction": 0.1,
+    "min_valid_frames": 9,
+    "balance_datasets": true,
+    "validation_batch_size": 128,
+    "num_workers": 8,
+    "pin_memory": true
+  },
+  "model": {
+    "window_size": 9,
+    "proposal_hidden_dim": 128,
+    "gate_hidden_dim": 64,
+    "max_motion_residual_rad": 0.35,
+    "max_blend": 0.5
+  },
+  "mixture": {
+    "clean": 0.3,
+    "centre_jitter": 0.3,
+    "small": 0.25,
+    "medium": 0.15
+  },
+  "noise": {
+    "centre_jitter": {
+      "drift_std_rad": 0.06,
+      "jitter_std_rad": 0.025,
+      "root_multiplier": 1.5
+    },
+    "small": {
+      "drift_std_rad": 0.06,
+      "jitter_std_rad": 0.025,
+      "root_multiplier": 1.5
+    },
+    "medium": {
+      "drift_std_rad": 0.12,
+      "jitter_std_rad": 0.05,
+      "root_multiplier": 1.5
+    }
+  },
+  "optim": {
+    "batch_size": 512,
+    "epochs": 30,
+    "lr": 0.0003,
+    "weight_decay": 0.0001,
+    "grad_clip_norm": 1.0,
+    "amp": true,
+    "log_interval": 50
+  },
+  "loss": {
+    "final_weight": 2.0,
+    "proposal_weight": 1.0,
+    "blend_weight": 2.0,
+    "angular_velocity_weight": 0.25,
+    "oracle_positive_threshold": 0.02
+  },
+  "logging": {
+    "wandb": {
+      "enabled": true,
+      "project": "vggt-human",
+      "entity": "",
+      "name": "smpl_temporal_stabilizer_v2_pose_mixture",
+      "group": "smpl_temporal_stabilizer_v2",
+      "mode": "online",
+      "tags": [
+        "smpl",
+        "pose-stabilizer",
+        "mixture",
+        "clean-identity",
+        "centre-jitter",
+        "small",
+        "medium"
+      ]
+    }
+  }
+}
