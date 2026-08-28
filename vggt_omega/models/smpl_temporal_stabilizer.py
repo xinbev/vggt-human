@@ -106,7 +106,8 @@ class TranslationTemporalStabilizer(nn.Module):
         ).all(dim=2)
         midpoint = 0.5 * (neighbours[:, :, 1] + neighbours[:, :, 2])
         relative_neighbours = (neighbours - midpoint.unsqueeze(2)).reshape(batch, centres.numel(), 12)
-        proposal_residual = torch.tanh(self.proposal_head(relative_neighbours)) * self.config.max_motion_residual_m
+        proposal_residual = torch.tanh(self.proposal_head(relative_neighbours)).to(dtype=observed_transl.dtype)
+        proposal_residual = proposal_residual * self.config.max_motion_residual_m
         proposal_centres = midpoint + proposal_residual
         observed_centres = observed_transl[:, centres]
         neighbour_velocity = 0.5 * (neighbours[:, :, 3] - neighbours[:, :, 0])
@@ -118,7 +119,8 @@ class TranslationTemporalStabilizer(nn.Module):
             ),
             dim=-1,
         )
-        blend_centres = torch.sigmoid(self.gate_head(gate_features)) * self.config.max_blend
+        blend_centres = torch.sigmoid(self.gate_head(gate_features)).to(dtype=observed_transl.dtype)
+        blend_centres = blend_centres * self.config.max_blend
         blend_centres = blend_centres * neighbour_valid.to(dtype=blend_centres.dtype).unsqueeze(-1)
         proposal[:, centres] = torch.where(neighbour_valid.unsqueeze(-1), proposal_centres, observed_centres)
         blend[:, centres] = blend_centres
