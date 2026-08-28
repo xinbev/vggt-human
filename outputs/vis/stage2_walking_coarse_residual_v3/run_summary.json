@@ -1138,6 +1138,9 @@
       "anchor_depth_l1_median_after": 2.6787543296813965
     }
   ],
+  "trstr": {
+    "active": false
+  },
   "scene_scale_prealign": "smpl_median",
   "hsi_scene_affine_mode": "per_frame",
   "hsi_scene_affine_ema_alpha": 0.25,
@@ -3981,74 +3984,74 @@
   ],
   "timings": {
     "select_frames": {
-      "seconds": 0.0013356939889490604,
-      "ms_per_frame": 0.06678469944745302,
-      "fps": 14973.489560835886
+      "seconds": 0.001287992054130882,
+      "ms_per_frame": 0.0643996027065441,
+      "fps": 15528.046105451873
     },
     "load_config": {
-      "seconds": 0.02081579196965322,
-      "ms_per_frame": 1.040789598482661,
-      "fps": 960.8089871938315
+      "seconds": 0.019994456961285323,
+      "ms_per_frame": 0.9997228480642661,
+      "fps": 1000.2772287702242
     },
     "load_images_and_priors": {
-      "seconds": 0.7210993840126321,
-      "ms_per_frame": 36.054969200631604,
-      "fps": 27.7354279360328
+      "seconds": 0.7116412839968689,
+      "ms_per_frame": 35.582064199843444,
+      "fps": 28.10404686989463
     },
     "load_models": {
-      "seconds": 14.351940375985578,
-      "ms_per_frame": 717.5970187992789,
-      "fps": 1.393539791557736
+      "seconds": 14.182353900978342,
+      "ms_per_frame": 709.1176950489171,
+      "fps": 1.410203139735523
     },
     "transfer_images_to_device": {
-      "seconds": 0.019099142984487116,
-      "ms_per_frame": 0.9549571492243558,
-      "fps": 1047.1674051681055
+      "seconds": 0.034011339012067765,
+      "ms_per_frame": 1.7005669506033882,
+      "fps": 588.0391828414541
     },
     "model_forward": {
-      "seconds": 32.26312155899359,
-      "ms_per_frame": 1613.1560779496795,
-      "fps": 0.6199028188710664
+      "seconds": 31.89814684499288,
+      "ms_per_frame": 1594.907342249644,
+      "fps": 0.626995671478622
     },
     "posthoc_tracking_overlay": {
-      "seconds": 0.08228609204525128,
-      "ms_per_frame": 4.114304602262564,
-      "fps": 243.05443973449943
+      "seconds": 0.08309865201590583,
+      "ms_per_frame": 4.154932600795291,
+      "fps": 240.67779097273228
     },
     "scene_camera_and_depth": {
-      "seconds": 0.0007694619707763195,
-      "ms_per_frame": 0.038473098538815975,
-      "fps": 25992.187735830215
+      "seconds": 0.0007793179829604924,
+      "ms_per_frame": 0.03896589914802462,
+      "fps": 25663.465282840654
     },
     "decode_people_smpl": {
-      "seconds": 0.006907452014274895,
-      "ms_per_frame": 0.34537260071374476,
-      "fps": 2895.423661093574
+      "seconds": 0.006925862981006503,
+      "ms_per_frame": 0.34629314905032516,
+      "fps": 2887.726779297833
     },
     "depth_alignment": {
-      "seconds": 0.3211410699877888,
-      "ms_per_frame": 16.05705349938944,
-      "fps": 62.27792664687979
+      "seconds": 0.3199711889610626,
+      "ms_per_frame": 15.998559448053129,
+      "fps": 62.50562766272625
     },
     "build_frame_point_clouds": {
-      "seconds": 49.58330296998611,
-      "ms_per_frame": 2479.1651484993054,
-      "fps": 0.4033615915443643
+      "seconds": 50.016725824039895,
+      "ms_per_frame": 2500.8362912019948,
+      "fps": 0.3998662381532231
     },
     "build_scene_data": {
-      "seconds": 49.91233644995373,
-      "ms_per_frame": 2495.6168224976864,
-      "fps": 0.400702540143631
+      "seconds": 50.344636750989594,
+      "ms_per_frame": 2517.2318375494797,
+      "fps": 0.3972617798182221
     },
     "validate_and_summarize": {
-      "seconds": 0.0007403200143016875,
-      "ms_per_frame": 0.037016000715084374,
-      "fps": 27015.34419390938
+      "seconds": 0.0011625970364548266,
+      "ms_per_frame": 0.05812985182274133,
+      "fps": 17202.86511394106
     },
     "total_before_viewer": {
-      "seconds": 97.50805464899167,
-      "ms_per_frame": 4875.402732449584,
-      "fps": 0.2051112605209463
+      "seconds": 97.39569848799147,
+      "ms_per_frame": 4869.784924399573,
+      "fps": 0.20534787788873374
     }
   },
   "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_walking_coarse_residual_v3",

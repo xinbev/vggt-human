@@ -1,0 +1,91 @@
+{
+  "scanned_pickle_files": {
+    "3dpw": 24,
+    "emdb": 81
+  },
+  "raw_person_tracks": 115,
+  "raw_by_dataset": {
+    "3dpw": {
+      "person_tracks": 34,
+      "frames_total": 23543,
+      "frames_valid": 22735,
+      "frames_invalid": 808,
+      "pickle_files": 24
+    },
+    "emdb": {
+      "person_tracks": 81,
+      "frames_total": 105329,
+      "frames_valid": 104972,
+      "frames_invalid": 357,
+      "pickle_files": 81
+    }
+  },
+  "sampling": {
+    "mode": "balanced_dataset",
+    "per_dataset_windows": {
+      "3dpw": 18985,
+      "emdb": 90886
+    },
+    "samples_per_epoch": 109871,
+    "expected_dataset_fraction": {
+      "3dpw": 0.5,
+      "emdb": 0.5
+    }
+  },
+  "train": {
+    "partition": "train",
+    "window_size": 9,
+    "stride": 1,
+    "min_valid_frames": 9,
+    "total_person_tracks": 100,
+    "total_windows": 109871,
+    "by_dataset": {
+      "3dpw": {
+        "pickle_files": 24,
+        "person_tracks": 29,
+        "frames_total": 20394,
+        "frames_valid": 19664,
+        "frames_invalid": 730,
+        "windows": 18985,
+        "sequences": 21
+      },
+      "emdb": {
+        "pickle_files": 81,
+        "person_tracks": 71,
+        "frames_total": 91864,
+        "frames_valid": 91518,
+        "frames_invalid": 346,
+        "windows": 90886,
+        "sequences": 71
+      }
+    }
+  },
+  "val": {
+    "partition": "val",
+    "window_size": 9,
+    "stride": 1,
+    "min_valid_frames": 9,
+    "total_person_tracks": 15,
+    "total_windows": 16276,
+    "by_dataset": {
+      "3dpw": {
+        "pickle_files": 24,
+        "person_tracks": 5,
+        "frames_total": 3149,
+        "frames_valid": 3071,
+        "frames_invalid": 78,
+        "windows": 2910,
+        "sequences": 3
+      },
+      "emdb": {
+        "pickle_files": 81,
+        "person_tracks": 10,
+        "frames_total": 13465,
+        "frames_valid": 13454,
+        "frames_invalid": 11,
+        "windows": 13366,
+        "sequences": 10
+      }
+    }
+  }
+}

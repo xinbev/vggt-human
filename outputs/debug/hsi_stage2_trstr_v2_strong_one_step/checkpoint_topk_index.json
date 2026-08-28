@@ -1,0 +1,13 @@
+{
+  "monitor": "metric_hsi_trstr_xy_refined_l2_p90_m",
+  "monitor_mode": "min",
+  "entries": [
+    {
+      "rank": 1,
+      "metric": 1.572831153869629,
+      "epoch": 1,
+      "source": "train",
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/debug/hsi_stage2_trstr_v2_strong_one_step/checkpoint_top_train_epoch_0001_metric_hsi_trstr_xy_refined_l2_p90_m_1.572831.pt"
+    }
+  ]
+}

@@ -1,0 +1,252 @@
+_wandb:
+    value:
+        cli_version: 0.28.2
+        e:
+            0o9x54vdcxm5d12jkzaqsqp425181r1d:
+                args:
+                    - --config
+                    - /home/zhw/lab_users/xyb/home/projects/vggt-human/configs/train_smpl_temporal_refiner_emdb_3dpw.yaml
+                    - --path-config
+                    - /home/zhw/lab_users/xyb/home/projects/vggt-human/configs/path.yaml
+                    - --override
+                    - data.sources=[{"name":"3dpw","root":"/home/zhw/xyb_space/3DPW/sequenceFiles/train"},{"name":"emdb","root":"/home/zhw/xyb_space/emdb"}]
+                    - --override
+                    - experiment.output_dir=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_temporal_refiner_emdb_3dpw_v1
+                    - --override
+                    - data.window_size=9
+                    - --override
+                    - data.min_valid_frames=9
+                    - --override
+                    - data.num_workers=8
+                    - --override
+                    - model.window_size=9
+                    - --override
+                    - optim.batch_size=64
+                    - --override
+                    - optim.epochs=50
+                    - --override
+                    - optim.lr=2e-4
+                    - --override
+                    - data.sampling_mode=balanced_dataset
+                    - --override
+                    - data.samples_per_epoch=0
+                    - --override
+                    - logging.wandb.enabled=true
+                    - --override
+                    - logging.wandb.project=vggt-human
+                    - --override
+                    - logging.wandb.mode=online
+                codePath: scripts/train/train_smpl_temporal_refiner.py
+                codePathLocal: scripts/train/train_smpl_temporal_refiner.py
+                cpu_count: 64
+                cpu_count_logical: 128
+                cudaVersion: "13.1"
+                disk:
+                    /:
+                        total: "470353559552"
+                        used: "174174375936"
+                email: xinbev@126.com
+                executable: /home/zhw/.conda/envs/zhw_env/bin/python
+                git:
+                    commit: f4bed142abd68547c54a77b3ff222a16af68c74e
+                    remote: git@github.com:xinbev/vggt-human.git
+                gpu: NVIDIA A800-SXM4-80GB
+                gpu_count: 8
+                gpu_nvidia:
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-b28eab61-bd95-3310-66a2-0d73de22090e
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-4fb4c092-371b-e644-44d6-54ca99f5b0ec
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-46a302d1-32c9-b3c0-05f0-587d99cad2e7
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-7b2533a9-7e30-112a-4854-8ff224186939
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-2f0838cc-293f-1ba7-6549-70876e7462b3
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-c5e03e39-8eba-6c8d-ced8-2dc13ff9f615
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-4677cd9b-846b-ada8-e629-a3197a4f58a4
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-8d9fa29e-5fe2-d8f4-611a-7b031415c50f
+                host: beishida-R5500-G5
+                memory:
+                    total: "1081800237056"
+                os: Linux-6.8.0-136-generic-x86_64-with-glibc2.35
+                program: /home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/train/train_smpl_temporal_refiner.py
+                python: CPython 3.11.14
+                root: /home/zhw/lab_users/xyb/home/projects/vggt-human
+                startedAt: "2026-08-27T19:56:02.828020Z"
+                writerId: 0o9x54vdcxm5d12jkzaqsqp425181r1d
+        m: []
+        python_version: 3.11.14
+        t:
+            "1":
+                - 1
+            "2":
+                - 1
+            "3":
+                - 2
+                - 13
+                - 15
+                - 16
+                - 61
+            "4": 3.11.14
+            "5": 0.28.2
+            "12": 0.28.2
+            "13": linux-x86_64
+assets:
+    value:
+        smpl_mean_params: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/body_models/smpl/smpl/smpl_mean_params.npz
+        smpl_model_dir: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/body_models/smpl
+checkpoints:
+    value:
+        nlf_smpl: /home/zhw/lab_users/xyb/home/projects/vggt-human/third_party/weights/nlf/nlf_l_multi_0.3.2.torchscript
+        sat_hmr_smpl: /home/zhw/xyb_space/SAT-HMR/weights/sat_hmr/sat_644.pth
+        vggt_baseline: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt
+        yolo8x: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/yolov8x.torchscript
+data:
+    value:
+        min_valid_frames: 9
+        num_workers: 8
+        pin_memory: true
+        samples_per_epoch: 0
+        sampling_mode: balanced_dataset
+        sources:
+            - name: 3dpw
+              root: /home/zhw/xyb_space/3DPW/sequenceFiles/train
+            - name: emdb
+              root: /home/zhw/xyb_space/emdb
+        stride: 1
+        validation_fraction: 0.1
+        window_size: 9
+datasets:
+    value:
+        bedlam_boxes_root: outputs/preprocess/bedlam_boxes
+        bedlam_root: /home/zhw/xyb_space/bedlam/processed_bedlam/
+        bedlam_tracks_root: outputs/preprocess/video_tracks
+        emdb_hmr4d_support_root: /home/zhw/xyb_space/EMDB/hmr4d_support
+        hf_bedlam_images_root: /home/zhw/xyb_space/bedlam/hf_bedlam/training_images
+        hf_bedlam_npz_root: /home/zhw/xyb_space/bedlam/all_npz_12_training
+        hf_bedlam_sam2_patch_masks_root: outputs/preprocess/hf_bedlam_sam2_patch_masks
+        hmr4d_eval_frames_root: outputs/preprocess/hmr4d_eval_frames
+        hmr4d_eval_tracks_root: outputs/preprocess/hmr4d_eval_tracks
+        rich_hmr4d_support_root: /home/zhw/xyb_space/RICH/hmr4d_support
+        threedpw_hmr4d_support_root: /home/zhw/xyb_space/3DPW/hmr4d_support
+        threedpw_root: /home/zhw/xyb_space/3DPW
+        threedpw_sam2_patch_masks_root: outputs/preprocess/3dpw_sam2_patch_masks
+        threedpw_smpl_base_root: outputs/preprocess/3dpw_smpl_base
+experiment:
+    value:
+        name: smpl_temporal_refiner_emdb_3dpw_v1
+        output_dir: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_temporal_refiner_emdb_3dpw_v1
+        seed: 42
+logging:
+    value:
+        wandb:
+            enabled: true
+            entity: ""
+            group: smpl_temporal_refiner
+            mode: online
+            name: smpl_temporal_refiner_emdb_3dpw_v1
+            project: vggt-human
+            tags:
+                - smpl
+                - temporal-refiner
+                - 3dpw
+                - emdb
+                - offline
+loss:
+    value:
+        acceleration_weight: 0.25
+        clean_residual_weight: 0.1
+        no_worse_margin: 0.002
+        no_worse_weight: 0.5
+        pose_weight: 1
+        transl_weight: 2
+        velocity_weight: 0.5
+model:
+    value:
+        dropout: 0.1
+        gate_bias: -1.5
+        hidden_dim: 384
+        max_pose_delta_rad: 0.35
+        max_translation_delta_m: 0.25
+        num_heads: 8
+        num_layers: 4
+        window_size: 9
+noise:
+    value:
+        clean_clip_prob: 0.15
+        pose_drift_std_rad: 0.06
+        pose_jitter_std_rad: 0.025
+        root_pose_multiplier: 1.5
+        translation_drift_std_m: 0.06
+        translation_jitter_std_m: 0.025
+        translation_outlier_prob: 0.05
+        translation_outlier_std_m: 0.1
+noise_curriculum:
+    value:
+        enabled: true
+        medium:
+            clean_clip_prob: 0.15
+            pose_drift_std_rad: 0.12
+            pose_jitter_std_rad: 0.05
+            root_pose_multiplier: 1.5
+            translation_drift_std_m: 0.12
+            translation_jitter_std_m: 0.05
+            translation_outlier_prob: 0.08
+            translation_outlier_std_m: 0.25
+        small:
+            clean_clip_prob: 0.15
+            pose_drift_std_rad: 0.06
+            pose_jitter_std_rad: 0.025
+            root_pose_multiplier: 1.5
+            translation_drift_std_m: 0.06
+            translation_jitter_std_m: 0.025
+            translation_outlier_prob: 0.05
+            translation_outlier_std_m: 0.1
+        small_epochs: 10
+        validation_stage: medium
+optim:
+    value:
+        amp: true
+        batch_size: 64
+        epochs: 50
+        grad_clip_norm: 1
+        log_interval: 20
+        lr: 0.0002
+        weight_decay: 0.01
+third_party:
+    value:
+        Omnieraser_checkpoint: third_party/weights/Omnieraser/controlnet_flux_pytorch_lora_weights.safetensors
+        Omnieraser_root: third_party/Omnieraser
+        boosttrack_root: third_party/BoostTrack
+        boosttrack_weights_root: third_party/weights/BoostTrack
+        nlf_root: third_party/nlf
+        sam2_checkpoint: third_party/weights/sam/sam2.1_hiera_large.pt
+        sam2_root: third_party/sam2
