@@ -7,6 +7,7 @@
 from .vggt_omega import VGGTOmega
 from .smpl_temporal_refiner import TemporalRefinerConfig, TemporalSMPLRefiner, TemporalSMPLRefinerLoss
 from .smpl_temporal_stabilizer import TranslationStabilizerConfig, TranslationTemporalStabilizer, TranslationStabilizerLoss
+from .smpl_temporal_stabilizer import PoseStabilizerConfig, PoseTemporalStabilizer, PoseStabilizerLoss
 
 __all__ = [
     "VGGTOmega",
@@ -16,4 +17,7 @@ __all__ = [
     "TranslationStabilizerConfig",
     "TranslationTemporalStabilizer",
     "TranslationStabilizerLoss",
+    "PoseStabilizerConfig",
+    "PoseTemporalStabilizer",
+    "PoseStabilizerLoss",
 ]

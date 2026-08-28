@@ -226,3 +226,22 @@ final translation error <= base
 2. 把时序结果作为受约束的后处理，而不是让网络任意改动作。
 
 V2 不引入该论文的 Gravity-View、视觉主干、相机 VO、长序列 RoPE、脚接触 IK 或 world trajectory recovery；这些超出“稳定已对齐输出序列”的任务边界。
+
+## 7. Pose E0：必须独立验收
+
+translation E0 不能证明 body pose 可安全稳定。新增独立的 pose E0：所有 24 个 SMPL 关节都在 SO(3) 上处理，邻帧 proposal 对中心帧做严格遮挡，最终只允许在当前 rotation 与 proposal rotation 之间插值最多 50%。它不是 axis-angle 的直接加法平滑。
+
+运行：
+
+```bash
+bash scripts/smoke/run_smpl_pose_stabilizer_v2_e0.sh
+```
+
+通过条件为：
+
+```text
+final mean joint geodesic error < base error
+且 mean improvement > 0.01 rad
+```
+
+Pose E0 通过后仍不直接说明可以发布：下一关必须包含 clean windows、small/medium noise 和真实快速动作的 held-out E1，以验证真实动作没有被过平滑。
