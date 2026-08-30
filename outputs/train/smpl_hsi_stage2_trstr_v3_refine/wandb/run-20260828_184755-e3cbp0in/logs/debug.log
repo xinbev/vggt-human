@@ -17,3 +17,8 @@ config: {'checkpoints': {'vggt_baseline': '/home/zhw/lab_users/xyb/home/projects
 2026-08-28 18:47:57,099 INFO    MainThread:2717112 [wandb_run.py:_redirect():2545] Wrapping output streams.
 2026-08-28 18:47:57,099 INFO    MainThread:2717112 [wandb_run.py:_redirect():2568] Redirects installed.
 2026-08-28 18:47:57,102 INFO    MainThread:2717112 [wandb_init.py:init():1019] run started, returning control to user process
+2026-08-28 23:38:43,129 INFO    MainThread:2717112 [wandb_run.py:_finish():2397] finishing run xinbev-beijing-normal-university/vggt-human/e3cbp0in
+2026-08-28 23:38:43,130 INFO    MainThread:2717112 [wandb_run.py:_atexit_cleanup():2593] got exitcode: 0
+2026-08-28 23:38:43,130 INFO    MainThread:2717112 [wandb_run.py:_restore():2575] restore
+2026-08-28 23:38:43,130 INFO    MainThread:2717112 [wandb_run.py:_restore():2581] restore done
+2026-08-28 23:38:47,417 INFO    MainThread:2717112 [wandb_run.py:_footer_sync_info():4025] logging synced files

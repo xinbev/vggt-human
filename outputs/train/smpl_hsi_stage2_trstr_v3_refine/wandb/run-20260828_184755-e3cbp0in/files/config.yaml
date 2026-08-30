@@ -1,0 +1,517 @@
+_wandb:
+    value:
+        cli_version: 0.28.2
+        e:
+            2bwzs8d6am5qqy640i4kzflt6m3rzlye:
+                args:
+                    - --path-config
+                    - /home/zhw/lab_users/xyb/home/projects/vggt-human/configs/path.yaml
+                    - --train-config
+                    - /home/zhw/lab_users/xyb/home/projects/vggt-human/configs/train_smpl_hsi_stage2_trstr_v3_refine.yaml
+                    - --override
+                    - checkpoints.vggt_baseline=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt
+                    - --override
+                    - assets.smpl_model_dir=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/body_models/smpl
+                    - --override
+                    - datasets.bedlam_root=/home/zhw/xyb_space/bedlam/processed_bedlam
+                    - --override
+                    - experiment.output_dir=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_stage2_trstr_v3_refine
+                    - --override
+                    - checkpoint.resume=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_stage2_trstr_v2_strong/checkpoint_top_train_epoch_0007_metric_hsi_trstr_xy_refined_l2_p90_m_0.709676.pt
+                    - --override
+                    - checkpoint.overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt
+                    - --override
+                    - checkpoint.reset_epoch=true
+                    - --override
+                    - data.max_humans=20
+                    - --override
+                    - data.num_workers=12
+                    - --override
+                    - model.num_smpl_queries=20
+                    - --override
+                    - model.hsi_trstr_enable_temporal=false
+                    - --override
+                    - optim.batch_size=16
+                    - --override
+                    - optim.epochs=5
+                    - --override
+                    - optim.lr=2e-6
+                    - --override
+                    - optim.max_steps_per_epoch=0
+                    - --override
+                    - optim.max_val_steps=0
+                    - --override
+                    - logging.wandb.enabled=true
+                    - --override
+                    - logging.wandb.project=vggt-human
+                    - --override
+                    - logging.wandb.entity=
+                    - --override
+                    - logging.wandb.name=smpl_hsi_stage2_trstr_v3_refine
+                    - --override
+                    - logging.wandb.group=hsi_stage2_trstr_v3_refine
+                    - --override
+                    - logging.wandb.mode=online
+                codePath: scripts/train/train_smpl.py
+                codePathLocal: scripts/train/train_smpl.py
+                cpu_count: 64
+                cpu_count_logical: 128
+                cudaVersion: "13.1"
+                disk:
+                    /:
+                        total: "470353559552"
+                        used: "174273466368"
+                email: xinbev@126.com
+                executable: /home/zhw/.conda/envs/zhw_env/bin/python
+                git:
+                    commit: a764cafed7ff842259627bc56cf96cf52356fb99
+                    remote: git@github.com:xinbev/vggt-human.git
+                gpu: NVIDIA A800-SXM4-80GB
+                gpu_count: 8
+                gpu_nvidia:
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-b28eab61-bd95-3310-66a2-0d73de22090e
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-4fb4c092-371b-e644-44d6-54ca99f5b0ec
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-46a302d1-32c9-b3c0-05f0-587d99cad2e7
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-7b2533a9-7e30-112a-4854-8ff224186939
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-2f0838cc-293f-1ba7-6549-70876e7462b3
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-c5e03e39-8eba-6c8d-ced8-2dc13ff9f615
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-4677cd9b-846b-ada8-e629-a3197a4f58a4
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A800-SXM4-80GB
+                      uuid: GPU-8d9fa29e-5fe2-d8f4-611a-7b031415c50f
+                host: beishida-R5500-G5
+                memory:
+                    total: "1081800237056"
+                os: Linux-6.8.0-136-generic-x86_64-with-glibc2.35
+                program: /home/zhw/lab_users/xyb/home/projects/vggt-human/scripts/train/train_smpl.py
+                python: CPython 3.11.14
+                root: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_stage2_trstr_v3_refine
+                startedAt: "2026-08-28T10:47:55.253574Z"
+                writerId: 2bwzs8d6am5qqy640i4kzflt6m3rzlye
+        m:
+            - "2": train/*
+              "5": 2
+              "6":
+                - 1
+              "7": []
+            - "1": global_step
+              "6": []
+              "7": []
+            - "2": train_epoch/*
+              "5": 4
+              "6":
+                - 1
+              "7": []
+            - "1": epoch
+              "6": []
+              "7": []
+            - "2": val/*
+              "5": 4
+              "6":
+                - 1
+              "7": []
+            - "2": scale_compare/*
+              "5": 2
+              "6":
+                - 1
+              "7": []
+        python_version: 3.11.14
+        t:
+            "1":
+                - 1
+            "2":
+                - 1
+            "3":
+                - 2
+                - 7
+                - 13
+                - 15
+                - 16
+                - 61
+            "4": 3.11.14
+            "5": 0.28.2
+            "12": 0.28.2
+            "13": linux-x86_64
+assets:
+    value:
+        smpl_mean_params: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/body_models/smpl/smpl/smpl_mean_params.npz
+        smpl_model_dir: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/body_models/smpl
+checkpoint:
+    value:
+        frozen_hash_prefixes:
+            - hsi_refinement_head.
+        load_vggt_baseline: true
+        monitor: metric_hsi_trstr_v3_selection
+        monitor_mode: min
+        overlay: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt
+        overlay_prefixes:
+            - hsi_refinement_head.
+        overlay_required_prefixes:
+            - hsi_refinement_head.
+        reset_epoch: true
+        resume: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_stage2_trstr_v2_strong/checkpoint_top_train_epoch_0007_metric_hsi_trstr_xy_refined_l2_p90_m_0.709676.pt
+        resume_optimizer: false
+        resume_required_prefixes:
+            - hsi_refinement_head.
+            - hsi_trstr_head.
+        resume_strict: false
+        save_epoch_checkpoint: false
+        save_final: false
+        save_latest: true
+        save_optimizer: false
+        save_prefixes:
+            - hsi_refinement_head.
+            - hsi_trstr_head.
+        save_scope: hsi
+        save_top_k: 1
+        save_top_k_from_train: false
+        strict: false
+        topk_create_stable_copies: false
+checkpoints:
+    value:
+        nlf_smpl: /home/zhw/lab_users/xyb/home/projects/vggt-human/third_party/weights/nlf/nlf_l_multi_0.3.2.torchscript
+        sat_hmr_smpl: /home/zhw/xyb_space/SAT-HMR/weights/sat_hmr/sat_644.pth
+        vggt_baseline: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt
+        yolo8x: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/yolov8x.torchscript
+data:
+    value:
+        box_free_gt_slots: true
+        boxes_root_key: ""
+        dataset: bedlam
+        image_resolution: 512
+        image_size: 518
+        max_humans: 20
+        num_workers: 12
+        pin_memory: true
+        require_boxes: false
+        require_depth: true
+        require_smpl: true
+        resize_mode: balanced
+        root_key: datasets.bedlam_root
+        sequence_length: 1
+        stride: 1
+        train_split: Training
+        val_split: Training
+        val_subset_count: 256
+        val_subset_start: 90000
+datasets:
+    value:
+        bedlam_boxes_root: outputs/preprocess/bedlam_boxes
+        bedlam_root: /home/zhw/xyb_space/bedlam/processed_bedlam
+        bedlam_tracks_root: outputs/preprocess/video_tracks
+        emdb_hmr4d_support_root: /home/zhw/xyb_space/EMDB/hmr4d_support
+        hf_bedlam_images_root: /home/zhw/xyb_space/bedlam/hf_bedlam/training_images
+        hf_bedlam_npz_root: /home/zhw/xyb_space/bedlam/all_npz_12_training
+        hf_bedlam_sam2_patch_masks_root: outputs/preprocess/hf_bedlam_sam2_patch_masks
+        hmr4d_eval_frames_root: outputs/preprocess/hmr4d_eval_frames
+        hmr4d_eval_tracks_root: outputs/preprocess/hmr4d_eval_tracks
+        rich_hmr4d_support_root: /home/zhw/xyb_space/RICH/hmr4d_support
+        threedpw_hmr4d_support_root: /home/zhw/xyb_space/3DPW/hmr4d_support
+        threedpw_root: /home/zhw/xyb_space/3DPW
+        threedpw_sam2_patch_masks_root: outputs/preprocess/3dpw_sam2_patch_masks
+        threedpw_smpl_base_root: outputs/preprocess/3dpw_smpl_base
+experiment:
+    value:
+        name: smpl_hsi_stage2_trstr_v3_refine
+        output_dir: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_stage2_trstr_v3_refine
+        seed: 42
+logging:
+    value:
+        wandb:
+            enabled: true
+            entity: ""
+            group: hsi_stage2_trstr_v3_refine
+            log_interval: 20
+            log_keys:
+                - loss_total
+                - loss_hsi_trstr_translation
+                - loss_hsi_trstr_strong_translation
+                - loss_hsi_trstr_clean_identity
+                - loss_hsi_trstr_no_worse
+                - loss_hsi_trstr_monotonic
+                - metric_hsi_trstr_translation_l1
+                - metric_hsi_trstr_xy_refined_l2_p90_m
+                - metric_hsi_trstr_strong_refined_l2_mean_m
+                - metric_hsi_trstr_strong_improvement_rate
+                - metric_hsi_trstr_clean_displacement_l1
+                - metric_hsi_trstr_worsening_rate
+                - metric_hsi_trstr_monotonic_violation_rate
+                - metric_hsi_trstr_region_valid_ratio
+                - metric_hsi_trstr_v3_selection
+                - metric_trstr_alignment_case_clean_rate
+                - metric_trstr_alignment_case_scale_rate
+                - metric_trstr_alignment_case_nlf_rate
+                - metric_trstr_alignment_case_mixed_rate
+                - metric_grad_norm_feature
+                - metric_grad_norm_vote
+                - metric_grad_norm_region_gate
+                - metric_grad_norm_person_gate
+                - metric_grad_norm_uncertainty
+            mode: online
+            name: smpl_hsi_stage2_trstr_v3_refine
+            person_table_interval: 0
+            project: vggt-human
+            scale_chart_interval: 0
+            tags:
+                - hsi
+                - trstr
+                - v3
+                - refinement
+                - spatial-only
+                - fixed-eval
+loss:
+    value:
+        bbox_weight: 0
+        betas_weight: 0
+        conf_weight: 0
+        giou_weight: 0
+        hsi_betas_weight: 0
+        hsi_depth_teacher_weight: 0
+        hsi_joints3d_weight: 0
+        hsi_pose_weight: 0
+        hsi_projected_joints2d_weight: 0
+        hsi_smpl_scale_teacher_weight: 0
+        hsi_transl_cam_weight: 0
+        hsi_trstr_clean_identity_weight: 2
+        hsi_trstr_delta_reg_weight: 0.0005
+        hsi_trstr_gate_weight: 0.05
+        hsi_trstr_monotonic_weight: 3
+        hsi_trstr_no_worse_margin_m: 0.005
+        hsi_trstr_no_worse_weight: 2
+        hsi_trstr_strong_threshold_m: 0.5
+        hsi_trstr_strong_translation_weight: 2
+        hsi_trstr_strong_xy_threshold_m: 1
+        hsi_trstr_temporal_no_worse_weight: 0
+        hsi_trstr_temporal_velocity_weight: 0
+        hsi_trstr_translation_weight: 4
+        hsi_trstr_vote_target_mode: staged_remaining
+        hsi_trstr_vote_weight: 1
+        hsi_vertices_weight: 0
+        id_weight: 0
+        joints3d_weight: 0
+        local_joints3d_weight: 0
+        local_vertices_weight: 0
+        pose_weight: 0
+        projected_bbox_weight: 0
+        projected_giou_weight: 0
+        projected_joints2d_weight: 0
+        transl_cam_weight: 0
+        type: hungarian
+matching:
+    value:
+        cost_bbox: 0
+        cost_conf: 0.5
+        cost_giou: 0
+        cost_kpts: 0
+        enabled: true
+        mode: gt_slots
+model:
+    value:
+        embed_dim: 1024
+        enable_alignment: false
+        enable_camera: true
+        enable_depth: true
+        enable_hsi_contact_refine: false
+        enable_hsi_foot_contact_intent: false
+        enable_hsi_grounding: false
+        enable_hsi_human_scene_align: false
+        enable_hsi_refine: true
+        enable_hsi_translation_refine_v4: false
+        enable_hsi_trstr: true
+        enable_smpl: true
+        freeze_aggregator: true
+        freeze_aggregator_forward: true
+        freeze_camera_head: true
+        freeze_dense_head: true
+        freeze_hsi_backbone: true
+        freeze_hsi_refinement: true
+        freeze_hsi_scene_affine: true
+        gt_smpl_box_free: true
+        gt_smpl_online_visibility: true
+        hsi_geometry_mode: gt_metric
+        hsi_scene_affine_mode: per_frame
+        hsi_trstr_adaptive_radius_max: 8
+        hsi_trstr_annulus_width: 2
+        hsi_trstr_enable_temporal: false
+        hsi_trstr_fast_gt: true
+        hsi_trstr_hidden_dim: 256
+        hsi_trstr_human_depth_dilation_px: 4
+        hsi_trstr_human_depth_tolerance_m: 0.18
+        hsi_trstr_max_person_delta_m: 1.25
+        hsi_trstr_max_ray_delta_m: 1
+        hsi_trstr_max_tangent_delta_m: 1.25
+        hsi_trstr_min_valid_ratio: 0.25
+        hsi_trstr_num_iters: 2
+        hsi_trstr_num_regions: 96
+        hsi_trstr_patch_sizes:
+            - 3
+            - 7
+        hsi_trstr_probe_token_dim: 16
+        hsi_trstr_region_embedding_dim: 32
+        hsi_trstr_representative_vertices: 8
+        hsi_trstr_temporal_gap_max: 8
+        hsi_trstr_temporal_quality_min: 0.25
+        hsi_trstr_temporal_use_world: false
+        num_smpl_queries: 20
+        patch_size: 16
+        smpl_provider: gt_perturbed
+        smpl_query_box_prior: false
+        smpl_query_patch_pool: false
+        smpl_track_assignment_mode: gt
+        smpl_use_aggregator_queries: false
+        smpl_use_external_track_prior: false
+        train_hsi_trstr_only: true
+optim:
+    value:
+        allowed_trainable_prefixes:
+            - hsi_trstr_head.
+        batch_size: 16
+        drop_no_visible_gt_samples: true
+        epochs: 5
+        grad_clip_norm: 1
+        gradient_monitor_prefixes:
+            feature: hsi_trstr_head.feature_mlp.
+            person_gate: hsi_trstr_head.person_gate_head.
+            region_gate: hsi_trstr_head.gate_head.
+            uncertainty: hsi_trstr_head.logvar_head.
+            vote: hsi_trstr_head.vote_head.
+        log_interval: 20
+        log_style: progress
+        lr: 2e-06
+        max_steps_per_epoch: 0
+        max_val_steps: 0
+        progress_log_keys:
+            - loss_total
+            - loss_hsi_trstr_translation
+            - loss_hsi_trstr_strong_translation
+            - loss_hsi_trstr_clean_identity
+            - loss_hsi_trstr_no_worse
+            - loss_hsi_trstr_monotonic
+            - metric_hsi_trstr_translation_l1
+            - metric_hsi_trstr_xy_refined_l2_p90_m
+            - metric_hsi_trstr_strong_refined_l2_mean_m
+            - metric_hsi_trstr_strong_improvement_rate
+            - metric_hsi_trstr_clean_displacement_l1
+            - metric_hsi_trstr_worsening_rate
+            - metric_hsi_trstr_monotonic_violation_rate
+            - metric_hsi_trstr_v3_selection
+        progress_max_loss_items: 20
+        required_gradient_prefixes:
+            - hsi_trstr_head.vote_head.
+            - hsi_trstr_head.gate_head.
+        required_supervision_metric: metric_hsi_trstr_region_valid_ratio
+        required_supervision_min: 0.01
+        required_trainable_prefixes:
+            - hsi_trstr_head.vote_head.
+            - hsi_trstr_head.gate_head.
+            - hsi_trstr_head.logvar_head.
+            - hsi_trstr_head.person_gate_head.
+        save_interval: 1
+        val_batch_size: 4
+        val_interval: 1
+        val_log_keys:
+            - loss_total
+            - metric_hsi_trstr_xy_refined_l2_p90_m
+            - metric_hsi_trstr_strong_refined_l2_mean_m
+            - metric_hsi_trstr_strong_improvement_rate
+            - metric_hsi_trstr_clean_displacement_l1
+            - metric_hsi_trstr_worsening_rate
+            - metric_hsi_trstr_monotonic_violation_rate
+            - metric_hsi_trstr_v3_selection
+        val_log_style: compact
+        weight_decay: 0.05
+third_party:
+    value:
+        Omnieraser_checkpoint: third_party/weights/Omnieraser/controlnet_flux_pytorch_lora_weights.safetensors
+        Omnieraser_root: third_party/Omnieraser
+        boosttrack_root: third_party/BoostTrack
+        boosttrack_weights_root: third_party/weights/BoostTrack
+        nlf_root: third_party/nlf
+        sam2_checkpoint: third_party/weights/sam/sam2.1_hiera_large.pt
+        sam2_root: third_party/sam2
+training_prior:
+    value:
+        center_noise: 0
+        drop_prob: 0
+        gt_smpl_visibility_decode_batch_size: 128
+        gt_smpl_visibility_max_points: 512
+        gt_smpl_visibility_min_points: 32
+        gt_smpl_visibility_tolerance_m: 0.2
+        gt_smpl_visibility_window: 3
+        size_noise: 0
+        smpl_perturb_mode: trstr_scale_alignment
+        smpl_transl_ray_noise_mixture_clip_m:
+            - 0.15
+            - 0.35
+            - 0.6
+        smpl_transl_ray_noise_mixture_probabilities:
+            - 0.3
+            - 0.4
+            - 0.3
+        smpl_transl_ray_noise_mixture_std_m:
+            - 0.06
+            - 0.16
+            - 0.3
+        smpl_transl_ray_noise_mode: metric_gaussian_mixture
+        smpl_transl_ray_noise_schedule: 0
+        smpl_transl_ray_noise_schedule_m: 0.6
+        smpl_transl_tangent_noise_mixture_clip_m:
+            - 0.35
+            - 1.2
+            - 2
+        smpl_transl_tangent_noise_mixture_probabilities:
+            - 0.2
+            - 0.35
+            - 0.45
+        smpl_transl_tangent_noise_mixture_std_m:
+            - 0.12
+            - 0.55
+            - 1.1
+        smpl_transl_tangent_noise_mode: metric_gaussian_mixture
+        smpl_transl_tangent_noise_schedule_m: 2
+        smpl_transl_target_tangent_correction_m: 2
+        trstr_alignment_case_probabilities:
+            - 0.2
+            - 0.3
+            - 0.2
+            - 0.3
+        trstr_alignment_eval_case_mode: cycle
+        trstr_alignment_eval_scales:
+            - 0.9
+            - 1.1
+        trstr_alignment_eval_seed: 20260828
+        trstr_alignment_max_target_delta_m: 2
+        trstr_alignment_scale_log_std: 0.08
+        trstr_alignment_scale_max: 1.15
+        trstr_alignment_scale_min: 0.85
+        trstr_require_isolated_loss: true
