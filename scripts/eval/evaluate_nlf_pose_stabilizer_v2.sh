@@ -58,6 +58,10 @@ for DATASET in ${DATASETS}; do
   python scripts/eval/evaluate_nlf_pose_stabilizer_v2_metrics.py "${ARGS[@]}"
 done
 
-python scripts/eval/summarize_nlf_pose_stabilizer_v2_metrics.py --root "${OUT_ROOT}"
-echo "Table  : ${OUT_ROOT}/summary.md"
+if [[ " ${DATASETS} " == *" 3dpw "* && " ${DATASETS} " == *" emdb1 "* ]]; then
+  python scripts/eval/summarize_nlf_pose_stabilizer_v2_metrics.py --root "${OUT_ROOT}"
+  echo "Table  : ${OUT_ROOT}/summary.md"
+else
+  echo "Per-dataset run complete. Six-metric summary.md is created only after both DATASETS='3dpw emdb1' finish."
+fi
 echo "Details: ${OUT_ROOT}/{3dpw,emdb1}/*_metrics.json"
