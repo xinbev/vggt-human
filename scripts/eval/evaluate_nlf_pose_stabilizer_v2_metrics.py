@@ -27,7 +27,6 @@ from scripts.eval.evaluate_hmr4d_smpl_metrics import (  # noqa: E402
     UnsupportedLabelError,
     box_iou_cxcywh,
     extract_gt_smpl,
-    load_training_checkpoint,
     move_to_device,
 )
 from scripts.train.train_smpl import apply_overrides, build_model, load_initial_checkpoint  # noqa: E402
@@ -52,13 +51,19 @@ def main() -> None:
     config = deep_update(load_yaml_config(args.path_config), load_yaml_config(args.train_config))
     config = apply_overrides(config, args.override)
     config = apply_nlf_defaults(config)
+    # A released VGGT baseline is a plain state_dict and is valid for this
+    # RGB->VGGT(camera)->NLF evaluation.  ``load_initial_checkpoint`` handles
+    # both that format and project checkpoint wrappers, so do not load the
+    # same file again through the full-training-checkpoint loader.
+    config.setdefault("checkpoints", {})["vggt_baseline"] = str(args.checkpoint)
+    config.setdefault("checkpoint", {})["load_vggt_baseline"] = True
     model = build_model(config).to(device)
     load_initial_checkpoint(model, config, device)
-    load_training_checkpoint(model, Path(args.checkpoint), device)
     model.eval()
     stabilizer = load_pose_stabilizer(Path(args.temporal_checkpoint), device)
     smpl = SMPLLayer(require_path(config, "assets.smpl_model_dir", allow_empty=False)).to(device).eval()
     dataset = build_dataset(config, args)
+    print_component_manifest(config, args, stabilizer, dataset, device)
     loader = DataLoader(
         dataset,
         batch_size=int(args.batch_size),
@@ -180,6 +185,48 @@ def load_pose_stabilizer(path: Path, device: torch.device) -> PoseTemporalStabil
     stabilizer.load_state_dict(checkpoint["model_state"], strict=True)
     stabilizer.eval()
     return stabilizer
+
+
+def print_component_manifest(
+    config: dict[str, Any],
+    args: argparse.Namespace,
+    stabilizer: PoseTemporalStabilizer,
+    dataset: HMR4DSupportEvalDataset,
+    device: torch.device,
+) -> None:
+    """Make every model asset and disabled branch explicit in evaluation logs."""
+    model_cfg = config.get("model", {})
+    checkpoints = config.get("checkpoints", {})
+    assets = config.get("assets", {})
+    print("========== Evaluation component manifest ==========", flush=True)
+    print(f"device: {device}", flush=True)
+    print(f"VGGT runtime camera checkpoint: {args.checkpoint}", flush=True)
+    print(f"NLF detector checkpoint: {checkpoints.get('nlf_smpl', '<missing>')}", flush=True)
+    print(
+        "NLF runtime: "
+        f"detector={model_cfg.get('nlf_use_detector')} "
+        f"model_name={model_cfg.get('nlf_model_name')} "
+        f"internal_batch_size={model_cfg.get('nlf_internal_batch_size')} "
+        f"num_aug={model_cfg.get('nlf_num_aug')}",
+        flush=True,
+    )
+    print(f"SMPL body model: {assets.get('smpl_model_dir', '<missing>')}", flush=True)
+    print(
+        "PoseTemporalStabilizer V2 checkpoint: "
+        f"{args.temporal_checkpoint} "
+        f"window={stabilizer.config.window_size} "
+        f"proposal_hidden={stabilizer.config.proposal_hidden_dim} "
+        f"gate_hidden={stabilizer.config.gate_hidden_dim} "
+        f"max_blend={stabilizer.config.max_blend}",
+        flush=True,
+    )
+    print("HSI scale checkpoint: not loaded (disabled)", flush=True)
+    print("TRSTR checkpoint: not loaded (disabled)", flush=True)
+    print("Contact/grounding checkpoints: not loaded (disabled)", flush=True)
+    print(f"GT support root: {dataset.support_root}", flush=True)
+    print(f"RGB frames root: {dataset.frames_root}", flush=True)
+    print(f"Dataset records/windows: {len(dataset.records)} / {len(dataset)}", flush=True)
+    print("Metric protocol: SMPL-24 pelvis-aligned PA-MPJPE / MPJPE / PVE; unique 9-frame centres", flush=True)
 
 
 def build_dataset(config: dict[str, Any], args: argparse.Namespace) -> HMR4DSupportEvalDataset:
