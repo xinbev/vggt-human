@@ -229,13 +229,32 @@ class HMR4DSupportEvalDataset(Dataset):
             self.frames_root / record.dataset_id / record.safe_vid / "rgb" / f"{frame_idx:06d}.png",
             self.frames_root / record.safe_vid / "rgb" / f"{frame_idx:06d}.png",
         ]
+        # A 3DPW user may point ``frames_root`` directly at the native
+        # ``<3DPW>/imageFiles`` tree instead of first extracting HMR4D videos.
+        # HMR4D record IDs can include a person suffix (e.g. ``seq_0``), so
+        # use the support label's sequence-level ``vname`` and, when present,
+        # the support label's original frame ID rather than guessing from the
+        # record ID.
+        if self.dataset == "3dpw":
+            sequence_name = str(record.label.get("vname", "") or "").strip()
+            if not sequence_name:
+                sequence_name = record.vid.rsplit("_", 1)[0]
+            source_frame_id = _select_frame_id(record.label.get("frame_id"), frame_idx)
+            frame_ids = [source_frame_id, int(frame_idx)]
+            for image_id in dict.fromkeys(frame_ids):
+                candidates.extend(
+                    [
+                        self.frames_root / sequence_name / f"image_{int(image_id):05d}.jpg",
+                        self.frames_root / sequence_name / f"image_{int(image_id):05d}.png",
+                    ]
+                )
         for path in candidates:
             if path.is_file():
                 return path
         raise FileNotFoundError(
             "HMR4D eval RGB frame not found. Expected one of: "
             + ", ".join(str(path) for path in candidates)
-            + ". Run scripts/preprocess/extract_hmr4d_eval_frames.py first."
+            + ". Provide extracted HMR4D RGB frames, or for 3DPW pass the native imageFiles root."
         )
 
     def _full_intrinsics(self, record: HMR4DSequenceRecord) -> torch.Tensor:
@@ -400,6 +419,19 @@ def _select_value(value: Any, frame_indices: list[int]) -> Any:
         selected = value[frame_indices] if value.ndim > 0 and value.shape[0] >= max(frame_indices, default=-1) + 1 else value
         return torch.as_tensor(selected)
     return value
+
+
+def _select_frame_id(value: Any, frame_idx: int) -> int:
+    """Return the support-to-source frame mapping when one is available."""
+    if value is None:
+        return int(frame_idx)
+    try:
+        frame_ids = torch.as_tensor(value).reshape(-1)
+        if 0 <= int(frame_idx) < int(frame_ids.numel()):
+            return int(frame_ids[int(frame_idx)].item())
+    except (TypeError, ValueError, RuntimeError):
+        pass
+    return int(frame_idx)
 
 
 def _torch_load(path: Path) -> Any:

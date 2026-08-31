@@ -44,7 +44,13 @@ CENTER_INDEX = WINDOW_SIZE // 2
 
 def main() -> None:
     args = parse_args()
-    device = torch.device(args.device if args.device else ("cuda" if torch.cuda.is_available() else "cpu"))
+    requested_device = args.device if args.device else ("cuda" if torch.cuda.is_available() else "cpu")
+    if str(requested_device).startswith("cuda") and not torch.cuda.is_available():
+        raise RuntimeError(
+            f"CUDA was requested ({requested_device}) but PyTorch cannot see a CUDA device. "
+            "Check CUDA_VISIBLE_DEVICES_VALUE and the active torch/CUDA environment; do not run full VGGT/NLF evaluation on CPU."
+        )
+    device = torch.device(requested_device)
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -63,6 +69,7 @@ def main() -> None:
     stabilizer = load_pose_stabilizer(Path(args.temporal_checkpoint), device)
     smpl = SMPLLayer(require_path(config, "assets.smpl_model_dir", allow_empty=False)).to(device).eval()
     dataset = build_dataset(config, args)
+    filtered_windows = apply_sequence_filter(dataset, args.sequence_filter)
     print_component_manifest(config, args, stabilizer, dataset, device)
     loader = DataLoader(
         dataset,
@@ -113,6 +120,8 @@ def main() -> None:
         "num_unsupported_windows": len(unsupported),
         "unsupported_examples": unsupported[:5],
         "coverage": coverage.summary(),
+        "sequence_filter": str(args.sequence_filter or ""),
+        "dataset_windows_after_filter": int(filtered_windows),
         "metric_protocol": "project_native_smpl24_pelvis_aligned",
         "metric_definition": {
             "PA-MPJPE": "24-joint Procrustes-aligned error in mm",
@@ -139,6 +148,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--train-config", default="configs/eval_nlf_pose_stabilizer_v2.yaml")
     parser.add_argument("--support-root", default="")
     parser.add_argument("--frames-root", default="")
+    parser.add_argument("--sequence-filter", default="", help="Optional substring matched against support vid/vname; useful for a native 3DPW sequence smoke")
     parser.add_argument("--output-dir", default="outputs/eval/nlf_pose_stabilizer_v2")
     parser.add_argument("--device", default="")
     parser.add_argument("--image-size", type=int, default=0)
@@ -235,6 +245,21 @@ def build_dataset(config: dict[str, Any], args: argparse.Namespace) -> HMR4DSupp
         config,
         "datasets.emdb_hmr4d_support_root" if args.dataset == "emdb1" else "datasets.threedpw_hmr4d_support_root",
     )
+
+
+def apply_sequence_filter(dataset: HMR4DSupportEvalDataset, raw_filter: str) -> int:
+    query = str(raw_filter or "").strip().lower()
+    if not query:
+        return len(dataset)
+    record_indices = {
+        index
+        for index, record in enumerate(dataset.records)
+        if query in str(record.vid).lower() or query in str(record.label.get("vname", "")).lower()
+    }
+    dataset._index = [item for item in dataset._index if item[0] in record_indices]
+    if not dataset._index:
+        raise ValueError(f"sequence_filter={raw_filter!r} matched no evaluation windows")
+    return len(dataset)
     frames_root = args.frames_root or require_path(config, "datasets.hmr4d_eval_frames_root")
     image_size, image_resolution = resolve_image_size_config(data_cfg, args.image_size)
     return HMR4DSupportEvalDataset(

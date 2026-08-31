@@ -16,6 +16,9 @@ CUDA_VISIBLE_DEVICES_VALUE="${CUDA_VISIBLE_DEVICES_VALUE:-0}"
 BATCH_SIZE="${BATCH_SIZE:-1}"
 NUM_WORKERS="${NUM_WORKERS:-2}"
 MAX_WINDOWS="${MAX_WINDOWS:-0}"
+DEVICE="${DEVICE:-cuda:0}"
+FRAMES_ROOT="${FRAMES_ROOT:-}"
+SEQUENCE_FILTER="${SEQUENCE_FILTER:-}"
 
 [[ -f "${CONFIG}" ]] || { echo "[ERROR] Missing config: ${CONFIG}" >&2; exit 1; }
 [[ -f "${PATH_CONFIG}" ]] || { echo "[ERROR] Missing path config: ${PATH_CONFIG}" >&2; exit 1; }
@@ -39,11 +42,18 @@ for DATASET in ${DATASETS}; do
     --path-config "${PATH_CONFIG}"
     --train-config "${CONFIG}"
     --output-dir "${OUT_ROOT}/${DATASET}"
+    --device "${DEVICE}"
     --batch-size "${BATCH_SIZE}"
     --num-workers "${NUM_WORKERS}"
   )
   if [[ "${MAX_WINDOWS}" != "0" ]]; then
     ARGS+=(--max-windows "${MAX_WINDOWS}")
+  fi
+  if [[ -n "${FRAMES_ROOT}" ]]; then
+    ARGS+=(--frames-root "${FRAMES_ROOT}")
+  fi
+  if [[ -n "${SEQUENCE_FILTER}" ]]; then
+    ARGS+=(--sequence-filter "${SEQUENCE_FILTER}")
   fi
   python scripts/eval/evaluate_nlf_pose_stabilizer_v2_metrics.py "${ARGS[@]}"
 done

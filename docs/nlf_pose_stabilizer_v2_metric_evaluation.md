@@ -73,6 +73,31 @@ outputs/eval/.../summary.json
 
 `summary.md` 自动生成 NLF base 与 NLF+V2 temporal 两行、六个主表数值。它们只能代表实际计入的 centre frames，不应描述成“完整视频所有帧”的结果。
 
+## 原始 3DPW `imageFiles` 直接输入
+
+无需先抽帧时，可把 `FRAMES_ROOT` 指向**上层**原始图像目录：
+
+```text
+/home/zhw/xyb_space/3DPW/imageFiles
+```
+
+不要把它设为单独的 `.../imageFiles/courtyard_arguing_00`，因为评测器会从 HMR4D support label 的 `vname` 自动拼接 sequence 目录。先对指定序列做 smoke：
+
+```bash
+CUDA_VISIBLE_DEVICES_VALUE=7 \
+DEVICE=cuda:0 \
+FRAMES_ROOT=/home/zhw/xyb_space/3DPW/imageFiles \
+SEQUENCE_FILTER=courtyard_arguing_00 \
+DATASETS=3dpw \
+MAX_WINDOWS=20 \
+CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt \
+TEMPORAL_CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/<v2_run>/checkpoint_best.pt \
+OUT_ROOT=outputs/debug/nlf_pose_stabilizer_v2_3dpw_courtyard_smoke \
+bash scripts/eval/evaluate_nlf_pose_stabilizer_v2.sh
+```
+
+`CUDA_VISIBLE_DEVICES_VALUE=7` 选择物理 GPU 7；该环境变量会把它映射为进程内唯一可见设备，因此 `DEVICE` 必须为 `cuda:0`，不要设置为 `cuda:7`。EMDB-1 不能使用 3DPW 的 imageFiles root；它需要独立的 EMDB RGB frame root 或 HMR4D 抽帧目录。
+
 ## 当前风险
 
 - V2 是合成 GT 扰动训练，尚未使用真实 NLF error cache 微调；真实指标可能无改善或退化。
