@@ -245,21 +245,6 @@ def build_dataset(config: dict[str, Any], args: argparse.Namespace) -> HMR4DSupp
         config,
         "datasets.emdb_hmr4d_support_root" if args.dataset == "emdb1" else "datasets.threedpw_hmr4d_support_root",
     )
-
-
-def apply_sequence_filter(dataset: HMR4DSupportEvalDataset, raw_filter: str) -> int:
-    query = str(raw_filter or "").strip().lower()
-    if not query:
-        return len(dataset)
-    record_indices = {
-        index
-        for index, record in enumerate(dataset.records)
-        if query in str(record.vid).lower() or query in str(record.label.get("vname", "")).lower()
-    }
-    dataset._index = [item for item in dataset._index if item[0] in record_indices]
-    if not dataset._index:
-        raise ValueError(f"sequence_filter={raw_filter!r} matched no evaluation windows")
-    return len(dataset)
     frames_root = args.frames_root or require_path(config, "datasets.hmr4d_eval_frames_root")
     image_size, image_resolution = resolve_image_size_config(data_cfg, args.image_size)
     return HMR4DSupportEvalDataset(
@@ -276,6 +261,21 @@ def apply_sequence_filter(dataset: HMR4DSupportEvalDataset, raw_filter: str) -> 
         patch_size=int(config.get("model", {}).get("patch_size", 16)),
         full_sequence=False,
     )
+
+
+def apply_sequence_filter(dataset: HMR4DSupportEvalDataset, raw_filter: str) -> int:
+    query = str(raw_filter or "").strip().lower()
+    if not query:
+        return len(dataset)
+    record_indices = {
+        index
+        for index, record in enumerate(dataset.records)
+        if query in str(record.vid).lower() or query in str(record.label.get("vname", "")).lower()
+    }
+    dataset._index = [item for item in dataset._index if item[0] in record_indices]
+    if not dataset._index:
+        raise ValueError(f"sequence_filter={raw_filter!r} matched no evaluation windows")
+    return len(dataset)
 
 
 def evaluate_center_frames(
