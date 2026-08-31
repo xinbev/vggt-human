@@ -308,7 +308,7 @@ class HMR4DSupportEvalDataset(Dataset):
         for key in keys:
             if key not in label:
                 continue
-            out[key] = _select_value(label[key], frame_indices)
+            out[key] = _select_value(label[key], frame_indices, sequence_length=record.length)
         return out
 
     def _query_from_sidecar_or_fallback(
@@ -410,13 +410,16 @@ def _default_intrinsics(image_hw: tuple[int, int]) -> torch.Tensor:
     return torch.tensor([[focal, 0.0, float(w) * 0.5], [0.0, focal, float(h) * 0.5], [0.0, 0.0, 1.0]], dtype=torch.float32)
 
 
-def _select_value(value: Any, frame_indices: list[int]) -> Any:
+def _select_value(value: Any, frame_indices: list[int], sequence_length: int) -> Any:
     if isinstance(value, dict):
-        return {key: _select_value(item, frame_indices) for key, item in value.items()}
+        return {key: _select_value(item, frame_indices, sequence_length=sequence_length) for key, item in value.items()}
     if isinstance(value, torch.Tensor):
-        return value[frame_indices] if value.ndim > 0 and value.shape[0] >= max(frame_indices, default=-1) + 1 else value
+        # Do not infer "per frame" merely from an array's first dimension.
+        # A constant camera K is [3,3] and previously got wrongly sliced for
+        # frame 0, producing [1,3] while later frames retained [3,3].
+        return value[frame_indices] if value.ndim > 0 and int(value.shape[0]) == int(sequence_length) else value
     if isinstance(value, np.ndarray):
-        selected = value[frame_indices] if value.ndim > 0 and value.shape[0] >= max(frame_indices, default=-1) + 1 else value
+        selected = value[frame_indices] if value.ndim > 0 and int(value.shape[0]) == int(sequence_length) else value
         return torch.as_tensor(selected)
     return value
 
