@@ -67,8 +67,6 @@ class NLFSMPLProvider(nn.Module):
         if num_queries <= 0:
             raise ValueError("NLFSMPLProvider requires max_humans/num_smpl_queries > 0")
 
-        flat_images = images.reshape(batch_size * num_frames, channels, image_h, image_w).detach()
-        flat_images = flat_images.to(dtype=torch.float32).clamp(0.0, 1.0)
         _, intrinsics = encoding_to_camera(
             pose_enc.detach().float(),
             image_size_hw=(int(image_h), int(image_w)),
@@ -76,6 +74,43 @@ class NLFSMPLProvider(nn.Module):
         )
         if intrinsics is None:
             raise RuntimeError("encoding_to_camera did not return intrinsics for NLF")
+        return self.forward_with_intrinsics(
+            images=images,
+            intrinsics=intrinsics,
+            smpl_query_boxes=smpl_query_boxes,
+            smpl_query_boxes_mask=smpl_query_boxes_mask,
+            max_humans=max_humans,
+        )
+
+    @torch.no_grad()
+    def forward_with_intrinsics(
+        self,
+        images: torch.Tensor,
+        intrinsics: torch.Tensor,
+        smpl_query_boxes: torch.Tensor | None = None,
+        smpl_query_boxes_mask: torch.Tensor | None = None,
+        max_humans: int | None = None,
+    ) -> dict[str, torch.Tensor]:
+        """Run NLF with explicitly supplied full-image intrinsics.
+
+        This is used by dataset-native benchmarks that intentionally omit
+        VGGT.  The caller is responsible for declaring whether K is GT or
+        predicted; no camera convention is inferred in this provider.
+        """
+        if images.ndim != 5:
+            raise ValueError(f"NLFSMPLProvider expects images [B,S,3,H,W], got {tuple(images.shape)}")
+        batch_size, num_frames, channels, image_h, image_w = images.shape
+        if channels != 3:
+            raise ValueError(f"NLFSMPLProvider expects RGB images with 3 channels, got {channels}")
+        if intrinsics.shape != (batch_size, num_frames, 3, 3):
+            raise ValueError(
+                "intrinsics must be [B,S,3,3] aligned with images, got "
+                f"{tuple(intrinsics.shape)} for images {tuple(images.shape)}"
+            )
+        num_queries = int(max_humans or (smpl_query_boxes.shape[2] if smpl_query_boxes is not None else 0))
+        if num_queries <= 0:
+            raise ValueError("NLFSMPLProvider requires max_humans/num_smpl_queries > 0")
+        flat_images = images.reshape(batch_size * num_frames, channels, image_h, image_w).detach().to(dtype=torch.float32).clamp(0.0, 1.0)
         flat_intrinsics = intrinsics.reshape(batch_size * num_frames, 3, 3).to(device=flat_images.device, dtype=torch.float32)
 
         slot_indices: list[torch.Tensor] | None = None
