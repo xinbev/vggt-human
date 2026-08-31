@@ -1,0 +1,45 @@
+experiment:
+  name: eval_nlf_pose_stabilizer_v2
+  output_dir: outputs/eval/nlf_pose_stabilizer_v2
+
+data:
+  # PoseTemporalStabilizer V2 is trained and evaluated with exactly 9 frames.
+  sequence_length: 9
+  stride: 1
+  image_size: 518
+  image_resolution: 512
+  resize_mode: balanced
+  max_humans: 20
+
+model:
+  patch_size: 16
+  embed_dim: 1024
+  enable_camera: true
+  enable_depth: true
+  enable_alignment: false
+  enable_smpl: true
+  smpl_provider: nlf
+  nlf_use_detector: true
+  nlf_require_boxes: false
+  nlf_model_name: smpl
+  nlf_internal_batch_size: 128
+  nlf_num_aug: 1
+  num_smpl_queries: 20
+  smpl_use_aggregator_queries: false
+  smpl_use_external_track_prior: false
+  # Evaluator uses model-side base-SMPL tracking; GT only selects which
+  # centre detection is scored and is never passed into the stabilizer.
+  smpl_track_assignment_mode: base_smpl
+  enable_hsi_refine: false
+  enable_hsi_human_scene_align: false
+  enable_hsi_translation_refine_v4: false
+  enable_hsi_contact_refine: false
+  enable_hsi_grounding: false
+  enable_hsi_foot_contact_intent: false
+  enable_hsi_trstr: false
+
+checkpoint:
+  load_vggt_baseline: true
+  strict: false
+  resume_strict: false
+  resume_optimizer: false
