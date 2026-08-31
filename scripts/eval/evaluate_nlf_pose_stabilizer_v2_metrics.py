@@ -274,7 +274,15 @@ def apply_sequence_filter(dataset: HMR4DSupportEvalDataset, raw_filter: str) -> 
     }
     dataset._index = [item for item in dataset._index if item[0] in record_indices]
     if not dataset._index:
-        raise ValueError(f"sequence_filter={raw_filter!r} matched no evaluation windows")
+        choices = [
+            f"vid={record.vid!r}, vname={record.label.get('vname', '<missing>')!r}"
+            for record in dataset.records[:12]
+        ]
+        raise ValueError(
+            f"sequence_filter={raw_filter!r} matched no evaluation windows. "
+            "This evaluator uses the HMR4D support split (3DPW=test labels), so a train-only sequence cannot match. "
+            f"First available support records: {choices}"
+        )
     return len(dataset)
 
 
