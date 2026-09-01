@@ -1,0 +1,7 @@
+LAYOUT D — MODULAR MATRIX.
+
+Build a restrained two-row by three-column matrix of six equal scientific cells, each with a thin charcoal border and pale semantic tint. Top row: "Input & VGGT", "NLF Metric SMPL", "HSI Scale Calibration". Bottom row: "Metric Geometry Bus", "TRSTR Translation Refinement", "Temporal Stabilizer & Output".
+
+Each cell follows an exact Input → Operator → Output mini-layout using small tensor strips and diagrams. Connect cells with labeled orthogonal arrows that may cross row boundaries only at designated circular ports. Put a horizontal shared bus between the rows labeled "metric geometry: {K, D_metric, θ, β, τ, c}". HSI writes D_metric to the bus; NLF writes θ, β, τ, c; TRSTR reads both and writes τ*; temporal reads track-wise τ* / pose observations and writes stable sequence.
+
+At the far right add a narrow three-part ablation/contract column: "Scale", "Spatial", "Temporal", each with one equation or invariant. Emphasize contributions through slightly thicker inner headings, not larger pictures. Caption: "Modular system and interface contracts". This is the most camera-ready, sober, grid-based option.

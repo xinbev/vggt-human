@@ -1,0 +1,23 @@
+Create an exceptionally clean ICLR main-paper architecture figure, landscape 1536×1024, warm white background, flat vector scientific illustration, large readable sans-serif labels, dark charcoal strokes, muted pastel panels, strict grid alignment, generous whitespace. No gradients, no watermark, no logo, no numbered badges, no tiny labels, no random letters, no decorative scribbles.
+
+Top heading exactly: "Method Overview".
+
+Build six connected areas from left to right:
+
+1. A narrow warm-yellow #F8E8A4 panel titled exactly "RGB Video", containing three frames of one walking person. One arrow splits upward and downward.
+
+2. Two parallel panels. Upper lavender #D8D0F0 panel titled exactly "VGGT Scene Encoder", with patch-token grid, camera frustum, depth image, and three large chips exactly "Camera K", "Raw depth D_vggt", "Scene tokens F". Lower dusty-rose #C8A0A0 panel titled exactly "NLF Human Estimator", with detection box, SMPL mesh, and four large chips exactly "pose θ", "shape β", "translation τ", "confidence c". Place one label under the lower panel exactly "Metric SMPL". Draw a curved conditioning arrow from Camera K into NLF and label it exactly "intrinsics".
+
+3. A sage #98B898 panel titled exactly "HSI Scale Calibration". Raw depth D_vggt and Metric SMPL both enter it. Upper visual: body anchors projected to depth, label exactly "Analytic coarse gauge C_coarse". Lower visual: 24 green anchor dots probing a local depth patch, label exactly "HSI residual R_hsi, b_hsi". One large equation strip exactly "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi". Output depth image labeled exactly "Metric scene depth".
+
+4. A blue-gray #A8ACB8 panel titled exactly "TRSTR Translation Refinement". Show a segmented SMPL body and label exactly "96 body regions". Beside it show four probe icons labeled exactly "3×3", "7×7", "adaptive", "annulus". Three compact chips exactly "vote Δτ_r", "gate g_r", "uncertainty σ_r" flow into a weighted funnel. Add one circular arrow exactly "2× re-probe". Output chip exactly "refined translation τ*". Bottom lock strip exactly "θ, β fixed · translation only". Use two icon arrows entering this block from Metric SMPL and Metric scene depth, but do not add extra input text.
+
+5. A warm-gray #D0D0C7 panel titled exactly "Temporal Stabilizer" with subtitle exactly "track-wise · post-alignment". Show nine evenly spaced circular timeline nodes. Highlight only the center node and label it exactly "O_t"; do not print labels on the other timeline nodes. Neighbor nodes feed a clean smooth trajectory curve labeled exactly "motion proposal M_t". Then show one gate diamond labeled exactly "α_t ≤ 0.5". Under it show one large formula exactly "X*_t = O_t + α_t(M_t − O_t)". At the bottom show three clean parallel colored track ribbons with no text labels at all, making identity separation visual. Do not place any other text in this panel.
+
+6. A pale-sage #98B898 output panel titled exactly "Stable Metric Human–Scene Sequence". Show three ghosted instances of the same refined person on one metric 3D floor grid and a simple rightward time arrow. No time labels and no other text.
+
+Dataflow: RGB feeds VGGT and NLF; Camera K conditions NLF; VGGT depth and Metric SMPL feed HSI; HSI Metric scene depth and Metric SMPL feed TRSTR; TRSTR feeds Temporal Stabilizer; Temporal Stabilizer feeds final output. Make all arrows bold enough and unambiguous.
+
+Mandatory bottom legend, title exactly "Figure palette". Six equal swatches with exact printed codes in order: "#F8E8A4" "#D8D0F0" "#98B898" "#C8A0A0" "#A8ACB8" "#D0D0C7".
+
+Render only the listed words. Exact spelling is more important than fine decorative detail. The result must feel restrained, rigorous, technically designed, and ready for an ICLR PDF at full-page width.

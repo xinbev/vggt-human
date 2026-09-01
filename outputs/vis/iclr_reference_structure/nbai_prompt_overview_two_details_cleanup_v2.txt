@@ -1,0 +1,14 @@
+Use the provided architecture image as the strict composition reference. Preserve the exact top-overview plus bottom-two-detail-panels layout, module sizes, arrows, technical icons, equations, pastel palette, thin charcoal outlines, and all scientific content. Do not redesign.
+
+Perform an editorial cleanup only. Remove every illegible microtext fragment, duplicated character, stray mark, and garbled label. Keep whitespace where text is removed. Make typography crisp and line weights consistent.
+
+TOP OVERVIEW exact labels:
+"RGB Sequence", "Parallel Human–Scene Encoding", "VGGT Scene Encoder", "Camera K", "Raw depth D_vggt", "Scene tokens F_scene", "NLF Human Estimator", "intrinsics", "pose θ", "shape β", "translation τ", "confidence c", "Metric Human–Scene Evidence", "Scene evidence {D_vggt, F_scene}", "Camera evidence {K}", "Human evidence {θ, β, τ, c}", "HSI Scale Calibration", "Coarse gauge C_coarse", "Residual affine R_hsi, b_hsi", "Metric depth D_metric", "Metric SMPL", "TRSTR Spatial Refinement", "96-region token matrix", "Multi-scale probes", "Weighted voting", "θ, β fixed", "Track-wise Temporal Stabilizer", "9-frame window", "O_t", "Neighbour-only proposal M_t", "α_t ≤ 0.5", "Stable Metric Human–Scene Sequence", "(A) Overall Architecture".
+
+BOTTOM-LEFT exact title "(B) Metric Scale Calibration". Preserve the four numbered steps and use exact step labels: "Project 24 body anchors", "Compute robust coarse gauge", "Probe local depth around 24 anchors", "Apply scale calibration". Preserve exact formulas "C_coarse = median(z_smpl / z_depth)" and "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi". Preserve outputs "R_hsi", "b_hsi", "Metric depth D_metric".
+
+BOTTOM-RIGHT exact title "(C) Spatial–Temporal Refinement". Upper section title "TRSTR Regional Translator" with exact labels "Metric SMPL", "Metric scene depth", "96 body regions", "Multi-scale probes", "3×3", "7×7", "adaptive", "annulus", "Regional consensus", "vote Δτ_r", "gate g_r", "uncertainty σ_r", "Weighted vote", "2× re-probe", "τ*", "translation only".
+
+Lower section title "Track-wise Temporal Fusion". Keep three identity lanes ID 1, ID 2, ID 3 and the nine-frame labels t−4 through t+4. Replace the duplicated middle cards with exactly three cards in sequence: "Observation O_t" → "Neighbour-only proposal M_t" → "Capped fusion α_t ≤ 0.5". Then formula exactly "X*_t = O_t + α_t(M_t − O_t)" and output "Stable sequence".
+
+Bottom legend title "Figure palette" with exact codes #D9ACA6, #AFCAB2, #A9CFD8, #99ADD4, #CBBAD8, #E7DAAC, #E9D36E, #2F3438. No new modules, no poster effects, no watermark.

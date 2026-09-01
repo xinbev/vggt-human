@@ -1,0 +1,18 @@
+Use the provided reference paper figure only as a VISUAL STYLE reference: warm off-white paper, pastel semantic colors, thin charcoal outlines, rounded dashed grouping, small scientific matrices and geometric glyphs, a large overview plus a narrow right column of mechanism insets. Do not copy its labels or content.
+
+Design a premium ICLR architecture figure, 1536×1024 landscape, using #F7F6F2 background, #D9ACA6 dusty blush, #AFCAB2 sage, #A9CFD8 powder cyan, #99ADD4 periwinkle, #CBBAD8 lavender, #E7DAAC cream, #E9D36E yellow accent, and #2F3438 charcoal. Flat vector, no gradients, no watermark, no generic slide-template boxes.
+
+The main overview occupies the left 72% inside a rounded dashed boundary and is titled exactly "(a) Human–Scene Metric Reconstruction". Build it as a CENTRAL BODY FIELD WITH SATELLITES:
+
+- Put one large segmented SMPL human in the center, standing in a faint camera frustum and metric scene grid. Around the body place 96 small anatomical region dots. This central object is titled exactly "TRSTR Body Field".
+- At upper-left, a curved lavender satellite titled exactly "VGGT Scene Encoder" contains RGB frame thumbnails, a patch-token strip, Camera K, Raw depth D_vggt, and Scene tokens F.
+- At lower-left, a curved blush satellite titled exactly "NLF Metric SMPL" contains a detection box, pose θ, shape β, translation τ. Draw Camera K curving down to NLF with label "intrinsics".
+- Between the two left satellites and the central body, place a sage-and-cream coupling lens titled exactly "HSI Scale Calibration". Raw depth and Metric SMPL meet inside the lens. Show C_coarse, R_hsi, b_hsi and the formula "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi". The lens projects a calibrated depth field behind the central body.
+- Around the central body, four floating local probes titled exactly "3×3", "7×7", "adaptive", "annulus" connect to regional nodes. Region vote, gate, and uncertainty tokens converge through a small consensus ring to update only translation. Add "2× re-probe", output "τ*", and lock label "θ, β fixed".
+- Wrap a broad temporal ribbon around the lower-right and upper-right edges of the central body field. It contains nine frame nodes and three separate colored trajectories. Title exactly "Track-wise Temporal Stabilizer". Show O_t, M_t, and α_t ≤ 0.5. The ribbon ends at three ghosted human instances on the same scene grid, titled exactly "Stable Metric Sequence".
+
+Right detail column has three stacked rounded dashed panels: "(b) HSI Metric Gauge", "(c) TRSTR Regional Voting", and "(d) Temporal Fusion". Use concise mechanisms: anchor-depth ratio and residual affine; 96-region token matrix and weighted consensus; neighbour-only trajectory proposal and capped fusion. Avoid paragraphs.
+
+At bottom add "Figure palette" and eight exact swatches: #D9ACA6, #AFCAB2, #A9CFD8, #99ADD4, #CBBAD8, #E7DAAC, #E9D36E, #2F3438.
+
+The figure must feel designed around the scientific thesis, not around implementation order. Use curved callout arrows, variable visual scale, matrices, tokens, and geometric fields. Keep dataflow accurate and typography crisp. No unrelated modules.

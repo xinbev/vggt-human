@@ -1,0 +1,8 @@
+LAYOUT C — ORTHOGONAL CROSS.
+
+Use a balanced cross-shaped dependency diagram with a compact HSI block at the exact center. VGGT occupies the upper quadrant, NLF occupies the left quadrant, TRSTR occupies the right quadrant, and Temporal Stabilizer occupies the lower quadrant. RGB sequence sits at upper-left between VGGT and NLF and branches to both. Use only orthogonal 90-degree connectors with arrowheads and short edge labels; no sweeping ribbons.
+
+The central HSI block contains the metric depth equation and exposes two explicit ports: "Metric depth" to the right and "Metric SMPL" passing through from left to right. The TRSTR right quadrant is a structured three-column module: regionalization → multi-scale probing → weighted translation consensus. The temporal lower quadrant is a structured two-column module: neighbor proposal → capped fusion. A small stable-output panel sits at lower-right.
+
+Use four lightly tinted rectangular quadrants with dashed outer group labels and one small zoom inset in each corner: K matrix, HSI anchor ratio, regional vote matrix, and track-valid mask. Caption under the cross: "Orthogonal dependency view". Keep all graphics small and technical.
+

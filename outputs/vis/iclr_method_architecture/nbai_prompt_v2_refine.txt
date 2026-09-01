@@ -1,0 +1,16 @@
+Use the provided reference image as the visual guide. Preserve its exact landscape composition, six-column scientific-paper layout, muted pastel palette, white background, block sizes, arrows, human figures, module hierarchy, and bottom color swatches. This is a careful editorial correction pass, not a redesign.
+
+Correct all typography and technical labels so every word is crisp, correctly spelled, and readable. Mandatory corrections:
+
+1. Keep stage badges exactly: 1, 2A, 2B, 3, 4, 5, 6. The final green output panel must be badge "6", never 8.
+2. Top title exactly: "RGB-to-Metric Human–Scene Reconstruction with Temporal Stabilization".
+3. Upper lavender module title exactly: "VGGT Scene Encoder". Its three output chips must read exactly "Camera K", "Raw depth D_vggt", and "Scene tokens F".
+4. The curved arrow from Camera K to NLF must be labeled exactly "intrinsics".
+5. Lower rose module title exactly: "NLF Human Estimator" and subtitle exactly "outputs metric SMPL". Its chips must read "pose θ", "shape β", "translation τ", "confidence c".
+6. Central sage module title exactly: "HSI Metric Scale Calibration". Keep the two substeps "Analytic coarse gauge" and "HSI residual scale + bias". Its formula strip must read exactly: "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi". Output label exactly "Metric scene depth".
+7. Blue-gray module title exactly: "TRSTR · Regional Translation Refinement". Keep "96 regions / person", "3×3", "7×7", "adaptive", "annulus", "region vote Δτ_r", "reliability g_r", "uncertainty σ_r", "weighted aggregation", "person gate", "2× re-probe", and output "refined translation τ*". Bottom lock strip exactly: "pose θ, global orientation, shape β: read-only".
+8. Gray module title exactly: "Track-wise Temporal Stabilizer" and subtitle "optional · post-alignment". Timeline labels exactly "t−2", "t−1", "O_t", "t+1", "t+2". Replace the current row of empty green boxes under motion proposal with a clean small trajectory curve or neighbor-to-center arrows labeled exactly "motion proposal M_t". Gate label exactly "fusion gate α_t ≤ 0.5". Formula exactly "X*_t = O_t + α_t(M_t − O_t)". Keep "track ID (people never mixed)".
+9. Final green panel title exactly: "Stable metric human–scene sequence". Its three temporal labels must be exactly "t−1", "t", "t+1".
+10. Bottom legend title exactly "Figure palette" and preserve these six exact hex codes in this order: "#F8E8A4", "#D8D0F0", "#98B898", "#C8A0A0", "#A8ACB8", "#D0D0C7".
+
+Preserve dataflow accuracy: RGB feeds VGGT and NLF; Camera K conditions NLF; VGGT depth and NLF metric SMPL feed HSI; HSI metric depth and NLF metric SMPL feed TRSTR; TRSTR feeds the temporal stabilizer; temporal output feeds Stage 6. Keep all arrows visible and unambiguous. Do not add new modules, extra equations, legends, logos, citations, watermarks, contact modules, or decorative clutter. Maintain a sophisticated ICLR figure aesthetic with consistent line weights and generous spacing.

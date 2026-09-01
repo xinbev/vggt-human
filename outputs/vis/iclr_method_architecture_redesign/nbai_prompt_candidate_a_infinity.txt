@@ -1,0 +1,30 @@
+Use the provided reference paper figure only as a VISUAL LANGUAGE reference: borrow its warm paper background, low-saturation pastel palette, thin charcoal linework, rounded dashed grouping, information-dense scientific glyphs, main-overview-plus-right-insets hierarchy, and elegant academic rhythm. Do not copy any of its method content, labels, matrices, or exact layout.
+
+Create a high-end ICLR method architecture figure, landscape 1536×1024, sophisticated flat vector scientific illustration. This must NOT be a conventional row of boxes. Use an asymmetric composition with a large main framework on the left 72% and three stacked mechanism insets on the right 28%.
+
+COLOR SYSTEM derived from the reference: warm paper #F7F6F2; dusty blush #D9ACA6; muted sage #AFCAB2; powder cyan #A9CFD8; periwinkle #99ADD4; soft lavender #CBBAD8; warm cream #E7DAAC; restrained yellow accent #E9D36E; charcoal #2F3438. Use mostly pale tints with thin charcoal outlines. No gradients, no glossy effects, no dark backgrounds, no watermark.
+
+MAIN OVERVIEW, inside one large rounded dashed charcoal boundary labeled exactly "(a) Overall Framework" at the lower-left edge.
+
+Compose the main pipeline as a SIDEWAYS INFINITY / TWO-LOOP FLOW, not a straight line:
+
+- At far left-center, a compact vertical film strip titled exactly "RGB Video" with three frames of the same walking person. Treat it as the shared input portal.
+- From RGB, one curved arrow rises into an UPPER SCENE ARC. Along the arc place a lavender token strip, a small camera frustum, and a depth-map tile. Title the arc exactly "VGGT Scene Branch". Use three concise labels only: "Camera K", "Raw depth D_vggt", "Scene tokens F".
+- A second curved arrow falls into a LOWER HUMAN ARC. Place a detection box turning into a clean SMPL mesh. Title exactly "NLF Human Branch". A slender curved arrow from Camera K touches this branch and is labeled exactly "intrinsics". Use concise output labels "pose θ", "shape β", "translation τ" and one label "Metric SMPL".
+- The upper and lower arcs curve inward and cross visually at a CENTRAL HSI COUPLING CORE. Make this the first visual focal point: a rotated rounded diamond or softly faceted octagon, sage and cream, titled exactly "HSI Scale Calibration". Inside show projected body anchors on a depth patch and a small scale dial. Around the core place two small chips "C_coarse" and "R_hsi, b_hsi". Under the core render one formula exactly "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi". A calibrated depth ribbon exits the core.
+- To the right of the HSI core, create the dominant TRSTR BODY FIELD, not a standard box: a large segmented SMPL human at center with 96 small regional nodes distributed over the body, surrounded by four floating probe tiles labeled "3×3", "7×7", "adaptive", "annulus". Title exactly "TRSTR Translation Refinement". Region evidence flows radially toward a compact triangular consensus glyph with three chips "vote", "gate", "uncertainty". A circular arrow around the body says "2× re-probe". Output label exactly "refined translation τ*". Add a small lock label "θ, β fixed".
+- From the TRSTR field, do not use another rectangular module. Draw a WIDE CURVED TEMPORAL ORBIT that sweeps upward and then right, made of nine small frame nodes and three parallel identity-colored trajectories. Label the orbit exactly "Track-wise Temporal Stabilizer". Highlight a central observation O_t, a neighbor-only curve M_t, and a small gate diamond "α_t ≤ 0.5".
+- The temporal orbit terminates at a clean final vignette in the upper-right of the main overview: three ghosted instances of the same person correctly aligned to a metric floor grid. Label exactly "Stable Metric Human–Scene Sequence".
+
+RIGHT DETAIL COLUMN: three separate rounded dashed charcoal inset panels, visually related to the main overview with small callout arrows.
+
+Top inset title exactly "(b) Metric Scale Coupling". Show projected SMPL anchors, depth samples, robust median C_coarse, 24 HSI anchor tokens, R_hsi and b_hsi, and the compact formula "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi". Use cream, sage, and powder cyan.
+
+Middle inset title exactly "(c) Regional Surface Consensus". Show a small segmented body, a 96-region token matrix, four multi-scale probe icons, then regional vote / reliability / uncertainty flowing into a weighted consensus symbol and τ*. Use periwinkle, cyan, blush, and lavender.
+
+Bottom inset title exactly "(d) Conservative Temporal Fusion". Show unlabeled neighbour nodes around O_t, a smooth proposal curve M_t, a gate α_t ≤ 0.5, three identity-separated colored trajectories, and compact formula "X*_t = O_t + α_t(M_t − O_t)".
+
+At the very bottom of the entire canvas add a slim palette strip titled exactly "Figure palette" with eight small swatches and exact labels: "#D9ACA6" "#AFCAB2" "#A9CFD8" "#99ADD4" "#CBBAD8" "#E7DAAC" "#E9D36E" "#2F3438".
+
+Typography must be crisp, restrained, and correctly spelled. Use only concise labels; diagrams carry the explanation. Keep arrows technically correct: RGB feeds VGGT and NLF; Camera K conditions NLF; Raw depth and Metric SMPL converge at HSI; Metric depth and Metric SMPL feed TRSTR; TRSTR output enters temporal stabilization; final output is a stable metric human-scene sequence. No contact module, grounding module, physics solver, SAM, or unrelated method.
+

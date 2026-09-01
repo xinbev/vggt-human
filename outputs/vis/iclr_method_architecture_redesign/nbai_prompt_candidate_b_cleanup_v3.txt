@@ -1,0 +1,15 @@
+Use the provided refined architecture image as the strict visual reference. Preserve the exact composition, panel geometry, central TRSTR body, pastel temporal ribbon, right-side three-inset column, arrows, colors, and bottom palette. Do not redesign or rearrange anything.
+
+Perform a final professional CLEANUP pass:
+- erase every stray black tick, random glyph, illegible microtext fragment, duplicated tiny character, and scribble;
+- remove the tiny black marks above the temporal ribbon nodes and the stray tiny characters near the right bend of the ribbon;
+- remove stray marks at the bottom of the NLF panel;
+- remove illegible tiny marks above and beside the depth tiles in inset (b);
+- keep empty whitespace where removed text was located;
+- preserve all meaningful diagrams and arrows;
+- make line weights consistent and keep the warm paper texture subtle.
+
+Preserve these exact visible labels and no others:
+"VGGT Scene Encoder", "RGB frames", "Patch tokens F", "Camera K", "Raw depth D_vggt", "NLF Metric SMPL", "Detection box", "Pose θ", "Shape β", "Translation τ", "intrinsics", "HSI Scale Calibration", "Raw depth", "C_coarse", "R_hsi", "b_hsi", "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi", "TRSTR Body Field", "96 anatomical region nodes", "3×3", "7×7", "adaptive", "annulus", "Region vote", "Gate", "Uncertainty", "Consensus", "2× re-probe", "τ*", "θ, β fixed", "Track-wise Temporal Stabilizer", "O_t", "M_t", "α_t ≤ 0.5", "Stable Metric Sequence", "(a) Human–Scene Metric Reconstruction", "(b) HSI Metric Gauge", "Anchor-depth ratio C_coarse", "Residual affine R_hsi, b_hsi", "Metric depth D_metric", "(c) TRSTR Regional Voting", "96 region tokens", "vote Δτ_r", "gate g_r", "uncertainty σ_r", "Weighted consensus", "(d) Temporal Fusion", "Neighbour-only proposal M_t", "Capped fusion α_t ≤ 0.5", "Stable metric sequence", "Figure palette".
+
+Preserve exact palette labels: "#D9ACA6" "#AFCAB2" "#A9CFD8" "#99ADD4" "#CBBAD8" "#E7DAAC" "#E9D36E" "#2F3438". No watermark, no logo, no new modules.

@@ -1,0 +1,29 @@
+Use the provided HD architecture image as the strict reference. Preserve the exact canvas, panel layout, module positions, sizes, arrows, diagrams, token strips, colors, and spacing. Do not redesign. Perform only a clean camera-ready editorial correction.
+
+Remove all garbled microtext and stray characters. Correct these exact items:
+
+TOP:
+- Inside Parallel Encoding, add upper lane title exactly "VGGT" and preserve chips "K", "D_vggt", "F_scene".
+- Lower lane title exactly "NLF" with chips "θ", "β", "τ", "c".
+- Keep dashed "intrinsics" arrow K → NLF.
+- Timeline must read exactly "t−4  t−3  t−2  t−1  O_t  t+1  t+2  t+3  t+4".
+- Keep titles "Human–Scene Interface", "HSI Scale", "TRSTR", "Temporal", "Stable Sequence".
+
+BOTTOM-LEFT:
+- Step 2 formula exactly "C_coarse = median(z_smpl / z_depth)". Never use a plus sign before median.
+- Step 3 labels exactly "24 anchors", "probe 9×9 local depth", "R_hsi", "b_hsi".
+- Step 4 formula exactly "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi".
+
+BOTTOM-RIGHT TRSTR:
+- Probe labels exactly "3×3", "7×7", "adaptive", "annulus".
+- Evidence labels exactly "vote Δτ_r", "gate g_r", "uncertainty σ_r".
+- Weighted formula exactly "Δτ = Σ_r w_r Δτ_r / Σ_r w_r".
+- Keep "2× re-probe", "τ*", and "translation only; θ, β fixed".
+
+BOTTOM-RIGHT TEMPORAL:
+- Window labels exactly "t−4  t−3  t−2  t−1  O_t  t+1  t+2  t+3  t+4".
+- Three cards exactly "Observation O_t", "Proposal M_t", "Gate α_t ≤ 0.5".
+- Formula exactly "X*_t = O_t + α_t(M_t − O_t)".
+- Output exactly "Stable track".
+
+Preserve the exact bottom palette codes. Use crisp academic typography, no new text, no watermark, no effects.

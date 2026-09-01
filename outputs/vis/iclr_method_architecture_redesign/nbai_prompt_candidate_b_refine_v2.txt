@@ -1,0 +1,48 @@
+Use the provided candidate architecture image as the strict composition reference. Preserve its exact asymmetric layout: large dashed overview on the left, three stacked rounded dashed insets on the right, central segmented human body field, upper-left VGGT satellite, lower-left NLF satellite, HSI coupling lens between them, and the broad pastel temporal ribbon wrapping around the central field. Preserve the warm paper background, thin charcoal linework, and the current reference-derived palette. This is an editorial refinement pass, not a redesign.
+
+Improve hierarchy and typography. Remove random microtext and duplicate labels. Keep diagrams, tokens, matrices, arrows, body regions, depth tiles, and temporal trajectories. Render these labels exactly and clearly:
+
+MAIN OVERVIEW:
+- "VGGT Scene Encoder"
+- "RGB frames"
+- "Patch tokens F"
+- "Camera K"
+- "Raw depth D_vggt"
+- "NLF Metric SMPL"
+- "Detection box"
+- "Pose θ"
+- "Shape β"
+- "Translation τ"
+- "intrinsics"
+- "HSI Scale Calibration"
+- "C_coarse"
+- "R_hsi"
+- "b_hsi"
+- formula exactly "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi"
+- "TRSTR Body Field"
+- "96 anatomical region nodes"
+- four probe tiles exactly "3×3", "7×7", "adaptive", "annulus"
+- three evidence labels exactly "Region vote", "Gate", "Uncertainty"
+- "Consensus"
+- "2× re-probe"
+- output "τ*"
+- lock label "θ, β fixed"
+- "Track-wise Temporal Stabilizer"
+- center observation "O_t"
+- motion proposal "M_t"
+- gate "α_t ≤ 0.5"
+- "Stable Metric Sequence"
+- bottom overview caption exactly "(a) Human–Scene Metric Reconstruction"
+
+On the broad temporal ribbon, keep nine colored circular nodes on the upper path and nine on the lower path, but DO NOT print t1, t2, t3 or any individual frame labels. Use clean nodes and arrows only. Keep three identity-separated colored trajectories.
+
+RIGHT INSETS:
+Top title exactly "(b) HSI Metric Gauge". Use only three mechanism labels: "Anchor-depth ratio C_coarse", "Residual affine R_hsi, b_hsi", and "Metric depth D_metric". Keep the anchor projection, depth tiles, ratio strip, and residual affine glyph. Remove extra small text.
+
+Middle title exactly "(c) TRSTR Regional Voting". Use concise labels exactly "96 region tokens", "vote Δτ_r", "gate g_r", "uncertainty σ_r", "Weighted consensus", and "τ*". Keep the region token matrix and three colored evidence columns.
+
+Bottom title exactly "(d) Temporal Fusion". Use concise labels exactly "Neighbour-only proposal M_t", "Capped fusion α_t ≤ 0.5", and "Stable metric sequence". Keep three identity-separated trajectories and the final three-person sequence. Remove all other small labels.
+
+BOTTOM PALETTE: title exactly "Figure palette" and eight exact codes in this order: "#D9ACA6" "#AFCAB2" "#A9CFD8" "#99ADD4" "#CBBAD8" "#E7DAAC" "#E9D36E" "#2F3438".
+
+Technical arrows must remain accurate: VGGT provides Camera K and Raw depth; Camera K conditions NLF; Raw depth and Metric SMPL meet at HSI; calibrated metric scene geometry and Metric SMPL enter the TRSTR body field; TRSTR updates translation only; temporal stabilization follows TRSTR; output is a stable metric human-scene sequence. Do not add new modules. Prioritize crisp labels and visual elegance over dense annotation.

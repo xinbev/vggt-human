@@ -1,0 +1,12 @@
+LAYOUT B — THREE-TIER HIERARCHY.
+
+Divide the canvas into three horizontal scientific bands inside one dashed boundary.
+
+Tier I title "Observation Encoding": RGB sequence at left, VGGT across the upper half of the band, NLF across the lower half, with compact token strips, camera matrix, depth tile, detector box, and SMPL parameter vectors. Show Camera K conditioning NLF.
+
+Tier II title "Metric Human–Scene Coupling": centered wide but shallow HSI strip. Arrange analytic coarse gauge on the left, 24 anchor-token probing in the middle, and residual affine equation on the right. Metric depth and Metric SMPL are drawn as two labeled buses leaving the tier.
+
+Tier III title "Spatial and Temporal Refinement": left two-thirds is TRSTR with a modest segmented body, 96-region token matrix, multi-scale probe grids, weighted consensus, and 2× re-probe. Right one-third is a compact temporal window with O_t, M_t, α_t, three identity lanes, and stable output.
+
+Place three small vertical callout insets along the far-right margin for tensor contracts: "HSI inputs", "TRSTR outputs", "Temporal constraints". Use mostly straight vertical arrows between tiers. Caption: "Hierarchical inference architecture". No dominant illustration.
+

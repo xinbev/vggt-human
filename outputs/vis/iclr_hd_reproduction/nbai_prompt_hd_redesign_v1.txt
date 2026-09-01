@@ -1,0 +1,34 @@
+Use the provided paper figure only as a layout reference: one wide system overview on top and two mechanism panels below. Create a NEW, cleaner camera-ready ICLR architecture figure at 1536×1024. Warm white paper #F7F6F2, thin charcoal #2F3438 outlines, restrained pastel accents #D9ACA6 #AFCAB2 #A9CFD8 #99ADD4 #CBBAD8 #E7DAAC #E9D36E. Flat 2D vector style. No gradients, shadows, glow, photorealism, hero illustration, ribbon, poster styling, or watermark.
+
+The entire composition follows a strict engineering grid. All modules have comparable weight. Use large readable labels and few words. Use token strips, matrices, formulas, small SMPL wireframes, and depth tiles.
+
+TOP PANEL title exactly "(A) System Overview". It occupies the full width and about 43% height.
+
+Draw this compact sequence from left to right:
+
+1. "RGB Sequence": three small stacked frames.
+2. "Parallel Encoding": one rounded container with two horizontal lanes. Upper lavender lane "VGGT" outputs three labeled chips "K", "D_vggt", "F_scene". Lower blush lane "NLF" outputs four labeled chips "θ", "β", "τ", "c". Draw a short dashed arrow K → NLF labeled "intrinsics".
+3. "Human–Scene Interface": three neat token rows labeled "scene", "camera", "human", combined by a brace. Do not call this learned fusion; it is an interface summary.
+4. "HSI Scale": two vertically stacked cells "coarse gauge" and "residual affine". Output two horizontal ports "D_metric" and "metric SMPL".
+5. "TRSTR": three columns inside one restrained periwinkle container: "96 regions" → "multi-scale probes" → "weighted vote". Add a small circular "2×" loop and lock note "θ, β fixed". Output "τ*".
+6. "Temporal": a nine-node horizontal window with center O_t, proposal M_t, and gate α_t ≤ 0.5. Add three short identity-separated lanes.
+7. "Stable Sequence": a small scene grid with three technical SMPL wireframes.
+
+Use straight arrows. RGB branches to VGGT and NLF. K conditions NLF. D_vggt plus metric SMPL enter HSI. D_metric plus metric SMPL enter TRSTR. τ* enters Temporal. No unrelated modules.
+
+BOTTOM-LEFT PANEL title exactly "(B) HSI Metric Calibration". It occupies 40% width and about 44% height. Use four equal numbered columns:
+
+"1 Project anchors": small SMPL wireframe with exactly 24 anchor dots projected to a depth tile.
+"2 Coarse gauge": exact formula "C_coarse = median(z_smpl / z_depth)" and a small robust-median gauge.
+"3 Residual affine": a 24-token strip probing a 9×9 local depth grid, output chips "R_hsi" and "b_hsi".
+"4 Metric depth": exact equation "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi" and one output depth tile.
+
+BOTTOM-RIGHT PANEL title exactly "(C) TRSTR and Temporal Refinement". It occupies 60% width and about 44% height. Split it into upper 58% TRSTR and lower 42% Temporal.
+
+Upper TRSTR row: inputs "Metric SMPL" and "D_metric" → small segmented body with label "96 regions / person" → four probe matrices labeled "3×3", "7×7", "adaptive", "annulus" → three colored evidence columns "vote Δτ_r", "gate g_r", "uncertainty σ_r" → exact weighted consensus formula "Δτ = Σ_r w_r Δτ_r / Σ_r w_r" → circular "2× re-probe" → output "τ*". Place lock note "translation only; θ, β fixed".
+
+Lower Temporal row: three identity-separated lanes "ID 1", "ID 2", "ID 3" under a nine-frame window from t−4 to t+4. Show three equal cards "Observation O_t", "Proposal M_t", "Gate α_t ≤ 0.5". Then exact formula "X*_t = O_t + α_t(M_t − O_t)" and output "Stable track".
+
+At bottom add a slim legend titled "Figure palette" with exact swatches #D9ACA6 #AFCAB2 #A9CFD8 #99ADD4 #CBBAD8 #E7DAAC #E9D36E #2F3438.
+
+Typography must be crisp and correctly spelled. Minimum visible text size equivalent to 15 px. If space is tight, simplify an icon instead of adding tiny or garbled text. The result should be straightforward to reproduce in Figma from rectangles, token chips, matrices, wireframes, and orthogonal arrows.

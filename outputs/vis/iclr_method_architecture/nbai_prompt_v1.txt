@@ -1,0 +1,25 @@
+Create a polished, publication-ready ICLR method architecture diagram in a clean flat vector editorial style, landscape 3:2, white to warm-off-white background, crisp dark-charcoal strokes, subtle rounded rectangles, generous negative space, precise alignment, no gradients, no 3D photorealism, no watermark. It must look like a top-tier machine learning paper figure made by an expert scientific illustrator, not a slide template.
+
+TITLE at top, restrained and small: "RGB-to-Metric Human–Scene Reconstruction with Temporal Stabilization"
+
+Use one continuous left-to-right story with two parallel branches that merge. Use thin clean arrows, consistent line weights, compact mathematical notation, and legible English labels. Add small numbered stage badges 1–6.
+
+STAGE 1, far left, color #F8E8A4: a horizontal strip of three RGB video frames showing the same walking person in a simple indoor scene, labeled "RGB sequence  I₁ … Iₜ … Iₛ". From this strip split into two arrows.
+
+STAGE 2A, upper center-left, color #D8D0F0, label "VGGT Scene Encoder". Inside show a tiny patch-token grid and camera frustum icon. Outputs as three small chips: "Camera K", "Raw depth D_vggt", "Scene tokens F".
+
+STAGE 2B, lower center-left, color #C8A0A0, label "NLF Human Estimator". It receives RGB directly and also a clearly visible curved conditioning arrow from the VGGT chip "Camera K" labeled "intrinsics". Inside show a clean SMPL human mesh silhouette and detection box. Outputs chips: "pose θ", "shape β", "translation τ", "confidence c". Make clear that NLF outputs metric SMPL.
+
+STAGE 3, central fusion block, color #98B898, label "HSI Metric Scale Calibration". It receives Raw depth D_vggt from VGGT and metric SMPL from NLF. Inside organize two stacked substeps: first "Analytic coarse gauge" with projected SMPL anchors, depth samples, ratio z_smpl / z_depth, and robust median C_coarse; second "HSI residual scale + bias" with 24 small body-anchor tokens probing local scene geometry, output R_hsi and b_hsi. At bottom of this block show the exact equation in a clean formula strip: "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi". Output a calibrated metric depth map labeled "Metric scene depth". This module calibrates scene scale; do not depict it as changing body pose.
+
+STAGE 4, large center-right block, color #A8ACB8, label "TRSTR  ·  Regional Translation Refinement". Inputs are metric SMPL from NLF and Metric scene depth from HSI. Inside show one human mesh partitioned into many small anatomical surface regions, with a small badge "96 regions / person". Show selected region centers projecting into local depth patches labeled "3×3", "7×7", "adaptive", "annulus". Then show a compact row: "region vote Δτᵣ" + "reliability gᵣ" + "uncertainty σᵣ" flowing into a weighted aggregation funnel. Add "person gate" and "2× re-probe" as small annotations. Output "refined translation τ*". Put a small lock strip under the module: "pose θ, global orientation, shape β: read-only". Visually emphasize that different people are processed independently and TRSTR changes translation only.
+
+STAGE 5, right side, color #D0D0C7, label "Track-wise Temporal Stabilizer" with a small subtitle "optional · post-alignment". Show a 9-frame horizontal timeline with the center observation O_t highlighted, neighboring frames t−2, t−1, t+1, t+2 feeding a "motion proposal M_t". Show a second small "fusion gate α_t ≤ 0.5" and the exact compact equation "X*_t = O_t + α_t(M_t − O_t)". Include a track-ID ribbon to show that people are never mixed. Keep this block visually lighter than the spatial pipeline.
+
+STAGE 6, far right, color #98B898 with a thin #A8ACB8 outline: final output vignette showing a stable SMPL human correctly placed in a metric 3D scene across three ghosted time instants. Label "Stable metric human–scene sequence". Use a tiny floor grid and camera frusta, scientifically clean.
+
+DATAFLOW ACCURACY: RGB feeds both VGGT and NLF. VGGT Camera K conditions NLF. VGGT Raw depth plus NLF metric SMPL feed HSI scale calibration. HSI Metric scene depth plus NLF SMPL feed TRSTR. TRSTR output feeds the temporal stabilizer. Do not draw historical contact, grounding, V4, physics solver, SAM, tracker detector, or unrelated modules.
+
+At the very bottom create a neat horizontal palette legend with six equal color swatches and exact printed hex labels, fully visible and correctly spelled: "#F8E8A4" "#D8D0F0" "#98B898" "#C8A0A0" "#A8ACB8" "#D0D0C7". Add a tiny label "Figure palette". This bottom palette is mandatory.
+
+Typography: modern academic sans-serif, dark charcoal, no tiny paragraphs. Keep labels concise. Avoid decorative icons that look childish. Use subdued pastel fills at 75–90% opacity, consistent with the supplied palette. Make the architecture readable at single-column zoom and elegant at full-page width.

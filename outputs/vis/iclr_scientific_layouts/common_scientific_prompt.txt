@@ -1,0 +1,20 @@
+Use the provided paper figure only as a reference for its restrained pastel color system, thin charcoal outlines, dashed grouping, compact tensor strips, small matrices, and overview-plus-inset scientific hierarchy. Do not copy its method, labels, or exact composition.
+
+Create a rigorous ICLR scientific method figure, landscape 1536×1024, warm paper background #F7F6F2. Use #D9ACA6 dusty blush, #AFCAB2 sage, #A9CFD8 powder cyan, #99ADD4 periwinkle, #CBBAD8 lavender, #E7DAAC cream, #E9D36E restrained yellow, and #2F3438 charcoal. Flat 2D vector linework only.
+
+STRICT ANTI-PROMOTIONAL RULES: no hero image, no photorealism, no giant human figure, no dramatic orbit, no glowing ribbon, no gradient, no cinematic depth, no decorative empty space, no oversized title, no marketing-poster composition. Human bodies are small technical SMPL wireframes or segmented anatomical diagrams. Use compact modules, precise arrows, tensor notation, formulas, matrices, probe grids, and small mechanism insets. Every graphical element must carry scientific information.
+
+COMMON TECHNICAL CONTENT:
+- Input "RGB sequence" with tensor "I ∈ R^{B×S×3×H×W}".
+- VGGT outputs "Camera K", "Raw depth D_vggt", and "Scene tokens F_scene".
+- A labeled arrow "intrinsics" carries Camera K into NLF.
+- NLF outputs metric SMPL: "pose θ", "shape β", "translation τ", "confidence c" with compact shapes "θ:[B,S,Q,144]", "β:[B,S,Q,10]", "τ:[B,S,Q,3]".
+- HSI scale combines Raw depth and Metric SMPL. Show "C_coarse = median(z_smpl / z_depth)", residual "R_hsi, b_hsi", and exact equation "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi".
+- TRSTR is translation-only. Show "96 regions / person", probe grids "3×3", "7×7", "adaptive", "annulus", outputs "vote Δτ_r", "gate g_r", "uncertainty σ_r", weighted consensus, "2× re-probe", final "τ*", and lock note "θ, β fixed".
+- Temporal refinement is post-alignment and track-wise. Show a 9-frame window, center observation "O_t", neighbor-only proposal "M_t", gate "α_t ≤ 0.5", identity-separated tracks, and exact equation "X*_t = O_t + α_t(M_t − O_t)".
+- Final output: "Stable metric human–scene sequence".
+
+Keep dataflow exact: RGB feeds both VGGT and NLF; K conditions NLF; raw depth and metric SMPL feed HSI; metric depth and metric SMPL feed TRSTR; TRSTR feeds temporal stabilization. Historical contact, grounding, V4, SAM, and physics modules are absent.
+
+Use a compact palette strip at the bottom titled "Figure palette" with exact codes #D9ACA6, #AFCAB2, #A9CFD8, #99ADD4, #CBBAD8, #E7DAAC, #E9D36E, #2F3438. Typography is crisp academic sans-serif with restrained serif math. No watermark.
+

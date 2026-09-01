@@ -1,0 +1,45 @@
+Use the provided paper architecture image as a STRUCTURAL and VISUAL reference only. Preserve its scientific hierarchy: one wide rounded system-overview panel across the top, two large rounded mechanism-detail panels across the bottom, thin black connectors, compact token strips, modest line-art images, and generous but functional spacing. Do not copy its method names or specific graphics.
+
+Create a rigorous ICLR architecture figure, 1536×1024 landscape. Warm paper background #F7F6F2, thin charcoal #2F3438 outlines, very pale panels, muted colors #D9ACA6 dusty blush, #AFCAB2 sage, #A9CFD8 powder cyan, #99ADD4 periwinkle, #CBBAD8 lavender, #E7DAAC cream, #E9D36E restrained yellow. Flat 2D vector style. No photorealism, no gradients, no glow, no giant human, no dramatic ribbon, no promotional visual, no watermark.
+
+TOP PANEL, about 55% of figure height, title at lower-left exactly "(A) Overall Architecture". Use one clean horizontal scientific overview with compact modules and clear arrows:
+
+At far left: a narrow vertical strip of three RGB frames, label exactly "RGB Sequence".
+
+Next: one rounded dual-evidence module titled exactly "Parallel Human–Scene Encoding". Split it into two stacked lanes:
+- upper lavender lane titled "VGGT Scene Encoder", showing a patch-token strip and three outputs exactly "Camera K", "Raw depth D_vggt", "Scene tokens F_scene";
+- lower blush lane titled "NLF Human Estimator", showing a detection box, a small SMPL wireframe, and outputs exactly "pose θ", "shape β", "translation τ", "confidence c".
+Draw one short arrow from Camera K down to NLF, labeled exactly "intrinsics".
+
+Next: a compact token/evidence fusion card, styled like the reference token-concatenation area, titled exactly "Metric Human–Scene Evidence". Show three rows of small colored tokens:
+"Scene evidence {D_vggt, F_scene}", "Camera evidence {K}", "Human evidence {θ, β, τ, c}". A brace combines them into one compact evidence strip.
+
+Next: a medium cream-and-sage block titled exactly "HSI Scale Calibration". Inside show two small stages, "Coarse gauge C_coarse" and "Residual affine R_hsi, b_hsi". Output two ports exactly "Metric depth D_metric" and "Metric SMPL".
+
+Next: a blue/lavender block titled exactly "TRSTR Spatial Refinement". Inside show a small segmented SMPL wireframe, a 96-region token matrix, four tiny probe grids, and a weighted voting funnel. Add lock note exactly "θ, β fixed". Output exactly "refined translation τ*".
+
+Next: a compact cyan block titled exactly "Track-wise Temporal Stabilizer". Show a nine-node window, center O_t, neighbor-only M_t, and gate α_t ≤ 0.5. Keep it compact, not decorative.
+
+At far right: a small output thumbnail of three identity-separated SMPL people aligned with a metric scene grid, label exactly "Stable Metric Human–Scene Sequence".
+
+All top arrows are straight and technically exact: RGB feeds both VGGT and NLF; K conditions NLF; raw depth and metric SMPL feed HSI; D_metric and metric SMPL feed TRSTR; TRSTR feeds temporal stabilization.
+
+BOTTOM-LEFT PANEL, width about 44%, title exactly "(B) Metric Scale Calibration". Match the reference's construction/detail panel style, with a left-to-right internal chain:
+
+1. Small inputs: "Raw depth D_vggt" and "Metric SMPL {θ, β, τ}".
+2. Project 24 body anchors onto depth samples. Show compact formula exactly "C_coarse = median(z_smpl / z_depth)".
+3. Show a 24-anchor token strip probing a local depth grid. Outputs "R_hsi" and "b_hsi".
+4. Render exact final equation in one clean strip: "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi".
+5. Output a small metric-depth tile.
+
+Use precise diagrams, arrows, tokens, and one modest wireframe body. No large illustration.
+
+BOTTOM-RIGHT PANEL, width about 56%, title exactly "(C) Spatial–Temporal Refinement". Split internally into an upper TRSTR section and a lower temporal section, similar to the reference's control-model plus memory organization.
+
+Upper section title "TRSTR Regional Translator". Inputs are a small "Metric SMPL" wireframe and "Metric scene depth" tile. Then show three operation cells: "96 body regions", "Multi-scale probes", "Regional consensus". Multi-scale probes contain exactly "3×3", "7×7", "adaptive", "annulus". Regional consensus uses three colored chips exactly "vote Δτ_r", "gate g_r", "uncertainty σ_r", then a weighted sum. Show circular annotation exactly "2× re-probe". Output exactly "τ*" and note "translation only".
+
+Lower section title "Track-wise Temporal Fusion". Show three identity-separated horizontal track lanes and a nine-frame window. Center observation "O_t" and neighbor-only proposal "M_t" enter a gate "α_t ≤ 0.5". Render exact equation "X*_t = O_t + α_t(M_t − O_t)". Output a small strip titled "Stable sequence".
+
+At the very bottom add a slim palette legend titled exactly "Figure palette" with exact codes: "#D9ACA6" "#AFCAB2" "#A9CFD8" "#99ADD4" "#CBBAD8" "#E7DAAC" "#E9D36E" "#2F3438".
+
+Use concise, crisp academic typography. The design should feel like a well-composed scientific figure assembled from modules, tokens, equations, and interfaces—not a poster or effect rendering. If space is tight, simplify icons rather than corrupting labels.

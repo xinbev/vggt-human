@@ -10,4 +10,5 @@ data:
 matching:
   min_keypoints: 5
   min_confidence: 0.2
+  min_bbox_iou: 0.05
   temporal_window: 9

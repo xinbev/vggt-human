@@ -21,6 +21,7 @@ from benchmarks.human3r_style_3dpw.data import (  # noqa: E402
     ThreeDPWTestSequence,
     decode_gt_camera_space,
     frame_path,
+    gt_camera_parameters,
     load_processed_frame,
     load_test_sequences,
     raw_openpose_2d,
@@ -71,11 +72,16 @@ def main() -> None:
     print_manifest(args, cfg, root, sequences, device, temporal)
     totals = {"nlf_base": Totals(), "nlf_pose_temporal": Totals()}
     rows: list[dict[str, Any]] = []
+    component_totals = {name: Totals() for name in COMPONENT_NAMES} if args.component_diagnostics else None
+    component_rows: list[dict[str, Any]] = []
     coverage = {"sequences": 0, "gt_people": 0, "matched_people": 0, "false_positives": 0, "temporal_applied_matches": 0}
     for sequence in sequences:
         result = infer_sequence(sequence, root, nlf, cfg, device, args)
         temporal_pose, temporal_applied = refine_tracks(result, temporal, int(cfg["matching"]["temporal_window"]))
-        sequence_stats = evaluate_sequence(sequence, result, temporal_pose, temporal_applied, smpl_layers, cfg, device, totals, rows)
+        sequence_stats = evaluate_sequence(
+            sequence, result, temporal_pose, temporal_applied, smpl_layers, cfg, device,
+            totals, rows, component_totals, component_rows,
+        )
         for key, value in sequence_stats.items():
             coverage[key] = coverage.get(key, 0) + int(value)
         coverage["sequences"] += 1
@@ -99,8 +105,16 @@ def main() -> None:
         "coverage": coverage,
         **{name: values.summary() for name, values in totals.items()},
     }
+    if component_totals is not None:
+        summary["component_diagnostics"] = {
+            "description": "Counterfactual local-body proxies. They are non-additive; compare them to nlf_base to identify whether pose, beta, or neutral-vs-gender representation dominates.",
+            **{name: values.summary() for name, values in component_totals.items()},
+            "rows_csv": str(output / "component_rows.csv"),
+        }
     (output / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
     write_rows(output / "rows.csv", rows)
+    if component_totals is not None:
+        write_component_rows(output / "component_rows.csv", component_rows)
     print(json.dumps(summary, indent=2, ensure_ascii=False), flush=True)
 
 
@@ -115,6 +129,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-sequences", type=int, default=0)
     parser.add_argument("--max-frames", type=int, default=0)
     parser.add_argument("--device", default="cuda:0")
+    parser.add_argument("--component-diagnostics", action="store_true", help="Record pose/beta counterfactual error decomposition per matched person-frame")
     return parser.parse_args()
 
 
@@ -194,7 +209,10 @@ def refine_tracks(result: dict[str, Any], temporal: PoseTemporalStabilizer | Non
     return refined, applied
 
 
-def evaluate_sequence(sequence: ThreeDPWTestSequence, result: dict[str, Any], temporal_pose: torch.Tensor, temporal_applied: torch.Tensor, smpl: dict[str, SMPLLayer], cfg: dict[str, Any], device: torch.device, totals: dict[str, Totals], rows: list[dict[str, Any]]) -> dict[str, int]:
+COMPONENT_NAMES = ("full_pred_neutral", "pred_pose_gt_beta", "gt_pose_pred_beta", "gt_pose_gt_beta_neutral")
+
+
+def evaluate_sequence(sequence: ThreeDPWTestSequence, result: dict[str, Any], temporal_pose: torch.Tensor, temporal_applied: torch.Tensor, smpl: dict[str, SMPLLayer], cfg: dict[str, Any], device: torch.device, totals: dict[str, Totals], rows: list[dict[str, Any]], component_totals: dict[str, Totals] | None, component_rows: list[dict[str, Any]]) -> dict[str, int]:
     stats = {"gt_people": 0, "matched_people": 0, "false_positives": 0, "temporal_applied_matches": 0}
     for frame_index in range(result["pose_6d"].shape[0]):
         gt_vertices, gt_joints, gt_people = decode_gt_camera_space(sequence, frame_index, smpl, device)
@@ -210,7 +228,14 @@ def evaluate_sequence(sequence: ThreeDPWTestSequence, result: dict[str, Any], te
         # are known.  ``gt_people`` originates from GPU SMPL decoding, so use
         # a CPU index for the CPU label tensor before moving that small subset.
         openpose = result["openpose"][frame_index][gt_people.detach().cpu()].to(device)
-        matched_local, matched_gt, false_pos = match_by_2d_joints(base_joints, openpose, result["intrinsics"][frame_index].to(device), int(cfg["matching"]["min_keypoints"]), float(cfg["matching"]["min_confidence"]))
+        matched_local, matched_gt, false_pos = match_by_2d_joints(
+            base_joints,
+            openpose,
+            result["intrinsics"][frame_index].to(device),
+            int(cfg["matching"]["min_keypoints"]),
+            float(cfg["matching"]["min_confidence"]),
+            float(cfg["matching"].get("min_bbox_iou", 0.05)),
+        )
         stats["false_positives"] += int(false_pos)
         if not matched_local.numel():
             continue
@@ -219,9 +244,34 @@ def evaluate_sequence(sequence: ThreeDPWTestSequence, result: dict[str, Any], te
         base_metrics = human3r_camera_metrics(base_joints[matched_local], gt_joints[matched_gt], base_vertices[matched_local], gt_vertices[matched_gt])
         temporal_metrics = human3r_camera_metrics(temporal_joints, gt_joints[matched_gt], temporal_vertices, gt_vertices[matched_gt])
         totals["nlf_base"].add(base_metrics); totals["nlf_pose_temporal"].add(temporal_metrics)
+        components = None
+        if component_totals is not None:
+            gt_pose, gt_beta, _, _ = gt_camera_parameters(sequence, frame_index, device)
+            pred_pose = rot6d_to_axis_angle(result["pose_6d"][frame_index, original_pred].reshape(-1, 24, 6)).reshape(-1, 72)
+            pred_beta = result["betas"][frame_index, original_pred]
+            gt_pose_matched, gt_beta_matched = gt_pose[matched_gt], gt_beta[matched_gt]
+            component_meshes = {
+                "full_pred_neutral": decode_local(pred_pose, pred_beta, smpl["neutral"]),
+                "pred_pose_gt_beta": decode_local(pred_pose, gt_beta_matched, smpl["neutral"]),
+                "gt_pose_pred_beta": decode_local(gt_pose_matched, pred_beta, smpl["neutral"]),
+                "gt_pose_gt_beta_neutral": decode_local(gt_pose_matched, gt_beta_matched, smpl["neutral"]),
+            }
+            components = {}
+            for name, (vertices, joints) in component_meshes.items():
+                metrics = human3r_camera_metrics(joints, gt_joints[matched_gt], vertices, gt_vertices[matched_gt])
+                component_totals[name].add(metrics)
+                components[name] = metrics
         for local in range(original_pred.numel()):
             is_temporal = bool(temporal_applied[frame_index, original_pred[local]])
             rows.append({"sequence": sequence.name, "frame": frame_index, "pred_index": int(original_pred[local]), "gt_person": int(gt_people[matched_gt[local]]), "temporal_applied": int(is_temporal), **{f"base_{key}": float(value[local].detach().cpu()) for key, value in base_metrics.items()}, **{f"temporal_{key}": float(value[local].detach().cpu()) for key, value in temporal_metrics.items()}})
+            if components is not None:
+                component_rows.append({
+                    "sequence": sequence.name,
+                    "frame": frame_index,
+                    "pred_index": int(original_pred[local]),
+                    "gt_person": int(gt_people[matched_gt[local]]),
+                    **{f"{name}_{key}": float(value[local].detach().cpu()) for name, metrics in components.items() for key, value in metrics.items()},
+                })
             stats["matched_people"] += 1
             stats["temporal_applied_matches"] += int(is_temporal)
     return stats
@@ -232,8 +282,24 @@ def decode_pred(pose6d: torch.Tensor, betas: torch.Tensor, transl: torch.Tensor,
     return vertices + transl[:, None], joints[:, :24] + transl[:, None]
 
 
+def decode_local(pose: torch.Tensor, betas: torch.Tensor, layer: SMPLLayer) -> tuple[torch.Tensor, torch.Tensor]:
+    vertices, joints = layer(pose.float(), betas.float())
+    return vertices, joints[:, :24]
+
+
 def write_rows(path: Path, rows: list[dict[str, Any]]) -> None:
     fields = ["sequence", "frame", "pred_index", "gt_person", "temporal_applied"] + [f"{branch}_{metric}" for branch in ("base", "temporal") for metric in ("pa_mpjpe_mm", "mpjpe_mm", "pve_mm", "pa_pve_mm", "metric_mpjpe_mm", "metric_pve_mm", "root_error_mm")]
+    with path.open("w", encoding="utf-8", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=fields)
+        writer.writeheader(); writer.writerows(rows)
+
+
+def write_component_rows(path: Path, rows: list[dict[str, Any]]) -> None:
+    fields = ["sequence", "frame", "pred_index", "gt_person"] + [
+        f"{name}_{metric}"
+        for name in COMPONENT_NAMES
+        for metric in ("mpjpe_mm", "pve_mm", "pa_mpjpe_mm", "pa_pve_mm", "metric_mpjpe_mm", "metric_pve_mm", "root_error_mm")
+    ]
     with path.open("w", encoding="utf-8", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=fields)
         writer.writeheader(); writer.writerows(rows)

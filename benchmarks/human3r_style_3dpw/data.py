@@ -92,33 +92,72 @@ def decode_gt_camera_space(
     device: torch.device,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Human3R-style GT: gender SMPL, root camera rotation, camera translation."""
-    meta = sequence.metadata
-    t_w2c = np.asarray(meta["cam_poses"][frame_index], dtype=np.float32).reshape(4, 4)
-    rotation, translation = t_w2c[:3, :3], t_w2c[:3, 3]
-    vertices, joints, valid = [], [], []
-    for person in range(sequence.persons):
-        is_valid = bool(np.asarray(meta["campose_valid"][person])[frame_index])
-        if not is_valid:
-            continue
-        pose = np.asarray(meta["poses"][person][frame_index], dtype=np.float32).reshape(24, 3)
-        betas = np.asarray(meta["betas"][person], dtype=np.float32).reshape(-1)[:10]
-        raw_trans = np.asarray(meta["trans"][person][frame_index], dtype=np.float32).reshape(3)
-        gender = "male" if str(meta["genders"][person]).lower().startswith("m") else "female"
-        root_rotation = axis_angle_to_rotmat(torch.from_numpy(pose[0])).cpu().numpy()
-        root_camera = rotation_matrix_to_axis_angle(torch.from_numpy(rotation @ root_rotation)).cpu().numpy().reshape(3)
-        pose_camera = np.concatenate((root_camera[None], pose[1:]), axis=0).reshape(1, 72)
-        layer = smpl_layers[gender]
-        local_vertices, local_joints = layer(torch.from_numpy(pose_camera).to(device).float(), torch.from_numpy(betas[None]).to(device).float())
-        local_vertices, local_joints = local_vertices[0], local_joints[0, :24]
-        root_after_trans = local_joints[0] + torch.from_numpy(raw_trans).to(device)
-        camera_root = torch.from_numpy(rotation).to(device) @ root_after_trans + torch.from_numpy(translation).to(device)
-        camera_vertices = local_vertices + torch.from_numpy(raw_trans).to(device) - root_after_trans + camera_root
-        camera_joints = local_joints + torch.from_numpy(raw_trans).to(device) - root_after_trans + camera_root
+    poses, betas, genders, person_ids = gt_camera_parameters(sequence, frame_index, device)
+    vertices, joints = [], []
+    for row, person in enumerate(person_ids.tolist()):
+        layer = smpl_layers[genders[row]]
+        local_vertices, local_joints = layer(poses[row : row + 1], betas[row : row + 1])
+        # The camera-space root translation is reconstructed by subtracting
+        # the zero-translation local root from the already camera-space joint.
+        camera_root = gt_camera_root_translation(sequence, frame_index, person, local_joints[0, 0], device)
+        camera_vertices = local_vertices[0] + camera_root
+        camera_joints = local_joints[0, :24] + camera_root
         vertices.append(camera_vertices)
         joints.append(camera_joints)
-        valid.append(person)
     if not vertices:
         empty_v = torch.empty(0, 6890, 3, device=device)
         empty_j = torch.empty(0, 24, 3, device=device)
         return empty_v, empty_j, torch.empty(0, dtype=torch.long, device=device)
-    return torch.stack(vertices), torch.stack(joints), torch.tensor(valid, dtype=torch.long, device=device)
+    return torch.stack(vertices), torch.stack(joints), person_ids
+
+
+def gt_camera_parameters(
+    sequence: ThreeDPWTestSequence,
+    frame_index: int,
+    device: torch.device,
+) -> tuple[torch.Tensor, torch.Tensor, list[str], torch.Tensor]:
+    """Return camera-orientated SMPL pose, betas, gender and original person ID."""
+    meta = sequence.metadata
+    t_w2c = np.asarray(meta["cam_poses"][frame_index], dtype=np.float32).reshape(4, 4)
+    rotation = t_w2c[:3, :3]
+    poses, betas, genders, person_ids = [], [], [], []
+    for person in range(sequence.persons):
+        if not bool(np.asarray(meta["campose_valid"][person])[frame_index]):
+            continue
+        pose = np.asarray(meta["poses"][person][frame_index], dtype=np.float32).reshape(24, 3)
+        root_rotation = axis_angle_to_rotmat(torch.from_numpy(pose[0])).cpu().numpy()
+        root_camera = rotation_matrix_to_axis_angle(torch.from_numpy(rotation @ root_rotation)).cpu().numpy().reshape(3)
+        poses.append(np.concatenate((root_camera[None], pose[1:]), axis=0).reshape(72))
+        betas.append(np.asarray(meta["betas"][person], dtype=np.float32).reshape(-1)[:10])
+        genders.append("male" if str(meta["genders"][person]).lower().startswith("m") else "female")
+        person_ids.append(person)
+    if not poses:
+        return (
+            torch.empty(0, 72, device=device),
+            torch.empty(0, 10, device=device),
+            [],
+            torch.empty(0, dtype=torch.long, device=device),
+        )
+    return (
+        torch.from_numpy(np.stack(poses)).to(device).float(),
+        torch.from_numpy(np.stack(betas)).to(device).float(),
+        genders,
+        torch.tensor(person_ids, dtype=torch.long, device=device),
+    )
+
+
+def gt_camera_root_translation(
+    sequence: ThreeDPWTestSequence,
+    frame_index: int,
+    person: int,
+    local_root_joint: torch.Tensor,
+    device: torch.device,
+) -> torch.Tensor:
+    """Human3R-style conversion from raw 3DPW world translation to camera root."""
+    meta = sequence.metadata
+    t_w2c = np.asarray(meta["cam_poses"][frame_index], dtype=np.float32).reshape(4, 4)
+    rotation, translation = torch.from_numpy(t_w2c[:3, :3]).to(device), torch.from_numpy(t_w2c[:3, 3]).to(device)
+    raw_trans = torch.from_numpy(np.asarray(meta["trans"][person][frame_index], dtype=np.float32)).to(device)
+    root_after_raw_trans = local_root_joint + raw_trans
+    camera_root = rotation @ root_after_raw_trans + translation
+    return camera_root - local_root_joint

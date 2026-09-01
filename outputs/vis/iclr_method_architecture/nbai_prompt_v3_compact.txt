@@ -1,0 +1,29 @@
+Design a clean, publication-ready ICLR architecture figure, landscape 1536×1024, warm white background, flat vector scientific illustration, precise grid, large readable typography, generous whitespace, dark charcoal lines, restrained muted pastel fills. No gradients, no watermark, no logo, no decorative clutter. Prioritize exact text over detail.
+
+Top title exactly: "RGB-to-Metric Human–Scene Reconstruction with Temporal Stabilization"
+
+Create a left-to-right six-stage pipeline. Each stage has a circular badge. Badge sequence must be exactly: 1, 2A and 2B, 3, 4, 5, 6.
+
+STAGE 1, warm yellow #F8E8A4: three-frame video strip with one walking person. Label exactly "RGB sequence". Split one arrow into two branches.
+
+STAGE 2A, upper lavender #D8D0F0: label exactly "VGGT Scene Encoder". Show patch grid, camera frustum, depth map. Only three large output chips, with exact text: "Camera K", "Raw depth D_vggt", "Scene tokens F".
+
+STAGE 2B, lower dusty rose #C8A0A0: label exactly "NLF Human Estimator". Show detection box and SMPL mesh. A curved arrow from "Camera K" enters this block, label the arrow exactly "intrinsics". Only four large output chips: "pose θ", "shape β", "translation τ", "confidence c". Add one short subtitle exactly "metric SMPL".
+
+STAGE 3, central sage #98B898: title exactly "HSI Metric Scale Calibration". Both VGGT depth and NLF metric SMPL arrows enter this block. Use two large visual rows, minimal text:
+row one: projected body anchors divided by depth samples, label exactly "Analytic coarse gauge C_coarse";
+row two: 24 green body-anchor dots probing a local depth patch, label exactly "HSI residual R_hsi, b_hsi".
+At the bottom show one large clean formula exactly: "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi".
+Output a depth map labeled exactly "Metric scene depth".
+
+STAGE 4, wide blue-gray #A8ACB8: title exactly "TRSTR Regional Translation Refinement". Inputs are metric SMPL and Metric scene depth. Show a colored segmented SMPL body with label exactly "96 regions / person". Four local depth-probe icons labeled exactly "3×3", "7×7", "adaptive", "annulus". Then three symbols flow into a weighted funnel: "vote Δτ_r", "gate g_r", "uncertainty σ_r". Add one circular arrow labeled exactly "2× re-probe". Output chip exactly "refined translation τ*". At bottom show a lock icon and exact text "θ, β fixed · translation only".
+
+STAGE 5, warm gray #D0D0C7: title exactly "Track-wise Temporal Stabilizer" and subtitle exactly "optional · post-alignment". Show a nine-frame timeline with five visible labeled nodes: "t−2", "t−1", "O_t", "t+1", "t+2". Neighbor nodes connect to a smooth trajectory curve labeled exactly "motion proposal M_t". Then a gate labeled exactly "α_t ≤ 0.5". Show one large formula exactly "X*_t = O_t + α_t(M_t − O_t)". Add three parallel colored track ribbons labeled "ID 1", "ID 2", "ID 3" to communicate no identity mixing.
+
+STAGE 6, pale sage #98B898: title exactly "Stable metric human–scene sequence". Show the same person correctly placed on a metric floor grid at three instants labeled exactly "t−1", "t", "t+1".
+
+ARROWS MUST BE TECHNICALLY CORRECT: RGB feeds both VGGT and NLF. Camera K from VGGT conditions NLF. Raw depth D_vggt and metric SMPL both feed HSI. Metric scene depth and metric SMPL both feed TRSTR. TRSTR feeds the temporal stabilizer. Temporal stabilizer feeds Stage 6.
+
+At the bottom, mandatory horizontal palette legend. Heading exactly "Figure palette". Six equal swatches with exact labels, in this exact order: "#F8E8A4" "#D8D0F0" "#98B898" "#C8A0A0" "#A8ACB8" "#D0D0C7".
+
+Typography rule: use only the exact labels specified above; do not invent explanatory paragraphs. Render labels large, crisp, correctly spelled. If space is limited, simplify icons, never distort text. Style should resemble a sophisticated NeurIPS/ICLR method figure, understated and rigorous.
