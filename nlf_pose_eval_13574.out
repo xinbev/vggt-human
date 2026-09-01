@@ -1,0 +1,46 @@
+开始评估，作业 ID: 13574
+当前环境: zhw_env
+分配的 GPU: 0
+========== NLF pose-temporal benchmark ==========
+device: cuda:0
+input: RGB + dataset GT intrinsics -> NLF; VGGT absent
+NLF checkpoint: /home/zhw/lab_users/xyb/home/projects/vggt-human/third_party/weights/nlf/nlf_l_multi_0.3.2.torchscript
+V2 checkpoint: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_temporal_stabilizer_v2_pose_mixture_v21_focus/checkpoint_best.pt
+records: 37, frames root: /home/zhw/xyb_space/3DPW/imageFiles
+[record] downtown_arguing_00_0: frames=897 temporal=889
+[record] downtown_arguing_00_1: frames=895 temporal=887
+[record] downtown_bar_00_0: frames=1239 temporal=1227
+[record] downtown_bar_00_1: frames=578 temporal=564
+[record] downtown_bus_00_0: frames=1024 temporal=1011
+[record] downtown_bus_00_1: frames=1450 temporal=1441
+[record] downtown_cafe_00_0: frames=933 temporal=925
+[record] downtown_cafe_00_1: frames=1137 temporal=1129
+[record] downtown_car_00_0: frames=798 temporal=786
+[record] downtown_car_00_1: frames=722 temporal=714
+[record] downtown_crossStreets_00_0: frames=528 temporal=520
+[record] downtown_crossStreets_00_1: frames=505 temporal=495
+[record] downtown_downstairs_00_0: frames=628 temporal=620
+[record] downtown_enterShop_00_0: frames=1358 temporal=1350
+[record] downtown_rampAndStairs_00_0: frames=980 temporal=969
+[record] downtown_rampAndStairs_00_1: frames=974 temporal=965
+[record] downtown_runForBus_00_0: frames=644 temporal=636
+[record] downtown_runForBus_00_1: frames=655 temporal=647
+[record] downtown_runForBus_01_0: frames=737 temporal=725
+[record] downtown_runForBus_01_1: frames=682 temporal=670
+[record] downtown_sitOnStairs_00_0: frames=1301 temporal=1293
+[record] downtown_sitOnStairs_00_1: frames=1329 temporal=1321
+[record] downtown_stairs_00_0: frames=1187 temporal=1141
+[record] downtown_upstairs_00_0: frames=825 temporal=817
+[record] downtown_walkBridge_01_0: frames=1179 temporal=1171
+[record] downtown_walkUphill_00_0: frames=385 temporal=377
+[record] downtown_walking_00_0: frames=1325 temporal=1317
+[record] downtown_walking_00_1: frames=1256 temporal=1252
+[record] downtown_warmWelcome_00_0: frames=568 temporal=560
+[record] downtown_warmWelcome_00_1: frames=552 temporal=544
+[record] downtown_weeklyMarket_00_0: frames=1043 temporal=1035
+[record] downtown_windowShopping_00_0: frames=1806 temporal=1797
+[record] flat_guitar_01_0: frames=748 temporal=740
+[record] flat_packBags_00_0: frames=1273 temporal=1265
+[record] office_phoneCall_00_0: frames=724 temporal=716
+[record] office_phoneCall_00_1: frames=764 temporal=756
+[record] outdoors_fencing_01_0: frames=925 temporal=917

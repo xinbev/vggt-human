@@ -1,0 +1,52 @@
+{
+  "benchmark": "nlf_pose_temporal_gt_intrinsics",
+  "dataset": "3dpw",
+  "input_protocol": "RGB + dataset GT intrinsics -> NLF internal detector -> optional PoseTemporalStabilizerV2; VGGT/HSI/TRSTR absent",
+  "metric_protocol": "SMPL-24 pelvis-aligned PA-MPJPE/MPJPE/PVE",
+  "nlf_checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/third_party/weights/nlf/nlf_l_multi_0.3.2.torchscript",
+  "temporal_checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_temporal_stabilizer_v2_pose_mixture_v21_focus/checkpoint_best.pt",
+  "coverage": {
+    "records": 37,
+    "metric_frames": 34554,
+    "temporal_applied_frames": 34189,
+    "temporal_applied_rate": 0.9894368235226023
+  },
+  "nlf_base": {
+    "cam_mpjpe_no_align_m": 5.194784874578534,
+    "cam_mpjpe_no_align_mm": 5194.784874578534,
+    "cam_pve_no_align_m": 5.184504034591368,
+    "cam_pve_no_align_mm": 5184.5040345913685,
+    "mpjpe_m": 0.8412975888357964,
+    "mpjpe_mm": 841.2975888357964,
+    "pa_mpjpe_m": 0.04846462109611029,
+    "pa_mpjpe_mm": 48.46462109611029,
+    "pve_m": 0.8985351157966722,
+    "pve_mm": 898.5351157966722,
+    "count": {
+      "pa_mpjpe_m": 34554,
+      "mpjpe_m": 34554,
+      "pve_m": 34554,
+      "cam_mpjpe_no_align_m": 34554,
+      "cam_pve_no_align_m": 34554
+    }
+  },
+  "nlf_pose_temporal": {
+    "cam_mpjpe_no_align_m": 5.194801045532214,
+    "cam_mpjpe_no_align_mm": 5194.801045532214,
+    "cam_pve_no_align_m": 5.184506994655247,
+    "cam_pve_no_align_mm": 5184.506994655247,
+    "mpjpe_m": 0.8413364479488925,
+    "mpjpe_mm": 841.3364479488926,
+    "pa_mpjpe_m": 0.04819607284042307,
+    "pa_mpjpe_mm": 48.19607284042307,
+    "pve_m": 0.8985384501706134,
+    "pve_mm": 898.5384501706134,
+    "count": {
+      "pa_mpjpe_m": 34554,
+      "mpjpe_m": 34554,
+      "pve_m": 34554,
+      "cam_mpjpe_no_align_m": 34554,
+      "cam_pve_no_align_m": 34554
+    }
+  }
+}
