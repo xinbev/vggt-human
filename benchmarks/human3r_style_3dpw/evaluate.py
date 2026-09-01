@@ -206,7 +206,10 @@ def evaluate_sequence(sequence: ThreeDPWTestSequence, result: dict[str, Any], te
         if not pred_index.numel():
             continue
         base_vertices, base_joints = decode_pred(result["pose_6d"][frame_index, pred_index], result["betas"][frame_index, pred_index], result["transl_cam"][frame_index, pred_index], smpl["neutral"])
-        openpose = result["openpose"][frame_index][gt_people].to(device)
+        # Raw OpenPose labels remain on CPU until the matched valid GT people
+        # are known.  ``gt_people`` originates from GPU SMPL decoding, so use
+        # a CPU index for the CPU label tensor before moving that small subset.
+        openpose = result["openpose"][frame_index][gt_people.detach().cpu()].to(device)
         matched_local, matched_gt, false_pos = match_by_2d_joints(base_joints, openpose, result["intrinsics"][frame_index].to(device), int(cfg["matching"]["min_keypoints"]), float(cfg["matching"]["min_confidence"]))
         stats["false_positives"] += int(false_pos)
         if not matched_local.numel():
