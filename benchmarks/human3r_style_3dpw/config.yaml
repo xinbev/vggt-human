@@ -1,0 +1,13 @@
+data:
+  image_resolution: 512
+  resize_mode: balanced
+  patch_size: 16
+  nlf_batch_size: 32
+  nlf_internal_batch_size: 128
+  nlf_num_aug: 5
+  nlf_detector_threshold: 0.2
+  nlf_detector_nms_iou_threshold: 0.7
+matching:
+  min_keypoints: 5
+  min_confidence: 0.2
+  temporal_window: 9

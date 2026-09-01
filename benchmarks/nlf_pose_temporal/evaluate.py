@@ -28,6 +28,7 @@ from vggt_omega.tracking.smpl_track_assigner import BaseSMPLTrackAssigner
 from vggt_omega.training.config import deep_update, load_yaml_config, require_path
 
 
+@torch.no_grad()
 def main() -> None:
     args = parse_args()
     if str(args.device).startswith("cuda") and not torch.cuda.is_available():
@@ -60,7 +61,7 @@ def main() -> None:
             for key, value in values.items(): totals[name].add(key, value.mean(), int(value.numel()))
         valid_idx = torch.nonzero(valid, as_tuple=False).reshape(-1)
         for local, frame in enumerate(valid_idx.tolist()):
-            rows.append({"vid": record.vid, "vname": str(record.label.get("vname", "")), "frame": frame, "query": int(result["query"][frame]), "temporal_applied": int(applied[frame]), **{f"base_{k[:-2]}_mm": float(v[local].cpu()*1000) for k,v in base.items()}, **{f"temporal_{k[:-2]}_mm": float(v[local].cpu()*1000) for k,v in temp.items()}})
+            rows.append({"vid": record.vid, "vname": str(record.label.get("vname", "")), "frame": frame, "query": int(result["query"][frame]), "temporal_applied": int(applied[frame]), **{f"base_{k[:-2]}_mm": float(v[local].detach().cpu()*1000) for k,v in base.items()}, **{f"temporal_{k[:-2]}_mm": float(v[local].detach().cpu()*1000) for k,v in temp.items()}})
         coverage["records"] += 1; coverage["metric_frames"] += int(valid.sum()); coverage["temporal_applied_frames"] += int(applied[valid].sum())
         print(f"[record] {record.vid}: frames={int(valid.sum())} temporal={int(applied[valid].sum())}", flush=True)
     summary = {"benchmark": "nlf_pose_temporal_gt_intrinsics", "dataset": args.dataset, "input_protocol": "RGB + dataset GT intrinsics -> NLF internal detector -> optional PoseTemporalStabilizerV2; VGGT/HSI/TRSTR absent", "metric_protocol": "SMPL-24 pelvis-aligned PA-MPJPE/MPJPE/PVE", "nlf_checkpoint": str(cfg.get("checkpoints", {}).get("nlf_smpl", "")), "temporal_checkpoint": args.temporal_checkpoint or None, "coverage": {**coverage, "temporal_applied_rate": coverage["temporal_applied_frames"] / max(coverage["metric_frames"], 1)}}
@@ -128,7 +129,11 @@ def temporal_refine(x:dict[str,torch.Tensor], model:PoseTemporalStabilizer|None)
 
 
 def write_rows(path:Path,rows:list[dict[str,Any]])->None:
-    fields=["vid","vname","frame","query","temporal_applied","base_pa_mpjpe_mm","base_mpjpe_mm","base_pve_mm","temporal_pa_mpjpe_mm","temporal_mpjpe_mm","temporal_pve_mm"]
+    fields=[
+        "vid", "vname", "frame", "query", "temporal_applied",
+        "base_pa_mpjpe_mm", "base_mpjpe_mm", "base_pve_mm", "base_cam_mpjpe_no_align_mm", "base_cam_pve_no_align_mm",
+        "temporal_pa_mpjpe_mm", "temporal_mpjpe_mm", "temporal_pve_mm", "temporal_cam_mpjpe_no_align_mm", "temporal_cam_pve_no_align_mm",
+    ]
     with path.open("w",encoding="utf-8",newline="") as f: w=csv.DictWriter(f,fieldnames=fields); w.writeheader(); w.writerows(rows)
 
 
