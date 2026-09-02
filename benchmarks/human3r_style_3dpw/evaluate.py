@@ -143,6 +143,9 @@ def build_nlf(cfg: dict[str, Any]) -> NLFSMPLProvider:
         require_boxes=False,
         internal_batch_size=int(data["nlf_internal_batch_size"]),
         num_aug=int(data["nlf_num_aug"]),
+        antialias_factor=int(data.get("nlf_antialias_factor", 1)),
+        detector_flip_aug=bool(data.get("nlf_detector_flip_aug", False)),
+        suppress_implausible_poses=bool(data.get("nlf_suppress_implausible_poses", True)),
         detector_threshold=float(data["nlf_detector_threshold"]),
         detector_nms_iou_threshold=float(data["nlf_detector_nms_iou_threshold"]),
     )
@@ -308,7 +311,13 @@ def write_component_rows(path: Path, rows: list[dict[str, Any]]) -> None:
 def print_manifest(args: argparse.Namespace, cfg: dict[str, Any], root: Path, sequences: list[ThreeDPWTestSequence], device: torch.device, temporal: PoseTemporalStabilizer | None) -> None:
     print("========== Human3R-style raw 3DPW test benchmark ==========")
     print(f"device: {device}; raw root: {root}; test sequences: {len(sequences)}")
-    print(f"NLF checkpoint: {cfg.get('checkpoints', {}).get('nlf_smpl')}; num_aug={cfg['data']['nlf_num_aug']}; detector_thr={cfg['data']['nlf_detector_threshold']}")
+    print(
+        f"NLF checkpoint: {cfg.get('checkpoints', {}).get('nlf_smpl')}; "
+        f"num_aug={cfg['data']['nlf_num_aug']}; antialias={cfg['data'].get('nlf_antialias_factor', 1)}; "
+        f"detector_flip={cfg['data'].get('nlf_detector_flip_aug', False)}; "
+        f"suppress_implausible={cfg['data'].get('nlf_suppress_implausible_poses', True)}; "
+        f"detector_thr={cfg['data']['nlf_detector_threshold']}"
+    )
     print(f"V2 checkpoint: {args.temporal_checkpoint or 'disabled'}")
     print("GT: gender-specific SMPL + Human3R-style camera conversion; matching: projected 2D common joints")
 

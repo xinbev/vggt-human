@@ -1,0 +1,9 @@
+data:
+  root_key: datasets.emdb_root
+
+protocol:
+  chunk_length: 0
+  subsample_stride: 1
+  root_index: 0
+  joint_format: smpl24
+  units: meters

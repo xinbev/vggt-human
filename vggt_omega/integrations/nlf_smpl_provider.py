@@ -28,6 +28,9 @@ class NLFSMPLProvider(nn.Module):
         require_boxes: bool = True,
         internal_batch_size: int = 64,
         num_aug: int = 1,
+        antialias_factor: int = 1,
+        detector_flip_aug: bool = False,
+        suppress_implausible_poses: bool = True,
         detector_threshold: float = 0.3,
         detector_nms_iou_threshold: float = 0.7,
         max_detections: int = 150,
@@ -41,6 +44,9 @@ class NLFSMPLProvider(nn.Module):
         self.require_boxes = bool(require_boxes)
         self.internal_batch_size = int(internal_batch_size)
         self.num_aug = int(num_aug)
+        self.antialias_factor = int(antialias_factor)
+        self.detector_flip_aug = bool(detector_flip_aug)
+        self.suppress_implausible_poses = bool(suppress_implausible_poses)
         self.detector_threshold = float(detector_threshold)
         self.detector_nms_iou_threshold = float(detector_nms_iou_threshold)
         self.max_detections = int(max_detections)
@@ -200,6 +206,8 @@ class NLFSMPLProvider(nn.Module):
             "internal_batch_size": self.internal_batch_size,
             "num_aug": self.num_aug,
             "model_name": self.model_name,
+            "antialias_factor": self.antialias_factor,
+            "suppress_implausible_poses": self.suppress_implausible_poses,
         }
         if self.use_detector:
             if not hasattr(model, "detect_smpl_batched"):
@@ -209,6 +217,7 @@ class NLFSMPLProvider(nn.Module):
                 detector_threshold=self.detector_threshold,
                 detector_nms_iou_threshold=self.detector_nms_iou_threshold,
                 max_detections=self.max_detections,
+                detector_flip_aug=self.detector_flip_aug,
                 **common,
             )
         if boxes is None:

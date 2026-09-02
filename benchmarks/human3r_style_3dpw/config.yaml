@@ -5,6 +5,10 @@ data:
   nlf_batch_size: 32
   nlf_internal_batch_size: 128
   nlf_num_aug: 5
+  # Exact predictor settings in NLF's released predict_tdpw.py.
+  nlf_antialias_factor: 2
+  nlf_detector_flip_aug: true
+  nlf_suppress_implausible_poses: false
   nlf_detector_threshold: 0.2
   nlf_detector_nms_iou_threshold: 0.7
 matching:
