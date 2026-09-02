@@ -100,6 +100,11 @@ translation scale. C uses the same metric camera as B and changes only human
 translation. The evaluator reports A, B, C and error reductions A-B, B-C and
 A-C, with positive values denoting improvement.
 
+All stages use the same person selected by Human3R-style 2D association. GT
+gender SMPL-24 world joints are projected with EMDB GT camera only for matching;
+prediction world coordinates continue to use predicted VGGT camera exclusively.
+Reports distinguish stride sampling rate from detector prediction coverage.
+
 ## Outputs
 
 ```text

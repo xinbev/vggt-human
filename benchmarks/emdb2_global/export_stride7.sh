@@ -41,6 +41,7 @@ ARGS=(
   --max-input-frames "${MAX_INPUT_FRAMES:-500}"
   --max-humans "${MAX_HUMANS:-8}"
   --conf-threshold "${CONF_THRESHOLD:-0.05}"
+  --match-iou-threshold "${MATCH_IOU_THRESHOLD:-0.05}"
   --sequence-filter "${SEQUENCE_FILTER:-}"
   --max-sequences "${MAX_SEQUENCES:-0}"
   --device "${DEVICE:-cuda:0}"

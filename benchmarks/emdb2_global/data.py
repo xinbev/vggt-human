@@ -53,6 +53,7 @@ class EMDB2Sequence:
     transl_world: np.ndarray
     intrinsics: np.ndarray
     world_to_camera: np.ndarray
+    keypoints_2d: np.ndarray
 
     @property
     def good_frame_indices(self) -> np.ndarray:
@@ -111,6 +112,7 @@ def load_emdb_sequence(path: str | Path) -> EMDB2Sequence:
         raise ValueError(f"good_frames_mask length {mask.shape[0]} != n_frames {frame_count}")
     world_to_camera = np.asarray(camera["extrinsics"], dtype=np.float32).reshape(frame_count, 4, 4)
     intrinsics = np.asarray(camera["intrinsics"], dtype=np.float32).reshape(3, 3)
+    keypoints_2d = np.asarray(raw["kp2d"], dtype=np.float32).reshape(frame_count, 24, 2)
     name = str(raw["name"]).replace("_", "/", 1)
     gender = "male" if str(raw["gender"]).lower().startswith("m") else "female"
     return EMDB2Sequence(
@@ -125,6 +127,7 @@ def load_emdb_sequence(path: str | Path) -> EMDB2Sequence:
         transl_world=transl,
         intrinsics=intrinsics,
         world_to_camera=world_to_camera,
+        keypoints_2d=keypoints_2d,
     )
 
 
@@ -134,6 +137,7 @@ def decode_gt_world_joints(
     smpl_layer: Any,
     device: Any,
     chunk_size: int = 512,
+    joint_regressor: Any | None = None,
 ) -> np.ndarray:
     """Decode native EMDB world SMPL into this project's SMPL-24 joints."""
     import torch
@@ -155,7 +159,10 @@ def decode_gt_world_joints(
             pose_t = torch.from_numpy(pose[start:end]).to(device=device, dtype=torch.float32)
             beta_t = torch.from_numpy(betas[start:end]).to(device=device, dtype=torch.float32)
             transl_t = torch.from_numpy(transl[start:end]).to(device=device, dtype=torch.float32)
-            _, joints = smpl_layer(pose_t, beta_t)
+            vertices, joints = smpl_layer(pose_t, beta_t)
+            if joint_regressor is not None:
+                regressor = joint_regressor.to(device=device, dtype=vertices.dtype)[:24]
+                joints = torch.einsum("jv,bvc->bjc", regressor, vertices)
             joints_world = joints[:, :24] + transl_t[:, None, :]
             decoded.append(joints_world.detach().float().cpu().numpy())
     return np.concatenate(decoded, axis=0).astype(np.float32, copy=False)
