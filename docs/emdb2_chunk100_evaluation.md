@@ -62,6 +62,13 @@ outputs/eval/emdb2_global_chunk100/metrics/stage_metrics.csv
 outputs/eval/emdb2_global_chunk100/metrics/frame_metrics.csv
 ```
 
+Normal terminal output contains only the per-sequence metric rows and the
+three-stage summary. Export/checkpoint/stitch progress is retained in:
+
+```text
+outputs/eval/emdb2_global_chunk100/export.log
+```
+
 ## Risks
 
 The overlap stitch is a memory-management protocol, not a replacement for a

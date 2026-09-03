@@ -26,6 +26,9 @@ if [[ "${REQUIRE_ALL_SEQUENCES:-true}" == "true" ]]; then
 else
   ARGS+=(--no-require-all-sequences)
 fi
+if [[ "${METRICS_ONLY_OUTPUT:-false}" == "true" ]]; then
+  ARGS+=(--metrics-only-output)
+fi
 
 if [[ -n "${CUDA_VISIBLE_DEVICES_VALUE:-}" ]]; then
   export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}"

@@ -176,16 +176,17 @@ def main() -> None:
         base_summary = sequence_stage_summaries[STAGE_ORDER[0]]
         scale_summary = sequence_stage_summaries[STAGE_ORDER[1]]
         final_summary = sequence_stage_summaries[STAGE_ORDER[2]]
-        print(
-            f"[sequence] {sequence.name} frames={frame_indices.size}/{sequence.good_frame_indices.size} "
-            f"base=({base_summary['W-MPJPE_mm']:.2f},"
-            f"{base_summary['WA-MPJPE_mm']:.2f},{base_summary['RTE_percent']:.3f}%) "
-            f"hsi=({scale_summary['W-MPJPE_mm']:.2f},"
-            f"{scale_summary['WA-MPJPE_mm']:.2f},{scale_summary['RTE_percent']:.3f}%) "
-            f"trstr=({final_summary['W-MPJPE_mm']:.2f},"
-            f"{final_summary['WA-MPJPE_mm']:.2f},{final_summary['RTE_percent']:.3f}%)",
-            flush=True,
-        )
+        if not args.metrics_only_output:
+            print(
+                f"[sequence] {sequence.name} frames={frame_indices.size}/{sequence.good_frame_indices.size} "
+                f"base=({base_summary['W-MPJPE_mm']:.2f},"
+                f"{base_summary['WA-MPJPE_mm']:.2f},{base_summary['RTE_percent']:.3f}%) "
+                f"hsi=({scale_summary['W-MPJPE_mm']:.2f},"
+                f"{scale_summary['WA-MPJPE_mm']:.2f},{scale_summary['RTE_percent']:.3f}%) "
+                f"trstr=({final_summary['W-MPJPE_mm']:.2f},"
+                f"{final_summary['WA-MPJPE_mm']:.2f},{final_summary['RTE_percent']:.3f}%)",
+                flush=True,
+            )
 
     if not all_metrics[STAGE_ORDER[-1]]["w"]:
         raise RuntimeError("No EMDB-2 sequence produced metrics")
@@ -280,7 +281,10 @@ def main() -> None:
     (output_dir / "summary.json").write_text(
         json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8"
     )
-    print(json.dumps(summary, indent=2, ensure_ascii=False), flush=True)
+    if args.metrics_only_output:
+        print_metric_tables(sequence_rows, stage_rows)
+    else:
+        print(json.dumps(summary, indent=2, ensure_ascii=False), flush=True)
 
 
 def parse_args() -> argparse.Namespace:
@@ -302,7 +306,37 @@ def parse_args() -> argparse.Namespace:
         action=argparse.BooleanOptionalAction,
         default=True,
     )
+    parser.add_argument(
+        "--metrics-only-output",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Print only compact per-sequence and aggregate metric tables.",
+    )
     return parser.parse_args()
+
+
+def print_metric_tables(
+    sequence_rows: list[dict[str, Any]],
+    stage_rows: list[dict[str, Any]],
+) -> None:
+    print("sequence,stage,W-MPJPE_mm,WA-MPJPE_mm,RTE_percent", flush=True)
+    for row in sequence_rows:
+        print(
+            f"{row['sequence']},{row['stage']},"
+            f"{float(row['W-MPJPE_mm']):.3f},"
+            f"{float(row['WA-MPJPE_mm']):.3f},"
+            f"{float(row['RTE_percent']):.5f}",
+            flush=True,
+        )
+    print("summary_stage,W-MPJPE_mm,WA-MPJPE_mm,RTE_percent", flush=True)
+    for row in stage_rows:
+        print(
+            f"{row['stage']},"
+            f"{float(row['W-MPJPE_mm']):.3f},"
+            f"{float(row['WA-MPJPE_mm']):.3f},"
+            f"{float(row['RTE_percent']):.5f}",
+            flush=True,
+        )
 
 
 def find_prediction_archive(root: Path, sequence: EMDB2Sequence) -> Path | None:
