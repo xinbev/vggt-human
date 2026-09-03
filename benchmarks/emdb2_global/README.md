@@ -217,6 +217,9 @@ Positive contribution means the added module lowered error. Negative means it
 degraded that metric. `sequence_metrics.csv` and `frame_metrics.csv` include a
 `stage` column for direct plotting.
 
+Per-frame coarse/HSI terminal lines are not printed. Full per-frame records
+remain stored in the exported diagnostics.
+
 The shared detector query is selected with Human3R's matching principle:
 gender-specific EMDB world GT SMPL is projected with the EMDB GT camera for 2D
 association only, predicted neutral SMPL-24 joints are projected with the

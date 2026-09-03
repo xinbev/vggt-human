@@ -1,0 +1,50 @@
+Use the provided architecture image as a strict layout and color reference. Preserve the successful structure: one full-width overview panel on top, one HSI detail panel at bottom-left, one TRSTR–Temporal detail panel at bottom-right, and the slim palette row. Preserve the muted pastel palette, warm white canvas, thin charcoal outlines, rounded panel corners, overall spacing, and exact technical dataflow. This is a targeted scientific redesign, not a new composition.
+
+MAIN GOAL: make the figure look appropriate for an ICLR research paper. Replace generic product-style icons with compact scientific representations. Remove all tutorial-style numbered steps from the bottom-left panel. No 1, 2, 3, 4 badges or numbered cards anywhere. No photorealistic output thumbnails, decorative pictograms, gauge/speedometer icons, generic app icons, hero visuals, gradients, shadows, or poster effects.
+
+TOP PANEL — SCIENTIFIC REPRESENTATIONS:
+
+Keep title exactly "(A) Overall Architecture".
+
+At left, show "RGB Sequence" as three small flat image-plane rectangles labeled I_{t-1}, I_t, I_{t+1}, not photographic cards.
+
+Inside "Parallel Human–Scene Encoding":
+- "VGGT Scene Encoder" is represented by a patch lattice followed by two compact transformer operator blocks labeled "Frame Attn" and "Global Attn". Its outputs are scientific tensor glyphs: a 3×3 matrix "Camera K", a stacked H×W tensor "Raw depth D_vggt", and a token row "Scene tokens F_scene".
+- "NLF Human Estimator" is represented by an image feature grid, a small detection box, a light SMPL wireframe, and four parameter vectors: "pose θ", "shape β", "translation τ", "confidence c".
+- Keep a precise arrow "intrinsics" from Camera K to NLF.
+
+Replace the current decorative "Metric Human–Scene Evidence" card with a compact three-row interface table. Rows exactly: "Scene: {D_vggt, F_scene}", "Camera: {K}", "Human: {θ, β, τ, c}". Show tensor strips and one merge bracket, no decorative colored loose blocks.
+
+Inside "HSI Scale Calibration", replace the speedometer/gauge icon with a scientific anchor-correspondence diagram: projected SMPL anchor depths z_smpl paired with scene depths z_depth, followed by a median operator. Show compact labels "C_coarse" and "R_hsi, b_hsi". Outputs exactly "Metric depth D_metric" and "Metric SMPL".
+
+Inside "TRSTR Spatial Refinement", use a small segmented SMPL wireframe, a clear 96×C region-token matrix, four local sampling grids labeled "3×3", "7×7", "adaptive", "annulus", and a weighted-sum equation glyph. No funnel icon. Keep "θ, β fixed" and output "refined translation τ*".
+
+Inside "Track-wise Temporal Stabilizer", replace the generic circles-only icon with a compact sequence tensor: nine narrow frame columns, a center-column mask over O_t, four neighbor arrows into M_t, and a scalar gate α_t ≤ 0.5. Keep it technical and compact.
+
+At far right, replace the photorealistic result thumbnail with a scientific output diagram: three small SMPL wireframes with separate track colors over a sparse metric point-cloud / floor-grid outline. Label exactly "Stable Metric Human–Scene Sequence".
+
+BOTTOM-LEFT PANEL — NO NUMBERED STEPS:
+
+Keep title exactly "(B) Metric Scale Calibration". Remove every numbered circle and every 1–2–3–4 step card. Recompose the panel as one continuous left-to-right derivation with three softly separated, unnumbered scientific regions:
+
+Region header "Anchor Correspondence": small Metric SMPL wireframe with 24 anchor dots; dashed projection rays connect to sampled pixels in Raw depth D_vggt. Show paired columns z_smpl and z_depth.
+
+Region header "Robust Metric Gauge": ratio vector {z_smpl / z_depth}; a median operator box; output scalar C_coarse. No dial or gauge illustration.
+
+Region header "Residual Calibration": 24 anchor-token row attends to a small local depth-patch matrix; output R_hsi and b_hsi. Then exact equation in one clean horizontal strip: "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi". Finish with a small stacked tensor labeled "Metric depth D_metric".
+
+Connect these regions with straight arrows along one shared baseline. It should read as a mathematical derivation, not a tutorial.
+
+BOTTOM-RIGHT PANEL:
+
+Keep title exactly "(C) Spatial–Temporal Refinement" and retain its two-level structure. Refine icons into scientific glyphs: region-token matrix, sampling grids, vote/gate/uncertainty vectors, weighted consensus equation, re-projection loop, 9-frame track matrix, validity mask, neighbor-only proposal, and bounded fusion formula. Do not use funnels or decorative icons.
+
+TRSTR labels: "96 body regions", "Multi-scale probes", "Regional consensus", "vote Δτ_r", "gate g_r", "uncertainty σ_r", "2× re-probe", "τ*", "translation only".
+
+Temporal labels: "Track-wise Temporal Fusion", "Observation O_t", "Neighbour-only proposal M_t", "Capped fusion α_t ≤ 0.5", exact equation "X*_t = O_t + α_t(M_t − O_t)", and "Stable sequence".
+
+Preserve technically correct arrows: RGB feeds VGGT and NLF; K conditions NLF; raw depth and metric SMPL enter HSI; metric depth and metric SMPL enter TRSTR; TRSTR output enters temporal stabilization.
+
+BOTTOM PALETTE: title "Figure palette" and exact codes #D9ACA6, #AFCAB2, #A9CFD8, #99ADD4, #CBBAD8, #E7DAAC, #E9D36E, #2F3438.
+
+Typography must be crisp academic sans-serif with restrained serif math. Use no labels beyond those specified. If a label cannot fit, simplify the adjacent diagram instead of shrinking or corrupting text. No watermark.

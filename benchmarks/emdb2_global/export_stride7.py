@@ -306,7 +306,13 @@ def decode_selected_joints_cam_stages(
     gather_transl = query[..., None].expand(*query.shape, 3)
     selected_base_transl = base_transl.gather(2, gather_transl.unsqueeze(2)).squeeze(2)
     selected_refined_transl = refined_transl.gather(2, gather_transl.unsqueeze(2)).squeeze(2)
-    gather_joints = query[..., None, None].expand(*query.shape, 1, 24, 3)
+    gather_joints = query[..., None, None, None].expand(*query.shape, 1, 24, 3)
+    expected_gather_shape = (*query.shape, 1, 24, 3)
+    if gather_joints.shape != expected_gather_shape:
+        raise RuntimeError(
+            f"Joint gather index shape mismatch: got={tuple(gather_joints.shape)} "
+            f"expected={expected_gather_shape}"
+        )
     joints = all_joints.gather(2, gather_joints).squeeze(2)
     base_joints_cam = joints + selected_base_transl[..., None, :]
     refined_joints_cam = joints + selected_refined_transl[..., None, :]

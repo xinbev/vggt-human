@@ -681,7 +681,7 @@ def run_smpl_coarse_hsi_cascade(
             "active": True,
             "temporal_enabled": bool(getattr(trstr_head, "enable_temporal", False)),
             "depth_source": "hsi_translation_depth",
-            "valid_people": int(person_valid.sum().detach().cpu()),
+            "valid_detections": int(person_valid.sum().detach().cpu()),
             "delta_l2_mean_m": float(valid_delta.mean().cpu()) if valid_delta.numel() else 0.0,
             "delta_l2_p90_m": float(torch.quantile(valid_delta, 0.90).cpu()) if valid_delta.numel() else 0.0,
             "delta_l2_max_m": float(valid_delta.max().cpu()) if valid_delta.numel() else 0.0,
@@ -690,7 +690,7 @@ def run_smpl_coarse_hsi_cascade(
         cascade["_viewer_trstr_summary"] = trstr_summary
         print(
             "[trstr] "
-            f"people={trstr_summary['valid_people']} "
+            f"detections={trstr_summary['valid_detections']} "
             f"delta_mean_m={trstr_summary['delta_l2_mean_m']:.6g} "
             f"delta_p90_m={trstr_summary['delta_l2_p90_m']:.6g} "
             f"delta_max_m={trstr_summary['delta_l2_max_m']:.6g} "
@@ -705,28 +705,6 @@ def run_smpl_coarse_hsi_cascade(
             "[coarse-hsi] shared-world application: clip_median of composed effective scale/bias "
             f"scale={float(effective_scale[0, 0, 0].detach().cpu()):.6g} "
             f"bias={float(effective_bias[0, 0, 0].detach().cpu()):.6g}",
-            flush=True,
-        )
-    for frame_idx, record in enumerate(coarse_records):
-        coarse_value = float(coarse_scale_tensor[0, frame_idx, 0].detach().cpu())
-        residual_value = float(residual_scale[0, frame_idx, 0].detach().cpu())
-        frame_effective_value = float(frame_effective_scale[0, frame_idx, 0].detach().cpu())
-        effective_value = float(effective_scale[0, frame_idx, 0].detach().cpu())
-        frame_bias_value = float(frame_effective_bias[0, frame_idx, 0].detach().cpu())
-        bias_value = float(effective_bias[0, frame_idx, 0].detach().cpu())
-        print(
-            "[coarse-hsi] "
-            f"frame={frame_idx:04d} "
-            f"coarse={coarse_value:.6g} "
-            f"hsi_residual={residual_value:.6g} "
-            f"frame_effective={frame_effective_value:.6g} "
-            f"applied_effective={effective_value:.6g} "
-            f"frame_bias={frame_bias_value:.6g} "
-            f"applied_bias={bias_value:.6g} "
-            f"anchors={int(record.get('num_anchor_pixels', 0) or 0)} "
-            f"applied={bool(record.get('applied', False))} "
-            f"fallback={record.get('fallback_mode', 'none')} "
-            f"reason={record.get('reason', 'unknown')}",
             flush=True,
         )
     print_coarse_hsi_scale_summary(coarse_scale_tensor, residual_scale, effective_scale, effective_bias)

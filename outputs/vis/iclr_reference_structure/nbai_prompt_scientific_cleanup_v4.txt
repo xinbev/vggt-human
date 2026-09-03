@@ -1,0 +1,15 @@
+Use the provided scientific architecture image as the strict reference. Preserve the exact top-overview / bottom-two-detail-panels composition, all panel dimensions, colors, arrows, token grids, matrices, formulas, and the unnumbered bottom-left derivation. Do not redesign the layout.
+
+Make only these scientific cleanup changes:
+
+1. TOP TEMPORAL MODULE: erase the garbled title and all malformed text. Title exactly "Track-wise Temporal Stabilizer". Inside show a clean 2×9 sequence matrix: upper row observed states, lower row validity mask. Highlight the center column "O_t". Four thin arrows from neighbour columns enter one small box "M_t". Then a scalar box "α_t ≤ 0.5". No other text inside this module.
+
+2. TOP TRSTR MODULE: remove the funnel icon. Replace it with a compact weighted-sum operator and exact formula "Δτ = Σ_r w_r Δτ_r / Σ_r w_r". Keep the segmented SMPL, 96-region token matrix, probe grids, and lock label "θ, β fixed". Output exactly "τ*".
+
+3. BOTTOM-RIGHT TRSTR: remove the funnel icon there as well. Use the same compact weighted-sum operator "Δτ = Σ_r w_r Δτ_r / Σ_r w_r", followed by "2× re-probe" and output "τ*".
+
+4. BOTTOM-RIGHT TEMPORAL: preserve ID 1, ID 2, ID 3 lanes and t−4 through t+4. Replace malformed middle labels with exactly three cells in correct order: "Observation O_t" → "Neighbour-only proposal M_t" → "Capped fusion α_t ≤ 0.5". Keep exact formula "X*_t = O_t + α_t(M_t − O_t)".
+
+5. Remove all stray glyphs and illegible microtext throughout. Keep the bottom-left headers exactly "Anchor Correspondence", "Robust Metric Gauge", "Residual Calibration" with no numbers or badges.
+
+Typography: crisp academic sans-serif, restrained serif math. Keep the existing palette legend and exact codes. No new icons, no decoration, no watermark.

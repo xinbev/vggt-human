@@ -1,0 +1,16 @@
+Use the provided scientific figure as a color and component reference. Create a restrained mixed-abstraction ICLR diagram, 1536×1024 landscape, warm paper #F7F6F2, thin charcoal outlines, muted palette #D9ACA6 #AFCAB2 #A9CFD8 #99ADD4 #CBBAD8 #E7DAAC #E9D36E. No photorealism, gradients, hero art, numbered steps, decorative icons, or watermark.
+
+TOP OVERVIEW, 34% height, inside one rounded boundary titled "Overall Pipeline". Make it extremely concise: seven compact modules on one baseline with a single parallel fork at the beginning.
+"RGB" branches to "VGGT" and "NLF". VGGT has only output ports "K, D_vggt, F_scene". NLF has only output port "θ, β, τ, c". K conditions NLF via a short arrow "intrinsics". Both branches merge into "HSI Scale", then "TRSTR", then "Temporal", then "Stable Metric Sequence". Use tiny tensor strips and no internal illustrations. Under modules add small role labels: VGGT/NLF "frozen context", HSI "metric calibration", TRSTR "translation refinement", Temporal "track-wise stabilization".
+
+Highlight only HSI and TRSTR with stronger color borders. Draw dashed zoom connectors from them to two large lower panels.
+
+BOTTOM-LEFT ZOOM, 44% width, title "HSI Scale — Detailed View". Show the complete unnumbered anchor-depth derivation: 24 anchors → paired z_smpl and z_depth → median ratio C_coarse → anchor-token local probing → R_hsi, b_hsi → exact formula "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi". Use matrices, token rows, projection rays, and one small wireframe body.
+
+BOTTOM-RIGHT ZOOM, 56% width, title "TRSTR — Detailed View". Show Metric SMPL + D_metric → 96-region matrix → 3×3 / 7×7 / adaptive / annulus probes → vote Δτ_r / gate g_r / uncertainty σ_r → weighted consensus → 2× re-probe → τ*. Add "θ, β fixed".
+
+Do not create a full temporal detail panel. Instead, attach one small cyan constraint card to the TRSTR output, titled "Temporal constraint", containing only three identity lanes and exact formula "X*_t = O_t + α_t(M_t − O_t),  α_t ≤ 0.5". This card is medium-detail and secondary.
+
+Bottom palette strip titled "Figure palette" with exact codes #D9ACA6 #AFCAB2 #A9CFD8 #99ADD4 #CBBAD8 #E7DAAC #E9D36E #2F3438.
+
+The figure must communicate selective detail: pipeline abstract, HSI and TRSTR detailed, temporal semi-abstract. Typography crisp, equations correct, spacing functional.

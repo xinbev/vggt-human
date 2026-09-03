@@ -1,0 +1,25 @@
+Use the provided scientific architecture figure as a color and component reference, but redesign the information hierarchy into a mixed-abstraction ICLR figure. Preserve the muted palette, warm paper background, thin charcoal outlines, academic typography, equations, and exact dataflow. No photorealism, gradients, hero graphics, numbered tutorial steps, or watermark.
+
+Create a 1536×1024 landscape figure with three levels of detail.
+
+TOP CONTEXT BAND, only 27% of height, titled "System Context". This band is intentionally abstract and low-detail. Use small near-white tinted capsules connected by precise arrows:
+"RGB sequence" branches to "Frozen VGGT" and "NLF". Frozen VGGT exposes only three ports "K", "D_vggt", "F_scene". NLF exposes only one compact port "Metric SMPL {θ, β, τ, c}". Draw K conditioning NLF with label "intrinsics". Then two highlighted contribution capsules "HSI Scale" and "TRSTR", followed by a narrow "Temporal" capsule and "Stable sequence" output. Do not show internal icons inside RGB, VGGT, NLF, Temporal, or Output. Use only tiny tensor strips at their ports. Context capsules have very pale fills and thin gray outlines; HSI and TRSTR have stronger sage and periwinkle outlines.
+
+From the HSI and TRSTR capsules, draw two clean dashed callout lines downward into large detail panels.
+
+BOTTOM-LEFT DETAIL PANEL, about 42% width and 57% height, title "HSI Metric Calibration". This is high-detail. Arrange one continuous unnumbered derivation:
+"Anchor correspondences" shows a small SMPL wireframe with 24 anchor dots projected into a depth grid, paired columns z_smpl and z_depth.
+"Robust coarse gauge" shows ratio vector and exact formula "C_coarse = median(z_smpl / z_depth)".
+"Residual affine" shows 24 anchor tokens attending to local depth patches, outputs R_hsi and b_hsi.
+Large final formula exactly "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi".
+Show input and output tensor shapes compactly. No numbered circles and no decorative gauge icon.
+
+BOTTOM-RIGHT DETAIL PANEL, about 58% width and 57% height, title "TRSTR Translation Refinement". This is high-detail in its upper 70%:
+Inputs "Metric SMPL" and "D_metric" enter a structured chain: segmented small SMPL → "96 body regions" matrix → four probe grids "3×3", "7×7", "adaptive", "annulus" → vectors "vote Δτ_r", "gate g_r", "uncertainty σ_r" → exact weighted consensus "Δτ = Σ_r w_r Δτ_r / Σ_r w_r" → "2× re-probe" → output "τ*". Place invariant strip "θ, β fixed · translation only".
+
+At the bottom 30% of the same panel, use medium detail for a cyan strip titled "Track-wise Temporal Stabilization". Show three identity lanes, a 9-frame validity matrix, center O_t, neighbor-only M_t, α_t ≤ 0.5, and exact equation "X*_t = O_t + α_t(M_t − O_t)". Keep this smaller and visually quieter than TRSTR.
+
+At bottom add compact "Figure palette" swatches: #D9ACA6 #AFCAB2 #A9CFD8 #99ADD4 #CBBAD8 #E7DAAC #E9D36E #2F3438.
+
+The intended reading is: abstract context first, detailed contributions second. Avoid giving baseline modules the same visual weight as HSI and TRSTR.
+

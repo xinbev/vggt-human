@@ -1,0 +1,11 @@
+Use the provided figure as the strict reference. Preserve the entire composition, all diagrams, formulas, arrows, panel sizes, colors, and typography. Make only a minimal text-cleanup pass in the bottom-right panel.
+
+Erase the garbled text above the upper half of panel (C). Replace it with exactly "TRSTR Regional Translator" centered at the top of that upper subpanel.
+
+Keep the lower subpanel title exactly "Track-wise Temporal Fusion".
+
+In its track matrix show exactly nine columns labeled, from left to right: "t−4", "t−3", "t−2", "t−1", "t", "t+1", "t+2", "t+3", "t+4". Highlight the center t column with one dashed outline. Remove duplicated or malformed time labels.
+
+Keep the three operation cards exactly: "Observation O_t" → "Neighbour-only proposal M_t" → "Capped fusion α_t ≤ 0.5". Keep formula exactly "X*_t = O_t + α_t(M_t − O_t)".
+
+Remove stray microtext and black marks only. Do not alter any other section. No new content, no watermark.

@@ -226,6 +226,7 @@ def main() -> None:
             "vggt_nlf_hsi_scale": "same NLF base SMPL + shared analytic coarse * v3 HSI residual camera scale",
             "vggt_nlf_hsi_scale_trstr": "same metric camera as HSI stage + TRSTR refined translation",
         },
+        "matching_protocol": "human3r_gt_smpl2d_iou_v1",
         "chunk_length": chunk_length,
         "subsample_stride": subsample_stride,
         "official_emdb2_subsample": bool(subsample_stride == 1),
