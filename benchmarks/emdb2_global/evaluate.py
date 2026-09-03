@@ -85,6 +85,7 @@ def main() -> None:
     total_good_frames = 0
     total_sampled_frames = 0
     total_matched_frames = 0
+    inference_protocol: dict[str, Any] | None = None
 
     for sequence in sequences:
         total_good_frames += int(sequence.good_frame_indices.size)
@@ -97,6 +98,18 @@ def main() -> None:
                 raise FileNotFoundError(f"Missing prediction archive for {sequence.name}")
             continue
         prediction = load_prediction_archive(archive_path, sequence)
+        current_protocol = {
+            "inference_chunk_size": int(prediction["inference_chunk_size"]),
+            "inference_chunk_overlap": int(prediction["inference_chunk_overlap"]),
+            "stitch_protocol": str(prediction["stitch_protocol"]),
+        }
+        if inference_protocol is None:
+            inference_protocol = current_protocol
+        elif inference_protocol != current_protocol:
+            raise ValueError(
+                "Prediction archives use inconsistent inference protocols: "
+                f"{inference_protocol} vs {current_protocol} for {sequence.name}"
+            )
         frame_indices, pred_joints_world_by_stage = select_protocol_frames(
             sequence, prediction, subsample_stride=subsample_stride
         )
@@ -144,6 +157,7 @@ def main() -> None:
                     "prediction_coverage": float(prediction_coverage),
                     "gt_root_displacement_m": root_displacement,
                     "max_matched_frame_gap": max_frame_gap,
+                    **current_protocol,
                     **stage_summary,
                 }
             )
@@ -159,14 +173,17 @@ def main() -> None:
                         "RTE_percent": float(result.rte_percent[local]),
                     }
                 )
-        final_summary = sequence_stage_summaries[STAGE_ORDER[-1]]
+        base_summary = sequence_stage_summaries[STAGE_ORDER[0]]
+        scale_summary = sequence_stage_summaries[STAGE_ORDER[1]]
+        final_summary = sequence_stage_summaries[STAGE_ORDER[2]]
         print(
             f"[sequence] {sequence.name} frames={frame_indices.size}/{sequence.good_frame_indices.size} "
-            f"base_RTE={sequence_stage_summaries['vggt_nlf']['RTE_percent']:.3f}% "
-            f"scale_RTE={sequence_stage_summaries['vggt_nlf_hsi_scale']['RTE_percent']:.3f}% "
-            f"final_W={final_summary['W-MPJPE_mm']:.2f}mm "
-            f"final_WA={final_summary['WA-MPJPE_mm']:.2f}mm "
-            f"final_RTE={final_summary['RTE_percent']:.3f}%",
+            f"base=({base_summary['W-MPJPE_mm']:.2f},"
+            f"{base_summary['WA-MPJPE_mm']:.2f},{base_summary['RTE_percent']:.3f}%) "
+            f"hsi=({scale_summary['W-MPJPE_mm']:.2f},"
+            f"{scale_summary['WA-MPJPE_mm']:.2f},{scale_summary['RTE_percent']:.3f}%) "
+            f"trstr=({final_summary['W-MPJPE_mm']:.2f},"
+            f"{final_summary['WA-MPJPE_mm']:.2f},{final_summary['RTE_percent']:.3f}%)",
             flush=True,
         )
 
@@ -199,9 +216,21 @@ def main() -> None:
         }
         for stage in STAGE_ORDER
     ]
+    inference_protocol = inference_protocol or {
+        "inference_chunk_size": 0,
+        "inference_chunk_overlap": 0,
+        "stitch_protocol": "none",
+    }
+    is_chunk100_protocol = (
+        subsample_stride == 1
+        and inference_protocol["inference_chunk_size"] == 100
+        and inference_protocol["stitch_protocol"] != "none"
+    )
     summary = {
         "benchmark": (
-            "emdb2_global_human3r_protocol_v1"
+            "emdb2_global_chunk100_prediction_stitch_v1"
+            if is_chunk100_protocol
+            else "emdb2_global_human3r_protocol_v1"
             if subsample_stride == 1
             else f"emdb2_s{subsample_stride}_unchunked_two_pass_protocol_v1"
         ),
@@ -230,9 +259,14 @@ def main() -> None:
         "chunk_length": chunk_length,
         "subsample_stride": subsample_stride,
         "official_emdb2_subsample": bool(subsample_stride == 1),
+        "inference_protocol": inference_protocol,
         "root_index": root_index,
         "joint_format": "project SMPL-24; root index 0",
-        "prediction_protocol": "continuous unchunked world joints, or camera joints with predicted per-frame T_c2w",
+        "prediction_protocol": (
+            "100-frame local VGGT worlds joined by prediction-only overlapping-camera SE(3)"
+            if is_chunk100_protocol
+            else "continuous unchunked world joints, or camera joints with predicted per-frame T_c2w"
+        ),
         "gt_protocol": "native EMDB-2 good_frames_mask; gender-specific SMPL; world root pose/transl",
         "predictions_root": str(predictions_root),
         "emdb_root": str(emdb_root),
@@ -345,11 +379,25 @@ def load_prediction_archive(path: Path, sequence: EMDB2Sequence) -> dict[str, An
                 f"{path}: sequence_name={sequence_name!r} does not match {sequence.name!r}"
             )
         archive_stride = int(np.asarray(archive["subsample_stride"]).reshape(-1)[0]) if "subsample_stride" in keys else 1
+        inference_chunk_size = (
+            int(np.asarray(archive["inference_chunk_size"]).reshape(-1)[0])
+            if "inference_chunk_size" in keys
+            else 0
+        )
+        inference_chunk_overlap = (
+            int(np.asarray(archive["inference_chunk_overlap"]).reshape(-1)[0])
+            if "inference_chunk_overlap" in keys
+            else 0
+        )
+        stitch_protocol = _archive_scalar_string(archive, "stitch_protocol", "none")
     return {
         "frame_indices": frame_indices,
         "valid": valid,
         "pred_joints_world_by_stage": joints_world_by_stage,
         "subsample_stride": np.asarray(archive_stride, dtype=np.int64),
+        "inference_chunk_size": np.asarray(inference_chunk_size, dtype=np.int64),
+        "inference_chunk_overlap": np.asarray(inference_chunk_overlap, dtype=np.int64),
+        "stitch_protocol": stitch_protocol,
     }
 
 

@@ -121,12 +121,43 @@ The current VGGT-Omega full pipeline can evaluate short windows, but EMDB-2
 sequences contain roughly 700-3300 frames. Processing each sequence in
 independent VGGT chunks creates independent Sim(3) camera worlds. Concatenating
 those chunks would corrupt W-MPJPE, WA-MPJPE and RTE. A valid exporter needs a
-verified long-sequence camera-state path or overlap-based Sim(3) stitching with
+verified long-sequence camera-state path or overlap-based prediction-only
+stitching with
 explicit camera-trajectory tests. This benchmark intentionally refuses to use
 GT camera extrinsics as a shortcut.
 
 The stride-7 baseline below avoids chunk gauges with one forward per sampled
-sequence. The blocker remains only for the official all-good-frame protocol.
+sequence. The chunk-100 workflow below provides the no-subsampling protocol
+with prediction-only overlap stitching.
+
+## Chunk-100 No-Subsampling Workflow
+
+The official-style no-subsampling workflow is now available as an independent
+protocol:
+
+```bash
+bash benchmarks/emdb2_global/run_chunk100_full.sh
+```
+
+It uses every EMDB-2 `good_frames_mask` frame and sends at most 100 frames to
+VGGT per inference window. Neighbouring windows overlap by 8 frames. The
+overlap estimates a prediction-only rigid transform (SE(3), rotation plus
+translation) from the overlapping predicted camera poses, placing each local
+VGGT world into the first window's predicted world. Human joints and EMDB GT
+are not used for this stitching step.
+
+After stitching, the existing Human3R metric implementation runs with
+`subsample_stride=1` and `chunk_length=100`, so each sequence produces its
+three stage metrics and the dataset summary. The new archives record
+`inference_chunk_size`, `inference_chunk_overlap`, and `stitch_protocol`.
+Results are written independently to:
+
+```text
+outputs/eval/emdb2_global_chunk100/predictions/
+outputs/eval/emdb2_global_chunk100/metrics/
+```
+
+This removes the old stride-7 sampling issue while keeping memory bounded.
 
 ## Stride-7 Unchunked Two-Pass Workflow
 
