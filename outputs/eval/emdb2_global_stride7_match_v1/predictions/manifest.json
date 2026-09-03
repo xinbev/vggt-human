@@ -1,0 +1,34 @@
+{
+  "protocol": "EMDB-2-S7 unchunked-two-pass",
+  "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_stage2_trstr_v3_refine/checkpoint_top_val_epoch_0003_metric_hsi_trstr_v3_selection_1.225058.pt",
+  "scale_checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt",
+  "sequence_count": 1,
+  "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_global_stride7_match_v1/predictions",
+  "sequences": [
+    {
+      "sequence": "P2/19_indoor_walk_off_mvs",
+      "archive": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_global_stride7_match_v1/predictions/P2_19_indoor_walk_off_mvs.npz",
+      "original_good_frames": 1299,
+      "selected_frames": 186,
+      "valid_predictions": 186,
+      "coverage": 1.0,
+      "effective_scale": 10.0489501953125,
+      "analytic_coarse_scale": 9.15204906463623,
+      "stages": [
+        "vggt_nlf",
+        "vggt_nlf_hsi_scale",
+        "vggt_nlf_hsi_scale_trstr"
+      ],
+      "trstr": {
+        "active": true,
+        "temporal_enabled": false,
+        "depth_source": "hsi_translation_depth",
+        "valid_people": 219,
+        "delta_l2_mean_m": 0.16714926064014435,
+        "delta_l2_p90_m": 0.355559766292572,
+        "delta_l2_max_m": 0.6751005053520203,
+        "region_valid_ratio": 0.9988584518432617
+      }
+    }
+  ]
+}

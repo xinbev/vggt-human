@@ -1,0 +1,99 @@
+{
+  "benchmark": "emdb2_s7_unchunked_two_pass_protocol_v1",
+  "dataset": "EMDB-2",
+  "protocol_sequence_count": 1,
+  "evaluated_sequence_count": 1,
+  "missing_sequences": [],
+  "good_frames": 1299,
+  "matched_frames": 186,
+  "coverage": 0.14318706697459585,
+  "stages": {
+    "vggt_nlf": {
+      "label": "RGB-VGGT-NLF (analytic coarse gauge)",
+      "paper_metrics_frame_weighted": {
+        "W-MPJPE_mm": 84.41225916588486,
+        "WA-MPJPE_mm": 52.96400598603109,
+        "RTE_percent": 0.47907869953323473
+      },
+      "sequence_macro_diagnostics": {
+        "W-MPJPE_mm": 84.41225916588486,
+        "WA-MPJPE_mm": 52.96400598603109,
+        "RTE_percent": 0.47907869953323473
+      }
+    },
+    "vggt_nlf_hsi_scale": {
+      "label": "RGB-VGGT-NLF-HSI Scale",
+      "paper_metrics_frame_weighted": {
+        "W-MPJPE_mm": 119.97082992327954,
+        "WA-MPJPE_mm": 64.76268669768544,
+        "RTE_percent": 2.2520224664458177
+      },
+      "sequence_macro_diagnostics": {
+        "W-MPJPE_mm": 119.97082992327954,
+        "WA-MPJPE_mm": 64.76268669768544,
+        "RTE_percent": 2.2520224664458177
+      }
+    },
+    "vggt_nlf_hsi_scale_trstr": {
+      "label": "RGB-VGGT-NLF-HSI Scale-TRSTR",
+      "paper_metrics_frame_weighted": {
+        "W-MPJPE_mm": 125.95554595028693,
+        "WA-MPJPE_mm": 73.55968741899207,
+        "RTE_percent": 2.071379880897644
+      },
+      "sequence_macro_diagnostics": {
+        "W-MPJPE_mm": 125.95554595028693,
+        "WA-MPJPE_mm": 73.55968741899207,
+        "RTE_percent": 2.071379880897644
+      }
+    }
+  },
+  "contributions_error_reduction": {
+    "hsi_scale": {
+      "from": "RGB-VGGT-NLF (analytic coarse gauge)",
+      "to": "RGB-VGGT-NLF-HSI Scale",
+      "positive_means_improvement": true,
+      "W-MPJPE_mm": -35.558570757394676,
+      "WA-MPJPE_mm": -11.798680711654349,
+      "RTE_percent": -1.772943766912583
+    },
+    "trstr": {
+      "from": "RGB-VGGT-NLF-HSI Scale",
+      "to": "RGB-VGGT-NLF-HSI Scale-TRSTR",
+      "positive_means_improvement": true,
+      "W-MPJPE_mm": -5.984716027007394,
+      "WA-MPJPE_mm": -8.797000721306631,
+      "RTE_percent": 0.1806425855481737
+    },
+    "total": {
+      "from": "RGB-VGGT-NLF (analytic coarse gauge)",
+      "to": "RGB-VGGT-NLF-HSI Scale-TRSTR",
+      "positive_means_improvement": true,
+      "W-MPJPE_mm": -41.54328678440207,
+      "WA-MPJPE_mm": -20.59568143296098,
+      "RTE_percent": -1.5923011813644092
+    }
+  },
+  "metric_mapping": {
+    "W-MPJPE": "Human3R wa2_mpjpe; chunk Sim(3) from first two frames; mm",
+    "WA-MPJPE": "Human3R waa_mpjpe; chunk Sim(3) from all chunk joints; mm",
+    "RTE": "Rigid-aligned root error / total GT root displacement * 100; percent"
+  },
+  "stage_protocol": {
+    "vggt_nlf": "NLF base SMPL + shared analytic-coarse-scaled predicted VGGT camera",
+    "vggt_nlf_hsi_scale": "same NLF base SMPL + shared analytic coarse * v3 HSI residual camera scale",
+    "vggt_nlf_hsi_scale_trstr": "same metric camera as HSI stage + TRSTR refined translation"
+  },
+  "chunk_length": 14,
+  "subsample_stride": 7,
+  "official_emdb2_subsample": false,
+  "root_index": 0,
+  "joint_format": "project SMPL-24; root index 0",
+  "prediction_protocol": "continuous unchunked world joints, or camera joints with predicted per-frame T_c2w",
+  "gt_protocol": "native EMDB-2 good_frames_mask; gender-specific SMPL; world root pose/transl",
+  "predictions_root": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_global_stride7/predictions",
+  "emdb_root": "/home/zhw/xyb_space/emdb",
+  "sequence_metrics_csv": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_global_stride7/metrics/sequence_metrics.csv",
+  "frame_metrics_csv": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_global_stride7/metrics/frame_metrics.csv",
+  "stage_metrics_csv": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_global_stride7/metrics/stage_metrics.csv"
+}

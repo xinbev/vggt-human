@@ -1,0 +1,132 @@
+{
+  "benchmark": "human3r_style_3dpw_test_v1",
+  "input_protocol": "raw 3DPW test RGB + exact per-sequence GT K -> NLF detector -> optional PoseTemporalStabilizerV2",
+  "gt_protocol": "raw 3DPW test pkl; gender-specific SMPL; Human3R-style camera-coordinate conversion",
+  "matching_protocol": "project predicted SMPL joints with processed GT K; greedy common OpenPose/SMPL 2D-joint association",
+  "metric_protocol": "Human3R-style: pelvis[1,2]-aligned MPJPE/PVE; similarity PA-MPJPE/PA-PVE; metric unaligned diagnostics",
+  "nlf_checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/third_party/weights/nlf/nlf_l_multi_0.3.2.torchscript",
+  "temporal_checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_temporal_stabilizer_v2_pose_mixture_v21_focus/checkpoint_best.pt",
+  "sequence_filter": "downtown_arguing_00",
+  "coverage": {
+    "sequences": 1,
+    "gt_people": 200,
+    "matched_people": 200,
+    "false_positives": 88,
+    "temporal_applied_matches": 184,
+    "precision": 0.6944444444444444,
+    "recall": 1.0,
+    "temporal_applied_rate": 0.92
+  },
+  "nlf_base": {
+    "metric_mpjpe_mm": 89.01527458190918,
+    "metric_pve_mm": 94.48415679931641,
+    "mpjpe_mm": 41.55245536804199,
+    "pa_mpjpe_mm": 26.559425563812255,
+    "pa_pve_mm": 32.372939128875736,
+    "pve_mm": 48.37449859619141,
+    "root_error_mm": 72.60285179138184,
+    "count": {
+      "mpjpe_mm": 200,
+      "pve_mm": 200,
+      "pa_mpjpe_mm": 200,
+      "pa_pve_mm": 200,
+      "metric_mpjpe_mm": 200,
+      "metric_pve_mm": 200,
+      "root_error_mm": 200
+    }
+  },
+  "nlf_pose_temporal": {
+    "metric_mpjpe_mm": 89.00904754638673,
+    "metric_pve_mm": 94.47258308410645,
+    "mpjpe_mm": 41.53428779602051,
+    "pa_mpjpe_mm": 26.53842555999756,
+    "pa_pve_mm": 32.34751747131347,
+    "pve_mm": 48.35082271575928,
+    "root_error_mm": 72.60285385131836,
+    "count": {
+      "mpjpe_mm": 200,
+      "pve_mm": 200,
+      "pa_mpjpe_mm": 200,
+      "pa_pve_mm": 200,
+      "metric_mpjpe_mm": 200,
+      "metric_pve_mm": 200,
+      "root_error_mm": 200
+    }
+  },
+  "component_diagnostics": {
+    "description": "Counterfactual local-body proxies. They are non-additive; compare them to nlf_base to identify whether pose, beta, or neutral-vs-gender representation dominates.",
+    "full_pred_neutral": {
+      "metric_mpjpe_mm": 3891.221101074219,
+      "metric_pve_mm": 3891.939318847656,
+      "mpjpe_mm": 41.55245403289795,
+      "pa_mpjpe_mm": 26.559428119659422,
+      "pa_pve_mm": 32.37294008255005,
+      "pve_mm": 48.37449672698975,
+      "root_error_mm": 3889.56015625,
+      "count": {
+        "mpjpe_mm": 200,
+        "pve_mm": 200,
+        "pa_mpjpe_mm": 200,
+        "pa_pve_mm": 200,
+        "metric_mpjpe_mm": 200,
+        "metric_pve_mm": 200,
+        "root_error_mm": 200
+      }
+    },
+    "pred_pose_gt_beta": {
+      "metric_mpjpe_mm": 3889.738903808594,
+      "metric_pve_mm": 3888.9218627929686,
+      "mpjpe_mm": 55.80404109954834,
+      "pa_mpjpe_mm": 25.641861381530763,
+      "pa_pve_mm": 31.29832612991333,
+      "pve_mm": 62.831281929016114,
+      "root_error_mm": 3889.2025317382813,
+      "count": {
+        "mpjpe_mm": 200,
+        "pve_mm": 200,
+        "pa_mpjpe_mm": 200,
+        "pa_pve_mm": 200,
+        "metric_mpjpe_mm": 200,
+        "metric_pve_mm": 200,
+        "root_error_mm": 200
+      }
+    },
+    "gt_pose_pred_beta": {
+      "metric_mpjpe_mm": 3878.290129394531,
+      "metric_pve_mm": 3878.304572753906,
+      "mpjpe_mm": 23.39881498336792,
+      "pa_mpjpe_mm": 15.142466907501221,
+      "pa_pve_mm": 12.46578290939331,
+      "pve_mm": 22.596952667236327,
+      "root_error_mm": 3886.7209985351565,
+      "count": {
+        "mpjpe_mm": 200,
+        "pve_mm": 200,
+        "pa_mpjpe_mm": 200,
+        "pa_pve_mm": 200,
+        "metric_mpjpe_mm": 200,
+        "metric_pve_mm": 200,
+        "root_error_mm": 200
+      }
+    },
+    "gt_pose_gt_beta_neutral": {
+      "metric_mpjpe_mm": 3877.402958984375,
+      "metric_pve_mm": 3876.3927978515626,
+      "mpjpe_mm": 43.57133853912354,
+      "pa_mpjpe_mm": 15.412910995483399,
+      "pa_pve_mm": 12.328248453140258,
+      "pve_mm": 44.40224632263184,
+      "root_error_mm": 3886.238994140625,
+      "count": {
+        "mpjpe_mm": 200,
+        "pve_mm": 200,
+        "pa_mpjpe_mm": 200,
+        "pa_pve_mm": 200,
+        "metric_mpjpe_mm": 200,
+        "metric_pve_mm": 200,
+        "root_error_mm": 200
+      }
+    },
+    "rows_csv": "outputs/debug/human3r_style_3dpw_downtown_diagnose/component_rows.csv"
+  }
+}

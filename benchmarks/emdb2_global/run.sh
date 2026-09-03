@@ -27,5 +27,8 @@ else
   ARGS+=(--no-require-all-sequences)
 fi
 
-CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE:-7}" \
+if [[ -n "${CUDA_VISIBLE_DEVICES_VALUE:-}" ]]; then
+  export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}"
+fi
+
 python benchmarks/emdb2_global/evaluate.py "${ARGS[@]}"

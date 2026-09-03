@@ -1,0 +1,56 @@
+{
+  "benchmark": "human3r_style_3dpw_test_v1",
+  "input_protocol": "raw 3DPW test RGB + exact per-sequence GT K -> NLF detector -> optional PoseTemporalStabilizerV2",
+  "gt_protocol": "raw 3DPW test pkl; gender-specific SMPL; Human3R-style camera-coordinate conversion",
+  "matching_protocol": "project predicted SMPL joints with processed GT K; greedy common OpenPose/SMPL 2D-joint association",
+  "metric_protocol": "Human3R-style: pelvis[1,2]-aligned MPJPE/PVE; similarity PA-MPJPE/PA-PVE; metric unaligned diagnostics",
+  "nlf_checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/third_party/weights/nlf/nlf_l_multi_0.3.2.torchscript",
+  "temporal_checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_temporal_stabilizer_v2_pose_mixture_v21_focus/checkpoint_best.pt",
+  "sequence_filter": "",
+  "coverage": {
+    "sequences": 24,
+    "gt_people": 35515,
+    "matched_people": 35512,
+    "false_positives": 45396,
+    "temporal_applied_matches": 35030,
+    "precision": 0.43891827754980967,
+    "recall": 0.9999155286498662,
+    "temporal_applied_rate": 0.9864271232259518
+  },
+  "nlf_base": {
+    "metric_mpjpe_mm": 191.289625076862,
+    "metric_pve_mm": 196.11080768903813,
+    "mpjpe_mm": 60.12503948730508,
+    "pa_mpjpe_mm": 71.65090421847219,
+    "pa_pve_mm": 78.90549539767775,
+    "pve_mm": 70.70150534567948,
+    "root_error_mm": 183.9006306425519,
+    "count": {
+      "mpjpe_mm": 35512,
+      "pve_mm": 35512,
+      "pa_mpjpe_mm": 35512,
+      "pa_pve_mm": 35512,
+      "metric_mpjpe_mm": 35512,
+      "metric_pve_mm": 35512,
+      "root_error_mm": 35512
+    }
+  },
+  "nlf_pose_temporal": {
+    "metric_mpjpe_mm": 191.21070525597332,
+    "metric_pve_mm": 196.01597954760157,
+    "mpjpe_mm": 59.94369514473496,
+    "pa_mpjpe_mm": 71.40268638574962,
+    "pa_pve_mm": 78.6366087144279,
+    "pve_mm": 70.502378429693,
+    "root_error_mm": 183.89868265991947,
+    "count": {
+      "mpjpe_mm": 35512,
+      "pve_mm": 35512,
+      "pa_mpjpe_mm": 35512,
+      "pa_pve_mm": 35512,
+      "metric_mpjpe_mm": 35512,
+      "metric_pve_mm": 35512,
+      "root_error_mm": 35512
+    }
+  }
+}

@@ -52,6 +52,12 @@ echo "TRSTR checkpoint : ${TRSTR_CHECKPOINT}"
 echo "Scale checkpoint : ${SCALE_CHECKPOINT}"
 echo "Predictions      : ${PREDICTIONS_ROOT}"
 echo "Stride/limit     : ${SUBSAMPLE_STRIDE:-7} / ${MAX_INPUT_FRAMES:-500}"
+echo "CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES:-<unset>}"
 
-CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE:-7}" \
+# Slurm sets CUDA_VISIBLE_DEVICES to the allocated GPU and usually remaps it
+# to index 0. Only override it when the caller explicitly requests a value.
+if [[ -n "${CUDA_VISIBLE_DEVICES_VALUE:-}" ]]; then
+  export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}"
+fi
+
 python benchmarks/emdb2_global/export_stride7.py "${ARGS[@]}"
