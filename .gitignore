@@ -34,4 +34,5 @@ assets/demo/12-HW/
 
 outputs/vis/seq_000080_shared_6fps/
 outputs/train/smpl_hsi_gt_depth_scale_scene_affine_boxfree/wandb/run-20260824_160533-e6j59aru/run-e6j59aru.wandb
-outputs/eval/emdb2_s7_match_v2_smoke/predictions/P2_19_indoor_walk_off_mvs.npz
+outputs/eval/emdb2_s7_match_v2_smoke/predictions/
+outputs/eval/emdb2_s7_chunk16_full/predictions/

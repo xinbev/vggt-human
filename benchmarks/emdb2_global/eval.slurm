@@ -33,10 +33,11 @@ echo "分配的 GPU: ${CUDA_VISIBLE_DEVICES}"
 # OUTPUT_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_global_stride7_match_v1/metrics \
 # MAX_SEQUENCES=1 \
 # bash benchmarks/emdb2_global/run_stride7_full.sh
+
 TRSTR_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_stage2_trstr_v3_refine \
-PREDICTIONS_ROOT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_s7_match_v2_smoke/predictions \
-OUTPUT_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_s7_match_v2_smoke/metrics \
-MAX_SEQUENCES=1 \
-LOG_COARSE_FRAMES=false \
+PREDICTIONS_ROOT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_s7_chunk16_full/predictions \
+OUTPUT_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_s7_chunk16_full/metrics \
+TRSTR_FRAME_CHUNK=16 \
+MAX_SEQUENCES=0 \
 bash benchmarks/emdb2_global/run_stride7_full.sh
 echo "评估完成"
