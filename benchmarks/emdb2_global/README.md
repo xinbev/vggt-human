@@ -232,3 +232,18 @@ association only, predicted neutral SMPL-24 joints are projected with the
 predicted VGGT intrinsics, and the lowest-error prediction with bbox IoU at
 least 0.05 is matched. EMDB GT camera is never used to construct predicted
 world coordinates.
+
+## NLF + GT Camera Oracle
+
+An independent diagnostic removes camera uncertainty by running NLF with the
+processed EMDB GT intrinsics and mapping its camera-space joints to world with
+the EMDB GT extrinsics:
+
+```bash
+CUDA_VISIBLE_DEVICES_VALUE=0 \
+bash benchmarks/emdb2_global/run_gt_camera_nlf_stride7.sh
+```
+
+Outputs are isolated under `outputs/eval/emdb2_s7_nlf_gt_camera/`. This is an
+oracle ablation using privileged GT camera information and must not be reported
+as a pure-RGB prediction result. See `docs/emdb2_nlf_gt_camera_oracle.md`.
