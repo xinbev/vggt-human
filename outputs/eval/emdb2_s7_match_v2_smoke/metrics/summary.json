@@ -1,0 +1,102 @@
+{
+  "benchmark": "emdb2_s7_unchunked_two_pass_protocol_v1",
+  "dataset": "EMDB-2",
+  "protocol_sequence_count": 1,
+  "evaluated_sequence_count": 1,
+  "missing_sequences": [],
+  "good_frames": 1299,
+  "sampled_frames": 186,
+  "matched_frames": 186,
+  "sampling_rate": 0.14318706697459585,
+  "prediction_coverage": 1.0,
+  "stages": {
+    "vggt_nlf": {
+      "label": "RGB-VGGT-NLF (analytic coarse gauge)",
+      "paper_metrics_frame_weighted": {
+        "W-MPJPE_mm": 84.67441195636323,
+        "WA-MPJPE_mm": 52.82326614929773,
+        "RTE_percent": 0.47761008476403355
+      },
+      "sequence_macro_diagnostics": {
+        "W-MPJPE_mm": 84.67441195636323,
+        "WA-MPJPE_mm": 52.82326614929773,
+        "RTE_percent": 0.47761008476403355
+      }
+    },
+    "vggt_nlf_hsi_scale": {
+      "label": "RGB-VGGT-NLF-HSI Scale",
+      "paper_metrics_frame_weighted": {
+        "W-MPJPE_mm": 121.15517524097397,
+        "WA-MPJPE_mm": 65.19363488125907,
+        "RTE_percent": 2.252954522058714
+      },
+      "sequence_macro_diagnostics": {
+        "W-MPJPE_mm": 121.15517524097397,
+        "WA-MPJPE_mm": 65.19363488125907,
+        "RTE_percent": 2.252954522058714
+      }
+    },
+    "vggt_nlf_hsi_scale_trstr": {
+      "label": "RGB-VGGT-NLF-HSI Scale-TRSTR",
+      "paper_metrics_frame_weighted": {
+        "W-MPJPE_mm": 127.30078857629876,
+        "WA-MPJPE_mm": 74.02956237979521,
+        "RTE_percent": 2.072131606722319
+      },
+      "sequence_macro_diagnostics": {
+        "W-MPJPE_mm": 127.30078857629876,
+        "WA-MPJPE_mm": 74.02956237979521,
+        "RTE_percent": 2.072131606722319
+      }
+    }
+  },
+  "contributions_error_reduction": {
+    "hsi_scale": {
+      "from": "RGB-VGGT-NLF (analytic coarse gauge)",
+      "to": "RGB-VGGT-NLF-HSI Scale",
+      "positive_means_improvement": true,
+      "W-MPJPE_mm": -36.480763284610745,
+      "WA-MPJPE_mm": -12.370368731961342,
+      "RTE_percent": -1.7753444372946805
+    },
+    "trstr": {
+      "from": "RGB-VGGT-NLF-HSI Scale",
+      "to": "RGB-VGGT-NLF-HSI Scale-TRSTR",
+      "positive_means_improvement": true,
+      "W-MPJPE_mm": -6.145613335324782,
+      "WA-MPJPE_mm": -8.835927498536137,
+      "RTE_percent": 0.18082291533639472
+    },
+    "total": {
+      "from": "RGB-VGGT-NLF (analytic coarse gauge)",
+      "to": "RGB-VGGT-NLF-HSI Scale-TRSTR",
+      "positive_means_improvement": true,
+      "W-MPJPE_mm": -42.62637661993553,
+      "WA-MPJPE_mm": -21.20629623049748,
+      "RTE_percent": -1.5945215219582858
+    }
+  },
+  "metric_mapping": {
+    "W-MPJPE": "Human3R wa2_mpjpe; chunk Sim(3) from first two frames; mm",
+    "WA-MPJPE": "Human3R waa_mpjpe; chunk Sim(3) from all chunk joints; mm",
+    "RTE": "Rigid-aligned root error / total GT root displacement * 100; percent"
+  },
+  "stage_protocol": {
+    "vggt_nlf": "NLF base SMPL + shared analytic-coarse-scaled predicted VGGT camera",
+    "vggt_nlf_hsi_scale": "same NLF base SMPL + shared analytic coarse * v3 HSI residual camera scale",
+    "vggt_nlf_hsi_scale_trstr": "same metric camera as HSI stage + TRSTR refined translation"
+  },
+  "matching_protocol": "human3r_gt_smpl2d_iou_v1",
+  "chunk_length": 14,
+  "subsample_stride": 7,
+  "official_emdb2_subsample": false,
+  "root_index": 0,
+  "joint_format": "project SMPL-24; root index 0",
+  "prediction_protocol": "continuous unchunked world joints, or camera joints with predicted per-frame T_c2w",
+  "gt_protocol": "native EMDB-2 good_frames_mask; gender-specific SMPL; world root pose/transl",
+  "predictions_root": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_s7_match_v2_smoke/predictions",
+  "emdb_root": "/home/zhw/xyb_space/emdb",
+  "sequence_metrics_csv": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_s7_match_v2_smoke/metrics/sequence_metrics.csv",
+  "frame_metrics_csv": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_s7_match_v2_smoke/metrics/frame_metrics.csv",
+  "stage_metrics_csv": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_s7_match_v2_smoke/metrics/stage_metrics.csv"
+}

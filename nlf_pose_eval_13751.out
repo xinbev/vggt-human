@@ -1,0 +1,160 @@
+开始评估，作业 ID: 13751
+当前环境: zhw_env
+分配的 GPU: 0
+========== EMDB-2-S7 unchunked two-pass prediction export ==========
+TRSTR checkpoint : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_stage2_trstr_v3_refine/checkpoint_top_val_epoch_0003_metric_hsi_trstr_v3_selection_1.225058.pt
+Scale checkpoint : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt
+Predictions      : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_s7_match_v2_smoke/predictions
+Stride/limit     : 7 / 500
+CUDA_VISIBLE_DEVICES: 0
+[ckpt] loaded VGGT baseline for camera: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt
+[ckpt] baseline missing=187 unexpected=0
+[ckpt] loaded training checkpoint: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_stage2_trstr_v3_refine/checkpoint_top_val_epoch_0003_metric_hsi_trstr_v3_selection_1.225058.pt
+[ckpt] missing=1412 unexpected=0
+[ckpt] overlaid HSI prefixes ('hsi_refinement_head.',): /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt
+[ckpt] overlay tensors=140 missing=1458 unexpected=0
+[trstr] detections=219 delta_mean_m=0.167149 delta_p90_m=0.35556 delta_max_m=0.675101 region_valid=0.9989 temporal=False depth=hsi_translation_depth
+[coarse-hsi] final_depth = raw_vggt_depth * coarse_scale * hsi_residual_scale + hsi_residual_bias
+[coarse-hsi] shared-world application: clip_median of composed effective scale/bias scale=10.049 bias=-0.090774
+[coarse-hsi-summary] min/median/max coarse=8.37312/9.15205/9.78268 hsi_residual=0.92247/1.10534/1.27209 effective=10.049/10.049/10.049 bias=-0.090774/-0.090774/-0.090774
+[export] P2/19_indoor_walk_off_mvs frames=186 valid=186 scale=10.049
+{
+  "protocol": "EMDB-2-S7 unchunked-two-pass",
+  "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_stage2_trstr_v3_refine/checkpoint_top_val_epoch_0003_metric_hsi_trstr_v3_selection_1.225058.pt",
+  "scale_checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt",
+  "sequence_count": 1,
+  "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_s7_match_v2_smoke/predictions",
+  "sequences": [
+    {
+      "sequence": "P2/19_indoor_walk_off_mvs",
+      "archive": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_s7_match_v2_smoke/predictions/P2_19_indoor_walk_off_mvs.npz",
+      "original_good_frames": 1299,
+      "selected_frames": 186,
+      "valid_predictions": 186,
+      "coverage": 1.0,
+      "matching_protocol": "human3r_gt_smpl2d_iou_v1",
+      "effective_scale": 10.0489501953125,
+      "analytic_coarse_scale": 9.15204906463623,
+      "stages": [
+        "vggt_nlf",
+        "vggt_nlf_hsi_scale",
+        "vggt_nlf_hsi_scale_trstr"
+      ],
+      "trstr": {
+        "active": true,
+        "temporal_enabled": false,
+        "depth_source": "hsi_translation_depth",
+        "valid_detections": 219,
+        "delta_l2_mean_m": 0.16714885830879211,
+        "delta_l2_p90_m": 0.35555973649024963,
+        "delta_l2_max_m": 0.6751005053520203,
+        "region_valid_ratio": 0.9988584518432617
+      }
+    }
+  ]
+}
+[sequence] P2/19_indoor_walk_off_mvs frames=186/1299 base_RTE=0.478% scale_RTE=2.253% final_W=127.30mm final_WA=74.03mm final_RTE=2.072%
+{
+  "benchmark": "emdb2_s7_unchunked_two_pass_protocol_v1",
+  "dataset": "EMDB-2",
+  "protocol_sequence_count": 1,
+  "evaluated_sequence_count": 1,
+  "missing_sequences": [],
+  "good_frames": 1299,
+  "sampled_frames": 186,
+  "matched_frames": 186,
+  "sampling_rate": 0.14318706697459585,
+  "prediction_coverage": 1.0,
+  "stages": {
+    "vggt_nlf": {
+      "label": "RGB-VGGT-NLF (analytic coarse gauge)",
+      "paper_metrics_frame_weighted": {
+        "W-MPJPE_mm": 84.67441195636323,
+        "WA-MPJPE_mm": 52.82326614929773,
+        "RTE_percent": 0.47761008476403355
+      },
+      "sequence_macro_diagnostics": {
+        "W-MPJPE_mm": 84.67441195636323,
+        "WA-MPJPE_mm": 52.82326614929773,
+        "RTE_percent": 0.47761008476403355
+      }
+    },
+    "vggt_nlf_hsi_scale": {
+      "label": "RGB-VGGT-NLF-HSI Scale",
+      "paper_metrics_frame_weighted": {
+        "W-MPJPE_mm": 121.15517524097397,
+        "WA-MPJPE_mm": 65.19363488125907,
+        "RTE_percent": 2.252954522058714
+      },
+      "sequence_macro_diagnostics": {
+        "W-MPJPE_mm": 121.15517524097397,
+        "WA-MPJPE_mm": 65.19363488125907,
+        "RTE_percent": 2.252954522058714
+      }
+    },
+    "vggt_nlf_hsi_scale_trstr": {
+      "label": "RGB-VGGT-NLF-HSI Scale-TRSTR",
+      "paper_metrics_frame_weighted": {
+        "W-MPJPE_mm": 127.30078857629876,
+        "WA-MPJPE_mm": 74.02956237979521,
+        "RTE_percent": 2.072131606722319
+      },
+      "sequence_macro_diagnostics": {
+        "W-MPJPE_mm": 127.30078857629876,
+        "WA-MPJPE_mm": 74.02956237979521,
+        "RTE_percent": 2.072131606722319
+      }
+    }
+  },
+  "contributions_error_reduction": {
+    "hsi_scale": {
+      "from": "RGB-VGGT-NLF (analytic coarse gauge)",
+      "to": "RGB-VGGT-NLF-HSI Scale",
+      "positive_means_improvement": true,
+      "W-MPJPE_mm": -36.480763284610745,
+      "WA-MPJPE_mm": -12.370368731961342,
+      "RTE_percent": -1.7753444372946805
+    },
+    "trstr": {
+      "from": "RGB-VGGT-NLF-HSI Scale",
+      "to": "RGB-VGGT-NLF-HSI Scale-TRSTR",
+      "positive_means_improvement": true,
+      "W-MPJPE_mm": -6.145613335324782,
+      "WA-MPJPE_mm": -8.835927498536137,
+      "RTE_percent": 0.18082291533639472
+    },
+    "total": {
+      "from": "RGB-VGGT-NLF (analytic coarse gauge)",
+      "to": "RGB-VGGT-NLF-HSI Scale-TRSTR",
+      "positive_means_improvement": true,
+      "W-MPJPE_mm": -42.62637661993553,
+      "WA-MPJPE_mm": -21.20629623049748,
+      "RTE_percent": -1.5945215219582858
+    }
+  },
+  "metric_mapping": {
+    "W-MPJPE": "Human3R wa2_mpjpe; chunk Sim(3) from first two frames; mm",
+    "WA-MPJPE": "Human3R waa_mpjpe; chunk Sim(3) from all chunk joints; mm",
+    "RTE": "Rigid-aligned root error / total GT root displacement * 100; percent"
+  },
+  "stage_protocol": {
+    "vggt_nlf": "NLF base SMPL + shared analytic-coarse-scaled predicted VGGT camera",
+    "vggt_nlf_hsi_scale": "same NLF base SMPL + shared analytic coarse * v3 HSI residual camera scale",
+    "vggt_nlf_hsi_scale_trstr": "same metric camera as HSI stage + TRSTR refined translation"
+  },
+  "matching_protocol": "human3r_gt_smpl2d_iou_v1",
+  "chunk_length": 14,
+  "subsample_stride": 7,
+  "official_emdb2_subsample": false,
+  "root_index": 0,
+  "joint_format": "project SMPL-24; root index 0",
+  "prediction_protocol": "continuous unchunked world joints, or camera joints with predicted per-frame T_c2w",
+  "gt_protocol": "native EMDB-2 good_frames_mask; gender-specific SMPL; world root pose/transl",
+  "predictions_root": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_s7_match_v2_smoke/predictions",
+  "emdb_root": "/home/zhw/xyb_space/emdb",
+  "sequence_metrics_csv": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_s7_match_v2_smoke/metrics/sequence_metrics.csv",
+  "frame_metrics_csv": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_s7_match_v2_smoke/metrics/frame_metrics.csv",
+  "stage_metrics_csv": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_s7_match_v2_smoke/metrics/stage_metrics.csv"
+}
+Summary: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_s7_match_v2_smoke/metrics/summary.json
+评估完成

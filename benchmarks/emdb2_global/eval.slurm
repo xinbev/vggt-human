@@ -26,12 +26,17 @@ echo "分配的 GPU: ${CUDA_VISIBLE_DEVICES}"
 # TRSTR_CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_stage2_trstr_v3_refine/checkpoint_top_val_epoch_0003_metric_hsi_trstr_v3_selection_1.225058.pt \
 # MAX_SEQUENCES=1 \
 # bash benchmarks/emdb2_global/run_stride7_full.sh
-cd /home/zhw/lab_users/xyb/home/projects/vggt-human
+# cd /home/zhw/lab_users/xyb/home/projects/vggt-human
 
+# TRSTR_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_stage2_trstr_v3_refine \
+# PREDICTIONS_ROOT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_global_stride7_match_v1/predictions \
+# OUTPUT_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_global_stride7_match_v1/metrics \
+# MAX_SEQUENCES=1 \
+# bash benchmarks/emdb2_global/run_stride7_full.sh
 TRSTR_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_stage2_trstr_v3_refine \
-PREDICTIONS_ROOT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_global_stride7_match_v1/predictions \
-OUTPUT_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_global_stride7_match_v1/metrics \
+PREDICTIONS_ROOT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_s7_match_v2_smoke/predictions \
+OUTPUT_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_s7_match_v2_smoke/metrics \
 MAX_SEQUENCES=1 \
+LOG_COARSE_FRAMES=false \
 bash benchmarks/emdb2_global/run_stride7_full.sh
-
 echo "评估完成"
