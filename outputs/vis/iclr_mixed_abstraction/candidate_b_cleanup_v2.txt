@@ -1,0 +1,17 @@
+Use the provided mixed-abstraction figure as the strict reference. Preserve its exact composition, colors, panel sizes, dashed zoom connectors, abstract top pipeline, detailed HSI and TRSTR lower panels, and small temporal constraint card.
+
+Make only these cleanup changes:
+
+1. In "HSI Scale — Detailed View", remove every numeric anchor index label such as 1, 2, 3, 24. The anchor pairs are NOT steps. Replace them with one clean unnumbered vertical paired-depth matrix: left column z_smpl, right column z_depth, 8 visible paired colored cells followed by an ellipsis. Feed the paired-depth matrix into one median operator labeled "median" and output "C_coarse". Keep the 24-anchor wireframe and projection lines, but no numbered badges anywhere.
+
+2. Keep the HSI flow labels exactly "24 body anchors", "Paired anchor depths", "Robust median", "Anchor-token local probing", "R_hsi, b_hsi", and formula "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi".
+
+3. Clean the top role labels to exactly "frozen context", "metric calibration", "translation refinement", and "track-wise stabilization". Remove malformed tiny characters.
+
+4. In the top pipeline keep exact modules "RGB", "VGGT", "NLF", "HSI Scale", "TRSTR", "Temporal", "Stable Metric Sequence". Preserve K, D_vggt, F_scene and θ, β, τ, c ports.
+
+5. In the TRSTR detailed view preserve "96-region token matrix", "multi-scale probes", "vote Δτ_r", "gate g_r", "uncertainty σ_r", "weighted consensus", "2× re-probe", "τ*", and "θ, β fixed". Remove stray symbols only.
+
+6. Preserve the small "Temporal constraint" card and exact formula "X*_t = O_t + α_t(M_t − O_t), α_t ≤ 0.5".
+
+No new content, no numbered circles, no tutorial steps, no watermark.

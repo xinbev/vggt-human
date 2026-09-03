@@ -156,6 +156,12 @@ The exporter never reads EMDB GT camera extrinsics. It uses GT annotations only
 to select the protocol good-frame IDs; GT joints are decoded later by the metric
 process.
 
+VGGT/NLF/HSI keep the complete sampled sequence in one shared world. TRSTR is
+spatial-only and therefore runs in bounded 16-frame post-processing chunks by
+default. This does not split or re-estimate the predicted camera world; it only
+limits regional probe activations. Override with `TRSTR_FRAME_CHUNK=8` if a GPU
+still runs out of memory.
+
 Run one sequence first:
 
 ```bash

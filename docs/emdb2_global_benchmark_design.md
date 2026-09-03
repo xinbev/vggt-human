@@ -83,6 +83,12 @@ This is a valid internally consistent unchunked benchmark named
 `EMDB-2-S7`, but it is not the official Human3R `subsample=1` protocol. W/WA use
 chunk length 14 and RTE uses the stride-7 root path.
 
+The shared VGGT camera world remains unchunked. Because temporal TRSTR is
+disabled, its regional probe is evaluated in 16-frame memory chunks and merged
+in frame order. For roughly 469 frames, the former full-frame point-encoder
+activation alone approached 9.5 GiB; chunking it to 16 frames reduces that
+activation to roughly 0.32 GiB without changing per-frame outputs.
+
 ## Multi-Stage Attribution
 
 Every sequence archive contains three world predictions using the same

@@ -116,6 +116,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-humans", type=int, default=8)
     parser.add_argument("--conf-threshold", type=float, default=0.05)
     parser.add_argument("--match-iou-threshold", type=float, default=0.05)
+    parser.add_argument("--trstr-frame-chunk", type=int, default=16)
     parser.add_argument("--coarse-scale-min", type=float, default=0.10)
     parser.add_argument("--coarse-scale-max", type=float, default=25.0)
     parser.add_argument("--coarse-anchor-stride", type=int, default=8)
@@ -160,6 +161,7 @@ def export_sequence(
         coarse_fallback="sequence_median",
         conf_threshold=float(args.conf_threshold),
         cascade_effective_affine_mode="clip_median",
+        trstr_frame_chunk=max(int(args.trstr_frame_chunk), 1),
     )
     predictions = run_model(model, image_sequence, None, smpl=smpl, args=run_args)
     gt_keypoints = projected_gt_smpl_keypoints(

@@ -4,6 +4,7 @@ set -euo pipefail
 REPO_ROOT="${REPO_ROOT:-/home/zhw/lab_users/xyb/home/projects/vggt-human}"
 cd "${REPO_ROOT}"
 export PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
+export PYTORCH_ALLOC_CONF="${PYTORCH_ALLOC_CONF:-expandable_segments:True}"
 
 TRSTR_DIR="${TRSTR_DIR:-${REPO_ROOT}/outputs/train/smpl_hsi_stage2_trstr_v3_refine}"
 TRSTR_CHECKPOINT="${TRSTR_CHECKPOINT:-}"
@@ -42,6 +43,7 @@ ARGS=(
   --max-humans "${MAX_HUMANS:-8}"
   --conf-threshold "${CONF_THRESHOLD:-0.05}"
   --match-iou-threshold "${MATCH_IOU_THRESHOLD:-0.05}"
+  --trstr-frame-chunk "${TRSTR_FRAME_CHUNK:-16}"
   --sequence-filter "${SEQUENCE_FILTER:-}"
   --max-sequences "${MAX_SEQUENCES:-0}"
   --device "${DEVICE:-cuda:0}"
@@ -53,6 +55,7 @@ echo "TRSTR checkpoint : ${TRSTR_CHECKPOINT}"
 echo "Scale checkpoint : ${SCALE_CHECKPOINT}"
 echo "Predictions      : ${PREDICTIONS_ROOT}"
 echo "Stride/limit     : ${SUBSAMPLE_STRIDE:-7} / ${MAX_INPUT_FRAMES:-500}"
+echo "TRSTR frame chunk: ${TRSTR_FRAME_CHUNK:-16} (spatial-only, world remains unchunked)"
 echo "CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES:-<unset>}"
 
 # Slurm sets CUDA_VISIBLE_DEVICES to the allocated GPU and usually remaps it

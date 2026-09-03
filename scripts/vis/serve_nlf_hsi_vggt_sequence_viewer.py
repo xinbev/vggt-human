@@ -263,6 +263,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--coarse-min-anchor-pixels", type=int, default=32)
     parser.add_argument("--coarse-fallback", choices=["unit", "sequence_median"], default="unit")
     parser.add_argument(
+        "--trstr-frame-chunk",
+        type=int,
+        default=0,
+        help="Spatial-only TRSTR frame chunk. 0 processes all frames together.",
+    )
+    parser.add_argument(
         "--cascade-effective-affine-mode",
         choices=["per_frame", "clip_median"],
         default="per_frame",
@@ -636,16 +642,12 @@ def run_smpl_coarse_hsi_cascade(
     cascade["hsi_cascade_effective_affine_mode"] = effective_affine_mode
 
     if delay_trstr_until_global_depth:
-        trstr_outputs = trstr_head(
+        trstr_outputs = run_spatial_trstr_in_frame_chunks(
+            trstr_head=trstr_head,
             predictions=cascade,
             depth=final_metric_depth,
-            pose_enc=cascade.get("pose_enc"),
             image_size_hw=(int(images.shape[-2]), int(images.shape[-1])),
-            depth_is_metric=True,
-            person_valid=cascade["pred_confs"][..., 0] > 0.0,
-            track_ids=cascade.get("assigned_track_ids"),
-            track_quality=cascade.get("assigned_track_quality"),
-            track_gap=cascade.get("assigned_track_gap"),
+            frame_chunk=int(getattr(args, "trstr_frame_chunk", 0) or 0),
         )
         cascade.update(trstr_outputs)
         cascade["hsi_refined_pred_transl_cam"] = cascade["hsi_trstr_refined_pred_transl_cam"]
@@ -716,6 +718,98 @@ def run_smpl_coarse_hsi_cascade(
     ).reshape(1, -1)
     cascade["_hsi_coarse_scale_records"] = coarse_records
     return cascade
+
+
+@torch.no_grad()
+def run_spatial_trstr_in_frame_chunks(
+    trstr_head: torch.nn.Module,
+    predictions: dict[str, Any],
+    depth: torch.Tensor,
+    image_size_hw: tuple[int, int],
+    frame_chunk: int,
+) -> dict[str, torch.Tensor]:
+    """Run frame-independent TRSTR in bounded chunks without changing its result."""
+    if bool(getattr(trstr_head, "enable_temporal", False)):
+        raise ValueError("TRSTR frame chunking is only valid when temporal refinement is disabled")
+    transl = predictions.get("pred_transl_cam")
+    pose_enc = predictions.get("pose_enc")
+    if not isinstance(transl, torch.Tensor) or not isinstance(pose_enc, torch.Tensor):
+        raise RuntimeError("Chunked TRSTR requires pred_transl_cam and pose_enc")
+    num_frames = int(transl.shape[1])
+    chunk = num_frames if int(frame_chunk) <= 0 else min(int(frame_chunk), num_frames)
+    if chunk >= num_frames:
+        return trstr_head(
+            predictions=predictions,
+            depth=depth,
+            pose_enc=pose_enc,
+            image_size_hw=image_size_hw,
+            depth_is_metric=True,
+            person_valid=predictions["pred_confs"][..., 0] > 0.0,
+            track_ids=predictions.get("assigned_track_ids"),
+            track_quality=predictions.get("assigned_track_quality"),
+            track_gap=predictions.get("assigned_track_gap"),
+        )
+    if transl.device.type == "cuda":
+        torch.cuda.empty_cache()
+    print(
+        f"[trstr] spatial frame chunking: frames={num_frames} chunk={chunk} "
+        f"chunks={(num_frames + chunk - 1) // chunk}",
+        flush=True,
+    )
+    collected: dict[str, list[torch.Tensor]] = {}
+    iteration_keys = {
+        "hsi_trstr_iteration_transl",
+        "hsi_trstr_iteration_region_vote",
+        "hsi_trstr_iteration_region_gate",
+        "hsi_trstr_iteration_region_valid",
+    }
+    required_prediction_keys = (
+        "pred_pose_6d",
+        "pred_betas",
+        "pred_transl_cam",
+        "pred_confs",
+    )
+    for start in range(0, num_frames, chunk):
+        end = min(start + chunk, num_frames)
+        chunk_predictions = {
+            key: predictions[key][:, start:end]
+            for key in required_prediction_keys
+            if isinstance(predictions.get(key), torch.Tensor)
+        }
+        if len(chunk_predictions) != len(required_prediction_keys):
+            missing = [key for key in required_prediction_keys if key not in chunk_predictions]
+            raise RuntimeError(f"Chunked TRSTR missing prediction tensors: {missing}")
+        outputs = trstr_head(
+            predictions=chunk_predictions,
+            depth=depth[:, start:end],
+            pose_enc=pose_enc[:, start:end],
+            image_size_hw=image_size_hw,
+            depth_is_metric=True,
+            person_valid=predictions["pred_confs"][:, start:end, :, 0] > 0.0,
+            track_ids=_slice_optional_frame_tensor(predictions.get("assigned_track_ids"), start, end),
+            track_quality=_slice_optional_frame_tensor(predictions.get("assigned_track_quality"), start, end),
+            track_gap=_slice_optional_frame_tensor(predictions.get("assigned_track_gap"), start, end),
+        )
+        for key, value in outputs.items():
+            if not isinstance(value, torch.Tensor):
+                raise TypeError(f"TRSTR output {key!r} is not a tensor")
+            collected.setdefault(key, []).append(value)
+        del outputs, chunk_predictions
+    merged = {
+        key: torch.cat(values, dim=2 if key in iteration_keys else 1)
+        for key, values in collected.items()
+    }
+    if merged["hsi_trstr_refined_pred_transl_cam"].shape != transl.shape:
+        raise RuntimeError(
+            "Chunked TRSTR merge shape mismatch: "
+            f"got={tuple(merged['hsi_trstr_refined_pred_transl_cam'].shape)} "
+            f"expected={tuple(transl.shape)}"
+        )
+    return merged
+
+
+def _slice_optional_frame_tensor(value: Any, start: int, end: int) -> torch.Tensor | None:
+    return value[:, start:end] if isinstance(value, torch.Tensor) else None
 
 
 def print_coarse_hsi_scale_summary(
