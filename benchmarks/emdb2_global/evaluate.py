@@ -71,8 +71,9 @@ def main() -> None:
     smpl_root = require_path(cfg, "assets.smpl_model_dir", allow_empty=False)
     smpl_layers = {
         gender: SMPLLayer(smpl_root, gender=gender).to(device).eval()
-        for gender in ("male", "female")
+        for gender in ("neutral", "male", "female")
     }
+    neutral_joint_regressor = smpl_layers["neutral"].layer.J_regressor.detach()
 
     all_metrics = {
         stage: {"w": [], "wa": [], "rte": []}
@@ -82,10 +83,13 @@ def main() -> None:
     frame_rows: list[dict[str, Any]] = []
     missing_sequences: list[str] = []
     total_good_frames = 0
+    total_sampled_frames = 0
     total_matched_frames = 0
 
     for sequence in sequences:
         total_good_frames += int(sequence.good_frame_indices.size)
+        sequence_sampled_frames = int(sequence.good_frame_indices[::subsample_stride].size)
+        total_sampled_frames += sequence_sampled_frames
         archive_path = find_prediction_archive(predictions_root, sequence)
         if archive_path is None:
             missing_sequences.append(sequence.name)
@@ -106,9 +110,11 @@ def main() -> None:
             smpl_layers[sequence.gender],
             device,
             chunk_size=int(args.smpl_batch_size),
+            joint_regressor=neutral_joint_regressor,
         )
         total_matched_frames += int(frame_indices.size)
-        coverage = frame_indices.size / max(sequence.good_frame_indices.size, 1)
+        prediction_coverage = frame_indices.size / max(sequence_sampled_frames, 1)
+        sampling_rate = sequence_sampled_frames / max(sequence.good_frame_indices.size, 1)
         root_displacement = float(
             np.linalg.norm(np.diff(target_joints_world[:, root_index], axis=0), axis=-1).sum()
         )
@@ -134,7 +140,8 @@ def main() -> None:
                     "prediction_archive": str(archive_path),
                     "good_frames": int(sequence.good_frame_indices.size),
                     "matched_frames": int(frame_indices.size),
-                    "coverage": float(coverage),
+                    "sampling_rate": float(sampling_rate),
+                    "prediction_coverage": float(prediction_coverage),
                     "gt_root_displacement_m": root_displacement,
                     "max_matched_frame_gap": max_frame_gap,
                     **stage_summary,
@@ -203,8 +210,10 @@ def main() -> None:
         "evaluated_sequence_count": len(sequence_rows) // len(STAGE_ORDER),
         "missing_sequences": missing_sequences,
         "good_frames": int(total_good_frames),
+        "sampled_frames": int(total_sampled_frames),
         "matched_frames": int(total_matched_frames),
-        "coverage": float(total_matched_frames / max(total_good_frames, 1)),
+        "sampling_rate": float(total_sampled_frames / max(total_good_frames, 1)),
+        "prediction_coverage": float(total_matched_frames / max(total_sampled_frames, 1)),
         "stages": stage_summaries,
         "contributions_error_reduction": contributions,
         "metric_mapping": {
@@ -323,6 +332,12 @@ def load_prediction_archive(path: Path, sequence: EMDB2Sequence) -> dict[str, An
         joint_format = _archive_scalar_string(archive, "joint_format", "smpl24")
         if joint_format.lower() not in {"smpl24", "smpl-24"}:
             raise ValueError(f"{path}: expected joint_format=smpl24, got {joint_format!r}")
+        matching_protocol = _archive_scalar_string(archive, "matching_protocol", "")
+        if matching_protocol != "human3r_gt_smpl2d_iou_v1":
+            raise ValueError(
+                f"{path}: unsupported or stale matching_protocol={matching_protocol!r}; "
+                "re-export predictions with Human3R 2D matching"
+            )
         sequence_name = _archive_scalar_string(archive, "sequence_name", sequence.name)
         if sequence_name not in {sequence.name, sequence.safe_name}:
             raise ValueError(
