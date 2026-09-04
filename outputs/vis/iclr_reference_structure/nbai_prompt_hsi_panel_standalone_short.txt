@@ -1,0 +1,13 @@
+Scientific ICLR mechanism diagram, square 1024×1024, flat 2D vector, warm white background, thin charcoal lines, muted cream and sage panels, no gradients or photorealism. Title "Metric Scale Calibration".
+
+Inputs at left: "Raw VGGT depth D_vggt" depth tile and "Metric SMPL {θ, β, τ}" wireframe.
+
+Two parallel lanes:
+
+Upper cream lane "Analytic Metric Gauge": 1 Project 24 body anchors to depth; 2 compute r_i = z_smpl,i / z_depth,i; 3 reject outliers and robust median. Output "C_coarse = median({r_i})" and "absolute metric gauge".
+
+Lower sage lane "Learned HSI Residual": 1 build 24 body-anchor tokens as 4×6 grid; 2 probe local depth windows and body-scene offsets; 3 residual affine head. Outputs "R_hsi", "b_hsi", and "residual scale + bias".
+
+At right, both lanes merge. Large formula "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi". Output calibrated depth tile "Metric depth D_metric".
+
+Use colors #D9ACA6 #AFCAB2 #A9CFD8 #99ADD4 #CBBAD8 #E7DAAC #E9D36E #2F3438. Large crisp labels, straight arrows, numbered steps, no extra text, no watermark.

@@ -1,0 +1,21 @@
+Create a standalone publication-ready ICLR mechanism diagram titled exactly "Metric Scale Calibration". Landscape 1536×1024. Warm paper #F7F6F2, thin charcoal #2F3438 outlines, pale cream #E7DAAC and pale sage #AFCAB2 lanes, accents #A9CFD8 #99ADD4 #CBBAD8 #E9D36E #D9ACA6. Flat 2D scientific vector style, large crisp labels, no photorealism, gradients, glow, poster styling, or watermark.
+
+The diagram explains why metric scale calibration has TWO complementary paths.
+
+Left input column: "Raw VGGT depth D_vggt" depth tile and "Metric SMPL {θ, β, τ}" small wireframe.
+
+Upper horizontal lane header "Analytic Metric Gauge":
+1 "Project body anchors": 24 anchor dots on SMPL project to depth.
+2 "Anchor-depth ratios": r_i = z_smpl,i / z_depth,i.
+3 "Robust aggregation": ratio samples with outliers rejected, robust median.
+Output chip "C_coarse = median({r_i})" and descriptor "absolute metric gauge".
+
+Lower horizontal lane header "Learned HSI Residual":
+1 "24 body-anchor tokens": 4×6 token matrix.
+2 "Local scene probing": anchors sample local depth windows and human-scene residuals.
+3 "Residual affine head": two compact output heads R_hsi and b_hsi.
+Descriptor "residual scale + bias".
+
+At right, merge C_coarse, R_hsi, b_hsi through clear converging arrows. Large exact equation "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi". Output calibrated depth tile labeled "Metric depth D_metric".
+
+Bottom bracket exact text "analytic absolute gauge + learned residual correction". Add a small Figure palette strip with exact codes #D9ACA6 #AFCAB2 #A9CFD8 #99ADD4 #CBBAD8 #E7DAAC #E9D36E #2F3438. All graphical elements communicate inputs, operations, outputs, or mathematical relations.

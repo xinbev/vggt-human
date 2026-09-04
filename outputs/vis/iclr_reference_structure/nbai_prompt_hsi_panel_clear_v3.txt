@@ -1,0 +1,40 @@
+Use the provided architecture image as the strict composition and palette reference. Preserve the entire TOP overview panel and the entire BOTTOM-RIGHT Spatial–Temporal Refinement panel with the same positions, sizes, arrows, modules, and restrained scientific visual style. Do not redesign those areas.
+
+Redesign ONLY the BOTTOM-LEFT panel titled exactly "(B) Metric Scale Calibration" so its scientific meaning is immediately readable. Make this panel larger internally, with fewer but larger labels. Use a TWO-LANE diagram instead of four ambiguous sequential cards.
+
+BOTTOM-LEFT PANEL STRUCTURE:
+
+At far left, one shared input column with two compact inputs:
+- a raw depth tile labeled exactly "Raw VGGT depth D_vggt";
+- a small SMPL wireframe labeled exactly "Metric SMPL {θ, β, τ}".
+
+From these inputs split into two clearly separated horizontal lanes.
+
+UPPER LANE has a pale cream background and a header exactly "Analytic Metric Gauge". Show three numbered steps with large diagrams:
+1. "Project body anchors" — a small SMPL wireframe with 24 visible colored anchor dots projected by dotted rays onto the raw depth image.
+2. "Anchor-depth ratios" — show paired vertical depth markers z_smpl,i and z_depth,i, then the formula exactly "r_i = z_smpl,i / z_depth,i".
+3. "Robust aggregation" — show a row of ratio samples with outliers crossed out, flowing into a median symbol. Output one prominent scalar chip exactly "C_coarse = median({r_i})".
+Under the output add a short descriptor exactly "absolute metric gauge".
+
+LOWER LANE has a pale sage background and a header exactly "Learned HSI Residual". Show three numbered steps with large diagrams:
+1. "24 body-anchor tokens" — a row or 4×6 matrix of green anchor tokens connected to the SMPL wireframe.
+2. "Local scene probing" — selected anchors project into small local depth windows; show compact human-scene residual arrows. Do not show a giant body.
+3. "Residual affine head" — the token strip enters a small two-head module with two prominent outputs exactly "R_hsi" and "b_hsi".
+Under these outputs add a short descriptor exactly "residual scale + bias".
+
+At the right of the panel, merge the UPPER output C_coarse and LOWER outputs R_hsi, b_hsi into one clear fusion node using two converging arrows. Render the final equation large and exactly:
+"D_metric = (C_coarse · R_hsi) D_vggt + b_hsi"
+
+Then show a calibrated depth tile labeled exactly "Metric depth D_metric".
+
+Add one small explanatory bracket below the two lanes with exact text:
+"analytic absolute gauge + learned residual correction"
+
+VISUAL CLARITY RULES:
+- Make the two lanes visually distinct and parallel; never draw them as one undifferentiated chain.
+- Use larger text and larger formulas than the reference image.
+- Use straight arrows and numbered circles 1, 2, 3 inside each lane.
+- Keep the panel technical: 2D wireframe, anchor dots, depth tiles, ratio vector, token matrix, two-head MLP symbol.
+- No photorealism, gradients, promotional effects, decorative human render, or extra modules.
+- Keep the existing palette: #D9ACA6 #AFCAB2 #A9CFD8 #99ADD4 #CBBAD8 #E7DAAC #E9D36E #2F3438 and preserve the bottom Figure palette strip.
+- Remove any garbled or tiny text in the redesigned panel. Use only the exact labels specified above.
