@@ -51,10 +51,26 @@ def fit_scale(pred: np.ndarray, gt: np.ndarray) -> float:
     return max(scale, 1e-3)
 
 
+def find_prediction_paths(pred_root: Path, sequence: str) -> list[Path]:
+    """Find predictions for a sequence under common export layouts."""
+    candidates = (
+        pred_root / sequence,
+        pred_root / f"rgbd_bonn_{sequence}",
+        pred_root / sequence / "depth",
+        pred_root / f"rgbd_bonn_{sequence}" / "depth",
+    )
+    for candidate in candidates:
+        if candidate.is_dir():
+            paths = sorted(candidate.rglob("*.npy"))
+            if paths:
+                return paths
+    return []
+
+
 def evaluate_sequence(dataset_root: Path, pred_root: Path, sequence: str, start: int, count: int, max_depth: float, alignment: str = "scale") -> dict:
     seq_root = dataset_root / f"rgbd_bonn_{sequence}"
     gt_paths = sorted((seq_root / "depth").glob("*.png"))[start : start + count]
-    pred_paths = sorted((pred_root / sequence).glob("*.npy"))
+    pred_paths = find_prediction_paths(pred_root, sequence)
     if len(gt_paths) != count:
         raise ValueError(f"{sequence}: expected {count} GT frames after slicing, found {len(gt_paths)}")
     if len(pred_paths) == count:
@@ -62,7 +78,12 @@ def evaluate_sequence(dataset_root: Path, pred_root: Path, sequence: str, start:
     elif len(pred_paths) >= start + count:
         pred_paths = pred_paths[start : start + count]
     else:
-        raise ValueError(f"{sequence}: expected {count} predictions (or a full sequence) in {pred_root / sequence}, found {len(pred_paths)}")
+        available = sorted(str(path.relative_to(pred_root)) for path in pred_root.rglob("*.npy"))[:5] if pred_root.is_dir() else []
+        hint = f" Example files found: {available}" if available else " No .npy files were found under --pred-root; run the model export first."
+        raise ValueError(
+            f"{sequence}: expected {count} predictions (or a full sequence) under "
+            f"{pred_root}, found {len(pred_paths)}.{hint}"
+        )
     gt = np.stack([read_bonn_depth(p) for p in gt_paths])
     pred = np.stack([read_prediction(p, gt.shape[1:]) for p in pred_paths])
     valid = np.isfinite(gt) & (gt > 0) & (gt < max_depth) & np.isfinite(pred) & (pred > 0)
