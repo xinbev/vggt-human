@@ -159,7 +159,10 @@ def run_pure(args: argparse.Namespace, model: VGGTOmega, sequence: str, frames: 
         chunk = frames[start : start + chunk_size]
         images = load_and_preprocess_images([str(p) for p in chunk], mode=args.resize_mode, image_resolution=args.image_resolution).to(device)
         with torch.inference_mode():
-            all_depth.append(tensor_depth(model(images[None])))
+            predictions = model(images[None])
+            if not isinstance(predictions, dict) or not isinstance(predictions.get("depth"), torch.Tensor):
+                raise RuntimeError("Pure VGGT inference did not return a tensor at predictions['depth']")
+            all_depth.append(tensor_depth(predictions["depth"]))
         print(f"[pure] {sequence}: {min(start + len(chunk), len(frames))}/{len(frames)}", flush=True)
     save_depths(torch.cat(all_depth, dim=1), output_dir, frames)
 
