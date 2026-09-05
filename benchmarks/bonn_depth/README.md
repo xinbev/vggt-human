@@ -59,13 +59,20 @@ bash benchmarks/bonn_depth/run_full.sh
 Use `ALIGNMENT=metric` for a supplemental absolute-scale diagnostic. Results
 are written below `outputs/eval/` by default.
 
-## Absolute-depth prefix curve data
+## Human3R Figure 9b-style absolute-depth curve data
 
-The long-sequence curve is a different protocol from Table 1. It uses prefixes
-`[0:N)` for `N=100,200,300,400,500`, runs each prefix independently as one
-complete model input, and applies no test-time GT scale or shift. Do not set a
-positive chunk size for this experiment: chunking changes the model context and
-does not measure cumulative input length.
+The long-sequence curve is a different protocol from Table 1. Following the
+released Human3R/TTT3R preparation, requested lengths are
+`N=50,100,...,500`, every window begins at original frame 30, and each sequence
+uses `min(N, available_after_frame_30)` frames. Thus `N` is a requested maximum,
+not the actual length of every sequence. In the five-sequence Bonn subset, the
+short sequences are truncated rather than repeated. The evaluator records both
+the requested and actual lengths.
+
+Each requested prefix is run independently as one complete model input and no
+test-time GT scale or shift is applied. Do not set a positive chunk size for
+this experiment: chunking changes model context and does not measure cumulative
+input length.
 
 Generate only the proposed `vggt_traditional_hsi_scale` curve:
 

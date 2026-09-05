@@ -43,6 +43,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sequence", choices=SEQUENCES, action="append", default=None)
     parser.add_argument("--start-frame", type=int, default=30)
     parser.add_argument("--num-frames", type=int, default=110)
+    parser.add_argument(
+        "--allow-short",
+        action="store_true",
+        help="Allow a sequence to use fewer than --num-frames when the source sequence ends (Human3R Fig. 9 protocol).",
+    )
     parser.add_argument("--chunk-size", type=int, default=25, help="Frames per forward pass; <=0 means one pass")
     parser.add_argument("--image-resolution", type=int, default=512)
     parser.add_argument("--resize-mode", choices=["balanced", "max_size"], default="balanced")
@@ -124,11 +129,28 @@ def load_hsi_model(args: argparse.Namespace, device: torch.device) -> tuple[torc
     return model, config, SMPLLayer(smpl_dir).to(device).eval()
 
 
-def frame_paths(dataset_root: Path, sequence: str, start: int, count: int) -> list[Path]:
-    paths = sorted((dataset_root / f"rgbd_bonn_{sequence}" / "rgb").glob("*.png"))[start : start + count]
-    if len(paths) != count:
-        raise ValueError(f"{sequence}: expected {count} RGB frames after [{start}:{start + count}], found {len(paths)}")
-    return paths
+def frame_paths(dataset_root: Path, sequence: str, start: int, count: int, allow_short: bool = False) -> list[Path]:
+    sequence_root = dataset_root / f"rgbd_bonn_{sequence}"
+    rgb_all = sorted((sequence_root / "rgb").glob("*.png"))
+    depth_all = sorted((sequence_root / "depth").glob("*.png"))
+    groundtruth_path = sequence_root / "groundtruth.txt"
+    groundtruth_count = sum(
+        1
+        for line in groundtruth_path.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ) if groundtruth_path.is_file() else min(len(rgb_all), len(depth_all))
+    available = max(0, min(len(rgb_all), len(depth_all), groundtruth_count) - start)
+    actual_count = min(count, available)
+    if actual_count != count and not allow_short:
+        raise ValueError(
+            f"{sequence}: requested {count} frames after start={start}, but only {available} paired RGB/depth frames remain. "
+            "Use --allow-short only to reproduce the Human3R Figure 9 truncation protocol."
+        )
+    if actual_count <= 0:
+        raise ValueError(f"{sequence}: no paired RGB/depth frames remain after start={start}")
+    if actual_count != count:
+        print(f"[short] {sequence}: requested={count} actual={actual_count} start={start}", flush=True)
+    return rgb_all[start : start + actual_count]
 
 
 def tensor_depth(depth: torch.Tensor) -> torch.Tensor:
@@ -244,11 +266,11 @@ def main() -> None:
     if args.stage == "pure_vggt":
         model = load_pure_model(checkpoint, device)
         for sequence in sequences:
-            run_pure(args, model, sequence, frame_paths(resolve(args.dataset_root), sequence, args.start_frame, args.num_frames), device)
+            run_pure(args, model, sequence, frame_paths(resolve(args.dataset_root), sequence, args.start_frame, args.num_frames, args.allow_short), device)
     else:
         model, config, smpl = load_hsi_model(args, device)
         for sequence in sequences:
-            run_hsi(args, model, config, smpl, sequence, frame_paths(resolve(args.dataset_root), sequence, args.start_frame, args.num_frames), device)
+            run_hsi(args, model, config, smpl, sequence, frame_paths(resolve(args.dataset_root), sequence, args.start_frame, args.num_frames, args.allow_short), device)
 
 
 if __name__ == "__main__":

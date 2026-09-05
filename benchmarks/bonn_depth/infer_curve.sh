@@ -11,7 +11,9 @@ SCALE_CHECKPOINT="${SCALE_CHECKPOINT:-}"
 DEVICE="${DEVICE:-cuda}"
 IMAGE_RESOLUTION="${IMAGE_RESOLUTION:-512}"
 RESIZE_MODE="${RESIZE_MODE:-balanced}"
-PREFIX_LENGTHS="${PREFIX_LENGTHS:-100 200 300 400 500}"
+PREFIX_LENGTHS="${PREFIX_LENGTHS:-50 100 150 200 250 300 350 400 450 500}"
+START_FRAME="${START_FRAME:-30}"
+ALLOW_SHORT="${ALLOW_SHORT:-true}"
 OVERWRITE_FLAG="${OVERWRITE:+--overwrite}"
 
 if [[ "${STAGE}" == "vggt_traditional_hsi_scale" ]]; then
@@ -25,7 +27,7 @@ for frames in ${PREFIX_LENGTHS}; do
     --output-root "${PRED_ROOT}/${STAGE}/prefix_${frames}"
     --stage "${STAGE}"
     --checkpoint "${CHECKPOINT}"
-    --start-frame 0
+    --start-frame "${START_FRAME}"
     --num-frames "${frames}"
     --chunk-size 0
     --image-resolution "${IMAGE_RESOLUTION}"
@@ -34,6 +36,9 @@ for frames in ${PREFIX_LENGTHS}; do
   )
   if [[ "${STAGE}" == "vggt_traditional_hsi_scale" ]]; then
     args+=(--stage2-checkpoint "${STAGE2_CHECKPOINT}" --scale-checkpoint "${SCALE_CHECKPOINT}")
+  fi
+  if [[ "${ALLOW_SHORT}" == "true" ]]; then
+    args+=(--allow-short)
   fi
   if [[ -n "${OVERWRITE_FLAG}" ]]; then
     args+=("${OVERWRITE_FLAG}")
