@@ -1,0 +1,111 @@
+{
+  "protocol": "UniSH/Pi3 Bonn video depth; frames [30:140), alignment=scale",
+  "stages": {
+    "pure_vggt": {
+      "Abs Rel": 0.0859859228869729,
+      "delta<1.25": 0.963766614911104,
+      "valid_pixels": 142201784,
+      "per_sequence": [
+        {
+          "sequence": "balloon2",
+          "alignment": "scale",
+          "frames": 110,
+          "valid_pixels": 28980804,
+          "scale": 2.3253190517425537,
+          "Abs Rel": 0.08783577382564545,
+          "delta<1.25": 0.9705155177889475
+        },
+        {
+          "sequence": "crowd2",
+          "alignment": "scale",
+          "frames": 110,
+          "valid_pixels": 27662654,
+          "scale": 2.022510051727295,
+          "Abs Rel": 0.10760702192783356,
+          "delta<1.25": 0.9600071995984188
+        },
+        {
+          "sequence": "crowd3",
+          "alignment": "scale",
+          "frames": 110,
+          "valid_pixels": 28224769,
+          "scale": 2.5021092891693115,
+          "Abs Rel": 0.08633142709732056,
+          "delta<1.25": 0.9410602793595937
+        },
+        {
+          "sequence": "person_tracking2",
+          "alignment": "scale",
+          "frames": 110,
+          "valid_pixels": 29064292,
+          "scale": 2.721552610397339,
+          "Abs Rel": 0.03285415098071098,
+          "delta<1.25": 0.9927183500633698
+        },
+        {
+          "sequence": "synchronous",
+          "alignment": "scale",
+          "frames": 110,
+          "valid_pixels": 28269265,
+          "scale": 2.4015262126922607,
+          "Abs Rel": 0.1172134205698967,
+          "delta<1.25": 0.9534312264574265
+        }
+      ],
+      "prediction_root": "/home/zhw/xyb_space/vggt_bonn_predictions/pure_vggt"
+    },
+    "vggt_traditional_hsi_scale": {
+      "Abs Rel": 0.16521044055206785,
+      "delta<1.25": 0.7480214453568318,
+      "valid_pixels": 142201784,
+      "per_sequence": [
+        {
+          "sequence": "balloon2",
+          "alignment": "scale",
+          "frames": 110,
+          "valid_pixels": 28980804,
+          "scale": 1.0112578868865967,
+          "Abs Rel": 0.11134187132120132,
+          "delta<1.25": 0.9196588541849978
+        },
+        {
+          "sequence": "crowd2",
+          "alignment": "scale",
+          "frames": 110,
+          "valid_pixels": 27662654,
+          "scale": 1.0265036821365356,
+          "Abs Rel": 0.27619457244873047,
+          "delta<1.25": 0.5394726044724414
+        },
+        {
+          "sequence": "crowd3",
+          "alignment": "scale",
+          "frames": 110,
+          "valid_pixels": 28224769,
+          "scale": 0.8843408226966858,
+          "Abs Rel": 0.08433385193347931,
+          "delta<1.25": 0.9393012924215607
+        },
+        {
+          "sequence": "person_tracking2",
+          "alignment": "scale",
+          "frames": 110,
+          "valid_pixels": 29064292,
+          "scale": 0.8862303495407104,
+          "Abs Rel": 0.03685614839196205,
+          "delta<1.25": 0.9928049167686589
+        },
+        {
+          "sequence": "synchronous",
+          "alignment": "scale",
+          "frames": 110,
+          "valid_pixels": 28269265,
+          "scale": 1.0142195224761963,
+          "Abs Rel": 0.32454562187194824,
+          "delta<1.25": 0.3334912669289421
+        }
+      ],
+      "prediction_root": "/home/zhw/xyb_space/vggt_bonn_predictions/vggt_traditional_hsi_scale"
+    }
+  }
+}

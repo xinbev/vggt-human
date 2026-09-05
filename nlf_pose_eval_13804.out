@@ -1,0 +1,12 @@
+开始评估，作业 ID: 13804
+当前环境: zhw_env
+分配的 GPU: 0
+sequence,stage,W-MPJPE_mm,WA-MPJPE_mm,RTE_percent
+P2/19_indoor_walk_off_mvs,vggt_nlf,79.954,42.661,0.40138
+P2/19_indoor_walk_off_mvs,vggt_nlf_hsi_scale,145.105,60.964,3.36530
+P2/19_indoor_walk_off_mvs,vggt_nlf_hsi_scale_trstr,180.420,99.010,3.27155
+summary_stage,W-MPJPE_mm,WA-MPJPE_mm,RTE_percent
+vggt_nlf,79.954,42.661,0.40138
+vggt_nlf_hsi_scale,145.105,60.964,3.36530
+vggt_nlf_hsi_scale_trstr,180.420,99.010,3.27155
+评估完成

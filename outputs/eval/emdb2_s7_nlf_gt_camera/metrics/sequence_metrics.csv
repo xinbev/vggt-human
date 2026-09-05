@@ -1,0 +1,2 @@
+sequence,good_frames,sampled_frames,matched_frames,prediction_coverage,gt_root_displacement_m,max_matched_frame_gap,W-MPJPE_mm,WA-MPJPE_mm,RTE_percent
+P2/19_indoor_walk_off_mvs,1299,186,186,1.0,18.20827293395996,7,62.69668850091545,39.85764583983283,0.2661250566295544

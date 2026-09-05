@@ -1,0 +1,30 @@
+开始评估，作业 ID: 13881
+当前环境: zhw_env
+分配的 GPU: 0
+[pure] checkpoint=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt missing=1 unexpected=0
+[pure] balloon2: 25/110
+[pure] balloon2: 50/110
+[pure] balloon2: 75/110
+[pure] balloon2: 100/110
+[pure] balloon2: 110/110
+[pure] crowd2: 25/110
+[pure] crowd2: 50/110
+[pure] crowd2: 75/110
+[pure] crowd2: 100/110
+[pure] crowd2: 110/110
+[pure] crowd3: 25/110
+[pure] crowd3: 50/110
+[pure] crowd3: 75/110
+[pure] crowd3: 100/110
+[pure] crowd3: 110/110
+[pure] person_tracking2: 25/110
+[pure] person_tracking2: 50/110
+[pure] person_tracking2: 75/110
+[pure] person_tracking2: 100/110
+[pure] person_tracking2: 110/110
+[pure] synchronous: 25/110
+[pure] synchronous: 50/110
+[pure] synchronous: 75/110
+[pure] synchronous: 100/110
+[pure] synchronous: 110/110
+评估完成

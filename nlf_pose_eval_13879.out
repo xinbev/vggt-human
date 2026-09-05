@@ -1,0 +1,4 @@
+开始评估，作业 ID: 13879
+当前环境: zhw_env
+分配的 GPU: 0
+[pure] checkpoint=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt missing=1 unexpected=0

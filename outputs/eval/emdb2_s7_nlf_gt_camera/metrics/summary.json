@@ -1,0 +1,27 @@
+{
+  "benchmark": "emdb2_s7_nlf_gt_camera_oracle_v1",
+  "dataset": "EMDB-2",
+  "method": "RGB-NLF + EMDB GT intrinsics + EMDB GT extrinsics",
+  "oracle_warning": "GT camera is privileged test-time information; do not report as a pure RGB prediction result.",
+  "paper_metrics_frame_weighted": {
+    "W-MPJPE_mm": 62.69668850091545,
+    "WA-MPJPE_mm": 39.85764583983283,
+    "RTE_percent": 0.2661250566295544
+  },
+  "sequence_macro_diagnostics": {
+    "W-MPJPE_mm": 62.69668850091545,
+    "WA-MPJPE_mm": 39.85764583983283,
+    "RTE_percent": 0.2661250566295544
+  },
+  "protocol_sequence_count": 1,
+  "good_frames": 1299,
+  "sampled_frames": 186,
+  "matched_frames": 186,
+  "sampling_rate": 0.14318706697459585,
+  "prediction_coverage": 1.0,
+  "subsample_stride": 7,
+  "chunk_length": 14,
+  "matching_protocol": "human3r_gt_smpl2d_iou_v1",
+  "oracle_camera_protocol": "nlf_gt_intrinsics_gt_extrinsics_v1",
+  "predictions_root": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_s7_nlf_gt_camera/predictions"
+}

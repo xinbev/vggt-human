@@ -17,7 +17,7 @@ TRSTR_DIR="${TRSTR_DIR:-${REPO_ROOT}/outputs/train/smpl_hsi_stage2_trstr_v3_refi
 TRSTR_CHECKPOINT="${TRSTR_CHECKPOINT:-}" \
 SCALE_CHECKPOINT="${SCALE_CHECKPOINT:-${REPO_ROOT}/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt}" \
 MAX_SEQUENCES="${MAX_SEQUENCES:-0}" \
-SEQUENCE_FILTER="${SEQUENCE_FILTER:-}" \
+SEQUENCE_FILTER="${SEQUENCE_FILTER:-}"
 if ! bash "${REPO_ROOT}/benchmarks/emdb2_global/export_chunk100.sh" >"${EXPORT_LOG}" 2>&1; then
   tail -n 120 "${EXPORT_LOG}" >&2
   exit 1

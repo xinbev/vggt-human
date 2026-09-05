@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/benchmarks/bonn_depth/infer.py", line 241, in <module>
+    main()
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/benchmarks/bonn_depth/infer.py", line 233, in main
+    run_pure(args, model, sequence, frame_paths(resolve(args.dataset_root), sequence, args.start_frame, args.num_frames), device)
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/benchmarks/bonn_depth/infer.py", line 162, in run_pure
+    all_depth.append(tensor_depth(model(images[None])))
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zhw/lab_users/xyb/home/projects/vggt-human/benchmarks/bonn_depth/infer.py", line 135, in tensor_depth
+    if depth.ndim == 5 and depth.shape[-1] == 1:
+       ^^^^^^^^^^
+AttributeError: 'dict' object has no attribute 'ndim'

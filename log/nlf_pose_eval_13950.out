@@ -1,0 +1,100 @@
+开始评估，作业 ID: 13950
+当前环境: zhw_env
+分配的 GPU: 0
+[curve] stage=vggt_traditional_hsi_scale prefix=50 (one complete forward; no chunking)
+[hsi] baseline=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt missing=141 unexpected=0 skipped=0
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt missing=1412 unexpected=24
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt missing=1412 unexpected=0
+[hsi] balloon2: 50/50
+[hsi] crowd2: 50/50
+[hsi] crowd3: 50/50
+[hsi] person_tracking2: 50/50
+[hsi] synchronous: 50/50
+[curve] stage=vggt_traditional_hsi_scale prefix=100 (one complete forward; no chunking)
+[hsi] baseline=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt missing=141 unexpected=0 skipped=0
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt missing=1412 unexpected=24
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt missing=1412 unexpected=0
+[hsi] balloon2: 100/100
+[hsi] crowd2: 100/100
+[hsi] crowd3: 100/100
+[hsi] person_tracking2: 100/100
+[hsi] synchronous: 100/100
+[curve] stage=vggt_traditional_hsi_scale prefix=150 (one complete forward; no chunking)
+[hsi] baseline=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt missing=141 unexpected=0 skipped=0
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt missing=1412 unexpected=24
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt missing=1412 unexpected=0
+[hsi] balloon2: 150/150
+[hsi] crowd2: 150/150
+[hsi] crowd3: 150/150
+[hsi] person_tracking2: 150/150
+[hsi] synchronous: 150/150
+[curve] stage=vggt_traditional_hsi_scale prefix=200 (one complete forward; no chunking)
+[hsi] baseline=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt missing=141 unexpected=0 skipped=0
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt missing=1412 unexpected=24
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt missing=1412 unexpected=0
+[hsi] balloon2: 200/200
+[hsi] crowd2: 200/200
+[hsi] crowd3: 200/200
+[hsi] person_tracking2: 200/200
+[hsi] synchronous: 200/200
+[curve] stage=vggt_traditional_hsi_scale prefix=250 (one complete forward; no chunking)
+[hsi] baseline=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt missing=141 unexpected=0 skipped=0
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt missing=1412 unexpected=24
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt missing=1412 unexpected=0
+[hsi] balloon2: 250/250
+[hsi] crowd2: 250/250
+[hsi] crowd3: 250/250
+[hsi] person_tracking2: 250/250
+[hsi] synchronous: 250/250
+[curve] stage=vggt_traditional_hsi_scale prefix=300 (one complete forward; no chunking)
+[hsi] baseline=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt missing=141 unexpected=0 skipped=0
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt missing=1412 unexpected=24
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt missing=1412 unexpected=0
+[hsi] balloon2: 300/300
+[hsi] crowd2: 300/300
+[hsi] crowd3: 300/300
+[hsi] person_tracking2: 300/300
+[hsi] synchronous: 300/300
+[curve] stage=vggt_traditional_hsi_scale prefix=350 (one complete forward; no chunking)
+[hsi] baseline=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt missing=141 unexpected=0 skipped=0
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt missing=1412 unexpected=24
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt missing=1412 unexpected=0
+[hsi] balloon2: 350/350
+[hsi] crowd2: 350/350
+[hsi] crowd3: 350/350
+[hsi] person_tracking2: 350/350
+[short] synchronous: requested=350 actual=302 start=30
+[hsi] synchronous: 302/302
+[curve] stage=vggt_traditional_hsi_scale prefix=400 (one complete forward; no chunking)
+[hsi] baseline=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt missing=141 unexpected=0 skipped=0
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt missing=1412 unexpected=24
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt missing=1412 unexpected=0
+[hsi] balloon2: 400/400
+[hsi] crowd2: 400/400
+[hsi] crowd3: 400/400
+[hsi] person_tracking2: 400/400
+[short] synchronous: requested=400 actual=302 start=30
+[hsi] synchronous: 302/302
+[curve] stage=vggt_traditional_hsi_scale prefix=450 (one complete forward; no chunking)
+[hsi] baseline=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt missing=141 unexpected=0 skipped=0
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt missing=1412 unexpected=24
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt missing=1412 unexpected=0
+[short] balloon2: requested=450 actual=439 start=30
+[hsi] balloon2: 439/439
+[hsi] crowd2: 450/450
+[hsi] crowd3: 450/450
+[hsi] person_tracking2: 450/450
+[short] synchronous: requested=450 actual=302 start=30
+[hsi] synchronous: 302/302
+[curve] stage=vggt_traditional_hsi_scale prefix=500 (one complete forward; no chunking)
+[hsi] baseline=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt missing=141 unexpected=0 skipped=0
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt missing=1412 unexpected=24
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt missing=1412 unexpected=0
+[short] balloon2: requested=500 actual=439 start=30
+[hsi] balloon2: 439/439
+[hsi] crowd2: 500/500
+[hsi] crowd3: 500/500
+[hsi] person_tracking2: 500/500
+[short] synchronous: requested=500 actual=302 start=30
+[hsi] synchronous: 302/302
+评估完成

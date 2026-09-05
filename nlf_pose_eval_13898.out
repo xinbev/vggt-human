@@ -1,0 +1,32 @@
+开始评估，作业 ID: 13898
+当前环境: zhw_env
+分配的 GPU: 0
+[hsi] baseline=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt missing=141 unexpected=0 skipped=0
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt missing=1412 unexpected=24
+[hsi] overlay=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt missing=1412 unexpected=0
+[hsi] balloon2: 25/110
+[hsi] balloon2: 50/110
+[hsi] balloon2: 75/110
+[hsi] balloon2: 100/110
+[hsi] balloon2: 110/110
+[hsi] crowd2: 25/110
+[hsi] crowd2: 50/110
+[hsi] crowd2: 75/110
+[hsi] crowd2: 100/110
+[hsi] crowd2: 110/110
+[hsi] crowd3: 25/110
+[hsi] crowd3: 50/110
+[hsi] crowd3: 75/110
+[hsi] crowd3: 100/110
+[hsi] crowd3: 110/110
+[hsi] person_tracking2: 25/110
+[hsi] person_tracking2: 50/110
+[hsi] person_tracking2: 75/110
+[hsi] person_tracking2: 100/110
+[hsi] person_tracking2: 110/110
+[hsi] synchronous: 25/110
+[hsi] synchronous: 50/110
+[hsi] synchronous: 75/110
+[hsi] synchronous: 100/110
+[hsi] synchronous: 110/110
+评估完成

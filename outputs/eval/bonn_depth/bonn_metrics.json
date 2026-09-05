@@ -1,0 +1,60 @@
+{
+  "protocol": "UniSH/Pi3 Bonn video depth; frames [30:140), alignment=scale",
+  "sequences": [
+    "balloon2",
+    "crowd2",
+    "crowd3",
+    "person_tracking2",
+    "synchronous"
+  ],
+  "Abs Rel": 0.0859859228869729,
+  "delta<1.25": 0.963766614911104,
+  "valid_pixels": 142201784,
+  "per_sequence": [
+    {
+      "sequence": "balloon2",
+      "alignment": "scale",
+      "frames": 110,
+      "valid_pixels": 28980804,
+      "scale": 2.3253190517425537,
+      "Abs Rel": 0.08783577382564545,
+      "delta<1.25": 0.9705155177889475
+    },
+    {
+      "sequence": "crowd2",
+      "alignment": "scale",
+      "frames": 110,
+      "valid_pixels": 27662654,
+      "scale": 2.022510051727295,
+      "Abs Rel": 0.10760702192783356,
+      "delta<1.25": 0.9600071995984188
+    },
+    {
+      "sequence": "crowd3",
+      "alignment": "scale",
+      "frames": 110,
+      "valid_pixels": 28224769,
+      "scale": 2.5021092891693115,
+      "Abs Rel": 0.08633142709732056,
+      "delta<1.25": 0.9410602793595937
+    },
+    {
+      "sequence": "person_tracking2",
+      "alignment": "scale",
+      "frames": 110,
+      "valid_pixels": 29064292,
+      "scale": 2.721552610397339,
+      "Abs Rel": 0.03285415098071098,
+      "delta<1.25": 0.9927183500633698
+    },
+    {
+      "sequence": "synchronous",
+      "alignment": "scale",
+      "frames": 110,
+      "valid_pixels": 28269265,
+      "scale": 2.4015262126922607,
+      "Abs Rel": 0.1172134205698967,
+      "delta<1.25": 0.9534312264574265
+    }
+  ]
+}

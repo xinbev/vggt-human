@@ -1,0 +1,107 @@
+{
+  "benchmark": "emdb2_global_chunk100_prediction_stitch_v1",
+  "dataset": "EMDB-2",
+  "protocol_sequence_count": 25,
+  "evaluated_sequence_count": 25,
+  "missing_sequences": [],
+  "good_frames": 43129,
+  "sampled_frames": 43129,
+  "matched_frames": 43041,
+  "sampling_rate": 1.0,
+  "prediction_coverage": 0.9979596095434626,
+  "stages": {
+    "vggt_nlf": {
+      "label": "RGB-VGGT-NLF (analytic coarse gauge)",
+      "paper_metrics_frame_weighted": {
+        "W-MPJPE_mm": 149.9592902160271,
+        "WA-MPJPE_mm": 58.46753777803167,
+        "RTE_percent": 1.0794433968353128
+      },
+      "sequence_macro_diagnostics": {
+        "W-MPJPE_mm": 147.94947171499504,
+        "WA-MPJPE_mm": 59.491902115219,
+        "RTE_percent": 1.049903919764904
+      }
+    },
+    "vggt_nlf_hsi_scale": {
+      "label": "RGB-VGGT-NLF-HSI Scale",
+      "paper_metrics_frame_weighted": {
+        "W-MPJPE_mm": 214.26785523920395,
+        "WA-MPJPE_mm": 69.78139803505462,
+        "RTE_percent": 2.257755469560639
+      },
+      "sequence_macro_diagnostics": {
+        "W-MPJPE_mm": 205.19932640209836,
+        "WA-MPJPE_mm": 69.93675182711027,
+        "RTE_percent": 2.20458110216161
+      }
+    },
+    "vggt_nlf_hsi_scale_trstr": {
+      "label": "RGB-VGGT-NLF-HSI Scale-TRSTR",
+      "paper_metrics_frame_weighted": {
+        "W-MPJPE_mm": 239.80801039529007,
+        "WA-MPJPE_mm": 92.25546933135364,
+        "RTE_percent": 2.3064459475080583
+      },
+      "sequence_macro_diagnostics": {
+        "W-MPJPE_mm": 233.4734696111944,
+        "WA-MPJPE_mm": 93.19252739770735,
+        "RTE_percent": 2.2871538527884363
+      }
+    }
+  },
+  "contributions_error_reduction": {
+    "hsi_scale": {
+      "from": "RGB-VGGT-NLF (analytic coarse gauge)",
+      "to": "RGB-VGGT-NLF-HSI Scale",
+      "positive_means_improvement": true,
+      "W-MPJPE_mm": -64.30856502317684,
+      "WA-MPJPE_mm": -11.313860257022952,
+      "RTE_percent": -1.1783120727253265
+    },
+    "trstr": {
+      "from": "RGB-VGGT-NLF-HSI Scale",
+      "to": "RGB-VGGT-NLF-HSI Scale-TRSTR",
+      "positive_means_improvement": true,
+      "W-MPJPE_mm": -25.540155156086115,
+      "WA-MPJPE_mm": -22.474071296299016,
+      "RTE_percent": -0.0486904779474191
+    },
+    "total": {
+      "from": "RGB-VGGT-NLF (analytic coarse gauge)",
+      "to": "RGB-VGGT-NLF-HSI Scale-TRSTR",
+      "positive_means_improvement": true,
+      "W-MPJPE_mm": -89.84872017926295,
+      "WA-MPJPE_mm": -33.78793155332197,
+      "RTE_percent": -1.2270025506727456
+    }
+  },
+  "metric_mapping": {
+    "W-MPJPE": "Human3R wa2_mpjpe; chunk Sim(3) from first two frames; mm",
+    "WA-MPJPE": "Human3R waa_mpjpe; chunk Sim(3) from all chunk joints; mm",
+    "RTE": "Rigid-aligned root error / total GT root displacement * 100; percent"
+  },
+  "stage_protocol": {
+    "vggt_nlf": "NLF base SMPL + shared analytic-coarse-scaled predicted VGGT camera",
+    "vggt_nlf_hsi_scale": "same NLF base SMPL + shared analytic coarse * v3 HSI residual camera scale",
+    "vggt_nlf_hsi_scale_trstr": "same metric camera as HSI stage + TRSTR refined translation"
+  },
+  "matching_protocol": "human3r_gt_smpl2d_iou_v1",
+  "chunk_length": 100,
+  "subsample_stride": 1,
+  "official_emdb2_subsample": true,
+  "inference_protocol": {
+    "inference_chunk_size": 100,
+    "inference_chunk_overlap": 8,
+    "stitch_protocol": "prediction_only_overlap_se3"
+  },
+  "root_index": 0,
+  "joint_format": "project SMPL-24; root index 0",
+  "prediction_protocol": "100-frame local VGGT worlds joined by prediction-only overlapping-camera SE(3)",
+  "gt_protocol": "native EMDB-2 good_frames_mask; gender-specific SMPL; world root pose/transl",
+  "predictions_root": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_global_chunk100/predictions",
+  "emdb_root": "/home/zhw/xyb_space/emdb",
+  "sequence_metrics_csv": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_global_chunk100/metrics/sequence_metrics.csv",
+  "frame_metrics_csv": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_global_chunk100/metrics/frame_metrics.csv",
+  "stage_metrics_csv": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_global_chunk100/metrics/stage_metrics.csv"
+}

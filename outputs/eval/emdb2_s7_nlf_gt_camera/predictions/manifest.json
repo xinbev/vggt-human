@@ -1,0 +1,17 @@
+{
+  "protocol": "nlf_gt_intrinsics_gt_extrinsics_v1",
+  "description": "NLF is run with processed EMDB GT K; camera-space joints are transformed by EMDB GT T_c2w.",
+  "sequence_count": 1,
+  "subsample_stride": 7,
+  "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_s7_nlf_gt_camera/predictions",
+  "sequences": [
+    {
+      "sequence": "P2/19_indoor_walk_off_mvs",
+      "archive": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/emdb2_s7_nlf_gt_camera/predictions/P2_19_indoor_walk_off_mvs.npz",
+      "original_good_frames": 1299,
+      "selected_frames": 186,
+      "valid_predictions": 186,
+      "coverage": 1.0
+    }
+  ]
+}

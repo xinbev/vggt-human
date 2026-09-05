@@ -1,0 +1,64 @@
+开始评估，作业 ID: 13902
+当前环境: zhw_env
+分配的 GPU: 0
+{
+  "protocol": "UniSH/Pi3 Bonn video depth; frames [30:140), alignment=scale",
+  "sequences": [
+    "balloon2",
+    "crowd2",
+    "crowd3",
+    "person_tracking2",
+    "synchronous"
+  ],
+  "Abs Rel": 0.16521044055206785,
+  "delta<1.25": 0.7480214453568318,
+  "valid_pixels": 142201784,
+  "per_sequence": [
+    {
+      "sequence": "balloon2",
+      "alignment": "scale",
+      "frames": 110,
+      "valid_pixels": 28980804,
+      "scale": 1.0112578868865967,
+      "Abs Rel": 0.11134187132120132,
+      "delta<1.25": 0.9196588541849978
+    },
+    {
+      "sequence": "crowd2",
+      "alignment": "scale",
+      "frames": 110,
+      "valid_pixels": 27662654,
+      "scale": 1.0265036821365356,
+      "Abs Rel": 0.27619457244873047,
+      "delta<1.25": 0.5394726044724414
+    },
+    {
+      "sequence": "crowd3",
+      "alignment": "scale",
+      "frames": 110,
+      "valid_pixels": 28224769,
+      "scale": 0.8843408226966858,
+      "Abs Rel": 0.08433385193347931,
+      "delta<1.25": 0.9393012924215607
+    },
+    {
+      "sequence": "person_tracking2",
+      "alignment": "scale",
+      "frames": 110,
+      "valid_pixels": 29064292,
+      "scale": 0.8862303495407104,
+      "Abs Rel": 0.03685614839196205,
+      "delta<1.25": 0.9928049167686589
+    },
+    {
+      "sequence": "synchronous",
+      "alignment": "scale",
+      "frames": 110,
+      "valid_pixels": 28269265,
+      "scale": 1.0142195224761963,
+      "Abs Rel": 0.32454562187194824,
+      "delta<1.25": 0.3334912669289421
+    }
+  ]
+}
+评估完成
