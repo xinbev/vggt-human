@@ -182,7 +182,8 @@ def run_hsi(args: argparse.Namespace, model: torch.nn.Module, config: dict[str, 
             base = model(images[None])
         raw_5d = base["depth"]
         raw = tensor_depth(raw_5d)
-        coarse_scales: list[float] = []
+        coarse_scales: list[float | None] = []
+        chunk_diagnostics: list[dict[str, Any]] = []
         for frame_idx in range(len(chunk)):
             scale_info = {"scale": 1.0, "applied": False, "reason": "missing_smpl"}
             if all(key in base for key in ("pred_poses", "pred_betas", "pred_transl_cam", "pred_confs")):
@@ -204,10 +205,20 @@ def run_hsi(args: argparse.Namespace, model: torch.nn.Module, config: dict[str, 
                     anchor_stride=8,
                 )
                 scale_info["query"] = query
-            scale = float(scale_info.get("scale", 1.0)) if bool(scale_info.get("applied", False)) else 1.0
+            scale = float(scale_info.get("scale", 1.0)) if bool(scale_info.get("applied", False)) else None
             coarse_scales.append(scale)
-            diagnostics.append({"sequence": sequence, "frame": start + frame_idx, "image": str(chunk[frame_idx]), "coarse_scale": scale, "coarse_applied": bool(scale_info.get("applied", False)), "coarse_reason": scale_info.get("reason", "unknown")})
-        coarse = raw_5d * raw_5d.new_tensor(coarse_scales).reshape(1, len(chunk), 1, 1, 1)
+            chunk_diagnostics.append({"sequence": sequence, "frame": start + frame_idx, "image": str(chunk[frame_idx]), "coarse_scale_raw": scale, "coarse_applied": bool(scale_info.get("applied", False)), "coarse_reason": scale_info.get("reason", "unknown")})
+        valid_scales = [value for value in coarse_scales if value is not None and value > 0]
+        if not valid_scales:
+            raise RuntimeError(f"{sequence} frames {start}:{start + len(chunk)}: traditional coarse scale failed on every frame")
+        fallback_scale = float(np.exp(np.median(np.log(np.asarray(valid_scales, dtype=np.float64)))))
+        filled_scales = [fallback_scale if value is None else value for value in coarse_scales]
+        for item, scale in zip(chunk_diagnostics, filled_scales, strict=True):
+            item["coarse_scale"] = float(scale)
+            item["coarse_fallback"] = item["coarse_scale_raw"] is None
+            item["coarse_fallback_scale"] = fallback_scale
+        diagnostics.extend(chunk_diagnostics)
+        coarse = raw_5d * raw_5d.new_tensor(filled_scales).reshape(1, len(chunk), 1, 1, 1)
         with torch.inference_mode():
             refined = model(images[None], hsi_depth_override=coarse, hsi_depth_is_metric=True)
         residual_scale = refined.get("hsi_scene_scale")
@@ -218,7 +229,7 @@ def run_hsi(args: argparse.Namespace, model: torch.nn.Module, config: dict[str, 
         residual_bias = residual_bias.to(device=coarse.device, dtype=coarse.dtype).reshape(1, len(chunk), 1, 1, 1)
         final = coarse * residual_scale + residual_bias
         all_final.append(tensor_depth(final))
-        for idx, scale in enumerate(coarse_scales):
+        for idx, scale in enumerate(filled_scales):
             diagnostics[-len(chunk) + idx]["hsi_residual_scale"] = float(residual_scale[0, idx, 0, 0, 0].cpu())
             diagnostics[-len(chunk) + idx]["effective_scale"] = float(scale * residual_scale[0, idx, 0, 0, 0].cpu())
         print(f"[hsi] {sequence}: {min(start + len(chunk), len(frames))}/{len(frames)}", flush=True)

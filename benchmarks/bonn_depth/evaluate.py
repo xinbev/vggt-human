@@ -111,7 +111,7 @@ def main() -> None:
     args = parser.parse_args()
     rows = [evaluate_sequence(args.dataset_root, args.pred_root, seq, args.start_frame, args.num_frames, args.max_depth, args.alignment) for seq in SEQUENCES]
     weights = np.asarray([row["valid_pixels"] for row in rows], dtype=np.float64)
-    summary = {"protocol": f"UniSH/Pi3 Bonn video depth; frames [{args.start_frame}:{args.start_frame + args.num_frames}), alignment={args.alignment}", "sequences": list(SEQUENCES), "Abs Rel": float(np.average([row["Abs Rel"] for row in rows], weights=weights)), "delta<1.25": float(np.average([row["delta<1.25"] for row in rows], weights=weights)), "valid_pixels": int(weights.sum()), "per_sequence": rows}
+    summary = {"protocol": f"UniSH/Pi3 Bonn video depth; frames [{args.start_frame}:{args.start_frame + args.num_frames}), alignment={args.alignment}", "prediction_root": str(args.pred_root.expanduser()), "sequences": list(SEQUENCES), "Abs Rel": float(np.average([row["Abs Rel"] for row in rows], weights=weights)), "delta<1.25": float(np.average([row["delta<1.25"] for row in rows], weights=weights)), "valid_pixels": int(weights.sum()), "per_sequence": rows}
     args.output_dir.mkdir(parents=True, exist_ok=True)
     (args.output_dir / "bonn_metrics.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     with (args.output_dir / "bonn_metrics.csv").open("w", newline="", encoding="utf-8") as handle:

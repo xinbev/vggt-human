@@ -58,3 +58,36 @@ bash benchmarks/bonn_depth/run_full.sh
 
 Use `ALIGNMENT=metric` for a supplemental absolute-scale diagnostic. Results
 are written below `outputs/eval/` by default.
+
+## Absolute-depth prefix curve data
+
+The long-sequence curve is a different protocol from Table 1. It uses prefixes
+`[0:N)` for `N=100,200,300,400,500`, runs each prefix independently as one
+complete model input, and applies no test-time GT scale or shift. Do not set a
+positive chunk size for this experiment: chunking changes the model context and
+does not measure cumulative input length.
+
+Generate only the proposed `vggt_traditional_hsi_scale` curve:
+
+```bash
+DATASET_ROOT=/home/zhw/xyb_space/rgbd_bonn_dataset \
+PRED_ROOT=/home/zhw/xyb_space/vggt_bonn_curve_predictions \
+STAGE=vggt_traditional_hsi_scale \
+CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt \
+STAGE2_CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt \
+SCALE_CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt \
+DEVICE=cuda \
+bash benchmarks/bonn_depth/infer_curve.sh
+```
+
+Then calculate the five points and sequence-level 95% confidence intervals:
+
+```bash
+DATASET_ROOT=/home/zhw/xyb_space/rgbd_bonn_dataset \
+PRED_ROOT=/home/zhw/xyb_space/vggt_bonn_curve_predictions \
+STAGE=vggt_traditional_hsi_scale \
+bash benchmarks/bonn_depth/run_curve.sh
+```
+
+The plot-ready data are written to
+`outputs/eval/bonn_depth_curve/vggt_traditional_hsi_scale_curve_points.csv`.
