@@ -1,0 +1,735 @@
+{
+  "protocol": "Bonn video depth; requested windows [30:30+N); absolute metric depth; no GT scale/shift alignment; allow_short=True",
+  "aggregation": "Both unweighted sequence mean with two-sided 95% Student-t CI and Human3R-style valid-pixel-weighted aggregate are reported.",
+  "stage": "vggt_traditional_hsi_scale",
+  "prediction_root": "/home/zhw/xyb_space/vggt_bonn_curve_predictions/vggt_traditional_hsi_scale",
+  "sequences": [
+    "balloon2",
+    "crowd2",
+    "crowd3",
+    "person_tracking2",
+    "synchronous"
+  ],
+  "points": [
+    {
+      "stage": "vggt_traditional_hsi_scale",
+      "requested_frames": 50,
+      "actual_frames_min": 50,
+      "actual_frames_max": 50,
+      "num_sequences": 5,
+      "Abs Rel sequence mean": 0.17112109959125518,
+      "Abs Rel ci95 low": 0.0971352528702017,
+      "Abs Rel ci95 high": 0.24510694631230867,
+      "delta<1.25 sequence mean": 0.8270640536924265,
+      "delta<1.25 ci95 low": 0.625378188955036,
+      "delta<1.25 ci95 high": 1.028749918429817,
+      "Abs Rel Human3R pixel-weighted": 0.1704894840238119,
+      "delta<1.25 Human3R pixel-weighted": 0.8285414298583107,
+      "per_sequence": [
+        {
+          "sequence": "balloon2",
+          "alignment": "metric",
+          "frames": 50,
+          "valid_pixels": 13030002,
+          "scale": 1.0,
+          "Abs Rel": 0.10611851513385773,
+          "delta<1.25": 0.9501443668235815,
+          "requested_frames": 50,
+          "actual_frames": 50
+        },
+        {
+          "sequence": "crowd2",
+          "alignment": "metric",
+          "frames": 50,
+          "valid_pixels": 12673612,
+          "scale": 1.0,
+          "Abs Rel": 0.2580200731754303,
+          "delta<1.25": 0.6028578119639453,
+          "requested_frames": 50,
+          "actual_frames": 50
+        },
+        {
+          "sequence": "crowd3",
+          "alignment": "metric",
+          "frames": 50,
+          "valid_pixels": 12722273,
+          "scale": 1.0,
+          "Abs Rel": 0.1654898226261139,
+          "delta<1.25": 0.9219818659763078,
+          "requested_frames": 50,
+          "actual_frames": 50
+        },
+        {
+          "sequence": "person_tracking2",
+          "alignment": "metric",
+          "frames": 50,
+          "valid_pixels": 13171395,
+          "scale": 1.0,
+          "Abs Rel": 0.12933006882667542,
+          "delta<1.25": 0.954916848215394,
+          "requested_frames": 50,
+          "actual_frames": 50
+        },
+        {
+          "sequence": "synchronous",
+          "alignment": "metric",
+          "frames": 50,
+          "valid_pixels": 12813100,
+          "scale": 1.0,
+          "Abs Rel": 0.1966470181941986,
+          "delta<1.25": 0.7054193754829042,
+          "requested_frames": 50,
+          "actual_frames": 50
+        }
+      ]
+    },
+    {
+      "stage": "vggt_traditional_hsi_scale",
+      "requested_frames": 100,
+      "actual_frames_min": 100,
+      "actual_frames_max": 100,
+      "num_sequences": 5,
+      "Abs Rel sequence mean": 0.14694422632455825,
+      "Abs Rel ci95 low": 0.07881458433999879,
+      "Abs Rel ci95 high": 0.21507386830911773,
+      "delta<1.25 sequence mean": 0.8683171621755628,
+      "delta<1.25 ci95 low": 0.6776449743156238,
+      "delta<1.25 ci95 high": 1.0589893500355019,
+      "Abs Rel Human3R pixel-weighted": 0.1463710137014525,
+      "delta<1.25 Human3R pixel-weighted": 0.869712709532887,
+      "per_sequence": [
+        {
+          "sequence": "balloon2",
+          "alignment": "metric",
+          "frames": 100,
+          "valid_pixels": 26341461,
+          "scale": 1.0,
+          "Abs Rel": 0.14180085062980652,
+          "delta<1.25": 0.8211931373130746,
+          "requested_frames": 100,
+          "actual_frames": 100
+        },
+        {
+          "sequence": "crowd2",
+          "alignment": "metric",
+          "frames": 100,
+          "valid_pixels": 25158385,
+          "scale": 1.0,
+          "Abs Rel": 0.2401706874370575,
+          "delta<1.25": 0.6196993169474113,
+          "requested_frames": 100,
+          "actual_frames": 100
+        },
+        {
+          "sequence": "crowd3",
+          "alignment": "metric",
+          "frames": 100,
+          "valid_pixels": 25645832,
+          "scale": 1.0,
+          "Abs Rel": 0.13649578392505646,
+          "delta<1.25": 0.9392629960299201,
+          "requested_frames": 100,
+          "actual_frames": 100
+        },
+        {
+          "sequence": "person_tracking2",
+          "alignment": "metric",
+          "frames": 100,
+          "valid_pixels": 26439833,
+          "scale": 1.0,
+          "Abs Rel": 0.11828073114156723,
+          "delta<1.25": 0.9772700152833794,
+          "requested_frames": 100,
+          "actual_frames": 100
+        },
+        {
+          "sequence": "synchronous",
+          "alignment": "metric",
+          "frames": 100,
+          "valid_pixels": 25693300,
+          "scale": 1.0,
+          "Abs Rel": 0.09797307848930359,
+          "delta<1.25": 0.9841603453040286,
+          "requested_frames": 100,
+          "actual_frames": 100
+        }
+      ]
+    },
+    {
+      "stage": "vggt_traditional_hsi_scale",
+      "requested_frames": 150,
+      "actual_frames_min": 150,
+      "actual_frames_max": 150,
+      "num_sequences": 5,
+      "Abs Rel sequence mean": 0.14267715513706208,
+      "Abs Rel ci95 low": 0.0689006687803598,
+      "Abs Rel ci95 high": 0.21645364149376436,
+      "delta<1.25 sequence mean": 0.8650530582491847,
+      "delta<1.25 ci95 low": 0.6649048302826271,
+      "delta<1.25 ci95 high": 1.0652012862157423,
+      "Abs Rel Human3R pixel-weighted": 0.14197031315560926,
+      "delta<1.25 Human3R pixel-weighted": 0.8668413493899815,
+      "per_sequence": [
+        {
+          "sequence": "balloon2",
+          "alignment": "metric",
+          "frames": 150,
+          "valid_pixels": 39387278,
+          "scale": 1.0,
+          "Abs Rel": 0.11374204605817795,
+          "delta<1.25": 0.8528188721241412,
+          "requested_frames": 150,
+          "actual_frames": 150
+        },
+        {
+          "sequence": "crowd2",
+          "alignment": "metric",
+          "frames": 150,
+          "valid_pixels": 37757291,
+          "scale": 1.0,
+          "Abs Rel": 0.24735264480113983,
+          "delta<1.25": 0.5933975506876275,
+          "requested_frames": 150,
+          "actual_frames": 150
+        },
+        {
+          "sequence": "crowd3",
+          "alignment": "metric",
+          "frames": 150,
+          "valid_pixels": 38605261,
+          "scale": 1.0,
+          "Abs Rel": 0.1307128220796585,
+          "delta<1.25": 0.9142560388336709,
+          "requested_frames": 150,
+          "actual_frames": 150
+        },
+        {
+          "sequence": "person_tracking2",
+          "alignment": "metric",
+          "frames": 150,
+          "valid_pixels": 39753166,
+          "scale": 1.0,
+          "Abs Rel": 0.11959872394800186,
+          "delta<1.25": 0.9768952993580435,
+          "requested_frames": 150,
+          "actual_frames": 150
+        },
+        {
+          "sequence": "synchronous",
+          "alignment": "metric",
+          "frames": 150,
+          "valid_pixels": 38588322,
+          "scale": 1.0,
+          "Abs Rel": 0.10197953879833221,
+          "delta<1.25": 0.9878975302424396,
+          "requested_frames": 150,
+          "actual_frames": 150
+        }
+      ]
+    },
+    {
+      "stage": "vggt_traditional_hsi_scale",
+      "requested_frames": 200,
+      "actual_frames_min": 200,
+      "actual_frames_max": 200,
+      "num_sequences": 5,
+      "Abs Rel sequence mean": 0.13664690852165223,
+      "Abs Rel ci95 low": 0.07859837674406991,
+      "Abs Rel ci95 high": 0.19469544029923455,
+      "delta<1.25 sequence mean": 0.8813111937272791,
+      "delta<1.25 ci95 low": 0.766420248825118,
+      "delta<1.25 ci95 high": 0.9962021386294402,
+      "Abs Rel Human3R pixel-weighted": 0.13640267218863364,
+      "delta<1.25 Human3R pixel-weighted": 0.8819201812558329,
+      "per_sequence": [
+        {
+          "sequence": "balloon2",
+          "alignment": "metric",
+          "frames": 200,
+          "valid_pixels": 52337789,
+          "scale": 1.0,
+          "Abs Rel": 0.10811325162649155,
+          "delta<1.25": 0.8546723477371198,
+          "requested_frames": 200,
+          "actual_frames": 200
+        },
+        {
+          "sequence": "crowd2",
+          "alignment": "metric",
+          "frames": 200,
+          "valid_pixels": 50993827,
+          "scale": 1.0,
+          "Abs Rel": 0.21411429345607758,
+          "delta<1.25": 0.7379264749045017,
+          "requested_frames": 200,
+          "actual_frames": 200
+        },
+        {
+          "sequence": "crowd3",
+          "alignment": "metric",
+          "frames": 200,
+          "valid_pixels": 51637524,
+          "scale": 1.0,
+          "Abs Rel": 0.13377982378005981,
+          "delta<1.25": 0.8907546574076635,
+          "requested_frames": 200,
+          "actual_frames": 200
+        },
+        {
+          "sequence": "person_tracking2",
+          "alignment": "metric",
+          "frames": 200,
+          "valid_pixels": 52866298,
+          "scale": 1.0,
+          "Abs Rel": 0.1343575417995453,
+          "delta<1.25": 0.9634832194983655,
+          "requested_frames": 200,
+          "actual_frames": 200
+        },
+        {
+          "sequence": "synchronous",
+          "alignment": "metric",
+          "frames": 200,
+          "valid_pixels": 51424191,
+          "scale": 1.0,
+          "Abs Rel": 0.09286963194608688,
+          "delta<1.25": 0.9597192690887446,
+          "requested_frames": 200,
+          "actual_frames": 200
+        }
+      ]
+    },
+    {
+      "stage": "vggt_traditional_hsi_scale",
+      "requested_frames": 250,
+      "actual_frames_min": 250,
+      "actual_frames_max": 250,
+      "num_sequences": 5,
+      "Abs Rel sequence mean": 0.1514939397573471,
+      "Abs Rel ci95 low": 0.09178581875476383,
+      "Abs Rel ci95 high": 0.21120206075993037,
+      "delta<1.25 sequence mean": 0.8456151377665411,
+      "delta<1.25 ci95 low": 0.6903004036381863,
+      "delta<1.25 ci95 high": 1.0009298718948958,
+      "Abs Rel Human3R pixel-weighted": 0.15129675728060596,
+      "delta<1.25 Human3R pixel-weighted": 0.8463183598272144,
+      "per_sequence": [
+        {
+          "sequence": "balloon2",
+          "alignment": "metric",
+          "frames": 250,
+          "valid_pixels": 64736183,
+          "scale": 1.0,
+          "Abs Rel": 0.1388997882604599,
+          "delta<1.25": 0.7840888147514041,
+          "requested_frames": 250,
+          "actual_frames": 250
+        },
+        {
+          "sequence": "crowd2",
+          "alignment": "metric",
+          "frames": 250,
+          "valid_pixels": 63746673,
+          "scale": 1.0,
+          "Abs Rel": 0.2297830879688263,
+          "delta<1.25": 0.6569990405616933,
+          "requested_frames": 250,
+          "actual_frames": 250
+        },
+        {
+          "sequence": "crowd3",
+          "alignment": "metric",
+          "frames": 250,
+          "valid_pixels": 64536236,
+          "scale": 1.0,
+          "Abs Rel": 0.14374789595603943,
+          "delta<1.25": 0.8941430206744626,
+          "requested_frames": 250,
+          "actual_frames": 250
+        },
+        {
+          "sequence": "person_tracking2",
+          "alignment": "metric",
+          "frames": 250,
+          "valid_pixels": 65766659,
+          "scale": 1.0,
+          "Abs Rel": 0.14727455377578735,
+          "delta<1.25": 0.9296090896148457,
+          "requested_frames": 250,
+          "actual_frames": 250
+        },
+        {
+          "sequence": "synchronous",
+          "alignment": "metric",
+          "frames": 250,
+          "valid_pixels": 64428440,
+          "scale": 1.0,
+          "Abs Rel": 0.09776437282562256,
+          "delta<1.25": 0.9632357232303002,
+          "requested_frames": 250,
+          "actual_frames": 250
+        }
+      ]
+    },
+    {
+      "stage": "vggt_traditional_hsi_scale",
+      "requested_frames": 300,
+      "actual_frames_min": 300,
+      "actual_frames_max": 300,
+      "num_sequences": 5,
+      "Abs Rel sequence mean": 0.18317309767007828,
+      "Abs Rel ci95 low": 0.11169902904979977,
+      "Abs Rel ci95 high": 0.2546471662903568,
+      "delta<1.25 sequence mean": 0.7464156584166043,
+      "delta<1.25 ci95 low": 0.5107621353144911,
+      "delta<1.25 ci95 high": 0.9820691815187175,
+      "Abs Rel Human3R pixel-weighted": 0.18281167538345042,
+      "delta<1.25 Human3R pixel-weighted": 0.7475004048708033,
+      "per_sequence": [
+        {
+          "sequence": "balloon2",
+          "alignment": "metric",
+          "frames": 300,
+          "valid_pixels": 77880620,
+          "scale": 1.0,
+          "Abs Rel": 0.17112044990062714,
+          "delta<1.25": 0.6473376816979629,
+          "requested_frames": 300,
+          "actual_frames": 300
+        },
+        {
+          "sequence": "crowd2",
+          "alignment": "metric",
+          "frames": 300,
+          "valid_pixels": 76283657,
+          "scale": 1.0,
+          "Abs Rel": 0.25963130593299866,
+          "delta<1.25": 0.4817756705082977,
+          "requested_frames": 300,
+          "actual_frames": 300
+        },
+        {
+          "sequence": "crowd3",
+          "alignment": "metric",
+          "frames": 300,
+          "valid_pixels": 76918896,
+          "scale": 1.0,
+          "Abs Rel": 0.21020986139774323,
+          "delta<1.25": 0.7863668766124776,
+          "requested_frames": 300,
+          "actual_frames": 300
+        },
+        {
+          "sequence": "person_tracking2",
+          "alignment": "metric",
+          "frames": 300,
+          "valid_pixels": 78927501,
+          "scale": 1.0,
+          "Abs Rel": 0.1717691868543625,
+          "delta<1.25": 0.836655629069011,
+          "requested_frames": 300,
+          "actual_frames": 300
+        },
+        {
+          "sequence": "synchronous",
+          "alignment": "metric",
+          "frames": 300,
+          "valid_pixels": 77631504,
+          "scale": 1.0,
+          "Abs Rel": 0.10313468426465988,
+          "delta<1.25": 0.979942434195272,
+          "requested_frames": 300,
+          "actual_frames": 300
+        }
+      ]
+    },
+    {
+      "stage": "vggt_traditional_hsi_scale",
+      "requested_frames": 350,
+      "actual_frames_min": 302,
+      "actual_frames_max": 350,
+      "num_sequences": 5,
+      "Abs Rel sequence mean": 0.19941905587911607,
+      "Abs Rel ci95 low": 0.12167026177258793,
+      "Abs Rel ci95 high": 0.2771678499856442,
+      "delta<1.25 sequence mean": 0.6884494724660027,
+      "delta<1.25 ci95 low": 0.4363396595081048,
+      "delta<1.25 ci95 high": 0.9405592854239007,
+      "Abs Rel Human3R pixel-weighted": 0.20184729836199086,
+      "delta<1.25 Human3R pixel-weighted": 0.6808562716033664,
+      "per_sequence": [
+        {
+          "sequence": "balloon2",
+          "alignment": "metric",
+          "frames": 350,
+          "valid_pixels": 90865044,
+          "scale": 1.0,
+          "Abs Rel": 0.20928867161273956,
+          "delta<1.25": 0.5191435553588682,
+          "requested_frames": 350,
+          "actual_frames": 350
+        },
+        {
+          "sequence": "crowd2",
+          "alignment": "metric",
+          "frames": 350,
+          "valid_pixels": 88804072,
+          "scale": 1.0,
+          "Abs Rel": 0.2776850461959839,
+          "delta<1.25": 0.4764879700561479,
+          "requested_frames": 350,
+          "actual_frames": 350
+        },
+        {
+          "sequence": "crowd3",
+          "alignment": "metric",
+          "frames": 350,
+          "valid_pixels": 89761207,
+          "scale": 1.0,
+          "Abs Rel": 0.2057378739118576,
+          "delta<1.25": 0.7654175595031827,
+          "requested_frames": 350,
+          "actual_frames": 350
+        },
+        {
+          "sequence": "person_tracking2",
+          "alignment": "metric",
+          "frames": 350,
+          "valid_pixels": 92293135,
+          "scale": 1.0,
+          "Abs Rel": 0.20201487839221954,
+          "delta<1.25": 0.7007034055133137,
+          "requested_frames": 350,
+          "actual_frames": 350
+        },
+        {
+          "sequence": "synchronous",
+          "alignment": "metric",
+          "frames": 302,
+          "valid_pixels": 78163137,
+          "scale": 1.0,
+          "Abs Rel": 0.1023688092827797,
+          "delta<1.25": 0.9804948718985012,
+          "requested_frames": 350,
+          "actual_frames": 302
+        }
+      ]
+    },
+    {
+      "stage": "vggt_traditional_hsi_scale",
+      "requested_frames": 400,
+      "actual_frames_min": 302,
+      "actual_frames_max": 400,
+      "num_sequences": 5,
+      "Abs Rel sequence mean": 0.20521001666784286,
+      "Abs Rel ci95 low": 0.12880196367099062,
+      "Abs Rel ci95 high": 0.2816180696646951,
+      "delta<1.25 sequence mean": 0.6704540785857706,
+      "delta<1.25 ci95 low": 0.39378348734818464,
+      "delta<1.25 ci95 high": 0.9471246698233564,
+      "Abs Rel Human3R pixel-weighted": 0.2104471751716771,
+      "delta<1.25 Human3R pixel-weighted": 0.6542324786382709,
+      "per_sequence": [
+        {
+          "sequence": "balloon2",
+          "alignment": "metric",
+          "frames": 400,
+          "valid_pixels": 103555122,
+          "scale": 1.0,
+          "Abs Rel": 0.25844693183898926,
+          "delta<1.25": 0.38813314323554177,
+          "requested_frames": 400,
+          "actual_frames": 400
+        },
+        {
+          "sequence": "crowd2",
+          "alignment": "metric",
+          "frames": 400,
+          "valid_pixels": 101966643,
+          "scale": 1.0,
+          "Abs Rel": 0.24530981481075287,
+          "delta<1.25": 0.5792955839489586,
+          "requested_frames": 400,
+          "actual_frames": 400
+        },
+        {
+          "sequence": "crowd3",
+          "alignment": "metric",
+          "frames": 400,
+          "valid_pixels": 102249028,
+          "scale": 1.0,
+          "Abs Rel": 0.20331645011901855,
+          "delta<1.25": 0.7812636321589287,
+          "requested_frames": 400,
+          "actual_frames": 400
+        },
+        {
+          "sequence": "person_tracking2",
+          "alignment": "metric",
+          "frames": 400,
+          "valid_pixels": 105732379,
+          "scale": 1.0,
+          "Abs Rel": 0.21660807728767395,
+          "delta<1.25": 0.6230831616869228,
+          "requested_frames": 400,
+          "actual_frames": 400
+        },
+        {
+          "sequence": "synchronous",
+          "alignment": "metric",
+          "frames": 302,
+          "valid_pixels": 78163137,
+          "scale": 1.0,
+          "Abs Rel": 0.1023688092827797,
+          "delta<1.25": 0.9804948718985012,
+          "requested_frames": 400,
+          "actual_frames": 302
+        }
+      ]
+    },
+    {
+      "stage": "vggt_traditional_hsi_scale",
+      "requested_frames": 450,
+      "actual_frames_min": 302,
+      "actual_frames_max": 450,
+      "num_sequences": 5,
+      "Abs Rel sequence mean": 0.20284859091043472,
+      "Abs Rel ci95 low": 0.12333916256614778,
+      "Abs Rel ci95 high": 0.28235801925472165,
+      "delta<1.25 sequence mean": 0.7034124400789254,
+      "delta<1.25 ci95 low": 0.4084036254477833,
+      "delta<1.25 ci95 high": 0.9984212547100676,
+      "Abs Rel Human3R pixel-weighted": 0.20947930526130684,
+      "delta<1.25 Human3R pixel-weighted": 0.6858919768509673,
+      "per_sequence": [
+        {
+          "sequence": "balloon2",
+          "alignment": "metric",
+          "frames": 439,
+          "valid_pixels": 113520442,
+          "scale": 1.0,
+          "Abs Rel": 0.2794244885444641,
+          "delta<1.25": 0.3350742415185452,
+          "requested_frames": 450,
+          "actual_frames": 439
+        },
+        {
+          "sequence": "crowd2",
+          "alignment": "metric",
+          "frames": 450,
+          "valid_pixels": 115220181,
+          "scale": 1.0,
+          "Abs Rel": 0.22359637916088104,
+          "delta<1.25": 0.6567386576141553,
+          "requested_frames": 450,
+          "actual_frames": 450
+        },
+        {
+          "sequence": "crowd3",
+          "alignment": "metric",
+          "frames": 450,
+          "valid_pixels": 115165225,
+          "scale": 1.0,
+          "Abs Rel": 0.20682062208652496,
+          "delta<1.25": 0.8018125523568421,
+          "requested_frames": 450,
+          "actual_frames": 450
+        },
+        {
+          "sequence": "person_tracking2",
+          "alignment": "metric",
+          "frames": 450,
+          "valid_pixels": 119315362,
+          "scale": 1.0,
+          "Abs Rel": 0.2020326554775238,
+          "delta<1.25": 0.7429418770065837,
+          "requested_frames": 450,
+          "actual_frames": 450
+        },
+        {
+          "sequence": "synchronous",
+          "alignment": "metric",
+          "frames": 302,
+          "valid_pixels": 78163137,
+          "scale": 1.0,
+          "Abs Rel": 0.1023688092827797,
+          "delta<1.25": 0.9804948718985012,
+          "requested_frames": 450,
+          "actual_frames": 302
+        }
+      ]
+    },
+    {
+      "stage": "vggt_traditional_hsi_scale",
+      "requested_frames": 500,
+      "actual_frames_min": 302,
+      "actual_frames_max": 500,
+      "num_sequences": 5,
+      "Abs Rel sequence mean": 0.19635304659605027,
+      "Abs Rel ci95 low": 0.11787889709256347,
+      "Abs Rel ci95 high": 0.2748271960995371,
+      "delta<1.25 sequence mean": 0.736264254003884,
+      "delta<1.25 ci95 low": 0.43496863317114803,
+      "delta<1.25 ci95 high": 1.03755987483662,
+      "Abs Rel Human3R pixel-weighted": 0.20229296028967,
+      "delta<1.25 Human3R pixel-weighted": 0.7260507770216518,
+      "per_sequence": [
+        {
+          "sequence": "balloon2",
+          "alignment": "metric",
+          "frames": 439,
+          "valid_pixels": 113520442,
+          "scale": 1.0,
+          "Abs Rel": 0.2794244885444641,
+          "delta<1.25": 0.3350742415185452,
+          "requested_frames": 500,
+          "actual_frames": 439
+        },
+        {
+          "sequence": "crowd2",
+          "alignment": "metric",
+          "frames": 500,
+          "valid_pixels": 128284990,
+          "scale": 1.0,
+          "Abs Rel": 0.20909778773784637,
+          "delta<1.25": 0.7213700215434401,
+          "requested_frames": 500,
+          "actual_frames": 500
+        },
+        {
+          "sequence": "crowd3",
+          "alignment": "metric",
+          "frames": 500,
+          "valid_pixels": 128182501,
+          "scale": 1.0,
+          "Abs Rel": 0.20193620026111603,
+          "delta<1.25": 0.8199461328968765,
+          "requested_frames": 500,
+          "actual_frames": 500
+        },
+        {
+          "sequence": "person_tracking2",
+          "alignment": "metric",
+          "frames": 500,
+          "valid_pixels": 132747672,
+          "scale": 1.0,
+          "Abs Rel": 0.1889379471540451,
+          "delta<1.25": 0.8244360021620567,
+          "requested_frames": 500,
+          "actual_frames": 500
+        },
+        {
+          "sequence": "synchronous",
+          "alignment": "metric",
+          "frames": 302,
+          "valid_pixels": 78163137,
+          "scale": 1.0,
+          "Abs Rel": 0.1023688092827797,
+          "delta<1.25": 0.9804948718985012,
+          "requested_frames": 500,
+          "actual_frames": 302
+        }
+      ]
+    }
+  ]
+}

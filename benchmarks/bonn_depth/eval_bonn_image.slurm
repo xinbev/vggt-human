@@ -24,24 +24,33 @@ echo "分配的 GPU: ${CUDA_VISIBLE_DEVICES}"
 
 
 
+# DATASET_ROOT=/home/zhw/xyb_space/rgbd_bonn_dataset \
+# PRED_ROOT=/home/zhw/xyb_space/vggt_bonn_curve_predictions \
+# STAGE=vggt_traditional_hsi_scale \
+# CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt \
+# STAGE2_CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt \
+# SCALE_CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt \
+# PREFIX_LENGTHS="50 100 150 200 250 300 350 400 450 500" \
+# START_FRAME=30 \
+# ALLOW_SHORT=true \
+# IMAGE_RESOLUTION=512 \
+# RESIZE_MODE=balanced \
+# DEVICE=cuda \
+# bash benchmarks/bonn_depth/infer_curve.sh
+
+
+
+
+
+
 DATASET_ROOT=/home/zhw/xyb_space/rgbd_bonn_dataset \
 PRED_ROOT=/home/zhw/xyb_space/vggt_bonn_curve_predictions \
 STAGE=vggt_traditional_hsi_scale \
-CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt \
-STAGE2_CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt \
-SCALE_CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt \
 PREFIX_LENGTHS="50 100 150 200 250 300 350 400 450 500" \
 START_FRAME=30 \
 ALLOW_SHORT=true \
-IMAGE_RESOLUTION=512 \
-RESIZE_MODE=balanced \
-DEVICE=cuda \
-bash benchmarks/bonn_depth/infer_curve.sh
-
-
-
-
-
+OUTPUT_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/bonn_depth_curve \
+bash benchmarks/bonn_depth/run_curve.sh
 
 
 
