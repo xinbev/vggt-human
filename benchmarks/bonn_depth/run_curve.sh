@@ -9,6 +9,7 @@ PREFIX_LENGTHS="${PREFIX_LENGTHS:-50 100 150 200 250 300 350 400 450 500}"
 OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/outputs/eval/bonn_depth_curve}"
 START_FRAME="${START_FRAME:-30}"
 ALLOW_SHORT="${ALLOW_SHORT:-true}"
+ALIGNMENT="${ALIGNMENT:-metric}"
 
 EXTRA_ARGS=()
 if [[ "${ALLOW_SHORT}" == "true" ]]; then
@@ -21,5 +22,6 @@ python "${REPO_ROOT}/benchmarks/bonn_depth/evaluate_curve.py" \
   --stage-name "${STAGE}" \
   --prefix-lengths ${PREFIX_LENGTHS} \
   --start-frame "${START_FRAME}" \
+  --alignment "${ALIGNMENT}" \
   "${EXTRA_ARGS[@]}" \
   --output-dir "${OUTPUT_DIR}"

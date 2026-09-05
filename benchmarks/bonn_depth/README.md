@@ -98,3 +98,12 @@ bash benchmarks/bonn_depth/run_curve.sh
 
 The plot-ready data are written to
 `outputs/eval/bonn_depth_curve/vggt_traditional_hsi_scale_curve_points.csv`.
+
+Pure VGGT can use the same inference prefixes with `STAGE=pure_vggt`. Evaluate
+those predictions once with `ALIGNMENT=metric` for the raw absolute-scale
+diagnostic and once with `ALIGNMENT=scale` to diagnose relative-depth quality.
+The scale-aligned result is not part of Figure 9b's metric protocol.
+
+After both metric curve CSV files exist, run
+`bash benchmarks/bonn_depth/plot_comparison.sh` to render the comparison under
+`outputs/vis/bonn_depth_curve/`.

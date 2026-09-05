@@ -56,6 +56,7 @@ def main() -> None:
     )
     parser.add_argument("--output-dir", type=Path, default=Path("outputs/eval/bonn_depth_curve"))
     parser.add_argument("--max-depth", type=float, default=70.0)
+    parser.add_argument("--alignment", choices=["metric", "scale"], default="metric")
     args = parser.parse_args()
 
     rows: list[dict[str, object]] = []
@@ -81,7 +82,7 @@ def main() -> None:
                 start=args.start_frame,
                 count=actual_count,
                 max_depth=args.max_depth,
-                alignment="metric",
+                alignment=args.alignment,
             )
             item["requested_frames"] = length
             item["actual_frames"] = actual_count
@@ -124,25 +125,27 @@ def main() -> None:
     report = {
         "protocol": (
             f"Bonn video depth; requested windows [{args.start_frame}:{args.start_frame}+N); "
-            f"absolute metric depth; no GT scale/shift alignment; allow_short={args.allow_short}"
+            f"alignment={args.alignment}; allow_short={args.allow_short}"
         ),
         "aggregation": (
             "Both unweighted sequence mean with two-sided 95% Student-t CI and Human3R-style "
             "valid-pixel-weighted aggregate are reported."
         ),
         "stage": args.stage_name,
+        "alignment": args.alignment,
         "prediction_root": str(args.prediction_root),
         "sequences": list(SEQUENCES),
         "points": points,
     }
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    (args.output_dir / f"{args.stage_name}_curve.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
-    with (args.output_dir / f"{args.stage_name}_curve_points.csv").open("w", newline="", encoding="utf-8") as handle:
+    output_stem = args.stage_name if args.alignment == "metric" else f"{args.stage_name}_{args.alignment}"
+    (args.output_dir / f"{output_stem}_curve.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    with (args.output_dir / f"{output_stem}_curve_points.csv").open("w", newline="", encoding="utf-8") as handle:
         fieldnames = [key for key in points[0] if key != "per_sequence"]
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows({key: value for key, value in point.items() if key != "per_sequence"} for point in points)
-    with (args.output_dir / f"{args.stage_name}_per_sequence.csv").open("w", newline="", encoding="utf-8") as handle:
+    with (args.output_dir / f"{output_stem}_per_sequence.csv").open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=["stage", "requested_frames", "actual_frames", "sequence", "Abs Rel", "delta<1.25", "valid_pixels"])
         writer.writeheader()
         writer.writerows(rows)
