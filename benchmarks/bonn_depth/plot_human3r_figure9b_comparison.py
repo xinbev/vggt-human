@@ -60,6 +60,7 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional pure_vggt metric curve CSV to add as a diagnostic line.",
     )
+    parser.add_argument("--ours-label", default="VGGT + traditional + HSI scale (ours)")
     parser.add_argument(
         "--output",
         type=Path,
@@ -237,7 +238,7 @@ def main() -> None:
     legend_items = [(name, str(series["color"]), str(series["marker"])) for name, series in REFERENCE.items()]
     if pure_abs is not None:
         legend_items.append(("Pure VGGT (raw scale, diagnostic)", "#555555", "s"))
-    legend_items.append(("VGGT + traditional + HSI scale (ours)", "#b3242a", "X"))
+    legend_items.append((args.ours_label, "#b3242a", "X"))
     x = 70
     legend_y = 64
     for name, color, kind in legend_items:

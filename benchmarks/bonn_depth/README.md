@@ -104,6 +104,27 @@ those predictions once with `ALIGNMENT=metric` for the raw absolute-scale
 diagnostic and once with `ALIGNMENT=scale` to diagnose relative-depth quality.
 The scale-aligned result is not part of Figure 9b's metric protocol.
 
+If the pure VGGT curve predictions have already been generated, evaluate both
+versions in one command:
+
+```bash
+DATASET_ROOT=/home/zhw/xyb_space/rgbd_bonn_dataset \
+PRED_ROOT=/home/zhw/xyb_space/vggt_bonn_curve_predictions \
+OUTPUT_ROOT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/bonn_depth_pure_vggt \
+bash benchmarks/bonn_depth/run_pure_vggt_dual_eval.sh
+```
+
+This produces two separate result directories:
+
+```text
+outputs/eval/bonn_depth_pure_vggt/metric/
+outputs/eval/bonn_depth_pure_vggt/scale/
+```
+
+`metric` is the direct pure-VGGT output; `scale` is the same pure-VGGT output
+after one GT-fitted scale per sequence and prefix. The latter is an oracle
+scale diagnostic, not a new model prediction and not a metric-scale result.
+
 After both metric curve CSV files exist, run
 `bash benchmarks/bonn_depth/plot_comparison.sh` to render the comparison under
 `outputs/vis/bonn_depth_curve/`.
