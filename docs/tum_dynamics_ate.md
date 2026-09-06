@@ -12,10 +12,12 @@ the read-only Human3R reference tree.
 2. Associate `rgb.txt` and `groundtruth.txt` with a 20 ms timestamp tolerance.
 3. Prepare independent prefixes `50, 100, ..., 1000` and the Human3R-compatible
    `90` prefix.
-4. Read Human3R `pred_traj.txt` files and pair by index when prediction/GT
-   lengths agree (Human3R's in-memory behavior); otherwise use one-to-one
-   nearest timestamp matching.
-5. Estimate one Sim(3) from estimated camera centers to GT camera centers and
+4. Run the user's VGGT-Omega system on each prefix and export one
+   `<sequence>/pred_traj.txt` per prefix.  The provided `infer_vggt.py` does
+   this for the released `VGGTOmega()` checkpoint; Human3R is not run.
+5. Pair prediction/GT by index when lengths agree (the Human3R behavior),
+   otherwise use one-to-one nearest timestamp matching.
+6. Estimate one Sim(3) from estimated camera centers to GT camera centers and
    report translation RMSE in meters.  The dataset summary is the arithmetic
    mean of sequence RMSE values, matching Human3R's `calculate_averages`.
 
@@ -25,6 +27,7 @@ The implementation lives in `benchmarks/tum_dynamics_ate/`:
 
 - `download_tum_dynamics.sh`: official archive download/extraction.
 - `prepare_tum_dynamics.py` and `.sh`: timestamp association and prefix tree.
+- `infer_vggt.py` and `.sh`: VGGT-Omega inference and camera trajectory export.
 - `evaluate_ate.py`: one prediction-root evaluator.
 - `evaluate_curve.py` and `run_ate.sh`: all-prefix curve evaluator.
 - `test_ate.py` and `test.sh`: data-free Sim(3)/association smoke tests.
@@ -37,6 +40,5 @@ the repository by default.
 Local validation completed: Python compilation, synthetic Sim(3) recovery,
 timestamp one-to-one matching, Human3R synthetic-timestamp index matching, and
 the data-free unit test suite.  A real server run still requires the TUM data,
-Human3R weights/environment, and generated `pred_traj.txt` files.  The
+VGGT-Omega checkpoint/environment, and generated `pred_traj.txt` files.  The
 evaluator intentionally reports ATE only; Human3R RPE is a separate metric.
-

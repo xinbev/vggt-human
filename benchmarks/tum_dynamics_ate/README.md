@@ -60,60 +60,63 @@ tum_dynamics_long_s1/
 sequence has fewer than a requested number of associated frames, the prefix is
 truncated and the actual count is recorded; no frames are fabricated.
 
-## 3. Produce Human3R predictions
+## 3. Run your VGGT-Omega system and export trajectories
 
-This benchmark only computes the metric; it does not silently download model
-weights or run Human3R.  Run Human3R's released relpose evaluator in its own
-checkout, pointing its TUM metadata to the prepared tree.  Its output layout
-should be:
+You do **not** need to run Human3R.  Human3R is only the source of the metric
+protocol.  For the released/default VGGT-Omega model, use the project-native
+inference wrapper:
+
+```bash
+cd /home/zhw/lab_users/xyb/home/projects/vggt-human
+
+DATASET_ROOT=/home/zhw/xyb_space/tum_dynamics_long_s1 \
+CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt \
+PRED_PARENT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/tum_dynamics_predictions \
+LENGTHS=50,100,150,200,300,400,500,600,700,800,900,1000 \
+MODEL=vggt \
+bash benchmarks/tum_dynamics_ate/infer_vggt.sh
+```
+
+This wrapper reads the RGB prefixes generated in step 2, runs
+`VGGTOmega -> pose_enc -> camera extrinsics`, converts the camera-from-world
+extrinsics into camera centers, and writes:
 
 ```text
-<human3r-root>/eval_results/relpose/
-  tum_50_human3r/<sequence>/pred_traj.txt
-  tum_100_human3r/<sequence>/pred_traj.txt
+outputs/eval/tum_dynamics_predictions/
+  tum_50_vggt/<sequence>/pred_traj.txt
+  tum_100_vggt/<sequence>/pred_traj.txt
   ...
 ```
 
-In the Human3R checkout, edit `eval/relpose/metadata.py` so the `tum` entry
-and every generated `tum_50` ... `tum_1000` entry use the same prepared root
-(the `img_path` value).  The released metadata already expects the subfolder
-names `rgb_90`/`groundtruth_90` and `rgb_<N>`/`groundtruth_<N>` created above.
-Then launch its evaluator from the Human3R checkout, for example:
+The script uses one forward pass per sequence prefix.  This is intentional:
+each input length is an independent experiment.  Start with a small smoke run
+because the 1B model's memory grows quickly with the number of input views:
 
 ```bash
-cd /path/to/Human3R
-CUDA_VISIBLE_DEVICES=0 bash eval/relpose/run.sh
+DATASET_ROOT=/home/zhw/xyb_space/tum_dynamics_long_s1 \
+CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt \
+PRED_PARENT=outputs/eval/tum_dynamics_predictions_smoke \
+LENGTHS=50 \
+MAX_SEQUENCES=1 \
+bash benchmarks/tum_dynamics_ate/infer_vggt.sh
 ```
 
-This produces one `pred_traj.txt` per sequence and prefix under
-`eval_results/relpose/`.  Human3R weights and its CUDA environment are not
-part of this repository; if those are not already present on the server, stop
-at this step and prepare the Human3R environment/checkpoint first.
-
-The released Human3R `eval/relpose/run.sh` currently looks for
-`src/human3r.pth`, while the download command names the file
-`human3r_896L.pth`.  Change the `ckpt_name` variable in that script to
-`human3r_896L`, or place the downloaded checkpoint under the name expected by
-the script; do not evaluate with a missing/placeholder checkpoint.
-
-Human3R's `save_tum_poses` writes quaternion columns as `qw qx qy qz`; the
-metric script therefore defaults to `--prediction-quaternion-order wxyz`.
-Quaternion values do not enter translation ATE, but the option documents the
-file convention.  If a different predictor writes standard TUM
-`qx qy qz qw`, pass `PREDICTION_QUATERNION_ORDER=xyzw`.
+For a custom VGGT-Omega checkpoint whose constructor differs from the released
+`VGGTOmega()` default, keep the same export contract—one
+`<sequence>/pred_traj.txt` per prefix—but adapt the model construction in
+`infer_vggt.py`.  The ATE evaluator is independent of the model code.
 
 ## 4. Compute one ATE value
 
-For one Human3R length, use the supplied wrapper (the repository convention is
-to launch server evaluation through a `.sh` file):
+Now evaluate the trajectories produced by **your VGGT system**:
 
 ```bash
 cd /home/zhw/lab_users/xyb/home/projects/vggt-human
 DATASET_ROOT=/home/zhw/xyb_space/tum_dynamics_long_s1 \
-PRED_PARENT=/path/to/human3r/eval_results/relpose \
-MODEL=human3r \
+PRED_PARENT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/tum_dynamics_predictions \
+MODEL=vggt \
 LENGTHS=500 \
-OUTPUT_DIR=outputs/eval/tum_dynamics_ate/human3r \
+OUTPUT_DIR=outputs/eval/tum_dynamics_ate/vggt \
 bash benchmarks/tum_dynamics_ate/run_ate.sh
 ```
 
@@ -125,23 +128,23 @@ for finding sequences that fail or have very few associated poses.
 
 ## 5. Generate the ATE curve in the attached figure's style
 
-Once all Human3R prefix runs exist:
+Once all VGGT prefix runs exist:
 
 ```bash
 cd /home/zhw/lab_users/xyb/home/projects/vggt-human
 DATASET_ROOT=/home/zhw/xyb_space/tum_dynamics_long_s1 \
-PRED_PARENT=/path/to/human3r/eval_results/relpose \
-MODEL=human3r \
-OUTPUT_DIR=outputs/eval/tum_dynamics_ate/human3r \
+PRED_PARENT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/tum_dynamics_predictions \
+MODEL=vggt \
+OUTPUT_DIR=outputs/eval/tum_dynamics_ate/vggt \
 bash benchmarks/tum_dynamics_ate/run_ate.sh
 ```
 
 The curve table is written to:
 
 ```text
-outputs/eval/tum_dynamics_ate/human3r/curve.csv
-outputs/eval/tum_dynamics_ate/human3r/curve_summary.json
-outputs/eval/tum_dynamics_ate/human3r/length_<N>/summary.json
+outputs/eval/tum_dynamics_ate/vggt/curve.csv
+outputs/eval/tum_dynamics_ate/vggt/curve_summary.json
+outputs/eval/tum_dynamics_ate/vggt/length_<N>/summary.json
 ```
 
 `curve.csv` contains one row per requested length and the sequence-macro mean
