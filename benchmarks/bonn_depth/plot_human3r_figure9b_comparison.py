@@ -61,6 +61,10 @@ def parse_args() -> argparse.Namespace:
         help="Optional pure_vggt metric curve CSV to add as a diagnostic line.",
     )
     parser.add_argument("--ours-label", default="VGGT + traditional + HSI scale (ours)")
+    parser.add_argument("--left-y-min", type=float, default=0.08)
+    parser.add_argument("--left-y-max", type=float, default=0.22)
+    parser.add_argument("--right-y-min", type=float, default=0.62)
+    parser.add_argument("--right-y-max", type=float, default=0.97)
     parser.add_argument(
         "--output",
         type=Path,
@@ -222,17 +226,26 @@ def main() -> None:
         raise ValueError("Unexpected frame positions")
     canvas = Image.new("RGB", (1800, 780), "white")
     draw = ImageDraw.Draw(canvas)
-    abs_max = max(0.22, float(np.max(pure_abs)) * 1.08 if pure_abs is not None else 0.22)
+    abs_candidates = [float(np.max(ours_abs)) * 1.08, args.left_y_max]
+    if pure_abs is not None:
+        abs_candidates.append(float(np.max(pure_abs)) * 1.08)
+    abs_max = max(abs_candidates)
     abs_step = 0.05 if abs_max > 0.30 else 0.02
     abs_max = math.ceil(abs_max / abs_step) * abs_step
-    abs_min = 0.05 if abs_max > 0.30 else 0.08
+    abs_candidates_min = [float(np.min(ours_abs)) * 0.90, args.left_y_min]
+    if pure_abs is not None:
+        abs_candidates_min.append(float(np.min(pure_abs)) * 0.90)
+    abs_min = min(abs_candidates_min)
     abs_ticks = np.arange(abs_min, abs_max + abs_step * 0.5, abs_step).tolist()
-    delta_min_value = min(0.62, float(np.min(pure_delta)) - 0.03 if pure_delta is not None else 0.62)
+    delta_candidates_min = [float(np.min(ours_delta)) - 0.03, args.right_y_min]
+    if pure_delta is not None:
+        delta_candidates_min.append(float(np.min(pure_delta)) - 0.03)
+    delta_min_value = min(delta_candidates_min)
     delta_step = 0.10 if delta_min_value < 0.50 else 0.05
     delta_min = max(0.0, math.floor(delta_min_value / delta_step) * delta_step)
     delta_ticks = np.arange(delta_min, 0.951, delta_step).tolist()
     draw_panel(draw, (135, 145, 845, 640), "Absolute Relative Error ↓", "Abs Rel", (abs_min, abs_max), abs_ticks, "abs_rel", ours_abs, pure_abs)
-    draw_panel(draw, (990, 145, 1700, 640), "Threshold Accuracy (δ < 1.25) ↑", "δ < 1.25", (delta_min, 0.97), delta_ticks, "delta", ours_delta, pure_delta)
+    draw_panel(draw, (990, 145, 1700, 640), "Threshold Accuracy (δ < 1.25) ↑", "δ < 1.25", (delta_min, args.right_y_max), delta_ticks, "delta", ours_delta, pure_delta)
 
     legend_font = load_font(18)
     legend_items = [(name, str(series["color"]), str(series["marker"])) for name, series in REFERENCE.items()]
@@ -253,11 +266,13 @@ def main() -> None:
         x += item_width
 
     caption_font = load_font(14)
+    if "GT scale" in args.ours_label or "oracle" in args.ours_label.lower():
+        ours_note = "Selected curve uses one GT-fitted scale per sequence (oracle diagnostic)."
+    else:
+        ours_note = "Selected curve uses no GT scale/shift alignment."
     caption = (
         "Reference curves: digitized approximately from the supplied Human3R raster.  "
-        "Ours: exact valid-pixel-weighted Bonn metric evaluation, no GT scale/shift.  "
-        "Pure VGGT, when shown, is raw-scale and non-metric.  "
-        "Requested N is capped for short sequences."
+        f"{ours_note} Requested N is capped for short sequences."
     )
     bounds = draw.textbbox((0, 0), caption, font=caption_font)
     draw.text(((1800 - (bounds[2] - bounds[0])) / 2, 744), caption, font=caption_font, fill="#444444")
