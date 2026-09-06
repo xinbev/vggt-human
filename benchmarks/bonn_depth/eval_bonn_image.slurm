@@ -43,18 +43,28 @@ echo "分配的 GPU: ${CUDA_VISIBLE_DEVICES}"
 
 
 
+# DATASET_ROOT=/home/zhw/xyb_space/rgbd_bonn_dataset \
+# PRED_ROOT=/home/zhw/xyb_space/vggt_bonn_curve_predictions \
+# STAGE=vggt_traditional_hsi_scale \
+# PREFIX_LENGTHS="50 100 150 200 250 300 350 400 450 500" \
+# START_FRAME=30 \
+# ALLOW_SHORT=true \
+# OUTPUT_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/bonn_depth_curve \
+# bash benchmarks/bonn_depth/run_curve.sh
+
+
+
 DATASET_ROOT=/home/zhw/xyb_space/rgbd_bonn_dataset \
 PRED_ROOT=/home/zhw/xyb_space/vggt_bonn_curve_predictions \
-STAGE=vggt_traditional_hsi_scale \
+STAGE=pure_vggt \
+CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt \
 PREFIX_LENGTHS="50 100 150 200 250 300 350 400 450 500" \
 START_FRAME=30 \
 ALLOW_SHORT=true \
-OUTPUT_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/bonn_depth_curve \
-bash benchmarks/bonn_depth/run_curve.sh
-
-
-
-
+IMAGE_RESOLUTION=512 \
+RESIZE_MODE=balanced \
+DEVICE=cuda \
+bash benchmarks/bonn_depth/infer_curve.sh
 
 
 echo "评估完成"

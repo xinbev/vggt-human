@@ -37,3 +37,4 @@ outputs/train/smpl_hsi_gt_depth_scale_scene_affine_boxfree/wandb/run-20260824_16
 outputs/eval/emdb2_s7_match_v2_smoke/predictions/
 outputs/eval/emdb2_s7_chunk16_full/predictions/
 outputs/eval/emdb2_global_chunk100/predictions/
+outputs/eval/tum_dynamics_predictions/
