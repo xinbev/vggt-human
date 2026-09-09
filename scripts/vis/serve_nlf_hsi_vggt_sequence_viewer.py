@@ -29,6 +29,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.train.train_smpl import apply_overrides, build_model, load_yaml_config  # noqa: E402
+from scripts.vis.full_viewer_cache_io import export_full_sequence_viewer_cache  # noqa: E402
 from scripts.vis.sequence_sampling import sample_sequence, uniform_sample_indices  # noqa: E402
 from scripts.vis.viewer_cache_io import export_sequence_viewer_cache  # noqa: E402
 from scripts.vis.visualize_smpl_inference import (  # noqa: E402
@@ -200,6 +201,15 @@ def main() -> None:
             resolve_project_path(args.viewer_cache_output),
         )
         timings["export_viewer_cache"] = {"seconds": time.perf_counter() - step_start}
+    full_viewer_cache_manifest = None
+    if args.full_viewer_cache_output:
+        step_start = time.perf_counter()
+        full_viewer_cache_manifest = export_full_sequence_viewer_cache(
+            scene,
+            args,
+            resolve_project_path(args.full_viewer_cache_output),
+        )
+        timings["export_full_viewer_cache"] = {"seconds": time.perf_counter() - step_start}
 
     timings["total_before_viewer"] = {"seconds": elapsed_since(total_start, device)}
     for value in timings.values():
@@ -208,6 +218,9 @@ def main() -> None:
     summary = build_summary(args, frame_paths, checkpoint, image_sequence, predictions, scene, output_dir, timings)
     summary["hsi_overlay_checkpoint"] = None if overlay_checkpoint is None else str(overlay_checkpoint)
     summary["viewer_cache_manifest"] = None if viewer_cache_manifest is None else str(viewer_cache_manifest)
+    summary["full_viewer_cache_manifest"] = (
+        None if full_viewer_cache_manifest is None else str(full_viewer_cache_manifest)
+    )
     summary_path = output_dir / "run_summary.json"
     summary_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
     print(
@@ -216,6 +229,9 @@ def main() -> None:
                 "viewer": f"http://127.0.0.1:{int(args.port)}",
                 "summary": str(summary_path),
                 "viewer_cache": None if viewer_cache_manifest is None else str(viewer_cache_manifest),
+                "full_viewer_cache": (
+                    None if full_viewer_cache_manifest is None else str(full_viewer_cache_manifest)
+                ),
             },
             indent=2,
         ),
@@ -249,6 +265,11 @@ def parse_args() -> argparse.Namespace:
         "--viewer-cache-output",
         default="",
         help="Optional directory for a replayable final HSI point-cloud/SMPL cache.",
+    )
+    parser.add_argument(
+        "--full-viewer-cache-output",
+        default="",
+        help="Optional directory for a lossless cache replayed by the original SequenceViewer UI.",
     )
     parser.add_argument("--device", default="")
     parser.add_argument("--port", type=int, default=8080)

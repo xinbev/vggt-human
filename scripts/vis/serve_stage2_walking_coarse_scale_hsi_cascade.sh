@@ -8,6 +8,7 @@ CHECKPOINT="${CHECKPOINT:-${STAGE2_DIR}/checkpoint_latest.pt}"
 SCALE_CHECKPOINT="${SCALE_CHECKPOINT:-${REPO_ROOT}/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt}"
 OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/outputs/vis/stage2_walking_coarse_residual_v3}"
 VIEWER_CACHE_OUTPUT="${VIEWER_CACHE_OUTPUT:-}"
+FULL_VIEWER_CACHE_OUTPUT="${FULL_VIEWER_CACHE_OUTPUT:-}"
 CUDA_VISIBLE_DEVICES_VALUE="${CUDA_VISIBLE_DEVICES_VALUE:-7}"
 PORT="${PORT:-8080}"
 MAX_FRAMES="${MAX_FRAMES:-20}"
@@ -25,6 +26,7 @@ echo "Stage2 checkpoint : ${CHECKPOINT}"
 echo "Scale overlay     : ${SCALE_CHECKPOINT}"
 echo "Output            : ${OUTPUT_DIR}"
 echo "Viewer cache      : ${VIEWER_CACHE_OUTPUT:-<disabled>}"
+echo "Full UI cache     : ${FULL_VIEWER_CACHE_OUTPUT:-<disabled>}"
 echo "Port              : ${PORT}"
 echo "Frame sampling    : ${FRAME_SAMPLING}, max=${MAX_FRAMES}, stride=${FRAME_STRIDE}"
 echo "Accumulated SMPL  : ${SMPL_DISPLAY_FRAMES} (0 means all)"
@@ -38,6 +40,7 @@ CHECKPOINT="${CHECKPOINT}" \
 HSI_OVERLAY_CHECKPOINT="${SCALE_CHECKPOINT}" \
 OUTPUT_DIR="${OUTPUT_DIR}" \
 VIEWER_CACHE_OUTPUT="${VIEWER_CACHE_OUTPUT}" \
+FULL_VIEWER_CACHE_OUTPUT="${FULL_VIEWER_CACHE_OUTPUT}" \
 CUDA_VISIBLE_DEVICES_VALUE="${CUDA_VISIBLE_DEVICES_VALUE}" \
 PORT="${PORT}" \
 MAX_FRAMES="${MAX_FRAMES}" \
