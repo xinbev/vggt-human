@@ -48,3 +48,13 @@ bash scripts/smoke/check_full_sequence_viewer_cache.sh
 ```
 
 完整缓存为了保持所有 UI 功能，会明显大于仅保存最终 HSI 点云/SMPL 的轻量缓存。缓存使用项目本地 pickle 文件，只应读取本项目自己生成、可信来源的缓存。
+
+## 通用缓存加载入口
+
+其他序列可直接指定缓存目录，不需要新增序列专用 Python viewer：
+
+```bash
+CACHE_DIR=/path/to/full_viewer_cache \
+PORT=8080 \
+bash scripts/vis/serve_full_sequence_viewer_cache.sh
+```
