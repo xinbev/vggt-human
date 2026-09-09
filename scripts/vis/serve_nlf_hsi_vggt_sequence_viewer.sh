@@ -11,6 +11,7 @@ QUERY_SOURCE="${QUERY_SOURCE:-bedlam_sidecar}"
 PATH_CONFIG="${PATH_CONFIG:-${REPO_ROOT}/configs/path.yaml}"
 TRAIN_CONFIG="${TRAIN_CONFIG:-${REPO_ROOT}/configs/train_smpl_hsi_nlf_provider.yaml}"
 OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/outputs/vis/nlf_hsi_vggt_sequence_viewer}"
+VIEWER_CACHE_OUTPUT="${VIEWER_CACHE_OUTPUT:-}"
 CUDA_VISIBLE_DEVICES_VALUE="${CUDA_VISIBLE_DEVICES_VALUE:-0}"
 
 PORT="${PORT:-8080}"
@@ -97,6 +98,7 @@ echo "Sidecars    : ${PREPROCESSED_ROOT}"
 echo "Stage2 dir  : ${STAGE2_DIR}"
 echo "Checkpoint  : ${CHECKPOINT:-<rank1 from checkpoint_topk_index.json>}"
 echo "Output      : ${OUTPUT_DIR}"
+echo "Viewer cache: ${VIEWER_CACHE_OUTPUT:-<disabled>}"
 echo "Port        : ${PORT}"
 echo "Max frames  : ${MAX_FRAMES}"
 echo "Frame sample: ${FRAME_SAMPLING} (after start/stride)"
@@ -207,6 +209,9 @@ if [[ -n "${SMPL_MODEL_DIR}" ]]; then
 fi
 if [[ -n "${SMPL_EDIT_OUTPUT}" ]]; then
   ARGS+=(--smpl-edit-output "${SMPL_EDIT_OUTPUT}")
+fi
+if [[ -n "${VIEWER_CACHE_OUTPUT}" ]]; then
+  ARGS+=(--viewer-cache-output "${VIEWER_CACHE_OUTPUT}")
 fi
 if [[ -n "${HSI_ALIGN_FEATURE_VERSION}" ]]; then
   ARGS+=(--override "model.hsi_align_feature_version=${HSI_ALIGN_FEATURE_VERSION}")

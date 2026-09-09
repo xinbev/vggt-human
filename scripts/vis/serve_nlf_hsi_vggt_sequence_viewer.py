@@ -30,6 +30,7 @@ if str(ROOT) not in sys.path:
 
 from scripts.train.train_smpl import apply_overrides, build_model, load_yaml_config  # noqa: E402
 from scripts.vis.sequence_sampling import sample_sequence, uniform_sample_indices  # noqa: E402
+from scripts.vis.viewer_cache_io import export_sequence_viewer_cache  # noqa: E402
 from scripts.vis.visualize_smpl_inference import (  # noqa: E402
     estimate_scene_to_smpl_scale,
     load_training_checkpoint,
@@ -191,15 +192,35 @@ def main() -> None:
     validate_scene(scene, predictions, image_sequence)
     timings["validate_and_summarize"] = {"seconds": time.perf_counter() - step_start}
 
+    viewer_cache_manifest = None
+    if args.viewer_cache_output:
+        step_start = time.perf_counter()
+        viewer_cache_manifest = export_sequence_viewer_cache(
+            scene,
+            resolve_project_path(args.viewer_cache_output),
+        )
+        timings["export_viewer_cache"] = {"seconds": time.perf_counter() - step_start}
+
     timings["total_before_viewer"] = {"seconds": elapsed_since(total_start, device)}
     for value in timings.values():
         if isinstance(value, dict) and "seconds" in value:
             add_timing_rate(value, len(frame_paths))
     summary = build_summary(args, frame_paths, checkpoint, image_sequence, predictions, scene, output_dir, timings)
     summary["hsi_overlay_checkpoint"] = None if overlay_checkpoint is None else str(overlay_checkpoint)
+    summary["viewer_cache_manifest"] = None if viewer_cache_manifest is None else str(viewer_cache_manifest)
     summary_path = output_dir / "run_summary.json"
     summary_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(json.dumps({"viewer": f"http://127.0.0.1:{int(args.port)}", "summary": str(summary_path)}, indent=2), flush=True)
+    print(
+        json.dumps(
+            {
+                "viewer": f"http://127.0.0.1:{int(args.port)}",
+                "summary": str(summary_path),
+                "viewer_cache": None if viewer_cache_manifest is None else str(viewer_cache_manifest),
+            },
+            indent=2,
+        ),
+        flush=True,
+    )
     if bool(args.smoke_only):
         print("[ok] NLF-HSI VGGT sequence viewer smoke passed", flush=True)
         return
@@ -224,6 +245,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--path-config", default="configs/path.yaml")
     parser.add_argument("--train-config", default="configs/train_smpl_hsi_nlf_provider.yaml")
     parser.add_argument("--output-dir", default="outputs/vis/nlf_hsi_vggt_sequence_viewer")
+    parser.add_argument(
+        "--viewer-cache-output",
+        default="",
+        help="Optional directory for a replayable final HSI point-cloud/SMPL cache.",
+    )
     parser.add_argument("--device", default="")
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--image-size", type=int, default=0)

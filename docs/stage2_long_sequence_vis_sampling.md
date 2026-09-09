@@ -37,10 +37,39 @@ bash scripts/vis/serve_stage2_emdb_p4_36_long_walk_uniform.sh
 
 默认输出：`outputs/vis/stage2_emdb_p4_36_long_walk_coarse_residual_v3/`
 
+## 推理与 Viser 解耦
+
+`run_summary.json` 只包含统计信息，不能重建三维场景。可复用的 viewer cache 另外保存：
+
+- 每帧最终 HSI 点云：`float32 [N,3]` world points 与 `uint8 [N,3]` RGB。
+- 每帧最终 HSI SMPL：`float32 [P,6890,3]` world vertices，以及 track/query/confidence/color。
+- SMPL faces 只在 cache 根目录保存一份。
+- 不保存模型张量、checkpoint、原始/HSI depth map 的重复副本；离线 viewer 因而专注于最终点云和 SMPL，不提供重新计算深度采样或人体 mask 的功能。
+
+第一步仅运行推理并导出缓存，完成后退出：
+
+```bash
+cd /home/zhw/lab_users/xyb/home/projects/vggt-human
+CUDA_VISIBLE_DEVICES_VALUE=0 bash scripts/vis/export_stage2_emdb_p4_36_long_walk_viewer_cache.sh
+```
+
+缓存默认写入：
+
+`outputs/vis/stage2_emdb_p4_36_long_walk_coarse_residual_v3/viewer_cache/`
+
+第二步不加载 VGGT、NLF、SMPL layer 或 checkpoint，只读取缓存启动 Viser：
+
+```bash
+bash scripts/vis/serve_stage2_emdb_p4_36_long_walk_viewer_cache.sh
+```
+
+离线 viewer 默认使用端口 8081、从最后一个 timestep 开始，因此打开后直接是 500 帧点云与 50 个均匀 SMPL 时刻的累计结果。
+
 轻量抽样检查：
 
 ```bash
 bash scripts/smoke/check_sequence_viewer_sampling.sh
+bash scripts/smoke/check_sequence_viewer_cache.sh
 ```
 
 ## 尚需服务器验证的风险
