@@ -29,6 +29,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.train.train_smpl import apply_overrides, build_model, load_yaml_config  # noqa: E402
+from scripts.vis.sequence_sampling import sample_sequence, uniform_sample_indices  # noqa: E402
 from scripts.vis.visualize_smpl_inference import (  # noqa: E402
     estimate_scene_to_smpl_scale,
     load_training_checkpoint,
@@ -228,6 +229,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--image-size", type=int, default=0)
     parser.add_argument("--start-index", type=int, default=0)
     parser.add_argument("--frame-stride", type=int, default=1)
+    parser.add_argument(
+        "--frame-sampling",
+        choices=["head", "uniform"],
+        default="head",
+        help=(
+            "How --max-frames is applied after --start-index/--frame-stride: "
+            "'head' preserves the baseline prefix behavior; 'uniform' covers the full candidate sequence."
+        ),
+    )
     parser.add_argument("--max-frames", type=int, default=32)
     parser.add_argument("--max-humans", type=int, default=20)
     parser.add_argument("--conf-threshold", type=float, default=0.10)
@@ -250,6 +260,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--env-mesh-overlay-point-size-scale", type=float, default=0.75, help="Point-size scale for RGB overlay points in point_overlay mesh color mode.")
     parser.add_argument("--smpl-edit-output", default="", help="Optional JSON path for viewer-only SMPL translation edits. Defaults to <output-dir>/smpl_edit_offsets.json.")
     parser.add_argument("--show-track-ids", action=argparse.BooleanOptionalAction, default=True, help="Initial visibility for SMPL track ID labels. The Viser GUI can still toggle this live.")
+    parser.add_argument(
+        "--smpl-display-frames",
+        type=int,
+        default=0,
+        help=(
+            "Initial number of uniformly sampled SMPL frames shown in 3D accumulate mode. "
+            "0 keeps all selected frames visible (baseline behavior); this can be changed live in the GUI."
+        ),
+    )
     parser.add_argument("--point-size", type=float, default=0.012)
     parser.add_argument("--camera-frustum-scale", type=float, default=0.20)
     parser.add_argument("--alignment-vertex-stride", type=int, default=16)
@@ -301,9 +320,11 @@ def select_frames(frames_dir: Path, args: argparse.Namespace) -> list[Path]:
     start = max(0, int(args.start_index))
     stride = max(1, int(args.frame_stride))
     selected = paths[start::stride]
-    if int(args.max_frames) > 0:
-        selected = selected[: int(args.max_frames)]
-    return selected
+    return sample_sequence(
+        selected,
+        max_count=int(args.max_frames),
+        strategy=str(getattr(args, "frame_sampling", "head")),
+    )
 
 
 def load_config(args: argparse.Namespace) -> dict[str, Any]:
@@ -1501,6 +1522,14 @@ def build_summary(
     return {
         "frames_dir": str(resolve_project_path(args.frames_dir)),
         "num_frames": len(frame_paths),
+        "frame_selection": {
+            "strategy": str(getattr(args, "frame_sampling", "head")),
+            "start_index": int(args.start_index),
+            "frame_stride": int(args.frame_stride),
+            "max_frames": int(args.max_frames),
+            "selected_files": [path.name for path in frame_paths],
+        },
+        "smpl_display_frames_initial": int(getattr(args, "smpl_display_frames", 0)),
         "checkpoint": str(checkpoint),
         "query_source": str(args.query_source),
         "tracking_overlay": str(args.tracking_overlay),
@@ -1651,6 +1680,12 @@ class SequenceViewer:
             max(HSI_VISUAL_SCALE_MIN, float(args.hsi_visual_scale)),
         )
         self.smpl_opacity_value = 1.0
+        requested_smpl_frames = int(getattr(args, "smpl_display_frames", 0))
+        self.smpl_display_frames_value = (
+            len(scene["frames"])
+            if requested_smpl_frames <= 0
+            else min(len(scene["frames"]), requested_smpl_frames)
+        )
         self.depth_point_stride_value = max(1, int(args.depth_point_stride))
         self.max_scene_depth_value = float(args.max_scene_depth)
         self.filter_human_points_value = bool(args.filter_human_points)
@@ -1938,7 +1973,30 @@ class SequenceViewer:
         self.show_track_ids = add_checkbox(self.server, "Show Track IDs", bool(getattr(self.args, "show_track_ids", True)))
         self.smpl_opacity = add_slider(self.server, "SMPL Opacity", 0.05, 1.00, 0.05, self.smpl_opacity_value)
         self.smpl_color = add_rgb(self.server, "SMPL Color", (204, 51, 51))
-        self.smpl_downsample = add_slider(self.server, "SMPL Downsample", 1, max(1, len(self.scene["frames"])), 1, 1)
+        self.smpl_sampling_mode = add_dropdown(
+            self.server,
+            "SMPL Sampling Mode",
+            ["stride (baseline)", "target frame count"],
+            "target frame count" if int(getattr(self.args, "smpl_display_frames", 0)) > 0 else "stride (baseline)",
+        )
+        self.smpl_downsample = add_slider(
+            self.server,
+            "SMPL Downsample",
+            1,
+            max(1, len(self.scene["frames"])),
+            1,
+            1,
+        )
+        self.smpl_display_frames = add_slider(
+            self.server,
+            "Accumulated SMPL Frames",
+            1,
+            max(1, len(self.scene["frames"])),
+            1,
+            max(1, self.smpl_display_frames_value),
+        )
+        self.smpl_sampling_info = add_text(self.server, "SMPL Sampling", "")
+        set_handle_disabled(self.smpl_sampling_info, True)
         self.show_cameras = add_checkbox(self.server, "Show Cameras", True)
         self.camera_source = add_dropdown(self.server, "Camera Source", ["auto", "hsi_scaled", "raw_vggt", "both"], "auto")
         self.show_camera_trajectory = add_checkbox(self.server, "Show Camera Trajectory", True)
@@ -1967,7 +2025,9 @@ class SequenceViewer:
             self.show_hsi,
             self.show_base,
             self.show_track_ids,
+            self.smpl_sampling_mode,
             self.smpl_downsample,
+            self.smpl_display_frames,
             self.show_cameras,
             self.camera_source,
             self.show_camera_trajectory,
@@ -2907,7 +2967,13 @@ class SequenceViewer:
         environment_display = str(self.environment_display.value)
         show_env_points = environment_display in {"points", "both"}
         show_env_mesh = environment_display in {"mesh", "both"}
+        smpl_sampling_mode = str(self.smpl_sampling_mode.value)
         smpl_stride = max(1, int(self.smpl_downsample.value))
+        smpl_target_count = max(1, min(len(self.handles), int(self.smpl_display_frames.value)))
+        smpl_sample_indices = set(uniform_sample_indices(len(self.handles), smpl_target_count))
+        use_smpl_target_count = smpl_sampling_mode == "target frame count"
+        set_handle_disabled(self.smpl_downsample, use_smpl_target_count)
+        set_handle_disabled(self.smpl_display_frames, not use_smpl_target_count)
         camera_stride = max(1, int(self.camera_downsample.value))
         for idx, frame_handles in enumerate(self.handles):
             if mode == "3D accumulate":
@@ -2919,7 +2985,12 @@ class SequenceViewer:
             else:
                 show_points = idx == current
                 show_humans = idx == current
-            show_decimated_smpl = idx == current or (idx % smpl_stride == 0)
+            if mode != "3D accumulate":
+                show_decimated_smpl = True
+            elif use_smpl_target_count:
+                show_decimated_smpl = idx in smpl_sample_indices
+            else:
+                show_decimated_smpl = idx == current or (idx % smpl_stride == 0)
             show_decimated_camera = idx == current or (idx % camera_stride == 0)
             show_camera_frame = (idx <= current if mode != "4D current frame" else idx == current)
             show_raw_camera, show_hsi_camera = self._camera_visibility_for_depth(depth_source)
@@ -2941,6 +3012,27 @@ class SequenceViewer:
             set_group_visible(frame_handles["track_labels"], show_humans and show_decimated_smpl and bool(self.show_track_ids.value))
             set_group_visible(frame_handles["cameras_raw"], bool(self.show_cameras.value) and show_raw_camera and show_camera_frame and show_decimated_camera)
             set_group_visible(frame_handles["cameras_hsi"], bool(self.show_cameras.value) and show_hsi_camera and show_camera_frame and show_decimated_camera)
+        if mode == "3D accumulate" and use_smpl_target_count:
+            visible_sample_count = sum(index <= current for index in smpl_sample_indices)
+            set_text_value(
+                self.smpl_sampling_info,
+                f"{visible_sample_count} visible now / {smpl_target_count} across {len(self.handles)} frames (uniform)",
+            )
+        elif mode == "3D accumulate":
+            set_text_value(
+                self.smpl_sampling_info,
+                f"Baseline stride={smpl_stride}; current frame is always included",
+            )
+        else:
+            sampling_status = (
+                f"target {smpl_target_count}/{len(self.handles)}"
+                if use_smpl_target_count
+                else f"baseline stride={smpl_stride}"
+            )
+            set_text_value(
+                self.smpl_sampling_info,
+                f"Current-frame mode; {sampling_status} applies to 3D accumulate",
+            )
         self._update_info_text(current)
 
     def _ensure_depth_meshes_for_frame(self, frame: dict[str, Any], frame_handles: dict[str, Any], idx: int, depth_source: str) -> None:

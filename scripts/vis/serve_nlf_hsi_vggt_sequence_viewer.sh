@@ -17,6 +17,7 @@ PORT="${PORT:-8080}"
 MAX_FRAMES="${MAX_FRAMES:-32}"
 START_INDEX="${START_INDEX:-0}"
 FRAME_STRIDE="${FRAME_STRIDE:-1}"
+FRAME_SAMPLING="${FRAME_SAMPLING:-head}"
 MAX_HUMANS="${MAX_HUMANS:-20}"
 CONF_THRESHOLD="${CONF_THRESHOLD:-0.10}"
 TRACKING_OVERLAY="${TRACKING_OVERLAY:-none}"
@@ -26,6 +27,7 @@ TRACK_MAX_CENTER_DISTANCE="${TRACK_MAX_CENTER_DISTANCE:-0.25}"
 TRACK_MAX_TRANSL_DISTANCE="${TRACK_MAX_TRANSL_DISTANCE:-1.50}"
 TRACK_MAX_BETA_L1="${TRACK_MAX_BETA_L1:-0.30}"
 SHOW_TRACK_IDS="${SHOW_TRACK_IDS:-true}"
+SMPL_DISPLAY_FRAMES="${SMPL_DISPLAY_FRAMES:-0}"
 DEPTH_POINT_STRIDE="${DEPTH_POINT_STRIDE:-4}"
 MAX_SCENE_DEPTH="${MAX_SCENE_DEPTH:-30.0}"
 VIEWER_MODE="${VIEWER_MODE:-4d}"
@@ -77,6 +79,10 @@ case "${VIEWER_MODE}" in
   hybrid|Hybrid) VIEWER_MODE_ARG="Hybrid" ;;
   *) echo "[ERROR] VIEWER_MODE must be one of: 4d, 3d, hybrid. Got: ${VIEWER_MODE}" >&2; exit 1 ;;
 esac
+case "${FRAME_SAMPLING}" in
+  head|uniform) ;;
+  *) echo "[ERROR] FRAME_SAMPLING must be one of: head, uniform. Got: ${FRAME_SAMPLING}" >&2; exit 1 ;;
+esac
 if [[ "${QUERY_SOURCE}" == "bedlam_sidecar" ]]; then
   [[ -d "${BEDLAM_ROOT}" ]] || { echo "[ERROR] Missing BEDLAM root: ${BEDLAM_ROOT}" >&2; exit 1; }
   [[ -d "${PREPROCESSED_ROOT}" ]] || { echo "[ERROR] Missing preprocessed sidecars: ${PREPROCESSED_ROOT}" >&2; exit 1; }
@@ -93,6 +99,8 @@ echo "Checkpoint  : ${CHECKPOINT:-<rank1 from checkpoint_topk_index.json>}"
 echo "Output      : ${OUTPUT_DIR}"
 echo "Port        : ${PORT}"
 echo "Max frames  : ${MAX_FRAMES}"
+echo "Frame sample: ${FRAME_SAMPLING} (after start/stride)"
+echo "SMPL frames : ${SMPL_DISPLAY_FRAMES} (0 means all; GUI adjustable)"
 echo "ID overlay  : ${TRACKING_OVERLAY} (post-HSI display only)"
 echo "Show IDs    : ${SHOW_TRACK_IDS} (initial GUI state)"
 echo "Align compat: ${HSI_ALIGN_FEATURE_VERSION:-<config default>}"
@@ -133,6 +141,7 @@ ARGS=(
   --max-frames "${MAX_FRAMES}"
   --start-index "${START_INDEX}"
   --frame-stride "${FRAME_STRIDE}"
+  --frame-sampling "${FRAME_SAMPLING}"
   --max-humans "${MAX_HUMANS}"
   --conf-threshold "${CONF_THRESHOLD}"
   --tracking-overlay "${TRACKING_OVERLAY}"
@@ -141,6 +150,7 @@ ARGS=(
   --track-max-center-distance "${TRACK_MAX_CENTER_DISTANCE}"
   --track-max-transl-distance "${TRACK_MAX_TRANSL_DISTANCE}"
   --track-max-beta-l1 "${TRACK_MAX_BETA_L1}"
+  --smpl-display-frames "${SMPL_DISPLAY_FRAMES}"
   --depth-point-stride "${DEPTH_POINT_STRIDE}"
   --max-scene-depth "${MAX_SCENE_DEPTH}"
   --viewer-mode "${VIEWER_MODE_ARG}"

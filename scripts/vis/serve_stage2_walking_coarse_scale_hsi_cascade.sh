@@ -10,17 +10,22 @@ OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/outputs/vis/stage2_walking_coarse_residua
 CUDA_VISIBLE_DEVICES_VALUE="${CUDA_VISIBLE_DEVICES_VALUE:-7}"
 PORT="${PORT:-8080}"
 MAX_FRAMES="${MAX_FRAMES:-20}"
+FRAME_STRIDE="${FRAME_STRIDE:-1}"
+FRAME_SAMPLING="${FRAME_SAMPLING:-head}"
+SMPL_DISPLAY_FRAMES="${SMPL_DISPLAY_FRAMES:-0}"
 
 [[ -d "${FRAMES_DIR}" ]] || { echo "[ERROR] Missing walking frames: ${FRAMES_DIR}" >&2; exit 1; }
 [[ -f "${CHECKPOINT}" ]] || { echo "[ERROR] Missing Stage2 checkpoint: ${CHECKPOINT}" >&2; exit 1; }
 [[ -f "${SCALE_CHECKPOINT}" ]] || { echo "[ERROR] Missing current scale checkpoint: ${SCALE_CHECKPOINT}" >&2; exit 1; }
 
-echo "========== Walking Viser: analytic coarse -> current HSI -> Stage2 align =========="
+echo "========== Sequence Viser: analytic coarse -> current HSI -> Stage2 align =========="
 echo "Frames            : ${FRAMES_DIR}"
 echo "Stage2 checkpoint : ${CHECKPOINT}"
 echo "Scale overlay     : ${SCALE_CHECKPOINT}"
 echo "Output            : ${OUTPUT_DIR}"
 echo "Port              : ${PORT}"
+echo "Frame sampling    : ${FRAME_SAMPLING}, max=${MAX_FRAMES}, stride=${FRAME_STRIDE}"
+echo "Accumulated SMPL  : ${SMPL_DISPLAY_FRAMES} (0 means all)"
 
 REPO_ROOT="${REPO_ROOT}" \
 FRAMES_DIR="${FRAMES_DIR}" \
@@ -33,7 +38,9 @@ OUTPUT_DIR="${OUTPUT_DIR}" \
 CUDA_VISIBLE_DEVICES_VALUE="${CUDA_VISIBLE_DEVICES_VALUE}" \
 PORT="${PORT}" \
 MAX_FRAMES="${MAX_FRAMES}" \
-FRAME_STRIDE=1 \
+FRAME_STRIDE="${FRAME_STRIDE}" \
+FRAME_SAMPLING="${FRAME_SAMPLING}" \
+SMPL_DISPLAY_FRAMES="${SMPL_DISPLAY_FRAMES}" \
 MAX_HUMANS=8 \
 CONF_THRESHOLD=0.05 \
 SMPL_USE_AGGREGATOR_QUERIES=false \
