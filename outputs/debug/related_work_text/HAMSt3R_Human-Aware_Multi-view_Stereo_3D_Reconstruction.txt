@@ -1,0 +1,672 @@
+                                                      HAMSt3R: Human-Aware Multi-view Stereo 3D Reconstruction
+
+                                                                      Sara Rojas1,2* Matthieu Armando2 Bernard Ghanem1
+                                                                     Philippe Weinzaepfel2 Vincent Leroy2 Grégory Rogez2
+                                                                                    1                  2
+                                                                                        KAUST              NAVER LABS Europe
+arXiv:2508.16433v1 [cs.CV] 22 Aug 2025
+
+
+
+
+                                                                                                  Pointmaps                 Human-aware reconstruction & SMPL fit
+
+
+
+
+                                                                                               Ins. Segmentation
+
+
+
+
+                                                                                                  Densepose
+
+
+
+
+                                         Figure 1. Given a set of unposed images, HAMSt3R reconstructs the 3D scene as a dense point map with human semantics, attaching
+                                         instance segmentation and DensePose information directly to 3D points for human-aware modeling.
+
+
+                                                                  Abstract                                         reconstruction. By leveraging the outputs of our different
+                                                                                                                   heads, HAMSt3R produces a dense point map enriched with
+                                            Recovering the 3D geometry of a scene from a sparse                    human semantic information in 3D. Unlike existing methods
+                                         set of uncalibrated images is a long-standing problem in                  that rely on complex optimization pipelines, our approach
+                                         computer vision. While recent learning-based approaches                   is fully feed-forward and efficient, making it suitable for
+                                         such as DUSt3R and MASt3R have demonstrated impres-                       real-world applications. We evaluate our model on Ego-
+                                         sive results by directly predicting dense scene geometry,                 Humans and EgoExo4D, two challenging benchmarks con-
+                                         they are primarily trained on outdoor scenes with static en-              taining diverse human-centric scenarios. Additionally, we
+                                         vironments and struggle to handle human-centric scenar-                   validate its generalization to traditional multi-view stereo
+                                         ios. In this work, we introduce HAMSt3R, an extension                     and multi-view pose regression tasks. Our results demon-
+                                         of MASt3R for joint human and scene 3D reconstruction                     strate that our method can reconstruct humans effectively
+                                         from sparse, uncalibrated multi-view images. First, we ex-                while preserving strong performance in general 3D recon-
+                                         ploit DUNE, a strong image encoder obtained by distill-                   struction tasks, bridging the gap between human and scene
+                                         ing, among others, the encoders from MASt3R and from                      understanding in 3D vision.
+                                         a state-of-the-art Human Mesh Recovery (HMR) model,
+                                         multi-HMR, for a better understanding of scene geometry                   1. Introduction
+                                         and human bodies. Our method then incorporates addi-
+                                         tional network heads to segment people, estimate dense cor-               3D scene reconstruction from uncalibrated images is a fun-
+                                         respondences via DensePose, and predict depth in human-                   damental problem in computer vision with a wide range
+                                         centric environments, enabling a more comprehensive 3D                    of applications in robotics, augmented reality, and human-
+                                                                                                                   computer interaction. Traditionally, this task has long been
+                                           * Work done while interning at NAVER LABS Europe.                       approached by solving a succession of problems [53, 54]
+using different algorithmic tools like image matching and            By adapting a state-of-the-art stereo-based reconstruc-
+bundle adjustments. However, recent learning-based meth-         tion pipeline to the complexities of human shape recov-
+ods such as DUSt3R [64] and MASt3R [33] introduced               ery, we offer an efficient and scalable alternative to exist-
+a new paradigm by directly regressing the 3D geome-              ing optimization-based approaches. Our model effectively
+try of a scene, given a pair of images. These methods            bridges the gap between general scene reconstruction and
+not only significantly improved reconstruction quality but       articulated human modeling, enabling high-fidelity 3D re-
+also simplified the pipeline, inspiring numerous follow-         constructions from sparse and unstructured image collec-
+up works [56, 63, 69], including some efforts focused on         tions. To train the new human-centric heads, we introduce a
+human-centric scene reconstruction [37, 41].                     large-scale, multi-view, synthetic dataset of humans in in-
+    Despite these advances, estimating the geometry of           door environments, created by combining the procedural
+scenes involving people remains a major challenge. Hu-           scene generation of Infinigen [44] with HumGen3D [1] hu-
+mans are highly articulated, exhibit complex deformations,       man generator.
+and often appear in self-occluded poses, making their re-            Following [41], we evaluate our approach on two
+construction significantly more difficult than static environ-   challenging human-centric benchmarks, namely EgoHu-
+ments. While a complete 3D scene understanding should            mans [31] and EgoExo4D [34], which feature a variety of
+ideally facilitate Human Mesh Recovery (HMR)—the task            indoor and outdoor scenarios with one or several individu-
+of detecting and reconstructing people in 3D—humans              als across diverse environments. To ensure that our model
+themselves provide valuable cues for scene understanding,        maintains strong performance in traditional reconstruction
+such as scale estimation. However, concurrent methods that       setting - i.e., scenes without humans- we also evaluate it
+jointly reconstruct humans and their surrounding environ-        for the task of multi-view stereo depth estimation across
+ment [37, 41] rely on cumbersome optimization-based pro-         several benchmarks following [64]. Additionally, we as-
+cesses, limiting their scalability and practicality.             sess its ability to perform multi-view pose regression on
+    Furthermore, current learning-based reconstruction           the CO3Dv2 [46] and RealEstate10K [72] datasets follow-
+models such as MASt3R have been trained on buildings             ing [33]. Our thorough evaluation shows that our method
+and outdoor scenes, with little focus on human subjects. As      remains robust across both human-centric and general re-
+a result, they struggle when applied to images containing        construction tasks.
+people, failing to capture articulated structures accurately         The remaining of the paper is organized as follows: after
+and often producing incomplete or distorted reconstruc-          reviewing the related work, we present our methodology,
+tions. Addressing this limitation requires integrating addi-     followed by a description of our experiments. Finally, we
+tional human-specific cues into the reconstruction pipeline.     draw conclusions and discuss potential future directions for
+    In this work, we present HAMSt3R which extends               improving human-centric 3D scene reconstruction.
+MASt3R to explicitly handle human-centric scenes by
+jointly reconstructing both humans and their surrounding         2. Related Work
+environments (see Figure 1). To achieve this, we first lever-
+age DUNE [51], a strong image encoder which is pre-              We review past work on structure-from-motion, multi-view
+trained by distilling those from several teacher models,         human reconstruction and both of them jointly.
+including MASt3R and Multi-HMR [6], a state-of-the-art           Structure-from-Motion (SfM) [16, 17, 27] consists in re-
+HMR model, to help the network gain human understand-            constructing 3D scene geometry and camera poses given a
+ing capabilities.                                                set of images. The most popular approach is COLMAP [53,
+    We then introduce additional processing heads for in-        54] that relies on traditional feature matching to perform in-
+stance segmentation, dense pose estimation, and binary           cremental bundle adjustments. For many years, most work
+mask generation. These components allow our model to             has focused on improving various parts of this pipeline such
+distinguish human regions from the background, estimate          as keypoint detection and description [7, 19, 39, 48, 49],
+dense correspondences based on the SMPL model [38] (e.g.         feature matching [22, 52, 60], initialization strategies [4, 58]
+DensePose predictions [26]), and integrate human-specific        or optimization techniques [36, 65]. Recently, there has
+priors into the reconstruction process. By leveraging the        been a significant paradigm shift towards fully-learnable ap-
+outputs of our different heads, HAMSt3R produces a dense         proaches [10, 21, 57, 62, 64]. In particular, DUSt3R [64]
+point map enriched with human semantic information in            has shown outstanding performance in unconstrained 3D
+3D. Specifically, each predicted 3D point is classified as hu-   reconstruction from as few as 2 images. Their core idea
+man or non-human, with human points mapped to precise            is to regress pointmaps for each image, expressed in the co-
+body locations of specific individuals. Predictions across       ordinate system of the first image. Several extensions have
+multiple images pairs can be aggregated with global align-       been since proposed including MASt3R [33] which also re-
+ment, enabling dense, structured human semantics in 3D.          gresses pixel-aligned dense descriptors, Splatt3r [56] which
+outputs pixel-aligned parameters for 3D Gaussian splat-         ViT decoder where cross-attention is applied with the to-
+ting [30], MONSt3R [69] which enables handling dynamic          kens from the other image. In addition to the 3D head
+objects or MUSt3R [11] and CUT3R [63] which focus on            of MASt3R (which predicts pointmaps and descriptor fea-
+improving efficiency when processing large image sets. In       tures for matching), our model is also trained to produce ad-
+this paper, we build upon MASt3R to enable joint 3D re-         ditional human-specific outputs, including human instance
+construction of humans and scenes from sparse uncalibrated      segmentation and DensePose predictions [26]. This helps
+views. While prior methods focus on rigid scene recon-          the model gain a more meaningful understanding of the
+struction, our approach explicitly incorporates human un-       human geometry and its relation to the scene, adding rich
+derstanding while maintaining strong performance on struc-      semantic information to the reconstruction process. These
+tures, such as buildings and other man-made elements.           outputs can be further leveraged for tasks like SMPL pre-
+Multi-view Human Reconstruction has been extensively            dictions through an optimization procedure. We first pro-
+studied, particularly in controlled environments where cam-     vide background on MASt3R (Section 3.1), then describe
+era parameters are known [23, 28, 29, 59]. In such set-         the image encoder adopted from [51] (Section 3.2) and the
+tings, multi-view geometry can be leveraged for accurate        additional heads and training strategy (Section 3.3).
+3D shape estimation, effectively transforming single- and
+                                                                3.1. Background on MASt3R
+multi-person reconstruction to a triangulation task [27].
+When intrinsic and extrinsic camera parameters are avail-       Given an image pair I0 , I1 ∈ RH×W ×3 (3 channels for
+able, single-view reconstruction techniques can also be ex-     RGB), MASt3R [33] jointly performs local 3D reconstruc-
+tended to multi-view settings by enforcing geometric con-       tion and pixelwise matching. To achieve this, the network
+sistency. For instance, SMPLify [9] has been adapted to         predicts a pixel-aligned pointmap X ∈ RH×W ×3 for each
+estimate 3D human body geometry in a shared coordinate          image, i.e., containing the predicted 3D coordinates of the
+frame, where accuracy is assessed by minimizing the 2D re-      scene point corresponding to each pixel, expressed in the
+projection error of keypoints and silhouettes across multiple   coordinate system of the first image’s camera. A confidence
+views, ensuring a geometrically coherent model [35]. Re-        map C is also produced. Additionally, another head predicts
+cent approaches have explored setups with unknown cam-          a small descriptor for each pixel, enabling efficient match-
+era poses, employing end-to-end learning to jointly estimate    ing via approximate but fast nearest neighbor search.
+camera parameters and 3D human poses [66, 68]. How-                For training, MASt3R uses a confidence-aware regres-
+ever, these methods are often limited to single-person sce-     sion loss for pointmaps and a InfoNCE loss for the local
+narios [68] or lack scene context integration [66].             descriptor learning. We denote its total loss as LMASt3R .
+Joint Reconstruction of Scene and Humans has been                  In terms of architecture, each image is processed by
+studied in some very recent concurrent methods. JOSH [37]       a ViT encoder Enc [20] to obtain a feature map F =
+begins with an off-the-shelf scene reconstruction model [33,    Enc(I) ∈ Rh×w×d for an image I. A dual ViT decoder
+64]; the resulting geometry offers valuable contact cues that   Dec, incorporating cross-attention blocks, then processes
+guide human fitting. HSfM [41] instead assumes accurate         both feature maps while attending to the tokens from the
+2D human keypoints across views to refine camera poses          other image: F0′ , F1′ = Dec Enc(I0 ), Enc(I1 ) . Finally,
+and, in turn, the surrounding scene. SynCHMR [71], fol-         the prediction heads operate on F0′ or F1′ , producing pixel-
+lowing the SLAHMR [67] insight that human meshes can            wise outputs via either a linear head or a DPT head [45]. In
+disambiguate SLAM, stitches together camera-frame HMR,          this paper, we exclusively use linear heads.
+monocular depth, and a human-aware SLAM pipeline be-
+                                                                3.2. A Strong Image Encoder
+fore a global optimisation fuses the scene, cameras, and
+a single actor. All three pipelines therefore depend on         We replace the original MASt3R encoder with a stronger
+pre-computed modules and iterative refinement to reconcile      image encoder Enc: a distilled ViT-B/14 backbone ob-
+them. Our method removes these dependencies: in a sin-          tained through the multi-teacher strategy of DUNE [51].
+gle forward pass, we jointly predict metric 3D point-maps,      Distillation fuses complementary competencies from three
+dense human semantics, and camera parameters, providing         powerful teachers—(1) a generalist image encoder (DI-
+a fully integrated and markedly more efficient solution.        NOv2 [42]), (2) the encoder of a state-of-the-art multi-
+                                                                person human-mesh-recovery model (Multi-HMR [6]), and
+3. Methodology                                                  (3) the MASt3R encoder itself [33]. Their representa-
+                                                                tions are aligned by the UNIC projection mechanism [50],
+An overview of our model is shown in Figure 2. Building on      yielding visual features that are simultaneously robust for
+the DUSt3R/MASt3R architecture, our approach takes two          scenes and humans. Unlike DUNE, which attaches sepa-
+input images I0 and I1 which are encoded using a siamese        rate decoders per task and therefore reconstructs humans
+ViT encoder. Each image is then processed by a separate         only from single images, our method couples this encoder
+     Image 1                                                                               Pointmaps                                           SMPL model
+                                                                    PointMap
+                                                                      Head 1
+                           ViT                    ViT              Segmentation
+                                                                      Head 1                                                                                         Camera from
+                         encoder                decoder 1                                                                                                              image 2
+                                                                    DensePose
+                                                                      Head 1           Ins. Segmentation
+
+                       shared weights          cross attention                                                 Camera from
+     Image 2                                                                                                     image 1
+                                                                    PointMap
+                                                                      Head 2
+                                                                                           DensePose
+                           ViT                   ViT               Segmentation
+                         encoder               decoder 2              Head 2
+                                                                    DensePose
+                                                                      Head 2
+
+
+
+Figure 2. Overview of HAMSt3R. From left to right: (1) Input stereo images are processed via a Siamese ViT encoder, (2) extracted
+features are passed to dual decoders with cross-attention, (3) separate heads generate 3D pointmaps and dense human semantic information,
+in the form of instance segmentation, DensePose, and binary mask predictions. (4) These outputs can be lifted to 3D using the Pointmaps
+and can be used, for example, to fit a SMPL body model for each human.
+
+with a unified, end-to-end architecture that jointly performs           additional branch to predict DensePose maps using SMPL
+3D scene reconstruction, instance segmentation, and cross-              projection templates. It consists of a linear layer that gen-
+view human reconstruction.                                              erates a four-channel prediction: an RGB dense pose map
+                                                                        P_{\text {dp}} \in \mathbb {R}^{H \times W \times 3} , where each pixel is assigned an RGB
+3.3. HAMSt3R                                                            color that encodes its corresponding 3D location on the
+Unlike MASt3R, which primarily focuses on objects and                   SMPL template mesh, and a binary mask indicating the re-
+scenes (e.g. indoor environments or buildings), our method              gions where the DensePose mapping is valid. The Dense-
+— as shown in Figure 2 — is trained on scenes containing                Pose representation, when integrated with the 3D recon-
+humans.                                                                 struction, is expected to enhance the model’s ability to rea-
+    HAMSt3R takes two images, I_0 and I_1 , as input and en-            son about human poses, body parts, and their interaction
+codes them using a shared Vision Transformer (ViT) and a                with the environment, which adds semantics beyond just the
+cross-attention decoder, generating global feature maps F_0             raw geometric points. The predicted DensePose map is su-
+and F_1 . These feature embeddings are then utilized by var-            pervised by an L2 loss computed as \protect \mathcal  {L}_{\text {dp}} = \|P_{\text {dp}} - P_{\text {gt}}\|_2^2 ,
+ious heads. In addition to the original point and matching              where P_{\text {gt}} represents the ground truth DensePose map. Un-
+heads, we introduce an object segmentation head that pro-               like the original DensePose approach that uses discrete
+duces segmentation masks for each individual in both im-                body-part classes, our method employs a continuous map-
+ages and a DensePose head that predicts DensePose maps                  ping that directly formulates the problem as a 3D regression
+for each person, mapping human pixels to the 3D surface of              task, as done in [5].
+the human body, represented by the SMPL mesh [38]. The                           In addition to the RGB DensePose map, the head pro-
+following paragraphs describe these additional heads in de-             duces a binary mask M \in \mathbb {R}^{H \times W} that specifically dis-
+tail.                                                                   tinguishes human regions corresponding to the SMPL pro-
+Instance Segmentation Head. An instance segmenta-                       jection — this excludes areas such as hair and clothing —
+tion head is added to MASt3R, extending the original                    from the background. This is in contrast to the instance
+backbone with a transformer-based design inspired by                    segmentation mask, which covers the entire human silhou-
+Mask2Former [14]. This head is specifically designed to                 ette, including hair and clothing. The binary mask is opti-
+segment human instances from the background, generating                 mized using a cross entropy-loss \protect \mathcal  {L}_{\text {mask}} , which ensures that
+masks that capture the full appearance of people, including             the SMPL model can be accurately fitted to the relevant hu-
+hair and clothing. The segmentation branch is supervised                man regions.
+by classification and mask losses following the strategy pro-           Semantic 3D Human Representation. By combining the
+posed in [13, 14], but with an extension to account for the             outputs of our different heads, we obtain dense point maps
+two input views. In particular, the classification loss dis-            with human semantic information in 3D. Specifically, ev-
+tinguishes between human and background, while the mask                 ery 3D point predicted by our method can be classified as
+loss combines binary cross-entropy and dice loss. The key               either human or non-human, with human points mapped to
+idea is that the model’s understanding of 3D geometry al-               specific locations on the body of the corresponding human
+lows it to assign consistent instance labels to each person             instance.
+across different viewpoints.                                               An advantage of our method is that we can readily fit the
+DensePose Head. The DensePose head is introduced as an                  SMPL body model to every detected human, e.g. for nu-
+                                                                    Table 1. Human-centric training datasets used for finetuning
+                                                                    on human-centric scenes alongside the original MASt3R training
+                                                                    datasets. All datasets provide camera pose, depth, and instance
+                                                                    segmentation. BEDLAM’s 9.2k scenes are motion clips from 8
+                                                                    3D environments and 95 HDRIs. For EgoBody, we use an off-the-
+                                                                    shelf segmentation tool [47] to obtain the instance segmentations.
+
+                                                                      Dataset                                              Domain                                                             Type                                                  Scenes
+                                                                      HumGen3D                                           Synthetic                                          Indoor                                                                          10k
+                                                                      BEDLAM [8]                                         Synthetic                                     Indoor & Outdoor                                                                     9.2k
+                                                                      HuMMan [12]                                          Real                                             Studio                                                                          339
+                                                                      EgoBody [70]                                         Real                                             Indoor                                                                          125
+
+                                                                    the distilled features while the decoders and the new heads
+                                                                    are fine-tuned. The overall training loss L is a weighted sum
+                                                                    of the MASt3R loss  \mathcal {L}_{\text {MASt3R}}  , the segmentation loss  \mathcal {L}_{\text {seg}}  , the
+                                                                    dense pose loss  \mathcal {L}_{\text {dp}}  , and the binary mask loss  \mathcal {L}_{\text {mask}}  :
+                                                                                   \mathcal {L} = \mathcal {L}_{\text {MASt3R}} + \lambda _1 \mathcal {L}_{\text {seg}} + \lambda _2 \mathcal {L}_{\text {dp}} + \lambda _3 \mathcal {L}_{\text {mask}},           (1)
+                                                                    where λ1 , λ2 and λ3 are loss weights; details on their se-
+                                                                    lection can be found in the Supp. Mat. Training is per-
+Figure 3. Results on HumGen3D data (on a scene not seen dur-
+                                                                    formed by mixing 50% of the original MASt3R dataset with
+ing training), using global alignment: Given a set of images of a
+                                                                    50% human-specific data in each epoch. For the original
+scene (three out of eight of them are shown in the first column),
+we run our model on all possible image pairs, and aggregate pre-    MASt3R dataset, supervision is exclusively applied to the
+dictions from the human heads in 2D, for each view (second and      point maps and the matching head. In contrast, the human-
+third columns). We apply the alignment method of MASt3R [33]        specific data is used to supervise all heads. This tailored
+to align the individual pointmaps in 3D (fourth column) and they    supervision strategy ensures that each network component
+can be combined into a unified reconstruction (bottom).             is optimally trained based on the available data. Training
+                                                                    samples consist of image pairs from multi-camera setups or
+merical evaluation (see Section 4.1). This kind of semantic
+                                                                    closely spaced frames from videos, ensuring diverse view-
+understanding is crucial for applications like tracking, be-
+                                                                    points while maintaining spatial coherence. All images are
+havior analysis, or interaction with the environment.
+                                                                    downscaled to a maximum dimension of 518 pixels.
+Dealing with more than 2 views. To handle scenes with               Training Datasets. Obtaining large-scale, multi-view data
+an arbitrary number of images, we run our network inde-             with accurate camera poses, depth maps, and parametric
+pendently on each possible image pair and align the output          body annotations is particularly challenging for human-
+pointmaps in 3D using the procedure from MASt3R [33].               centric scenes. Real-world captures often require special-
+   Since instance segmentation is performed independently           ized equipment or extensive manual post-processing, mak-
+for each pair, person IDs can vary across pairs—for in-             ing them both costly and error-prone. Consequently, we
+stance, a person labeled as ‘human 1’ in one pair might be          rely primarily on synthetic data where camera intrinsics,
+labeled as ‘human 2’ in another. To maintain consistent IDs         poses, and depth can be automatically recorded during ren-
+across the scene, we resolve ID correspondences using 2D            dering. We generate our own training data with the follow-
+overlap before integrating all pairs into a consistent 3D rep-      ing pipeline: For each person in the data, we first sample a
+resentation. For DensePose, we aggregate the predictions            random body shape and pose from the AMASS dataset [40],
+for a same image (produced by each pair) by performing              then map a human model to it, from the HumGen3D [1]
+a weighted average of the DensePose outputs, using confi-           human generator plugin for Blender. These Humgen3D
+dence scores as weights. This prioritizes higher-confidence         humans are then placed in detailed indoor 3D scenes that
+predictions, resulting in a more accurate and stable human          are procedurally generated with Infinigen Indoors [44]. Fi-
+surface representation in 3D. Predictions from multiple im-         nally, these scenes are rendered with Blender, along with the
+age pairs are subsequently combined after a global align-           necessary annotations (depth, instance masks, and Dense-
+ment step, ensuring a coherent 3D representation of human           Pose). We generate 524k images, rendered from 10k scenes
+semantics across the entire scene. This is illustrated in Fig-      and 1000 unique 3D environments, with approximately 5
+ure 3. Note that in the binocular case, our approach is fully       persons per scene. To increase diversity in environment
+feed-forward.                                                       types and the number of subjects, we also incorporate BED-
+Training. The DUNE image encoder is frozen to preserve              LAM [8], which includes both indoor and outdoor settings,
+                                                                      tices on the SMPL model. This is accompanied by an addi-
+                                                                      tional loss that serves as a prior on the pose and shape, us-
+                                                                      ing VPoser [43] for pose regularization. We build upon the
+                                                                      MvSMPLFitting framework [15], which extends SMPLify-
+                                                                      X [43] to multi-view settings. For evaluating camera poses,
+                                                                      we also report the average camera translation error TE, and
+                                                                      its Sim(3) aligned version (s-TE), the camera Angle Er-
+                                                                      ror (AE), the Relative Rotation Accuracy (RRA), the Cam-
+                                                                      era Center Accuracy (CCA) and its version computed after
+                                                                      Sim(3) alignment (s-CCA).
+                                                                      Traditional 3D tasks. To ensure that our model still per-
+                                                                      forms well in classical 3D vision tasks, we also evaluate
+                                                                      it for the task of multi-view stereo depth estimation on
+                                                                      KITTI [24], ScanNet [18], ETH3D [55], DTU [3], Tanks
+                                                                      and Temples [32], following [64]. We report the Abso-
+                                                                      lute Relative Error (rel) and Inlier Ratio (τ ) with a thresh-
+                                                                      old of 1.03 on each test set and the averages across all test
+                                                                      sets. Additionally, we assess the ability of HAMSt3R to
+                                                                      perform multi-view pose estimation on the CO3Dv2 [46]
+                                                                      and RealEstate10K [72] datasets following [33] and report
+                                                                      the Relative Rotation Accuracy (RRA) and Relative Trans-
+                                                                      lation Accuracy (RTA) for each image pair to evaluate the
+Figure 4. Illustration of the human-centric datasets used in this     relative pose error and we select a threshold of 15° to re-
+paper and listed in Table 1, namely HumGen3D, BEDLAM, HuM-            port RT A@15 and RRA@15. Additionally, we calculate
+Man and EgoBody. For each dataset, we show an input image             the mean Average Accuracy (mAA30).
+(left), along with its corresponding DensePose annotations (right).
+                                                                      4.2. Results
+and HuMMAN [12], which features single individuals per-
+forming complex poses. Lastly, we include EgoBody [70], a             Human-centric experiments.
+real dataset captured with multiple Kinect sensors that con-             We report human metrics in Table 2, comparing var-
+tains up to two individuals per scene and provides accurate           ious human pose estimation baselines on EgoHumans
+depth maps. A summary of these datasets is provided in                and EgoExo4D. Specifically, we evaluate against UnCali-
+Table 1 and some examples are shown in Figure 4.                      Pose [66] and the concurrent work HSfM [41], as well as
+                                                                      a monocular baseline Multi-HMR [6]. For the latter, we
+4. Experimental results                                               simply select a random view among the set, to be used
+                                                                      as input. For HSfM, we also provide numerical evalua-
+We evaluate our approach on both human-centric and tradi-             tion before their optimization step (init). While both HSfM
+tional 3D tasks. We first present the evaluation protocol in          and UnCaliPose jointly reconstruct humans and cameras,
+Section 4.1 and then discuss results in Section 4.2.                  HSfM is more comparable to our approach as it also re-
+4.1. Datasets and Metrics                                             constructs the environment and leverages DUSt3R to esti-
+                                                                      mate the cameras. HAMSt3R outperforms the other base-
+Human-centric experiments. We evaluate the effective-                 lines on EgoExo4D in World coordinate metric (W-MPJPE
+ness of HAMSt3R across diverse indoor and outdoor envi-               = 0.51 m), in particular HSfM (0.56 m) that uses a global
+ronments, covering various activities involving one or mul-           scene optimization (and bundle adjustment guided by 2D
+tiple individuals. Following [41], we evaluate on EgoHu-              human keypoint predictions) to optimize the humans, depth
+mans [31] and EgoExo4D [34], and report different Mean                maps, and cameras. However, after Procrustes alignment,
+Per-Joint Position Error (MPJPE) metrics (expressed in me-            our performance (PA-MPJPE= 0.09m) is slightly below
+ters): W-MPJPE, when measured in the world coordinate                 HSfM’s performance (PA-MPJPE= 0.06m). The similar re-
+system, PA-MPJPE, its Procrustes-Aligned version, and                 sults of HSfM (init) for PA-MPJPE (0.07m) indicates that
+Group-Aligned MPJPE, (GA-MPJPE), after alignment be-                  most of its human pose estimation accuracy comes from its
+tween people. To obtain 3D joint predictions with our                 strong initialization using the off-the-shelf HMR2 [25]. A
+method, we fit SMPL to our predictions using an optimiza-             possible reason for our slightly lower performance in PA-
+tion procedure that minimizes the distance between all pre-           MPJPE is that we discard RGB information before fitting
+dicted 3D points of the person, and the corresponding ver-            the SMPL model, making it challenging to match neural
+                                          Table 2. Human-centric evaluation metrics on EgoHumans and EgoExo4D.
+                                                                           EgoHumans                                     EgoExo4D
+                         Method
+                                                       W-MPJPE ↓           GA-MPJPE ↓             PA-MPJPE ↓       W-MPJPE ↓ PA-MPJPE ↓
+                         Multi-HMR [6]                         7.66               0.99                0.12              2.88               0.07
+                         UnCaliPose [66]                       3.51               0.67                0.13              2.90               0.13
+                         HSfM (init) [41]                      4.28               0.51                0.06              5.29               0.07
+                         HSfM [41]                             1.04               0.21                0.05              0.56               0.06
+                         HAMSt3R (Ours)                        3.80               0.42                0.14              0.51               0.09
+
+                                                   Table 3. Camera pose evaluation on EgoHumans and EgoExo4D.
+                                                        EgoHumans                                                                 EgoExo4D
+ Method
+                         TE ↓    s-TE ↓       AE ↓     RRA@10 ↑ CCA@10 ↑                s-CCA@10 ↑     TE ↓   s-TE ↓    AE ↓    RRA@10 ↑ CCA@10 ↑           s-CCA@10 ↑
+ UnCaliPose [66]         2.63      2.63       60.90          0.28            -             0.33        2.43    1.16     65.61     0.19              -           0.24
+ DUSt3R [64]               -       1.15       11.00          0.61            -             0.49          -     0.33      9.92     0.81              -           0.64
+ MASt3R [33]             4.97      0.92       10.42          0.61          0.06            0.65        0.96    0.35     11.70     0.79            0.06          0.68
+ HSfM (init) [41]        2.37      1.15       11.00          0.52          0.26            0.49        1.27    0.33     9.92      0.81            0.05          0.64
+ HSfM [41]               2.09      0.75       9.35           0.72          0.32            0.75        0.95    0.36     11.57     0.78            0.07          0.67
+ DUNE                    1.43      0.17        3.51          0.96          0.27            0.97        1.03    0.26      6.45     0.94            0.25          0.85
+ HAMSt3R (Ours)          2.33      0.40       10.24          0.77          0.06            0.75        0.60    0.15     2.85      0.99            0.42          0.87
+
+
+Table 4. Camera pose evaluation on EgoHumans according                                        Table 5.  Multi-view pose regression evaluation on the
+to scene scale. Average results over the entire dataset (All),                                CO3Dv2 [46] and RealEstate10K [72] with 10 random frames.
+compared with a finer analysis based on the split between large-                                                                Co3Dv2 ↑                 RealEstate10K ↑
+                                                                                                  Method
+scale/open scenes (Badminton, Tennis, Volleyball) and smaller en-                                                      RRA@15   RTA@15      mAA(30)         mAA(30)
+vironments (Basketball, Fencing, Lego, Tagging).                                                  DUSt3R [64]           93.3      88.4        77.2            61.2
+Env.    Method            TE ↓   s-TE ↓    AE ↓     RRA@10 ↑    CCA@10 ↑   s-CCA@10 ↑             MASt3R [33]           94.6      91.9        81.8            76.4
+        DUNE              1.43    0.17      3.51      0.96          0.27      0.97
+                                                                                                  DUNE                  92.2      90.7        78.7            80.1
+All                                                                                               HAMSt3R (Ours)        90.7      90.2        76.3            77.4
+        HAMSt3R (Ours)    2.33    0.40     10.24      0.77          0.06      0.75
+        DUNE              0.98    0.24      4.78      0.90          0.34      0.93
+Large
+        HAMSt3R (Ours)    3.30    0.66     16.303     0.58          0.00      0.51
+
+Small
+        DUNE
+        HAMSt3R (Ours)
+                          2.04
+                          1.31
+                                  0.11
+                                  0.12
+                                            2.36
+                                            2.32
+                                                      1.00
+                                                      1.00
+                                                                    0.14
+                                                                    0.14
+                                                                              0.99
+                                                                              1.00
+                                                                                              the accuracy of camera estimates. We hypothesize that this
+                                                                                              is due to the large scale of some environments in the Ego-
+HMR methods that leverage richer appearance cues. The                                         Humans dataset, combined with our use of MASt3R log-
+same trend is observed on EgoHumans, where we out-                                            scaling of the 3D regression loss. This non-linear scaling
+perform the state-of-the-art method UnCalibPose on W-                                         does not penalize distant points as heavily, which may neg-
+MPJPE and GA-MPJPE but not on PA-MPJPE. Notably,                                              atively affect performance on larger scenes. This hypothesis
+on this dataset, the concurrent work HSfM achieves signif-                                    is further supported by separate evaluations of performance
+icantly better results, particularly on the PA-MPJPE metric                                   on large and small scenes, where our method performs sig-
+(0.17m for us vs. 0.05m for HSfM), where their global opti-                                   nificantly better on smaller environments; See experiments
+mization provides only marginal improvements over their                                       in Table 4.
+strong initialization (0.06m). Our lower performance on                                       Traditional 3D tasks. Table 6 presents our multi-view
+EgoHumans compared to EgoExo4D is likely due to the                                           stereo depth estimation results. As expected, overall per-
+nature of scenes, which often features large, open, outdoor                                   formance decreases compared to the original DUSt3R and
+environments. Our method to estimate SMPL parameters                                          MASt3R models. This is due to two factors: (1) we use
+appears more sensitive to lower-resolution inputs as obtain-                                  DUNE’s encoder that distills MASt3R alongside an HMR
+ing accurate SMPL fits becomes difficult when a person oc-                                    model, enhancing human understanding but reducing depth
+cupies only a small portion of the image.                                                     accuracy for structures (see the drop in performance be-
+   The camera pose estimation metrics are reported in Ta-                                     tween MASt3R and DUNE) and buildings, and (2) we intro-
+ble 3, where we evaluate our method against HSfM and                                          duce additional human-centric heads and tasks during train-
+UnCaliPose, as well as the original DUSt3R and MASt3R.                                        ing while using 50% human-centric data, further impact-
+To better analyze our performance, we also report cam-                                        ing depth estimation in non-human regions. Nevertheless,
+era metrics when estimating the cameras using DUNE. On                                        HAMSt3R remains competitive, performing on par with or
+EgoExo4D, HAMSt3R clearly outperforms all the other                                           even surpassing recent deep learning architectures such as
+baselines for all the considered metrics. On the EgoHumans                                    Deepv2D [61]. A similar trend is observed in the multi-
+dataset, DUNE consistently achieves the best performance                                      view pose regression results reported in Table 5, where
+overall. In contrast, training our method seems to reduce                                     performance drops on CO3Dv2 but unexpectedly improves
+                   Table 6. Multi-view depth evaluation (ScanNet) denote training on data from the same domain.
+                                          KITTI          ScanNet         ETH3D             DTU            T&T          Average
+             Method
+                                      rel. ↓  τ↑       rel. ↓ τ ↑     rel. ↓ τ↑       rel. ↓ τ ↑     rel. ↓ τ ↑     rel. ↓ τ ↑
+             DeepV2D (ScanNet) [61]   10.00    36.20   4.40   54.80   11.80   29.30   7.70   33.00   8.90   46.40   8.60   39.90
+             DUSt3R [64]                5.88   47.67   3.01   72.54    3.04   75.17   2.92   73.94   2.93   78.51   3.56   69.56
+             MASt3R [33]               3.54    65.68   4.17   65.22    2.44   82.77   3.46   66.89   2.04   87.88   3.13   73.69
+             DUNE [51]                 4.88    50.76   4.24   59.68    2.48   77.97   2.69   75.63   2.60   79.19   3.38   68.65
+             HAMSt3R (Ours)            5.60    45.66   4.43   56.50    2.96   71.68   5.31   57.62   3.01   73.53   4.26   61.00
+
+
+
+
+Figure 5. Qualitative results of HAMSt3R. Results from EgoExo4D (left) and EgoHumans (right). Each example includes point clouds
+(pink), instance segmentation (blue), and dense pose (green), with corresponding input images below (Best viewed when zoomed in).
+
+on RealEstate10K. The distillation process is beneficial on               ings from sparse stereo views. Given multiple images
+this benchmark (see DUNE’s performance) and the perfor-                   of a scene involving one or several persons, it produces
+mance drop is less important when training HAMSt3R.                       dense point maps with human semantic information in 3D.
+Qualitative results are presented in Figure 5, illustrating               Unlike optimization-based approaches, our method avoids
+human reconstructions from EgoExo4D and EgoHumans.                        common drawbacks such as computational slowness and
+Our method successfully estimates dense human poses, in-                  sensitivity to hyperparameters. Through extensive evalu-
+stance segmentation, and point clouds across a variety of                 ation, we demonstrate that our approach, combined with
+indoor and outdoor settings. The reconstructions capture                  SMPL fitting, outperforms prior methods in estimating hu-
+realistic human shapes and spatial configurations, demon-                 man poses and achieves competitive results to concurrent
+strating the robustness of our approach even in challeng-                 work in small environments, all while maintaining strong
+ing scenes. While some minor artifacts are visible in com-                performance in general scene reconstruction—even in the
+plex environments, our results align well with the quantita-              absence of people. For future work, we aim to extend our
+tive findings, reinforcing our strong performance in world-               method to videos and dynamic scenes, further enhancing its
+coordinate metrics.                                                       applicability to real-world scenarios.
+                                                                          Acknowledgements. The research reported in this publica-
+5. Conclusion                                                             tion was partially supported by funding from King Abdullah
+                                                                          University of Science and Technology (KAUST) - Center
+We have introduced HAMSt3R, the first feed-forward                        of Excellence for Generative AI, under award number 5940.
+method for jointly reconstructing people and their surround-
+References                                                           [17] Hainan Cui, Xiang Gao, Shuhan Shen, and Zhanyi Hu.
+                                                                          Hsfm: Hybrid structure-from-motion. In CVPR, 2017. 2
+ [1] Humgen3d. https://www.humgen3d.com/. 2, 5
+                                                                     [18] Angela Dai, Angel X Chang, Manolis Savva, Maciej Hal-
+ [2] Pexels. https://www.pexels.com/. Accessed: 2025-                     ber, Thomas Funkhouser, and Matthias Nießner. Scannet:
+     07-29. 12                                                            Richly-annotated 3d reconstructions of indoor scenes. In
+ [3] Henrik Aanæs, Rasmus Ramsbøl Jensen, George Vogiatzis,               CVPR, 2017. 6
+     Engin Tola, and Anders Bjorholm Dahl. Large-scale data for
+                                                                     [19] Daniel DeTone, Tomasz Malisiewicz, and Andrew Rabi-
+     multiple-view stereopsis. IJCV, 2016. 6
+                                                                          novich. Superpoint: Self-supervised Interest Point Detection
+ [4] Sameer Agarwal, Noah Snavely, Steven M Seitz, and                    and Description. In CVPR, 2018. 2
+     Richard Szeliski. Bundle adjustment in the large. In ECCV,
+                                                                     [20] Alexey Dosovitskiy, Lucas Beyer, Alexander Kolesnikov,
+     2010. 2
+                                                                          Dirk Weissenborn, Xiaohua Zhai, Thomas Unterthiner,
+ [5] Matthieu Armando, Salma Galaaoui, Fabien Baradel,                    Mostafa Dehghani, Matthias Minderer, Georg Heigold, Syl-
+     Thomas Lucas, Vincent Leroy, Romain Brégier, Philippe               vain Gelly, et al. An image is worth 16x16 words: Trans-
+     Weinzaepfel, and Grégory Rogez. Cross-view and cross-               formers for image recognition at scale. In ICLR, 2021. 3
+     pose completion for 3d human understanding. In CVPR,
+                                                                     [21] Bardienus Duisterhof, Lojze Zust, Philippe Weinzaepfel,
+     2024. 4
+                                                                          Vincent Leroy, Yohann Cabon, and Jerome Revaud. Mast3r-
+ [6] Fabien Baradel*, Matthieu Armando, Salma Galaaoui, Ro-
+                                                                          sfm: a fully-integrated solution for unconstrained structure-
+     main Brégier, Philippe Weinzaepfel, Grégory Rogez, and
+                                                                          from-motion. In 3DV, 2025. 2
+     Thomas Lucas*. Multi-hmr: Multi-person whole-body hu-
+                                                                     [22] Johan Edstedt, Qiyu Sun, Georg Bökman, Mårten
+     man mesh recovery in a single shot. In ECCV, 2024. 2, 3, 6,
+                                                                          Wadenbäck, and Michael Felsberg. Roma: Robust dense
+     7
+                                                                          feature matching. In CVPR, 2024. 2
+ [7] Herbert Bay, Tinne Tuytelaars, and Luc Van Gool. Surf:
+                                                                     [23] Yasutaka Furukawa and Jean Ponce. Accurate, dense, and
+     Speeded up robust features. In ECCV, 2006. 2
+                                                                          robust multiview stereopsis. IEEE Trans. PAMI, 2010. 3
+ [8] Michael J Black, Priyanka Patel, Joachim Tesch, and Jinlong
+                                                                     [24] Andreas Geiger, Philip Lenz, Christoph Stiller, and Raquel
+     Yang. Bedlam: A synthetic dataset of bodies exhibiting de-
+                                                                          Urtasun. Vision meets robotics: The kitti dataset. IJRR,
+     tailed lifelike animated motion. In CVPR, 2023. 5
+                                                                          2013. 6
+ [9] Federica Bogo, Angjoo Kanazawa, Christoph Lassner, Pe-
+     ter V. Gehler, Javier Romero, and Michael J. Black. Keep        [25] Shubham Goel, Georgios Pavlakos, Jathushan Rajasegaran,
+     it SMPL: automatic estimation of 3d human pose and shape             Angjoo Kanazawa, and Jitendra Malik. Humans in 4d: Re-
+     from a single image. In ECCV, 2016. 3                                constructing and tracking humans with transformers. In
+                                                                          ICCV, 2023. 6
+[10] Eric Brachmann, Jamie Wynn, Shuai Chen, Tommaso Cav-
+     allari, Áron Monszpart, Daniyar Turmukhambetov, and Vic-       [26] Rıza Alp Güler, Natalia Neverova, and Iasonas Kokkinos.
+     tor Adrian Prisacariu. Scene coordinate reconstruction: Pos-         Densepose: Dense human pose estimation in the wild. In
+     ing of image collections via incremental learning of a relo-         CVPR, 2018. 2, 3
+     calizer. In ECCV, 2024. 2                                       [27] Richard Hartley and Andrew Zisserman. Multiple view ge-
+[11] Yohann Cabon, Lucas Stoffl, Leonid Antsfeld, Gabriela                ometry in computer vision. Cambridge university press,
+     Csurka, Boris Chidlovskii, Jerome Revaud, and Vincent                2003. 2, 3
+     Leroy. Must3r: Multi-view network for stereo 3d reconstruc-     [28] Shoukang Hu, Fangzhou Hong, Liang Pan, Haiyi Mei, Lei
+     tion. In CVPR, 2025. 3                                               Yang, and Ziwei Liu. Sherf: Generalizable human nerf from
+[12] Zhongang Cai, Daxuan Ren, Ailing Zeng, Zhengyu Lin, Tao              a single image. In ICCV, 2023. 3
+     Yu, Wenjia Wang, Xiangyu Fan, Yang Gao, Yifan Yu, Liang         [29] Wei Jiang, Kwang Moo Yi, Golnoosh Samei, Oncel Tuzel,
+     Pan, Fangzhou Hong, Mingyuan Zhang, Chen Change Loy,                 and Anurag Ranjan. Neuman: Neural human radiance field
+     Lei Yang, and Ziwei Liu. HuMMan: Multi-modal 4d human                from a single video. In ECCV, 2022. 3
+     dataset for versatile sensing and modeling. In ECCV, 2022.      [30] Bernhard Kerbl, Georgios Kopanas, Thomas Leimkühler,
+     5, 6                                                                 and George Drettakis. 3d gaussian splatting for real-time
+[13] Bowen Cheng, Alex Schwing, and Alexander Kirillov. Per-              radiance field rendering. ACM Trans. Graph., 2023. 3
+     pixel classification is not all you need for semantic segmen-   [31] Rawal Khirodkar, Aayush Bansal, Lingni Ma, Richard New-
+     tation. In NeurIPS, 2021. 4                                          combe, Minh Vo, and Kris Kitani. Ego-humans: An ego-
+[14] Bowen Cheng, Ishan Misra, Alexander G Schwing, Alexan-               centric 3d multi-human benchmark. In ICCV, 2023. 2, 6
+     der Kirillov, and Rohit Girdhar. Masked-attention mask          [32] Arno Knapitsch, Jaesik Park, Qian-Yi Zhou, and Vladlen
+     transformer for universal image segmentation. In CVPR,               Koltun. Tanks and temples: Benchmarking large-scale scene
+     2022. 4                                                              reconstruction. ACM Trans. Graphics, 2017. 6
+[15] V. Choutas. Mvsmplfitting. https://github.com/                  [33] Vincent Leroy, Yohann Cabon, and Jerome Revaud. Ground-
+     vchoutas/smplify-x. 6                                                ing image matching in 3d with mast3r. In ECCV, 2024. 2, 3,
+[16] David J Crandall, Andrew Owens, Noah Snavely, and                    5, 6, 7, 8
+     Daniel P Huttenlocher. Sfm with mrfs: Discrete-continuous       [34] Yanghao Li, Tushar Nagarajan, Bo Xiong, and Kristen Grau-
+     optimization for large-scale structure from motion. IEEE             man. Ego-exo: Transferring visual representations from
+     trans. PAMI, 2012. 2                                                 third-person to first-person videos. In CVPR, 2021. 2, 6
+[35] Zhongguo Li, Magnus Oskarsson, and Anders Heyden. 3d                    Dune: Distilling a universal encoder from heterogeneous 2d
+     human pose and shape estimation through collaborative                   and 3d teachers. In CVPR, 2025. 2, 3, 8
+     learning and multi-view model-fitting. In WACV, 2021. 3            [52] Paul-Edouard Sarlin, Daniel DeTone, Tomasz Malisiewicz,
+[36] Chen-Hsuan Lin, Wei-Chiu Ma, Antonio Torralba, and Si-                  and Andrew Rabinovich. SuperGlue: Learning feature
+     mon Lucey. Barf: Bundle-adjusting neural radiance fields.               matching with graph neural networks. In CVPR, 2020. 2
+     In ICCV, 2021. 2                                                   [53] Johannes Lutz Schönberger and Jan-Michael Frahm.
+[37] Zhizheng Liu, Joe Lin, Wayne Wu, and Bolei Zhou. Joint                  Structure-from-motion revisited. In CVPR, 2016. 1, 2
+     optimization for 4d human-scene reconstruction in the wild.        [54] Johannes Lutz Schönberger, Enliang Zheng, Marc Pollefeys,
+     arXiv preprint arXiv:2501.02158, 2025. 2, 3                             and Jan-Michael Frahm. Pixelwise view selection for un-
+[38] Matthew Loper, Naureen Mahmood, Javier Romero, Gerard                   structured multi-view stereo. In ECCV, 2016. 1, 2
+     Pons-Moll, and Michael J. Black. SMPL: a skinned multi-            [55] Thomas Schops, Johannes L Schonberger, Silvano Galliani,
+     person linear model. ACM Trans. Graphics, 2015. 2, 4                    Torsten Sattler, Konrad Schindler, Marc Pollefeys, and An-
+[39] G Lowe. Sift-the scale invariant feature transform. IJCV,               dreas Geiger. A multi-view stereo benchmark with high-
+     2004. 2                                                                 resolution images and multi-camera videos. In CVPR, 2017.
+[40] Naureen Mahmood, Nima Ghorbani, Nikolaus F. Troje, Ger-                 6
+     ard Pons-Moll, and Michael J. Black. AMASS: Archive of             [56] Brandon Smart, Chuanxia Zheng, Iro Laina, and Vic-
+     motion capture as surface shapes. In ICCV, 2019. 5                      tor Adrian Prisacariu.       Splatt3r: Zero-shot gaussian
+[41] Lea Müller, Hongsuk Choi, Anthony Zhang, Brent Yi, Jiten-              splatting from uncalibrated image pairs. arXiv preprint
+     dra Malik, and Angjoo Kanazawa. Reconstructing people,                  arXiv:2408.13912, 2024. 2
+     places, and cameras. In CVPR, 2025. 2, 3, 6, 7, 12                 [57] Cameron Smith, David Charatan, Ayush Tewari, and Vincent
+[42] Maxime Oquab, Timothée Darcet, Théo Moutakanni, Huy                   Sitzmann. Flowmap: High-quality camera poses, intrinsics,
+     Vo, Marc Szafraniec, Vasil Khalidov, Pierre Fernandez,                  and depth via gradient descent. In 3DV, 2025. 2
+     Daniel Haziza, Francisco Massa, Alaaeldin El-Nouby, et al.         [58] Noah Snavely, Steven M Seitz, and Richard Szeliski. Photo
+     Dinov2: Learning robust visual features without supervision.            tourism: exploring photo collections in 3d. In SIGGRAPH,
+     TMLR, 2024. 3                                                           2006. 2
+[43] Georgios Pavlakos, Vasileios Choutas, Nima Ghorbani,
+                                                                        [59] Jonathan Starck and Adrian Hilton. Surface capture for
+     Timo Bolkart, Ahmed A. A. Osman, Dimitrios Tzionas, and
+                                                                             performance-based animation. IEEE Computer Graphics
+     Michael J. Black. Expressive body capture: 3d hands, face,
+                                                                             and Applications, 2007. 3
+     and body from a single image. In CVPR, 2019. 6
+                                                                        [60] Jiaming Sun, Zehong Shen, Yuang Wang, Hujun Bao, and
+[44] Alexander Raistrick, Lingjie Mei, Karhan Kayan, David
+                                                                             Xiaowei Zhou. Loftr: Detector-free local feature matching
+     Yan, Yiming Zuo, Beining Han, Hongyu Wen, Meenal
+                                                                             with transformers. In CVPR, 2021. 2
+     Parakh, Stamatis Alexandropoulos, Lahav Lipson, Zeyu Ma,
+     and Jia Deng. Infinigen indoors: Photorealistic indoor scenes      [61] Zachary Teed and Jia Deng. Deepv2d: Video to depth
+     using procedural generation. In CVPR, 2024. 2, 5                        with differentiable structure from motion. arXiv preprint
+                                                                             arXiv:1812.04605, 2018. 7, 8
+[45] René Ranftl, Alexey Bochkovskiy, and Vladlen Koltun. Vi-
+     sion transformers for dense prediction. In ICCV, 2021. 3           [62] Jianyuan Wang, Nikita Karaev, Christian Rupprecht, and
+                                                                             David Novotny. Vggsfm: Visual geometry grounded deep
+[46] Jeremy Reizenstein, Roman Shapovalov, Philipp Henzler,
+                                                                             structure from motion. In CVPR, 2024. 2
+     Luca Sbordone, Patrick Labatut, and David Novotný. Com-
+     mon objects in 3d: Large-scale learning and evaluation of          [63] Qianqian Wang, Yifei Zhang, Aleksander Holynski,
+     real-life 3d category reconstruction. In ICCV, 2021. 2, 6, 7            Alexei A Efros, and Angjoo Kanazawa. Continuous 3d per-
+[47] Tianhe Ren, Shilong Liu, Ailing Zeng, Jing Lin, Kunchang                ception model with persistent state. In CVPR, 2025. 2, 3
+     Li, He Cao, Jiayu Chen, Xinyu Huang, Yukang Chen, Feng             [64] Shuzhe Wang, Vincent Leroy, Yohann Cabon, Boris
+     Yan, et al. Grounded sam: Assembling open-world models                  Chidlovskii, and Jerome Revaud. Dust3r: Geometric 3d vi-
+     for diverse visual tasks. arXiv preprint arXiv:2401.14159,              sion made easy. In CVPR, 2024. 2, 3, 6, 7, 8, 12
+     2024. 5, 12                                                        [65] Yuxi Xiao, Nan Xue, Tianfu Wu, and Gui-Song Xia. Level-
+[48] Jerome Revaud, Cesar De Souza, Martin Humenberger, and                  s2 fm: Structure from motion on neural level set of implicit
+     Philippe Weinzaepfel. R2d2: Reliable and repeatable detec-              surfaces. In CVPR, 2023. 2
+     tor and descriptor. In NeurIPS, 2019. 2                            [66] Yan Xu and Kris Kitani. Multi-view multi-person 3d pose
+[49] Ethan Rublee, Vincent Rabaud, Kurt Konolige, and Gary                   estimation with uncalibrated camera networks. In BMVC,
+     Bradski. Orb: An efficient alternative to sift or surf. In ICCV,        2022. 3, 6, 7
+     2011. 2                                                            [67] Vickie Ye, Georgios Pavlakos, Jitendra Malik, and Angjoo
+[50] Mert Bülent Sarıyıldız, Philippe Weinzaepfel, Thomas Lu-               Kanazawa. Decoupling human and camera motion from
+     cas, Diane Larlus, and Yannis Kalantidis. Unic: Universal               videos in the wild. In CVPR, 2023. 3
+     classification models via multi-teacher distillation. In ECCV,     [68] Zhixuan Yu, Linguang Zhang, Yuanlu Xu, Chengcheng
+     2024. 3                                                                 Tang, Luan Tran, Cem Keskin, and Hyun Soo Park. Multi-
+[51] Mert Bülent Sarıyıldız, Philippe Weinzaepfel, Thomas Lu-               view human body reconstruction from uncalibrated cameras.
+     cas, Pau de Jorge, Diane Larlus, and Yannis Kalantidis.                 In NeurIPS, 2022. 3
+[69] Junyi Zhang, Charles Herrmann, Junhwa Hur, Varun Jam-
+     pani, Trevor Darrell, Forrester Cole, Deqing Sun, and Ming-
+     Hsuan Yang. Monst3r: A simple approach for estimating
+     geometry in the presence of motion. In ICLR, 2025. 2, 3
+[70] Siwei Zhang, Qianli Ma, Yan Zhang, Zhiyin Qian, Taein
+     Kwon, Marc Pollefeys, Federica Bogo, and Siyu Tang. Ego-
+     body: Human body shape and motion of interacting people
+     from head-mounted devices. In ECCV, 2022. 5, 6
+[71] Yizhou Zhao, Tuanfeng Y. Wang, Bhiksha Raj, Min Xu,
+     Jimei Yang, and Chun-Hao Paul Huang. Synergistic global-
+     space camera and human reconstruction from videos. CVPR,
+     2024. 3
+[72] Tinghui Zhou, Richard Tucker, John Flynn, Graham Fyffe,
+     and Noah Snavely. Stereo magnification: Learning view syn-
+     thesis using multiplane images. In SIGGRAPH, 2018. 2, 6,
+     7
+Supplementary Material
+Loss Weight Selection                                                                          Input image            PointMap             Segmentation
+The loss weights \lambda _1 , \lambda _2 , and \lambda _3 were selected to balance the
+contributions of the segmentation, DensePose, and binary mask
+losses, respectively. To ensure all loss terms operate on a compa-
+rable numerical scale, we first computed the typical magnitude of
+                                                                                               DensePose            SMPL model             SMPL model
+each loss on a held-out validation set and then scaled the corre-
+sponding \lambda  accordingly. The final values used in our experiments
+were \lambda _1 = 0.01, \lambda _2 = 1, and \lambda _3 = 1.
+
+Runtime Comparison
+                                                                                               Input image            PointMap             Segmentation
+To contextualize the efficiency of our approach, we report end-to-
+end runtimes on a representative 4-view input of a 3-person scene
+(EgoExo4D-style setup). All measurements were performed on a
+single NVIDIA V100 GPU.
+HSfM uses a multi-stage optimization pipeline with external tools,                             DensePose            SMPL model             SMPL model
+each adding to the total runtime. In contrast, HAMSt3R is a uni-
+fied, feed-forward architecture with optional SMPL fitting used
+only for evaluation.
+    Despite being a unified feed-forward model, HAMSt3R re-
+mains highly efficient compared to modular pipelines such as
+HSfM. SMPL fitting is performed only as a post-processing step                           Figure 6. Qualitative results of monocular prediction on in-the-
+for evaluation.                                                                          wild images taken from Pexels [2]. Each 2-row group shows: (top
+                                                                                         row, left to right) input image, high-confidence reconstructed point
+Table 7. Runtime comparison for HAMSt3R and HSfM in a                                    cloud overlaid with color (PointMap), and segmentation results;
+4-view, 3-person scene. HAMSt3R is significantly faster despite                          (bottom row) DensePose predictions and two different views of
+producing comparable or stronger results.                                                the fitted SMPL models. The figure illustrates that our method
+ Method                                                    Total Runtime (4-view)
+                                                                                         can produce coherent reconstructions and mesh predictions from a
+ HAMSt3R (Ours)
+                                                                                         single image.
+  Reconstruction + Segmentation + DensePose                         ∼14s
+  SMPL Fitting (post-process)                                       ∼6s
+  Total                                                             ∼32s
+ HSfM [41]
+  2D Pose Initialization                                             ∼1s
+  Segmentation (SAM [47])                                            ∼2s
+  3D Reconstruction (DUSt3R [64])                                   ∼18s
+  Stage 1 (Translation & Scale Only)                                ∼25s
+  Stage 2 (Add Global Orientation & Align DUSt3R)                   ∼48s
+  Stage 3 (Add Local Body Pose)                                     ∼24s
+  Total                                                             ∼118s
+
+
+
+
+Monocular Prediction
+HAMSt3R can also be run on a single image, by simply feeding
+the same image twice to the network. We show some qualitative
+results on in-the-wild images in Figure 6.
+
+Failure Cases in SMPL Fitting
+While HAMSt3R is generally robust, we observe occasional fail-                           Figure 7. Examples of failure cases. Top row: reconstruction
+ures in SMPL fitting, especially when subjects are far from the                          failures on a scene from EgoHumans. Due to the large scene scale
+camera. In such cases, the 3D points are sparse and noisy, leading                       and wide camera angle (left), human subjects appear very small
+to unstable optimization (Figure 7).                                                     after downscaling, leading to noisy point clouds (right) and incor-
+    We hypothesize that increasing reconstruction resolution or in-                      rect orientation in the SMPL mesh (inset). Bottom row: failures
+corporating additional priors could improve robustness in these                          caused by extreme body poses. DensePose predictions (middle)
+edge cases. These examples highlight the challenges of down-                             can break down under uncommon configurations (left), resulting
+stream mesh fitting in low-density areas, even when the upstream                         in erroneous SMPL fits (right).
+reconstruction is geometrically correct.
+

@@ -1,0 +1,934 @@
+               Crowd4D: Scene-Aware Monocular 4D Crowd Reconstruction
+
+
+     Hongbo Kang 1 Tianyi Zhou 1 Qingyang Yang 1 Hongwei Wen 1 Jing Huang 1 Yu-Kun Lai 2 Kun Li 1
+
+
+                           Abstract                                         1. Introduction
+     Recovering scene-consistent 4D crowd motion                            Monocular 4D crowd reconstruction in large scenes under-
+     from monocular video in large-scale scenes                             pins large-scale crowd perception for urban management,
+     remains challenging due to severe depth ambi-                          public safety, intelligent transportation, and behavior un-
+     guity and complex scene geometry. Existing                             derstanding. In contrast to small or close-range settings,
+     monocular crowd reconstruction methods typi-                           large scenes (e.g., plazas, street surveillance, drone videos)
+     cally rely on single-plane assumptions, leading                        exhibit wide spatial distribution, strong scale variation, and
+     to unreliable metric scale and spatial drift under                     frequent static–dynamic occlusions. With only monocular
+     complex terrain. We propose Crowd4D, the first                         RGB input, severe depth ambiguity renders world-space lo-
+     scene-aware 4D crowd reconstruction framework                          calization ill-posed, often causing temporal jitter and spatial
+     that jointly optimizes the crowd and scene from                        drift. Achieving spatio-temporally consistent reconstruc-
+     a monocular RGB video in large-scale scenes.                           tions in both pixel and world space therefore remains the
+     Crowd4D explicitly incorporates scene geometry                         central challenge.
+     and ensures consistency across image and scene
+     spaces via a multi-stage optimization strategy.                        Existing large-scene crowd reconstruction methods (Wen
+     A key bottleneck of this task lies in accurate                         et al., 2023; 2025; Huang et al., 2024) typically rely on sim-
+     human–scene alignment, particularly in scale                           plified scene assumptions (e.g., single-plane terrain), which
+     and position. However, human and scene recon-                          makes pixel–world consistency brittle on complex or non-
+     structions are typically decoupled. To address                         planar grounds. Meanwhile, most monocular multi-person
+     this, we introduce the Human–Scene Interaction                         reconstruction methods are developed for small scenes: full-
+     Proxy (HSIP) as an intermediate representation,                        image approaches (Baradel* et al., 2024; Patel & Black,
+     derived from Scene Interaction Point Clouds and                        2025; Wang et al., 2025b) struggle with tiny distant people,
+     a Scene Interaction Surface (SIPC&SIS), which                          while crop-based pipelines (Goel et al., 2023; Huang et al.,
+     encode explicit scene-aware geometric priors and                       2023; Wang et al., 2024) are highly sensitive to scale, where
+     redefine the optimization space for large-scale                        minor errors can be amplified into large world-space devia-
+     monocular 4D crowd reconstruction. To further                          tions. Depth-prior-based approaches (Liu et al., 2025; Chen
+     improve temporal stability under occlusions, we                        et al., 2025; Allshire et al., 2025) mitigate this issue via
+     introduce Crowd Structural Coherence Regular-                          scene reconstruction, but they mainly operate in close-range
+     ization (CSCR), which leverages HSIP-based                             settings; for distant crowds with only a few pixels, depth
+     spatial priors to impose soft temporal consistency                     ambiguity remains severe, limiting robustness in large and
+     on pairwise relative displacements and directions                      complex scenes.
+     within local crowd neighborhoods. Extensive                            Recent advances in scene reconstruction (Wang et al.,
+     experiments demonstrate that Crowd4D con-                              2025a;c) provide globally consistent geometry and ac-
+     sistently outperforms existing state-of-the-art                        curate camera registration, offering strong geometric an-
+     methods and enables robust monocular 4D                                chors for crowd reconstruction beyond single-plane assump-
+     crowd reconstruction in complex, large-scale                           tions (Wen et al., 2023; 2025; Huang et al., 2024). However,
+     real-world scenes. Project page is available at                        dense multi-frame point clouds are redundant and noisy, and
+     https://cic.tju.edu.cn/faculty/likun/projects/Crowd4D.                 their computational cost scales poorly with crowd size, mo-
+                                                                            tivating a compact and consistent interaction representation.
+                                                                            Overall, accurate large-scale crowd reconstruction requires:
+  1
+    Tianjin University, Tianjin, China 2 Cardiff University, Cardiff,       (1) precise scale alignment between the crowd and the scene,
+United Kingdom. Correspondence to: Kun Li <lik@tju.edu.cn>.
+                                                                            (2) efficient representations that preserve multi-frame geo-
+Proceedings of the 43 rd International Conference on Machine                metric consistency, and (3) robust human–scene geometric
+Learning, Seoul, South Korea. PMLR 306, 2026. Copyright 2026                anchoring consistent with both scene geometry and image
+by the author(s).
+
+                                                                        1
+                                         Crowd4D: Scene-Aware Monocular 4D Crowd Reconstruction
+
+
+  Input                     Overlay                       Input                    Overlay                Input                     Overlay
+
+
+
+
+  Optimized Results                                      Optimized Results                                Optimized Results
+
+
+
+
+     26753×15052px; Single-plane Terrain; Sta;c Camera       1920×1080px; Complex Terrain; Sta;c Camera   3640×2048px; Single-plane Terrain; Dynamic Camera
+          1.Gigapixel Surveillance Scenario                  2.Conventional Surveillance Scenario                     3.Drone Scenario
+
+Figure 1. Scene-aware 4D crowd reconstruction across diverse large-scene scenarios. From left to right: a gigapixel static-camera
+surveillance scenario, a conventional surveillance scenario with complex terrain, and a drone-captured scenario with dynamic camera
+motion. Our method supports all three scenarios, whereas previous large-scene approaches are typically limited to the leftmost scenario.
+The top row shows the input videos and overlay results, and the bottom row presents the final optimized reconstructions. Different colors
+indicate different pedestrians, with per-person 3D reconstructions over time forming a scene-consistent 4D representation.
+
+observations.                                                                         monocular 4D crowd reconstruction framework for large-
+                                                                                      scale complex-terrain scenes (Fig. 1). Crowd4D jointly
+To address these challenges, we introduce the Human–Scene
+                                                                                      optimizes the crowd and scene from monocular RGB video
+Interaction Proxy (HSIP), an intermediate optimization
+                                                                                      using a multi-stage strategy. Our contributions are three-
+proxy that bridges decoupled crowd and scene reconstruc-
+                                                                                      fold: (1) a unified scene-aware framework for monocular
+tions. Rather than directly constraining human poses with
+                                                                                      4D crowd reconstruction in large scenes; (2) HSIP, built
+dense and noisy scene geometry, HSIP combines scene-
+                                                                                      on SIPC&SIS, which couples scene geometry and crowd
+level geometric priors with temporally coherent depth cues
+                                                                                      distribution to stabilize metric scale and individual place-
+to restrict each individual to a stable and scene-consistent
+                                                                                      ment; and (3) CSCR, which exploits local crowd structure
+feasible region, mitigating the ill-posedness of monocular
+                                                                                      to improve temporal stability under occlusions. Extensive
+depth estimation. HSIP constrains each individual’s world-
+                                                                                      experiments demonstrate state-of-the-art performance on
+space location while jointly optimizing the global scene
+                                                                                      large-scale scenes.
+scale, effectively reducing scale drift and positional insta-
+bility under severe depth ambiguity. We instantiate HSIP
+using a compact scene representation composed of Scene                                2. Related Work
+Interaction Point Clouds and a Scene Interaction Surface
+                                                                                      2.1. Human-Scene Reconstruction
+(SIPC&SIS), which distill multi-frame reconstructions into
+an interaction-relevant structure. Built on SIPC&SIS, HSIP                            Joint human–scene reconstruction aims to recover humans,
+defines a feasible support region on complex terrain, en-                             cameras, and scene geometry in a common world frame.
+abling robust pixel-to-world anchoring beyond planar as-                              Sensor-assisted methods, such as CIMI4D (Yan et al., 2023)
+sumptions.                                                                            and HiSC4D (Dai et al., 2024), capture accurate human–
+                                                                                      scene interactions using wearable inertial sensors and Li-
+Moreover, per-track temporal smoothness alone is insuffi-
+                                                                                      DAR, but require specialized hardware. Vision-based meth-
+cient in dense crowds due to occlusions and fragmented
+                                                                                      ods jointly reason about humans and scenes from visual
+observations. While individual motions are highly dynamic,
+                                                                                      observations: SynCHMR (Zhao et al., 2024) reconstructs
+the local structural topology of a crowd—captured by rela-
+                                                                                      metric-scale cameras, humans, and dense scenes from
+tive spatial relationships among neighbors—exhibits strong
+                                                                                      monocular videos; HSfM (Müller et al., 2024) jointly recov-
+spatiotemporal coherence. Leveraging this property together
+                                                                                      ers humans, cameras, and scene point clouds from sparse un-
+with HSIP-based spatial priors, we introduce Crowd Struc-
+                                                                                      calibrated multi-view images; and optimization-based meth-
+tural Coherence Regularization (CSCR), a group-level con-
+                                                                                      ods such as JOSH (Liu et al., 2025) and VideoMimic (All-
+straint that enforces soft temporal consistency of pairwise
+                                                                                      shire et al., 2025) couple human motion with reconstructed
+relative displacements and directions, preventing implausi-
+                                                                                      environments for scene-consistent motion recovery. How-
+ble structural distortions under occlusion.
+                                                                                      ever, existing vision-based methods mainly target individ-
+In summary, we propose Crowd4D, the first scene-aware                                 ual humans or sparse interactions in relatively local scenes.
+
+                                                                                  2
+                                                  Crowd4D: Scene-Aware Monocular 4D Crowd Reconstruction
+
+       (a) Crowd and Scene Initialization (Sec. 3.1)                      (b) Human-Scene Interaction Processing (Sec. 3.2)              (c) Multi-stage Joint Optimization (Sec. 3.3)
+
+                                                                   Scene Interaction Geometry           Human-Scene Interaction      Stage-1: HSIP-Based Scale
+                        Detection and          𝑏!!,# 𝑚# !,#                                                Proxy Anchoring
+                                                                            Extraction                                               and Root Optimization 𝛽, 𝜏, 𝛾, 𝛼           Crowd
+                          Tracking               ̅
+                                                 ()*+
+                                                𝐽!,#                                                      Reference Root Position                                           Structural Prior
+                                                                      Metric Scale Initialization
+                                                                                                                Extraction           Stage-2: Pixel-Consistent
+                     Scene and Camera
+                      Reconstruction
+                                                  𝒞#̅ 𝒮#̅                                                                            Pose Optimization         𝛽, 𝜏, 𝛾, 𝑧   Geometric Prior
+                                                                      Confidence-guided Terrain            Ray-Space Sequence                                           &
+                                                                              Sampling                          Correction
+      …              Individual Motion
+                                                  𝑄!!,# 𝐽!,#
+                                                         ̅
+                                                         $%                                                                          Stage-3: Group-Guided
+                                                                                                                                                                             Motion Prior
+                       Reconstruction                                  Surface Reconstruction             Vertical Mapping to SIS
+                                                                                                                                     Motion Prior Optimization 𝛽, 𝑧'
+
+
+
+          Unaligned Scene and 4D Crowd Results                                                                                               Scene-Consistent 4D Crowd Results
+
+                                                         n   Ray   SIPC & SIS
+                                            Pro   jectio
+
+
+
+
+  Scene Consistency❌                                                                                                         HSIP                                   Scene Consistency ✅
+  Pixel Consistency ✅                                                                                                                                                Pixel Consistency ✅
+
+
+Figure 2. Overview of the Crowd4D framework. Our method starts from crowd and scene initialization; however, the initial results
+exhibit significant deviations in scene scale and individual spatial locations. To address this issue, we introduce human–scene interaction
+processing, where geometric constraints are imposed via Scene Interaction Point Clouds and a Scene Interaction Surface (SIPC&SIS) to
+construct Human–Scene Interaction Proxies (HSIP) that guide subsequent optimization. Finally, with crowd structure, geometry, and
+motion priors, a multi-stage joint optimization is performed to obtain scene-consistent and pixel-consistent 4D crowd reconstruction
+results.
+
+In large-scale crowd videos, distant observations, severe                                                3. Methodology
+inter-person occlusions, and complex non-planar terrain
+make direct human–scene alignment unreliable. In con-                                                    Crowd4D aims to recover scene-consistent 4D crowd mo-
+trast, we construct compact terrain-aware interaction geom-                                              tion from a monocular RGB video by jointly estimating the
+etry, SIPC&SIS, and derive HSIP anchors to stabilize dense                                               global camera trajectory, static scene geometry, and the 3D
+crowd placement on complex terrain.                                                                      positions, poses, and shapes of multiple individuals in a
+                                                                                                         unified world coordinate system. To address scale incon-
+                                                                                                         sistency and spatial drift caused by depth ambiguity and
+2.2. Crowd Reconstruction
+                                                                                                         complex terrain, we formulate crowd and scene reconstruc-
+Multi-person methods like ROMP (Sun et al., 2021), Multi-                                                tion as a tightly coupled joint optimization problem with
+HMR (Baradel* et al., 2024), and AiOS (Sun et al., 2024) re-                                             geometric, group-level, and motion constraints, enforcing
+construct meshes simultaneously but focus on small scenes                                                consistency between image and scene spaces (Fig. 2).
+and cannot handle dense crowds spanning hundreds of
+meters. For large-scene reconstruction, Crowd3D (Wen                                                     Human Body Representation. We represent human ge-
+et al., 2023) introduces HVIP (Human-scene Virtual In-                                                   ometry and motion using the SMPL model (Loper et al.,
+teraction Point) to convert 3D localization into 2D pixel                                                2015). At time t, each person n is parameterized by
+estimation with pre-estimated camera and ground plane.                                                   pose θ n,t ∈ R23×3 , shape β n,t ∈ R10 , global orientation
+GroupRec (Huang et al., 2023) models inter-person interac-                                               γ n,t ∈ R3 , and global translation τ n,t ∈ R3 . We denote
+tions via hypergraph reasoning. RCR (Huang et al., 2024)                                                 Qn,t = (θ n,t , β n,t , γ n,t , τ n,t ) and the temporal sequence
+defines ground-aware normalization to eliminate camera                                                   as Qn = {Qn,t }Tt=1 . The SMPL forward function maps
+intrinsic dependence. However, these single-image methods                                                these parameters to a posed mesh Vn,t ∈ R6890×3 and joint
+cannot infer crowd motion from video. DyCrowd (Wen                                                       locations Jn,t ∈ R24×3 in the world coordinate system:
+et al., 2025) extends to video with group-guided optimiza-
+tion and asynchronous consistency loss, and it also adopts                                                           (Vn,t , Jn,t ) = M(γ n,t , θ n,t , β n,t ) + τ n,t .                      (1)
+HVIP-based localization. However, HVIP-style 2D-to-3D
+plane anchoring is sensitive to projection errors: small 2D
+deviations can induce large 3D drift, especially in low-                                                 3.1. Crowd and Scene Initialization
+altitude, long-range scenes. In contrast, our HSIP com-                                                 We construct a globally consistent initialization to bootstrap
+bines scene-level geometric priors with temporally coherent                                             the subsequent joint optimization, which outputs: (i) per-
+depth cues to define stable feasible regions, and further sta-                                          frame person detections with track identities, (ii) a gravity-
+bilizes dense crowds via local structural coherence beyond                                              aligned global camera trajectory and static scene point cloud,
+per-individual temporal smoothness.                                                                     and (iii) per-person initial SMPL motion sequences in a
+                                                                                                        shared world frame.
+
+                                                                                                    3
+                                    Crowd4D: Scene-Aware Monocular 4D Crowd Reconstruction
+
+Detection and Tracking. Given a frame It ∈ RH×W ×3 ,                        scale factor α ∈ R+ by aligning the depth of reconstructed
+we apply YOLOX (Ge et al., 2021) to detect persons in the                   humans with the scene geometry using the metric SMPL
+full frame. For each detected person, we obtain an instance                 prior. For each valid person–frame pair (n, t), we use the
+                                                                                                                                    ↓
+mask using SAM 2 (Ravi et al., 2025) and per-joint obser-                   lowest body vertex along the gravity axis, denoted as v̄n,t , as
+vation confidence scores from DWPose (Yang et al., 2023).                   a proxy for ground contact. The initial scale α0 is computed
+BoostTrack++ (Stanojević & Todorović, 2024) associates                    as a weighted average of the ratio between human-based
+detections over time, yielding N persistent identities. For                 depth dsmpl                           scn
+                                                                                    n,t and scene-based depth dn,t :
+each valid person–frame pair (n, t), we denote the associ-
+ated bounding box, instance mask, and per-joint observation                           1    X               dsmpl
+                                                                                                            n,t
+                                                                                                                                 X
+confidence scores as b̄n,t ∈ R4 , m̄n,t ∈ {0, 1}H×W , and                      α0 =                 ωn,t         ,     Z=                ωn,t ,   (2)
+                                                                                      Z                     dscn
+                                                                                                             n,t
+J̄conf        17
+  n,t ∈ [0, 1] , respectively.
+                                                                                          (n,t)∈Ω                              (n,t)∈Ω
+
+                                                                            where ωn,t assigns higher weight to individuals closer to
+Scene and Camera Reconstruction. We uniformly sam-                          the camera. The estimated scale is applied to initialize the
+ple Tkey keyframes and apply π 3 (Wang et al., 2025c) to                    metric scene and camera trajectories.
+reconstruct camera parameters and scene geometry. For
+each keyframe t, we obtain camera parameters C¯t =                          Confidence-guided Terrain Sampling. Following metric
+{K̄t , R̄t , t̄t } together with a pixel-aligned 3D point map               scale initialization, we aggregate the scaled scene point
+defined in its local camera coordinate system and its corre-                clouds from all Tkey keyframes into a unified gravity-
+sponding confidence map, where K̄t is the camera intrinsic                  aligned representation S = {(sm , cm )}M m=1 . Rather than
+matrix, R̄t ∈ SO(3) is the rotation matrix, and t̄t ∈ R3                    operating on the dense and noisy point cloud directly, we
+is the translation vector. We collect valid points from the                 introduce the Scene Interaction Point Cloud (SIPC) as a
+predicted point map to form the per-frame scene point cloud                 compact terrain-aware abstraction that preserves interaction-
+                      Ntscn
+S̄t = {(s̄tj , c̄tj )}j=1   , where Ntscn is the number of retained         relevant geometry while suppressing redundancy.
+points in keyframe t, s̄tj ∈ R3 denotes the 3D coordinate                   Specifically, we discretize the horizontal (x, z) plane into
+of the j-th point, and c̄tj ∈ [0, 1] is its confidence score.               a regular metric grid with cell size ℓ. For each grid cell
+Finally, we estimate gravity using GeoCalib (Veicht et al.,                 indexed by u = (ux , uz ) ∈ Z2 , we collect scene points
+2024) and transform all camera poses and point clouds into                  falling inside the cell:
+a first-frame-referenced, gravity-aligned world coordinate                                            x 
+                                                                                                             = ux , zℓm = uz . (3)
+                                                                                                                    
+system.                                                                        Gu = (sm , cm ) ∈ S       ℓ
+                                                                                                          m
+
+
+
+                                                                            We retain only high-confidence measurements in each cell:
+Individual Motion Reconstruction. For each tracked
+identity n, we apply a monocular motion reconstruction                                 Guconf = {(sm , cm ) ∈ Gu | cm ≥ τc } ,                    (4)
+method (Wang et al., 2024) to estimate temporally con-
+sistent SMPL parameters (θ̄ n,t , β̄ n,t , γ̄ n,t , τ̄ n,t ). The re-       where τc denotes the confidence threshold. For each non-
+constructed motion is transformed into the gravity-aligned                  empty reliable cell, we select the lowest-elevation point
+world coordinate system to initialize Q̄n,t . We further                    along the gravity axis as the local terrain representative:
+project the corresponding initialized SMPL joints, mapped
+to the adopted 17-keypoint layout, onto frame t to obtain                                    s⋆u = arg           min          ym .                (5)
+                                                                                                                       conf
+                                                                                                            (sm ,cm )∈Gu
+the 2D reference joints J̄2D
+                          n,t ∈ R
+                                   17×2
+                                           for subsequent opti-
+mization.                                                                   The resulting set SSIPC = {s⋆u } constitutes the Scene Inter-
+                                                                            action Point Cloud, which provides a sparse yet structurally
+3.2. Human and Scene Interaction Processing                                 consistent proxy of the navigable surface for subsequent
+                                                                            human–scene interaction modeling.
+To reduce redundancy and noise in dense scene point clouds,
+we extract compact terrain-aware geometry in the form of
+                                                                            Surface Reconstruction. To enable continuous interac-
+a Scene Interaction Point Cloud (SIPC) and a continuous
+                                                                            tion queries, we construct the Scene Interaction Surface
+Scene Interaction Surface (SIS), which together support the
+                                                                            (SIS) from the discrete SIPC anchors. We fit a reference
+construction of the Human–Scene Interaction Proxy (HSIP)
+                                                                            support plane and interpolate the gravity-direction residuals
+for coupling the scene and the crowd.
+                                                                            of SIPC points over a regular horizontal grid. In insuf-
+                                                                            ficiently observed regions, the residual field is smoothly
+3.2.1. S CENE I NTERACTION G EOMETRY E XTRACTION
+                                                                            attenuated toward zero, allowing the reconstructed surface
+Metric Scale Initialization. Monocular reconstruction                       to fall back to the reference plane and preventing unstable
+suffers from inherent scale ambiguity. We estimate a global                 extrapolation. We triangulate the resulting height field in
+
+                                                                        4
+                                                                     Crowd4D: Scene-Aware Monocular 4D Crowd Reconstruction
+                                 Human-Scene Interaction Proxy Anchoring
+                                                                                                                                        Let lvert (x) denote the gravity-aligned vertical line passing
+ Initial State                                                         Gravity Direction
+                                          Correct State                                                 Pr
+                                                                                                          oje
+                                                                                                                cti
+                                                                                                                                        through point x. We define the reference position as the
+                                                                                                                   on
+                                                                                                                        Ra
+                                                                                                                          y
+                                                                                                                                        intersection between the root viewing ray and the gravity-
+                                        ∗
+                                                         3
+                                                        𝑟1,2                                                                            aligned vertical line passing through the probe correspon-
+                                       𝑟1,2                                                Ray-Space Sequence Correction
+                                                                                                                                        dence:
+       𝜏1,2
+        ̅                                                                                                                                             r′n,t = r(µ | τ̄ n,t ) ∩ lvert (s′n,t ).    (11)
+                                   s1,2        ∗
+                                              s1,2       3
+                                                        s1,2
+                                                                                                                                        Ray-Space Sequence Correction. The reference posi-
+                                                                                                                                        tions r′n,t are estimated independently per frame and may
+       𝑎1,2                ↓
+                        v' 1,2         HSIP Support
+                                          Range                                                                                         exhibit temporal jitter. We therefore parameterize them by
+   𝜐                                                                                                                                    the depth µn,t along the root viewing ray,
+                  3
+                 𝑎1,2            Reference Position Extraction                                    Vertical Mapping to SIS
+
+          Lowest Point Plane                         Scene Interaction Surface (SIS)                                                                       r′n,t = r(µn,t | τ̄ n,t ),            (12)
+        Figure 3. Human-Scene Interaction Proxy Anchoring.                                                                              and apply robust temporal smoothing:
+the horizontal plane and discard triangular faces with exces-                                                                                                                   
+                                                                                                                                                        en,t = F {µn,τ }τ ∈T (t) .
+                                                                                                                                                        µ                                        (13)
+sively long edges to avoid unsupported connections. The
+resulting surface is represented as                                                                                                     The refined reference position is obtained as
+                                          SSIS = (VSIS , FSIS ),                                                              (6)                          r∗n,t = r(e
+                                                                                                                                                                     µn,t | τ̄ n,t ),            (14)
+where VSIS and FSIS denote the mesh vertices and trian-                                                                                 which preserves image-space alignment while yielding tem-
+gular faces, respectively. SIS supports gravity-direction                                                                               porally coherent trajectories.
+projection and ray–surface intersection in subsequent HSIP
+construction.                                                                                                                           Vertical Mapping to SIS. Finally, we map the refined
+                                                                                                                                        reference position to the scene by intersecting the gravity-
+3.2.2. H UMAN -S CENE I NTERACTION P ROXY                                                                                               aligned vertical line passing through r∗n,t with the Scene
+       A NCHORING                                                                                                                       Interaction Surface:
+Monocular reconstruction provides reliable image-space                                                                                                  s∗n,t = lvert (r∗n,t ) ∩ SSIS .          (15)
+alignment but leaves depth and support relations undercon-
+                                                                                                                                        We refer to s∗n,t as the Human–Scene Interaction Proxy
+strained. We therefore construct a scene-aware interaction
+                                                                                                                                        (HSIP). To characterize its spatial extent, we define the
+proxy by progressively restricting the admissible 3D loca-
+                                                                                                                                        HSIP support range as
+tion of the human root while maintaining consistency with
+                                                                                                                                             HSIP
+                                                                                                                                                  = max ∥s∗n,t − sn,t ∥, ∥s∗n,t − s′n,t ∥ .
+                                                                                                                                                                                         
+its original 2D projection, as shown in Fig. 3.                                                                                             rn,t                                             (16)
+
+Reference Position Extraction. For each person n at                                                                                      For open- and mid-range scenes, we construct the Human–
+frame t, we use the lowest body vertex v̄n,t  ↓
+                                                   as a gravity-                                                                        Scene Interaction Proxy (HSIP) from SIPC&SIS as de-
+consistent support reference. We first define a plane anchor                                                                            scribed above. For close-range scenes, where foreground
+by vertically projecting the initialized root translation onto                                                                          bodies often occlude the local support region and hinder
+the horizontal plane passing through this point:                                                                                        reliable surface construction, we bypass SIPC/SIS and esti-
+                                                                                                                                        mate HSIP directly in ray space. Specifically, we define an
+                                   ↓               
+           an,t = x(τ̄ n,t ), y(v̄n,t ), z(τ̄ n,t ) .        (7)                                                                        anchor ray using the image-space projection of the support-
+                                                                                                                                        plane anchor an,t , infer a target horizontal support location
+An auxiliary probe anchor is obtained by extending it down-
+                                                                                                                                        from local scene-depth observations around reliable body
+ward by a fixed offset v:
+                                                                                                                                        joints or the person mask, and determine s∗n,t as the point
+                                     a′n,t = an,t − (0, v, 0)⊤ .                                                              (8)       on the anchor ray whose horizontal position is closest to the
+                                                                                                                                        inferred support location. Since SIS-based correspondences
+Given the camera extrinsics, the viewing ray corresponding                                                                              are unavailable in this setting, we set the HSIP support range
+                                                                                                                                         HSIP
+to a world-space point x is parameterized as                                                                                            rn,t   to a fixed constant for close-range scenes.
+           r(µ | x) = −R̄⊤                 ⊤
+                                                
+                           t t̄t + µ x + R̄t t̄t .      (9)
+                                                                                                                                        3.3. Multi-stage Optimization Strategy
+Intersecting the rays of an,t and a′n,t with the Scene Inter-
+                                                                                                                                        Given the reconstructed camera trajectory {C¯t }, the initial
+action Surface yields the scene correspondences
+                                                                                                                                        human motion sequences {Q̄n,t }, and the Scene Interac-
+sn,t = r(µ | an,t ) ∩ SSIS ,                                           s′n,t = r(µ | a′n,t ) ∩ SSIS .                                   tion Surface (SIS) together with the Human–Scene Interac-
+                                                                                                (10)                                    tion Proxy (HSIP), we formulate crowd reconstruction as a
+
+                                                                                                                                    5
+                                     Crowd4D: Scene-Aware Monocular 4D Crowd Reconstruction
+
+  Stage    Opt. Variables   Energy Term                                 nection loss Econnect . In addition, group-guided motion con-
+                                    (proj)     (xz)   (y)
+                            Eproj + EHSIP + EHSIP + EHSIP               sistency encoded by EAMC propagates reliable dynamics
+ Stage-1   β, τ , γ, α                (t)  (t)    (t)
+                            +Eβ + Eτ + Eγ + Ecrowd                      across individuals, improving robustness in crowded and
+                                    (proj)     (y)    θ
+                            Eproj + EHSIP + EHSIP + Eprior              occluded scenarios.
+ Stage-2   β, τ , γ, zθ               (t)  (t)    (t)     (t)
+                            +Eβ + Eτ + Eγ + Eθ + Ecrowd
+                                    (y)      (v)         ξ
+                            Eproj + EHSIP + Econtact + Eprior           3.4. HSIP-based Crowd and Scene Alignment
+ Stage-3   β, zξ                      (t)    (t)     (t)
+                            +Eβ + Eτ + Eγ + Eθ + Econnect + EAMC        To ensure scale-consistent and physically plausible human–
+Table 1. Overview of the multi-stage optimization strategy: vari-       scene relationships, we explicitly introduce crowd–scene
+ables and energy terms used in each stage.
+                                                                        interaction constraints during joint optimization. We lever-
+                                                                        age the Human–Scene Interaction Proxy (HSIP) defined
+joint optimization problem over the human motion variables              in Sec. 3.2.2 to align the crowd distribution with the re-
+{Qn,t } and the residual global scene scale α in a unified              constructed scene geometry. A residual global scene scale
+world coordinate system, and solve it using a three-stage               α ∈ R+ is treated as an optimizable variable and initial-
+optimization strategy where different subsets of variables              ized as 1. The HSIP points s∗n,t and their support ranges
+and energy terms are progressively activated to improve                  HSIP
+                                                                        rn,t   are constructed in the canonical frame scaled by α0
+stability and convergence (see Table 1); the energy terms
+                                                                        (Eq. (2)), while α further refines crowd–scene alignment
+for Crowd Structural Coherence Regularization and HSIP-
+                                                                        during optimization.
+based Crowd–Scene Alignment are presented in Secs. 3.5
+and 3.4, while the remaining terms are provided in Ap-                  By constraining human root translations using the dynam-
+pendix A.                                                               ically scaled HSIP, we jointly stabilize the global scene
+                                                                        scale and enforce valid placement of individuals on com-
+Stage-1: HSIP-guided Scale and Root Refinement. This                    plex terrain. We decompose this consistency into horizontal
+stage explicitly optimizes the global scene scale and root              feasible-region alignment, vertical terrain adaptation, and
+positions using geometric and crowd-structure priors. The               projection consistency. In addition, once the global scale
+residual scale parameter α is optimized jointly with root               becomes stable during optimization, we apply a direct root
+translation and orientation (τ , γ). HSIP-based feasible-               position update by setting the root translation to the HSIP-
+                                 (proj)   (xz)        (y)
+region constraints, including EHSIP , EHSIP , and EHSIP , are           corresponding reference position along the viewing ray, i.e.,
+the primary drivers that align the crowd distribution with the          τ n,t ← r∗n,t .
+scene geometry and resolve global scale ambiguity. Based
+on the HSIP anchoring, root positions are further refined and           Horizontal Feasible Region Alignment. The HSIP pro-
+                                                          (t)
+stabilized by the crowd-level structural regularization Ecrowd          vides a scene-grounded proxy location s∗n,t together with
+                                                                                                  HSIP
+together with temporal smoothness terms on root translation             a local support range rn,t      . We constrain the horizontal
+               (t)      (t)
+and rotation, Eτ and Eγ , yielding stable and geometrically             root translation (τ n,t )xz to remain within the scaled fea-
+plausible root trajectories.                                            sible region centered at α(s∗n,t )xz . A hinge loss penalizes
+                                                                        deviations when the person drifts outside this region:
+Stage-2: Pixel-consistent Pose Refinement. With the                       (xz)
+                                                                                       X h                                             i2
+global scale and root trajectories stabilized, this stage refines       EHSIP = λxz              (τ n,t )xz − α (s∗n,t )xz 2 − α rn,t
+                                                                                                                                  HSIP
+                                                                                                                                          .
+                                                                                                                                           +
+                                                                                     (n,t)∈Ω
+per-frame articulated body poses using pose-level priors and
+                                                                                                                                   (17)
+image evidence. The pose latent code zθ is optimized un-
+                                                   θ
+der the VPoser prior (Pavlakos et al., 2019) Eprior    to ensure
+anatomically plausible configurations. Pixel-level joint con-           Vertical Terrain Adaptation. The HSIP point s∗n,t pro-
+sistency is enforced through the reprojection loss Eproj , while        vides a terrain height reference. We constrain the lowest
+                                                                                                     ↓
+                                                 (t)                    vertex of the human mesh, vn,t  , to match the scaled HSIP
+temporal pose smoothness is encouraged by Eθ to maintain                height:
+stable articulation over time.
+                                                                               (y)
+                                                                                           X  ↓                    2
+                                                                             EHSIP = λy            vn,t y − α s∗n,t y .        (18)
+Stage-3: Group-guided Motion Prior Refinement. This
+                                                                                          (n,t)∈Ω
+stage recovers temporally coherent motion dynamics by
+optimizing the motion latent code zξ under the learned mo-
+             ξ                                                          Projection Consistency. To preserve image-space align-
+tion prior Eprior , following the motion prior formulation in
+                                                                        ment, we introduce a projection consistency constraint. The
+DyCrowd (Wen et al., 2025). Contact-aware motion regu-
+                                                        (v)             effective anchor is defined as the projection of the root trans-
+larization is imposed via the contact velocity term Econtact            lation onto the horizontal plane:
+to suppress sliding artifacts, and temporal continuity across
+                                                                                                            ↓
+                                                                                   aproj
+                                                                                                                          
+adjacent motion segments is enforced by the segment con-                             n,t = x(τ n,t ), y(vn,t ), z(τ n,t ) .         (19)
+
+                                                                    6
+                                    Crowd4D: Scene-Aware Monocular 4D Crowd Reconstruction
+
+We enforce consistency between its image projection and                Evaluation Metrics. We evaluate global crowd-level con-
+that of the probe anchor:                                              sistency using distance-based metrics, including PPDS
+                                                                       and its Procrustes-aligned variant (PA-PPDS) (Wen et al.,
+   (proj)
+                       X                             2
+ EHSIP      = λproj             Πt aproj
+                                    n,t    − Πt a′n,t     , (20)       2023), as well as the percentage of correct ordinal depth
+                                                        2              (PCOD) (Zhen et al., 2020). For pose accuracy, we report
+                      (n,t)∈Ω
+                                                                       MPJPE and PA-MPJPE. To assess global-coordinate pose se-
+where Πt (·) denotes the perspective projection under cam-             quences, we additionally report WA-MPJPE and W-MPJPE
+era parameters C¯t .                                                   following (Ye et al., 2023). Motion smoothness is measured
+                                                                       by the acceleration error (ACCEL).
+3.5. Crowd Structural Coherence Regularization
+                                                                       4.2. Implementation Details
+Per-person temporal smoothness alone becomes unreliable
+in dense crowds due to frequent occlusions and depth ambi-             We implement our method in PyTorch (Paszke et al., 2019)
+guity. We therefore introduce Crowd Structural Coherence               and optimize all models using the Adam optimizer. The
+Regularization (CSCR), which leverages HSIP-based spa-                 optimization is carried out in three successive stages (stage-
+tial priors to impose soft temporal consistency on pairwise            1, stage-2, and stage-3), with 150, 150 and 300 iterations,
+relative displacements within local crowd neighborhoods.               respectively. The learning rates are set to 0.01, 0.01, and
+                                                                       0.02 for the three stages. All experiments are conducted
+Dynamic Interaction Graph. At each frame t, we con-                    on a workstation equipped with an NVIDIA 4090D GPU
+struct a directed interaction graph Gt = (Vt , Et ), where             and 128 GB of system memory. Optimizing a large-scale
+nodes correspond to visible individuals. Neighborhood rela-            scene containing 100 individuals over 200 frames takes
+tions are determined in the horizontal plane using the HSIP            approximately 4 hours. Reducing the optimization budget
+points (s∗n,t )xz (Sec. 3.2.2), and edges (n, m) ∈ Et connect          to 100 iterations per stage enables approximately hour-level
+spatial neighbors m ∈ Nnt with interaction weights wnm    t
+                                                                       reconstruction while providing a practical trade-off between
+based on spatial proximity. A temporal stride ∆ is used to             efficiency and reconstruction quality.
+evaluate structural consistency over time.
+                                                                       4.3. Comparison
+Crowd Structural Coherence Loss. Let utnm = τ n,t −
+τ m,t denote the 3D relative displacement between neigh-               Following DyCrowd (Wen et al., 2025), we compare
+boring individuals. The crowd structural coherence energy              our method with state-of-the-art crowd reconstruction ap-
+is defined as                                                          proaches on the VirtualCrowd dataset under two tracking set-
+                                   "                                   tings: Unified Tracking-by-Detection, which uses detected
+   (t)
+                  X X
+                                t
+                                                                       trajectories and therefore retains practical identity associa-
+                                     ρ utnm − ut−∆
+                                                       
+  Ecrowd = λcrowd             w̃nm              nm 2                   tion errors, and Ground-truth Object Tracking, which uses
+                  t>∆ (n,m)∈Et                                         ground-truth identity associations to isolate reconstruction
+                                                    #                 quality from tracking errors (Table 2).
+                                 utnm · ut−∆
+                    
+                                         nm
+            + λdir ρ 1 −                              ,
+                            ∥utnm ∥2 ∥ut−∆
+                                        nm ∥2 + ε                      For large-scale dynamic crowd reconstruction, DyCrowd
+                                                          (21)         serves as the primary baseline, together with image-based
+         t
+where w̃nm   is the effective interaction weight, ρ(·) denotes         methods Crowd3D and GroupRec. Under the unified
+the Charbonnier penalty, λdir balances direction-aware con-            tracking-by-detection protocol, our method consistently
+sistency, and ε ensures numerical stability. The loss is eval-         outperforms DyCrowd on global and crowd-level metrics,
+uated only for pairs validly tracked at both t and t − ∆.              achieving a +5.8 improvement in PPDS and a smaller PPDS–
+                                                                       PA-PPDS gap, which indicates better global crowd consis-
+4. Experiments                                                         tency. We also reduce MPJPE by 7.9 mm without relying
+                                                                       on post-hoc alignment. Under the ground-truth object track-
+4.1. Datasets and Evaluation Metrics                                   ing setting, our method achieves the best global consistency,
+                                                                       with PPDS reaching 91.43 (+6.8 over DyCrowd) and MPJPE
+Datasets. We evaluate Crowd4D on VirtualCrowd (Wen
+                                                                       reduced by 9.5 mm.
+et al., 2025), a synthetic benchmark with complex ter-
+rain and dense crowds (60–200 people per scene). Since                 Our method further demonstrates stronger robustness to oc-
+Crowd4D is optimization-based and requires no train-                   clusions than DyCrowd, as shown in Table 3 and Fig. 4,
+ing, VirtualCrowd is used only for quantitative evalua-                particularly under severe occlusions and depth ambiguity.
+tion. We additionally report qualitative results on the real-          Moreover, our reconstructions exhibit more temporally co-
+world PANDA dataset (Wang et al., 2020), which provides                herent and physically plausible motion, and results on the
+gigapixel-level videos but no 3D pose annotations.                     PANDA dataset under flat and non-flat terrain settings show
+
+                                                                   7
+                                        Crowd4D: Scene-Aware Monocular 4D Crowd Reconstruction
+
+ Method                                               PPDS↑           PA-PPDS↑               PCOD↑                  MPJPE↓      PA-MPJPE↓                 WA-MPJPE↓           W-MPJPE↓              ACCEL↓
+     Unified Tracking-by-Detection
+ Crowd3D (Wen et al., 2023)           CVPR’23         82.61            87.98                         91.11          122.99           73.70                       -                  -                     -
+ GroupRec (Huang et al., 2023)         ICCV’23        74.25            75.04                         86.22           89.04           58.98                     82.20              94.34                 165.50
+ DyCrowd (Wen et al., 2025)           TPAMI’25        83.21            89.10                         92.20          69.74            48.57                     68.99              83.39                 15.72
+ Ours                                                 89.04            89.46                         92.92          61.83            45.32                     65.77              74.15                 16.10
+     Ground-truth Object Tracking
+ SLAHMR-Large⋆ (Ye et al., 2023)      CVPR’23         84.41            87.95                         90.34          106.35           69.41                     90.10             108.40                 12.25
+ DyCrowd (Wen et al., 2025)           TPAMI’25        84.66            91.23                         95.38          68.81            45.34                     65.91              80.34                 15.53
+ Ours                                                 91.43            92.38                         96.57          59.35            44.36                     63.98              73.32                 12.93
+Table 2. Quantitative Comparison on VirtualCrowd Dataset. while “-” means unavailable results, “*” indicates methods modified for
+large-scene videos. The best and second-best results are highlighted in bold and underline, respectively.
+Input
+
+
+
+
+                                                                          6              7
+                                                                                                                                                                   1
+DyCrowd
+
+
+
+
+                                                                                                                                                      3
+                                                                                     7                        1                                                                                             3
+                                                                         6
+                                                                                                                                                               2                      2                              2
+                                                              1
+                                                                                                                                                                       3
+                                                                                             5                                                4
+                                                      2
+                                                                                                                                                                                                    4
+                                                                                             4
+                                                                                     3                                                                                                 4
+
+
+
+
+                                                                                     7
+                                                                             6
+                                                                                                                                                                   1
+                                                                                     7
+Ours
+
+
+
+
+                                                                             6                                                                                                                              3
+                                                                                                                                                                                           2
+                                                                                                 5                                                                                                                   2
+                                                          1
+                                                                                                                                                  3
+                                                  2                                                                 1                                                                                   4
+                                                                                                                                                                             3
+                                                                                                 4
+                                                                                                                                                           2                               4
+                                                                                 3                                                            4
+                                              Severe Occlusions and Depth Ambiguity                                                                                        Flat and Non-Flat Terrain
+
+Figure 4. Qualitative comparison between our method and DyCrowd on the VirtualCrowd and PANDA datasets. Identical indices denote
+the same individual. The highlighted regions illustrate results under Flat and Non-Flat Terrain as well as Severe Occlusions and Depth
+Ambiguity.
+                                                                                                                        Scene Consistency ❌                                                                     ay
+           Method                       MPJPE↓        PA-MPJPE↓                                                                                                                                      ction
+                                                                                                                                                                                                           R
+                                                                                                       VideoMimic
+
+
+
+
+                                                                                                                                                                                               Proje
+           DyCrowd (Wen et al., 2025)     66.09               56.21
+           Ours                           64.19               54.81
+Table 3. Quantitative Comparison on Occluded Instances of the                                                           Scene Consistency ✅
+                                                                                                                                                                                                           R    ay
+VirtualCrowd Dataset.                                                                                                                                                                                ction
+                                                                                                                                                                                               Proje
+                                                                                                       Ours
+
+
+
+
+     Method         PPDS↑   PA-PPDS↑     PCOD↑        MPJPE↓           ACCEL↓
+     VideoMimic     80.03     80.09       91.34           62.49         23.80
+     Ours           91.43     92.38       96.57           59.35         12.93                          Figure 5. Qualitative comparison between our method and the
+Table 4. Quantitative comparison with the small-scene method                                           small-scene method VideoMimic (Allshire et al., 2025) from a
+VideoMimic (Allshire et al., 2025) under the ground-truth object                                       side-view perspective on the VirtualCrowd dataset.
+tracking protocol.
+                                                                                                       Table 4. As shown in Fig. 5, this leads to accumulated depth
+                                                                                                       drift and implausible crowd configurations.
+more reasonable alignment with the scene geometry.
+We further adapt the small-scene method VideoMimic (All-                                                4.4. Ablations
+shire et al., 2025) to large-scale scenarios using the same re-
+constructed cameras, scene geometry, and evaluation proto-                                             The Multi-stage Optimization Strategy ablation is evalu-
+col as our method. Since it relies primarily on iterative depth                                        ated on all test videos of VirtualCrowd. For the remaining
+alignment between humans and the scene, VideoMimic                                                     ablations, we use two selected videos from Scene 1 with
+lacks constraints for maintaining globally coherent crowd                                              distinct viewpoints (a higher and a lower view) to facilitate
+layouts at scale, resulting in a substantially lower PPDS                                              controlled analysis.
+of 80.03, compared with 91.43 achieved by our method in                                                 Multi-stage Optimization Strategy. As shown in Table 5,
+
+
+                                                                                                 8
+                                           Crowd4D: Scene-Aware Monocular 4D Crowd Reconstruction
+
+ Stages                        PPDS↑    PA-PPDS↑   PCOD↑   MPJPE↓   ACCEL↓        Method       PPDS↑   PA-PPDS↑    PCOD↑     MPJPE↓    ACCEL↓
+ Stage-1 only                   88.76     89.19    92.67    76.23    34.85              (t)
+ Stage-1 + Stage-2              88.88     89.34    92.89    67.28    62.92        w/o Ecrowd   90.57     91.04      93.44     66.24      16.79
+ Stage-1 + Stage-2 + Stage-3    89.04     89.46    92.92    61.83    16.10        Ours         90.71     91.22      93.57     61.76      16.66
+Table 5. Ablation study of the multi-stage optimization strategy.                Table 7. Ablation study of crowd structural coherence regulariza-
+                                                                                 tion.
+ Method                        PPDS↑    PA-PPDS↑   PCOD↑   MPJPE↓   ACCEL↓
+ w/o joint processing          67.92     68.40     77.38   154.08    41.04
+ w/ joint distance             79.26     79.22     89.50    62.89    25.58       coherent reconstructions across diverse large-scale scenes.
+ w/ direct projection anchor   84.81     87.95     92.22    65.73    24.80
+ Ours (w/ HSIP Alignment)      90.71     91.22     93.57   61.76     16.66
+                                                                                 Nevertheless, Crowd4D remains an offline optimization
+Table 6. Ablation study on human-scene joint processing strategies.              framework with non-negligible computational cost, and its
+                                                                                 performance depends on the quality of monocular scene
+our stage-wise optimization steadily improves performance.                       reconstruction, human initialization, and tracking, espe-
+Stage-1 provides a strong initialization with high global                        cially under severe occlusions. In addition, the absence of
+consistency (PPDS/PCOD = 88.76/92.67) but relatively                             pose-level 3D annotations in real-world large-scale crowd
+large pose error (MPJPE = 76.23). Stage-2 mainly fo-                             datasets limits quantitative evaluation in real scenes. Future
+cuses on pose refinement, reducing MPJPE to 67.28 while                          work will investigate more efficient feed-forward approxi-
+keeping global metrics nearly unchanged (PPDS/PCOD =                             mations and pseudo-label-based learning.
+88.88/92.89). Finally, Stage-3 further refines the full se-
+quence, improving both pose accuracy and motion smooth-                          Acknowledgments
+ness (MPJPE = 61.83, ACCEL = 16.10).
+                                                                                 This work was supported in part by National Key
+Human-Scene Joint Processing. Table 6 compares differ-                           R&D Program of China (2023YFC3082100) and Sci-
+ent strategies for coupling humans with reconstructed scene                      ence Fund for Distinguished Young Scholars of Tianjin
+geometry. Removing joint processing leads to severe scale                        (No.22JCJQJC00040).
+drift and inconsistent crowd layouts. Joint distance con-
+straints partially reduce drift but remain sensitive to noisy
+                                                                                 Impact Statement
+scene points. Projection-based anchors (Crowd3D (Wen
+et al., 2023)) improve global metrics in large scenes but lack                   This paper presents work whose goal is to advance the field
+a temporally stable proxy, making them prone to amplified                        of Machine Learning. On the positive side, the proposed
+3D errors under low viewing angles. In contrast, our HSIP-                       research can be useful for urban design and management,
+based crowd–scene alignment (Sec. 3.4) achieves the best                         public safety, intelligent transportation, crowd simulation,
+global consistency (PPDS, PCOD) and motion smoothness                            etc. Like many other works involving human reconstruc-
+(ACCEL).                                                                         tion from visual data, the work may also lead to concerns
+Crowd Structural Coherence Regularization.                                       regarding privacy. Our method does not reconstruct facial
+                                                                                 details, which are often crucial for individual recognition.
+We ablate the proposed crowd structural coherence term                           The technology should only be used in compliance with
+  (t)
+Ecrowd , which enforces temporal consistency of pairwise                         local regulations/laws, including camera placements and
+relative displacements within HSIP-induced local neighbor-                       transparent communication.
+                                            (t)
+hoods. As shown in Table 7, removing Ecrowd slightly de-
+grades global crowd consistency (PPDS, PA-PPDS, PCOD),                           References
+but leads to a clear drop in pose accuracy, with MPJPE
+increasing from 61.76 to 66.24. This indicates that CSCR                         Allshire, A., Choi, H., Zhang, J., McAllister, D., Zhang,
+plays an important role in stabilizing local crowd structure                       A., Kim, C. M., Darrell, T., Abbeel, P., Malik, J., and
+over time, especially under occlusions, and contributes to                         Kanazawa, A. Visual imitation enables contextual hu-
+more temporally coherent and physically plausible motion.                          manoid control. arXiv preprint arXiv:2505.03729, 2025.
+
+                                                                                 Baradel*, F., Armando, M., Galaaoui, S., Brégier, R., Wein-
+5. Conclusion                                                                      zaepfel, P., Rogez, G., and Lucas*, T. Multi-HMR: Multi-
+                                                                                   person whole-body human mesh recovery in a single shot.
+We proposed Crowd4D for scene-consistent monocular 4D
+                                                                                   In Proc. European Conference on Computer Vision, 2024.
+crowd reconstruction in large, complex-terrain scenes. By
+jointly optimizing crowd motion and a residual global scene                      Chen, Y., Chen, X., Xue, Y., Chen, A., Xiu, Y., and Gerard,
+scale, and introducing HSIP built on SIPC&SIS for scene-                           P.-M. Human3R: Everyone everywhere all at once. arXiv
+aware and temporally stable crowd–scene anchoring to-                              preprint arXiv:2510.06219, 2025.
+gether with CSCR for neighborhood-level temporal coher-
+ence, Crowd4D produces globally consistent and temporally                        Dai, Y., Wang, Z., Lin, X., Wen, C., Xu, L., Shen, S., Ma,
+
+                                                                             9
+                               Crowd4D: Scene-Aware Monocular 4D Crowd Reconstruction
+
+  Y., and Wang, C. HiSC4D: Human-centered interaction               Stanojević, V. and Todorović, B. BoostTrack++: using
+  and 4D scene capture in large-scale space using wearable            tracklet information to detect more objects in multiple
+  IMUs and LiDAR. IEEE Transactions on Pattern Analy-                 object tracking. arXiv preprint arXiv:2408.13003, 2024.
+  sis and Machine Intelligence, 46(12):11236–11253, 2024.
+  doi: 10.1109/TPAMI.2024.3457229.                                  Sun, Q., Wang, Y., Zeng, A., Yin, W., Wei, C., Wang, W.,
+                                                                      Mei, H., Leung, C.-S., Liu, Z., Yang, L., et al. AiOS: All-
+Ge, Z., Liu, S., Wang, F., Li, Z., and Sun, J. YOLOX:                 in-one-stage expressive human pose and shape estimation.
+  Exceeding YOLO series in 2021. arXiv preprint                       In Proceedings of the IEEE/CVF conference on computer
+  arXiv:2107.08430, 2021.                                             vision and pattern recognition, pp. 1834–1843, 2024.
+Goel, S., Pavlakos, G., Rajasegaran, J., Kanazawa, A., and
+                                                                    Sun, Y., Bao, Q., Liu, W., Fu, Y., Michael J., B., and Mei, T.
+  Malik, J. Humans in 4D: Reconstructing and tracking
+                                                                      Monocular, One-stage, Regression of Multiple 3D People.
+  humans with transformers. In Proc. IEEE International
+                                                                      In ICCV, 2021.
+ Conference on Computer Vision, pp. 14783–14794, 2023.
+Huang, B., Ju, J., Li, Z., and Wang, Y. Reconstructing              Veicht, A., Sarlin, P.-E., Lindenberger, P., and Pollefeys, M.
+  groups of people with hypergraph relational reasoning.              GeoCalib: Single-image calibration with geometric op-
+  In Proc. IEEE International Conference on Computer                  timization. In Proc. European Conference on Computer
+ Vision, pp. 14873–14883, 2023.                                       Vision, 2024.
+
+Huang, J., Wen, H., Zhou, T., Lin, H., Lai, Y.-K., and              Wang, J., Chen, M., Karaev, N., Vedaldi, A., Rupprecht,
+  Li, K. RCR: Robust crowd reconstruction with upright               C., and Novotny, D. VGGT: Visual geometry grounded
+  space from a single large-scene image. arXiv preprint              transformer. In Proceedings of the IEEE/CVF Conference
+  arXiv:2411.06232, 2024.                                            on Computer Vision and Pattern Recognition, 2025a.
+Liu, Z., Lin, J., Wu, W., and Zhou, B. Joint optimization           Wang, X., Zhang, X., Zhu, Y., Guo, Y., Yuan, X., Xiang, L.,
+  for 4D human-scene reconstruction in the wild. arXiv               Wang, Z., Ding, G., Brady, D., Dai, Q., et al. PANDA:
+  preprint arXiv:2501.02158, 2025.                                   A gigapixel-level human-centric video dataset. In Proc.
+Loper, M., Mahmood, N., Romero, J., Pons-Moll, G., and               IEEE Conference on Computer Vision and Pattern Recog-
+  Black, M. J. SMPL: A skinned multi-person linear model.            nition, pp. 3268–3278, 2020.
+  ACM Trans. Graphics (Proc. SIGGRAPH Asia), 34(6):
+                                                                    Wang, Y., Wang, Z., Liu, L., and Daniilidis, K. TRAM:
+  248:1–248:16, October 2015.
+                                                                     Global trajectory and motion of 3D humans from in-the-
+Müller, L., Choi, H., Zhang, A., Yi, B., Malik, J., and             wild videos. In European Conference on Computer Vision,
+ Kanazawa, A. Reconstructing people, places, and cam-                pp. 467–487. Springer, 2024.
+ eras. arXiv:2412.17806, 2024.
+                                                                    Wang, Y., Sun, Y., Patel, P., Daniilidis, K., Black, M. J.,
+Paszke, A., Gross, S., Massa, F., Lerer, A., Bradbury, J.,           and Kocabas, M. PromptHMR: Promptable human mesh
+  Chanan, G., Killeen, T., Lin, Z., Gimelshein, N., Antiga,          recovery. In Proceedings of the Computer Vision and
+  L., et al. PyTorch: An imperative style, high-performance          Pattern Recognition Conference, pp. 1148–1159, 2025b.
+  deep learning library. Proc. Adv. Neural Inform. Process.
+  Syst., 32, 2019.                                                  Wang, Y., Zhou, J., Zhu, H., Chang, W., Zhou, Y., Li, Z.,
+                                                                     Chen, J., Pang, J., Shen, C., and He, T. π 3 : Permutation-
+Patel, P. and Black, M. J. CameraHMR: Aligning people
+                                                                     equivariant visual geometry learning. arXiv preprint
+  with perspective. In 2025 International Conference on
+                                                                     arXiv:2507.13347, 2025c.
+  3D Vision (3DV), pp. 1562–1571. IEEE, 2025.
+Pavlakos, G., Choutas, V., Ghorbani, N., Bolkart, T., Osman,        Wen, H., Huang, J., Cui, H., Lin, H., Lai, Y.-K., Fang,
+  A. A., Tzionas, D., and Black, M. J. Expressive body               L., and Li, K. Crowd3D: Towards hundreds of people
+  capture: 3D hands, face, and body from a single image. In          reconstruction from a single image. In Proc. IEEE Con-
+  Proc. IEEE Conference on Computer Vision and Pattern               ference on Computer Vision and Pattern Recognition, pp.
+  Recognition, pp. 10975–10985, 2019.                                8937–8946, 2023.
+
+Ravi, N., Gabeur, V., Hu, Y.-T., Hu, R., Ryali, C., Ma, T.,         Wen, H., Kang, H., Ma, J., Huang, J., Yang, Y., Lin, H., Lai,
+  Khedr, H., Rädle, R., Rolland, C., Gustafson, L., et al.          Y.-K., and Li, K. DyCrowd: Towards dynamic crowd
+  SAM 2: Segment anything in images and videos. In                   reconstruction from a large-scene video. IEEE Trans-
+  International Conference on Learning Representations,              actions on Pattern Analysis and Machine Intelligence,
+  volume 2025, pp. 28085–28128, 2025.                                2025.
+
+                                                               10
+                                Crowd4D: Scene-Aware Monocular 4D Crowd Reconstruction
+
+Yan, M., Wang, X., Dai, Y., Shen, S., Wen, C., Xu, L., Ma,
+  Y., and Wang, C. CIMI4D: A large multimodal climbing
+  motion dataset under human-scene interactions. In Pro-
+  ceedings of the IEEE/CVF Conference on Computer Vi-
+  sion and Pattern Recognition (CVPR), pp. 12977–12988,
+  June 2023.
+Yang, Z., Zeng, A., Yuan, C., and Li, Y. Effective whole-
+  body pose estimation with two-stages distillation. In Proc.
+  IEEE International Conference on Computer Vision, pp.
+  4210–4220, 2023.
+Ye, V., Pavlakos, G., Malik, J., and Kanazawa, A. De-
+  coupling human and camera motion from videos in the
+  wild. In Proc. IEEE Conference on Computer Vision and
+  Pattern Recognition, pp. 21222–21232, 2023.
+Zhao, Y., Wang, T. Y., Raj, B., Xu, M., Yang, J., and Huang,
+  C.-H. P. Synergistic global-space camera and human
+  reconstruction from videos. June 2024.
+
+Zhen, J., Fang, Q., Sun, J., Liu, W., Jiang, W., Bao, H.,
+  and Zhou, X. SMAP: Single-shot multi-person absolute
+  3D pose estimation. In Proc. European Conference on
+  Computer Vision, pp. 550–566. Springer, 2020.
+
+
+
+
+                                                                11
+                                 Crowd4D: Scene-Aware Monocular 4D Crowd Reconstruction
+
+A. All Energy Functions.
+This appendix summarizes the energy terms used in the three-stage optimization strategy described in Sec. 3. The
+correspondence between each energy term and its weight is provided in the main text (Table 1). Note that the HSIP-based
+                                       (xz)  (y)        (proj)
+crowd–scene alignment energies EHSIP , EHSIP , and EHSIP are introduced in the main text (Sec. 3.4), and the CSCR term
+ (t)
+Ecrowd is defined in Sec. 3.5; thus, they are not repeated here.
+Observation Consistency Constraint. To align the reconstructed motion with visual observations, we employ a scale-
+normalized 2D reprojection loss. Using the camera parameters C¯t , we project the world-space joints Jn,t,j onto the image
+plane via the projection operator
+                         p        π(·). To balance gradients across individuals at varying depths, we normalize the residuals
+by a scale factor Ān,t = wn,t hn,t , derived from the bounding box. The energy is computed over the set of valid keypoints
+Ωreproj :
+                                                                                           2
+                                                     X          π(Jn,t,j ; C¯t ) − J̄2D
+                                                                                     n,t,j
+                                   Eproj = λJ2D                                              .                           (22)
+                                                                         Ān,t
+                                                  (n,t,j)∈Ωreproj                          2
+
+
+Per-individual Temporal Smoothness. To reduce temporal jitter and improve motion stability, we impose per-individual
+temporal smoothness constraints on global translation, root orientation, and articulated body pose. Concretely, we penalize
+                                     (t)
+inter-frame translation velocities (Eτ ) and relative angular velocities in the Lie algebra for both the root orientation and
+                  (t)     (t)
+joint rotations (Eγ and Eθ ).
+For global translation τ n,t , we penalize inter-frame velocities:
+                                                         X                         2
+                                            Eτ(t) = λτ           ∥τ n,t+1 − τ n,t ∥2 .                                  (23)
+                                                          (n,t)∈Ωadj
+
+
+We apply a unified regularization strategy for both root orientation γ and body pose θ. For body pose, we average the loss
+over J joints to keep gradients balanced across joints. Let R(v) denote the rotation matrix corresponding to an axis-angle
+vector v. The losses are formulated as:
+                                              X                                   2
+                                Eγ(t) = λγ             log R(γ n,t )⊤ R(γ n,t+1 ) 2                                   (24)
+                                             (n,t)∈Ωadj
+                                                              J
+                                   (t)
+                                               X          1X            (j)        (j)      2
+                                 Eθ = λθ                        log R(θ n,t )⊤ R(θ n,t+1 )     ,
+                                                          J j=1                              2
+                                            (n,t)∈Ωadj
+
+
+Shape Prior. To prevent unnatural body shapes, we impose an isotropic Gaussian prior on the SMPL shape parameters:
+                                                       X             2
+                                              Eβ = λβ          β n,t 2 .                                        (25)
+                                                                  (n,t)∈Ω
+
+
+Pose Prior. We regularize the articulated pose with a Gaussian prior in the VPoser latent space. Let z̃θn,t ∈ R32 denote the
+optimizable VPoser (Pavlakos et al., 2019) latent code corresponding to the SMPL pose at frame t. We define
+                                                              X            2
+                                               θ
+                                              Eprior = λprior
+                                                        θ           z̃θn,t 2 ,                                          (26)
+                                                                    (n,t)∈Ω
+
+where the equivalence holds up to an additive constant.
+Motion Prior. We follow DyCrowd (Wen et al., 2025) and introduce motion-level priors and group-level consistency to
+stabilize long sequences under occlusions. For each person n, we split the motion into Sn overlapping temporal segments
+and optimize a motion latent code zξn,s for each segment. Assuming a standard normal prior, we penalize deviations in the
+latent space:
+                                                              Sn
+                                                ξ
+                                                            XX           2
+                                               Eprior = λmp        zξn,s 2 .                                         (27)
+                                                                    n s=1
+
+
+                                                                    12
+                               Crowd4D: Scene-Aware Monocular 4D Crowd Reconstruction
+
+Contact Stationarity. Let cn,t,j ∈ [0, 1] denote the predicted contact confidence of joint j for person n at time t, and let
+∆t Jn,t,j = Jn,t+1,j − Jn,t,j denote the inter-frame joint displacement in world space. We encourage contacting joints to
+remain stationary:
+                                       (v)
+                                                         XXX                          2
+                                     Econtact = λcontact           cn,t,j ∥∆t Jn,t,j ∥2 .                              (28)
+                                                        n      t    j
+
+
+Segment Connection. To ensure continuity across adjacent segments, we penalize the joint discrepancy between the last
+frame sl of a segment and the first frame s+
+                                           1 of its subsequent segment:
+
+                                                            X                       2
+                                          Econnect = λcon           Jn,s+ − Jn,sl       .                              (29)
+                                                                        1           2
+                                                            n,s
+
+
+Group-guided AMC. To recover occluded or unreliable motions in video sequences, we adopt the Asynchronous Motion
+Consistency (AMC) loss from DyCrowd (Wen et al., 2025). Within each segment, unreliable individuals are aligned to
+confident group references using Soft-DTW:
+                                               X X
+                                   EAMC = λamc       wn,s sDTW(Pn,s , Pref,s ).                               (30)
+                                                    s   n∈Us
+
+Here, Pn,s denotes the pose sequence of person n in segment s, and Pref,s is selected from the most confident group member
+or a canonical template when unavailable.
+
+
+
+
+                                                               13
+

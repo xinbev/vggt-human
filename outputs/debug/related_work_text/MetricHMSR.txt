@@ -1,0 +1,914 @@
+                                                                           MetricHMSR:
+                                                     Metric Human Mesh and Scene Recovery from Monocular Images
+
+                                          Chentao Song∗1 , He Zhang∗1 , Haolei Yuan3 , Haozhe Lin1 , Jianhua Tao1 , Hongwen Zhang†2 , Tao Yu†1
+                                                       1
+                                                         Tsinghua University, 2 Beijing Normal University, 3 Beihang University
+arXiv:2506.09919v3 [cs.CV] 31 Mar 2026
+
+
+
+
+                                                                                                           b
+                                                                             a
+
+
+
+
+                                                                                                                                                                        II.
+
+
+
+                                                                             c
+                                                                                                           d
+
+
+
+
+                                                                                                               I.                                                      III.
+                                         Figure 1. MetricHMSR (Metric Human Mesh and Scene Recovery) reconstructs human pose, metric shape, global position, as well as
+                                         scene geometry from a monocular image. Left: metric-consistent human–scene reconstruction. Right: globally consistent 3D trajectories
+                                         obtained by applying MetricHMSR independently to each frame.
+
+                                                                     Abstract                                       metric human as a geometric anchor, we further refine
+                                                                                                                    monocular metric depth estimation to achieve more accu-
+                                         We introduce MetricHMSR, a novel framework for recov-                      rate 3D alignment between humans and scenes. Compre-
+                                         ering metric human meshes and 3D scenes from a sin-                        hensive experiments demonstrate that our method achieves
+                                         gle monocular image. Existing methods struggle to re-                      state-of-the-art performance on both human mesh recov-
+                                         cover metric scale due to monocular scale ambiguity and                    ery and metric human–scene reconstruction. Project Page:
+                                         weak-perspective camera assumptions. Moreover, their                       https://Metaverse-AI-Lab-THU.github.io/MetricHMSR.
+                                         fully coupled feature representations make it difficult to
+                                         disentangle local pose from global translation, often re-
+                                         quiring multi-stage pipelines that introduce accumulated
+                                                                                                                    1. Introduction
+                                         errors. To address these challenges, we propose Met-
+                                         ricHMR (Metric Human Mesh Recovery), which incorpo-                        Human mesh [6, 7, 15, 20, 26] and scene recovery [8, 22,
+                                         rates a bounding camera ray map representation to pro-                     49] (HMSR) from a single image is a fundamental prob-
+                                         vide explicit metric cues for human reconstruction, together               lem in computer vision and graphics. In particular, physi-
+                                         with a Human Mixture-of-Experts (HumanMoE) that dy-                        cally consistent metric reconstruction is crucial for emerg-
+                                         namically routes image features to specialized experts, en-                ing paradigms such as physical AI and embodied AI.
+                                         abling the disentangled perception of local human pose                         Since HMR [20] has similarly pioneered the first end-to-
+                                         and global metric position. Leveraging the recovered                       end approach for 3D human pose and shape estimation. The
+                                           * Equal contribution.                                                    field has progressively advanced towards achieving higher
+                                           † Corresponding author.                                                  precision in both 2D overlay [26, 63, 64] and local pose esti-
+mation [7, 12, 15, 24, 39]. However, metric properties, such      ment while preserving shared representations. HumanMoE
+as metric shape and position, have rarely been considered.        consists of a Patch MoE and a Global MoE, which capture
+Bridging the gap from local to global and from plausible to       complementary local and global context. The Patch MoE
+metric remains challenging.                                       processes image patches to learn specialized representations
+    Early approaches adopt weak-perspective assumptions           for different semantic regions, such as body parts or back-
+to simplify camera projection [15, 24, 26, 63, 64]. Sub-          ground elements, while the Global MoE captures holistic
+sequent works explore improved camera modeling [25, 35,           image-level information. Together, they enable accurate re-
+52, 58], while others [2, 53] assume full-perspective pro-        covery of metric human mesh from a single image.
+jection with known camera intrinsics when available. No-             Finally, metric human mesh provides a geometric anchor
+tably, CLIFF [28] is the first method to explicitly account       for scene understanding. We further introduce a human-
+for the influence of bounding boxes on both human rota-           guided metric depth refinement module that learns per-pixel
+tion and global position. However, these approaches ei-           depth transformations conditioned on the reconstructed hu-
+ther employ camera models that deviate significantly from         man mesh. This module refines MMDE and produces more
+real-world imaging conditions or fail to capture the role of      physically consistent human–scene compositions. By in-
+camera intrinsics in metric reconstruction and to disentan-       tegrating metric human reconstruction with human-guided
+gle features related to local pose and global position. An-       scene perception, we obtain a unified framework termed
+other line of methods [41, 42, 44, 58] attempts to introduce      MetricHMSR, which enables metric-scale reconstruction of
+additional trajectory estimation modules to derive plausible      both humans and scenes from a single image.
+human positions and motion trajectories. [51, 53] directly           In summary, our contributions are as follows:
+integrate monocular metric depth estimation (MMDE) ap-            • We propose MetricHMR, a novel human mesh recovery
+proaches [3, 57] to obtain metrical results. However, in-           method that encodes metric cues via bounding camera
+troducing additional modules increases system complexity,           rays and employs HumanMoE to disentangle features of
+while reliance on external monocular depth estimation in-           local pose and global position features.
+herently limits performance to that of the depth predictor.       • We propose MetricHMSR, a unified framework for metric
+    Besides, the Vision Transformer (ViT) has garnered sig-         human mesh and scene recovery. It further introduces a
+nificant attention due to its exceptional performance[12]. It       human-guided metric depth refinement module that lever-
+divides the input image into distinct patches; however, not         ages reconstructed human mesh priors to produce consis-
+all regions contribute equally to metric human mesh recov-          tent metric depth and human–scene reconstruction.
+ery [62], as different regions carry distinct types of informa-   • Comprehensive experiments demonstrate that Met-
+tion. Current architectures process all tokens holistically,        ricHMSR achieves state-of-the-art (SOTA) performance
+struggling to capture the nuanced similarities and differ-          in both human mesh recovery and MMDE.
+ences between image patches.
+    To overcome the aforementioned problems, our insights         2. Related Work
+are: (1) The camera intrinsic parameters and bounding box
+information are associated with the 3D position of the hu-        2.1. Human Mesh Recovery with Camera Modeling
+man. (2) Recent foundation models [49] have validated that        Human Mesh Recovery is a classic task that has seen
+all key 3D attributes can be learned by a unified architecture    significant progress. HMR [20] is the first end-to-end
+without incorporating specialized modules. (3) We argue           method to regress 3D human pose and shape. Numerous
+that feature disentanglement is beneficial.                       methods have emerged, focusing on improving the accu-
+    Hence, we first propose MetricHMR, a module that si-          racy of 2D overlay [26, 63, 64] and local pose estima-
+multaneously estimates local pose, metric shape, and metric       tion [7, 12, 15, 24, 33, 39]. Most of the methods above
+position. Following [32], we represent camera parameters          primarily rely on the weak-perspective projection assump-
+using pixel-aligned camera rays and construct a bounding          tion. Researchers [12, 23] have gradually recognized that
+ray map for the cropped image. The cropped image and              the incorrect camera model is a key limiting factor prevent-
+the corresponding bounding ray map are jointly fed into the       ing further improvements in accuracy.
+network, where the representation implicitly encodes both            To tackle this limitation, some methods [23, 25, 28, 35,
+camera intrinsics and bounding box information, mitigating        52, 54, 58] have proposed various approaches for camera
+the location ambiguity introduced by image cropping [28]          modeling or intrinsic parameter estimation, primarily by
+and providing explicit metric cues for reconstruction.            positing a relationship between the focal length and the di-
+    To jointly model pose, metric shape, and metric po-           mensions of the full image. These methods enhance accu-
+sition, we propose the HumanMoE. Built upon the MoE               racy in scenarios with unknown camera parameters, albeit
+framework [34], HumanMoE dynamically routes features              with a camera representation that lacks precision. This has
+to specialized experts, enabling feature-level disentangle-       prompted another branch of research [2, 17, 28, 53] to di-
+                                                                                                    MetricHMR
+                  crop Camera Ray
+                  scale Encoder                                             Shape Head     𝜷
+                                                  HumanMoE
+Bounding ray map                                                             Pose Head
+                                           Patch MoE       Global MoE                      𝜽
+     K
+
+                                                                           Position Head   𝒕𝒈𝒍𝒐𝒃𝒂𝒍 Metric human
+                  crop     Image
+                  scale   Encoder
+                                                                         Human depth and mask
+    Input image
+
+
+                                                  U-Net                  U-Net                                     Humans and scenes
+   MapAnything                                                ViT
+                                                 Encoder                Decoder
+                                                                                                                     in metric scale
+                          Initial depth          Dense metric depth refinement                 Metric scene
+
+Figure 2. Overview of MetricHMSR. Given a single image, the framework jointly recovers the metric human mesh and the scene. The
+cropped image and the corresponding bounding ray map are encoded into tokens and processed by HumanMoE, which consists of a Patch
+MoE and a Global MoE to capture patch-level and image-level representations. The output heads predict the SMPL pose, shape, and global
+position. The recovered metric human mesh is then used to refine the depth predicted by MapAnything, producing geometrically consistent
+metric depth and enabling accurate human–scene reconstruction. ⊕ denotes concatenation.
+
+
+rectly employ full perspective projection and ground-truth              ods relying on existing modules are inherently constrained
+camera intrinsics, wherever possible. By more closely ap-               by their performance. We empirically observe that recover-
+proximating the real camera, this model minimizes projec-               ing a metric human mesh does not require building upon or
+tive errors [12] and holds significant potential, especially            introducing additional specialized modules.
+given that many methods [19, 38, 49] can now estimate in-                  Our method, MetricHMSR, can recover the local pose,
+trinsic parameters from images.                                         metric shape, and metric position with a unified model with-
+                                                                        out introducing specialized modules.
+2.2. Human Mesh Recovery in Global Space
+Beyond estimating the human body’s own pose, recon-                     2.3. Metric Scene Recovery from Monocular Image
+structing its global position and trajectory in space is also           Monocular metric depth estimation [3, 15, 37, 38, 57, 59,
+essential. Methods relying solely on vision usually in-                 65] has long been a fundamental challenge in computer
+corporate a dedicated global estimation module, distinct                vision. By leveraging camera intrinsic parameters, metric
+from camera pose estimation, specifically for estimating 3D             scene reconstruction can be achieved. The development of
+global position and trajectory.                                         metric depth estimation has brought new opportunities and
+    Sun et al. [43, 44] introduce the Bird’s Eye View to infer          inspirations to human pose estimation. Recent advances in
+3D position. SLAMHMR [58] uses DROID-SLAM [45] to                       large feed-forward transformer models, such as VGGT [49],
+estimate camera pose and introduces an optimization mod-                demonstrate the capability to directly infer all key 3D at-
+ule to obtain 3D motion trajectory. WHAM [42] incorpo-                  tributes of scenes from single images. Human3R [8] can re-
+rates the trajectory decoder and refiner to regress the global          construct both 3D scenes and human bodies. MapAnything
+trajectory. GVHMR [41] proposes the Gravity-View coor-                  [22] regresses the metric 3D scene geometry and cameras,
+dinate system to estimate the global motion.                            achieving the current state-of-the-art performance.
+    The development of monocular metric depth estima-                       Based on MapAnything, we utilized the human mesh as a
+tion [3, 38, 57, 59] has brought new opportunities and in-              guide to achieve more accurate metric scene reconstruction.
+spirations to human mesh recovery. BLADE [51] utilizes                  This ultimately achieves the recovery of overlayed human
+DepthAnythingV2 [57] to estimate the depth of the pelvis                and 3D scene in metric scale.
+near the camera, to accurately recover the focal length and
+3D translation. TRAM [53] uses ZeoDepth [3] to esti-                    3. MetricHMSR
+mate the metric scale of humans. Human3R [8], built upon
+CUT3R [50], a 4D metric reconstruction method, achieves                 We proposed MetricHMSR to regress the metric human
+4D human–scene reconstruction in the world frame. Meth-                 mesh and scene from a monocular image. MetricHMSR
+consists of two components: MetricHMR for metric hu-                                                                                                                                                                                             Input
+                                                                                               𝑏′
+man mesh recovery, and a human-guided metric depth re-                                        𝑐𝑥′
+finement module for scene reconstruction. The pipeline is
+                                                                             𝑐𝑦′ 𝑐 ′
+shown in Fig. 2.
+3.1. MetricHMR                                                        Bbox info. Cam. info.                                              Bbox visual cone                                                                   Ray map
+
+We use SMPL [31], a linear parametric model, to represent             Figure 3. Bounding ray map representation. Left: bounding box
+the human body. Given a single RGB image I as input,                  and camera representation in CLIFF. Middle: bounding box visual
+our goal is to recover the SMPL pose parameters θ ∈ R72 ,             cone. Right: camera ray representation.
+shape parameters β ∈ R10 , and translation tglobal ∈ R3 ,
+corresponding to the local pose, metric body shape, and
+                                                                      sic matrix K ′ of the transformed image can be expressed as:
+metric 3D position of the human body.
+   To this end, we propose MetricHMR, a MoE-based
+framework for metric human mesh recovery, as illustrated                        K^{\prime } = \left [ \begin {array}{ccc} f_x/s & 0 & (c_x-u_{bbox})/s \\ 0 & f_y/s & (c_y-v_{bbox})/s \\ 0 & 0 & 1 \end {array} \right ]. \label {eq:crop_k}            (2)
+in Fig. 2. MetricHMR consists of two key components: a
+bounding ray map that provides explicit metric cues for 3D
+position, and HumanMoE that enables feature-level disen-              Then, we use Eq.(1) to calculate the camera ray bundle cor-
+tanglement between local pose and global position. The                responding to the transformed image. For images with un-
+network takes the cropped image and the corresponding                 known camera parameters, we approximate the focal length
+bounding camera ray map as input. The ray map is con-                 using the longer side of the image and set the principal point
+structed from the camera intrinsic parameters following the           to the image center.
+formulation described in Sec. 3.2. When intrinsics are un-
+                                                                      3.3. HumanMoE
+available, they are estimated using AnyCalib [47].
+   For feature extraction, we employ ViTPose [56] and ViT-            Existing human mesh recovery methods commonly employ
+Large-Patch16-224 [11] as the respective encoders for the             dense multi-layer perceptrons (MLP) [20, 28] or transform-
+image and the ray map. The encoded features are concate-              ers [53] as their decoder. However, these approaches may
+nated and jointly passed through the proposed HumanMoE                present two potential problems: (1) a single decoder fea-
+modules to capture both local and global feature representa-          ture may be insufficient to represent the variations of local
+tions. Finally, MLP heads regress the pose θ, shape β, and            pose, metric shape, and metric 3D position across diverse
+metric 3D translation tglobal .                                       scenarios; and (2) dense networks may struggle to decouple
+                                                                      hierarchical image features. Given the demonstrated power
+3.2. Bounding Ray Map                                                 of MoE in foundation models [10, 30], we propose Human-
+Existing human mesh recovery methods suffer from the fol-             MoE, a unified module to comprehensively learn human-
+lowing limitations: (1) Focal length influences the percep-           related knowledge across different dimensions.
+tion of metric distance, and the subject’s 2D image posi-                 Mixture-of-Experts (MoE) is commonly composed of
+tion correlates with global 3D location (see Supp. Mat. for           two core components: (1) MoE Layer: Consists of N feed-
+details). However, current networks struggle to effectively           forward networks (FFNs), each referred to as an ”expert”
+leverage this information for metric human mesh recovery.             (ei (·), i = 1, 2, ..., N ). These experts operate as indepen-
+(2) Cropping and scaling operations impair the network’s              dent modules, each designed to learn specialized domain
+ability to perceive metric information.                               knowledge. (2) Router: Functions as a gating module, im-
+   To address the aforementioned problems, we incorporate             plemented by a learnable MLP. Given the token x, it au-
+the bounding ray map, a pixel-aligned camera representa-              tomatically computes the probability gi (x) of it being as-
+tion, into our framework to comprehensively represent hu-             signed to each expert. The final output of the MoE is de-
+man image position, camera intrinsics, and the effects of             rived from a linear weighted combination of the outputs of
+cropping and scaling operations, as shown in Fig. 3.                  the selected experts and their corresponding router weights.
+   Assuming the intrinsic parameters of the original im-              The output of the corresponding top-K experts is
+age is K, with focal lengths (fx , fy ) and principal point
+(cx , cy ). Following [32], the camera ray d corresponding to
+                                                                                                             \mathrm {MoE}(x)=\sum _{i=0}^K g_i(x)e_i(x), \label {eq:moe}                                                                                (3)
+a pixel (u, v) on the image is calculated as:
+
+                         d = K^{-1}[u,v,1]. \label {eq:ray}    (1)
+                                                                      MoE layer design. Here we employ the soft MoE [34] to
+  Assuming the top-left corner of the cropping bounding               replace the feed-forward networks (FFNs) in dense trans-
+box is at (ubbox , vbbox ) and the scaling factor is s, the intrin-   former blocks. Compared to standard MoE, where each to-
+                                                                              4 0.29 0.11 0.11 0.12 0.32 0.29 0.11 0.38 0.27 0.29 0.20 0.39 0.31 0.39 0.32 0.36 0.42 0.55
+
+                                                                              3 0.07 0.08 0.05 0.02 0.31 0.19 0.22 0.18 0.43 0.37 0.32 0.32 0.37 0.38 0.07 0.08 0.08 0.09
+
+
+
+
+                                                                     Expert
+                                                                              2 0.08 0.34 0.65 0.46 0.28 0.35 0.54 0.30 0.11 0.17 0.32 0.17 0.22 0.09 0.07 0.07 0.04 0.04
+
+                  1        2       3        4   5    6                        1 0.56 0.47 0.20 0.40 0.08 0.17 0.14 0.14 0.19 0.17 0.15 0.12 0.10 0.13 0.54 0.49 0.46 0.31
+
+
+
+
+                                                                                 nose
+                                                                                        right shoulder
+                                                                                                                       left shoulder
+                                                                                                                                                        chest
+                                                                                                                                                                                        right elbow
+                                                                                                                                                                                                                         left elbow
+                                                                                                                                                                                                                                                          right knee
+                                                                                                                                                                                                                                                                                           left knee
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    left ear
+                                                                                                                                                                                                                                                                                                                            right wrist
+                                                                                                                                                                                                                                                                                                                                                             left wrist
+                                                                                                                                                                                                                                                                                                                                                                                              right ankle
+                                                                                                                                                                                                                                                                                                                                                                                                             left ankle
+                                                                                                                                                                                                                                                                                                                                                                                                                          right hip
+                                                                                                                                                                                                                                                                                                                                                                                                                                      left hip
+                                                                                                                                                                                                                                                                                                                                                                                                                                                 right eye
+                                                                                                                                                                                                                                                                                                                                                                                                                                                             left eye
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        right ear
+             Ray Expert
+             Routed Image Expert       Router
+             Shared Image Expert                                                                                                                                                                                                                                                                                                   Joint
+                                                                                   0.0                                                               0.1                                                                                0.2                                                                                0.3                                                                             0.4                        0.5                          0.6
+
+
+Figure 4. The architecture of MoE Layer. We designed a ray ex-        Figure 5. Routing heatmap of the deepest (last) MoE layer for
+pert to learn features from camera rays, 4 routed image experts to    image feature on 3DPW.
+process specialized image knowledge, and a shared image expert
+to capture common image knowledge.
+                                                                      behavior, we analyze the expert assignments of patches con-
+                                                                      taining 2D human keypoints on the 3DPW dataset and com-
+ken is only processed by the top-K experts, Soft MoE as-              pute the corresponding routing statistics, as shown in Fig. 5.
+signs a weighted combination of tokens to each expert. This           Despite potential noise from keypoint detection errors and
+approach demonstrates better training stability and expert            coarse patch partitioning, the large-scale statistics provide
+scalability. We also introduce shared experts [10, 16] that           reliable evidence for this observation. For Global MoE, we
+remain active for all tokens and are designed to capture fun-         analyze details in the supplementary materials.
+damental common knowledge. Shared expert prevents re-
+dundant learning of generic patterns across specialized ex-           MoE Loss. Following prior works [13, 40], to encourage
+perts, thereby optimizing model capacity utilization. We de-          balanced expert utilization, we add a soft load-balancing
+sign 4 routed experts to learn specialized visual knowledge,          loss on the gating probabilities. Let pi denote the average
+and a shared expert to capture common visual knowledge.               routing probability of expert i over all tokens in a batch.
+We also design a ray expert specifically for processing ray           The auxiliary loss is defined as
+tokens. The architecture is illustrated in Fig. 4.
+                                                                                                                                                                                                                              \mathcal {L}_{\text {aux}} = \lambda \, K \sum _{i=1}^{K} p_i^{2},                                                                                                                                                                                    (4)
+HumanMoE. HumanMoE comprises two components: a
+Patch MoE and a Global MoE, which model representations
+                                                                      where PK is the number of experts and λ is the weights.
+at different levels. In metric human mesh recovery, image
+                                                                      Since i pi = 1, this term is minimized when all experts
+patches play distinct roles and vary in importance. To cap-
+                                                                      are used uniformly, i.e., pi = 1/K, and increases when
+ture this heterogeneity, we introduce the Patch MoE, which
+                                                                      routing collapses onto a few experts, thus promoting a more
+dynamically routes patches to specialized experts based on
+                                                                      even load distribution. This loss is introduced solely to bal-
+semantic content. Patches with similar semantics or roles
+                                                                      ance the usage among the routed image experts.
+are processed by the same expert, enabling effective and
+explicit feature-level disentanglement. Building on this, we
+further introduce the Global MoE to aggregate full-image              Over-complete Loss Design for MetricHMR.                                                                                                                                                                                                                                                                                                                                               We train
+representations and capture global contextual information.            our model with the following losses:
+This complements the Patch MoE by enabling consistent                                      \begin {aligned} \mathcal {L} =& \lambda _{J_{2D}}\mathcal {L}_{J_{2D}}+\lambda _{J_{3D}}\mathcal {L}_{J_{3D}}+\lambda _{V_{3D}}\mathcal {L}_{V_{3D}}+\\ &\lambda _{\theta }\mathcal {L}_{\theta }+\lambda _{\beta }\mathcal {L}_{\beta }+\lambda _{h}\mathcal {L}_{h}. \end {aligned} \label {eq:hmr_losses}
+reasoning about metric properties across the entire image.                                                                                                                                                                                                                                                                                                                                                                                                                          (5)
+
+Token routing. Here, we analyze the routing behavior of               LJ2D , λJ3D , LV3D , Lθ , Lβ , and Lh are the loss of 2D key-
+HumanMoE and its role in disentangling features related               points, 3D joints, vertices, SMPL pose, SMPL shape and
+to local pose and global position. The deepest (last) MoE             SMPL body height. λJ2D , λJ3D , λV3D , λθ , λβ and λh
+layer exhibits the strongest semantic representation [16].            are their corresponding weights. For detailed definitions of
+For Patch MoE, distinct body regions are consistently as-             each loss term, please refer to the supplementary material.
+signed to different experts, while similar body parts across             In particular, VGGT [49] suggests that over-complete
+images are predominantly routed to the same experts, in-              predictions during training can bring substantial perfor-
+dicating emergent semantic specialization. To quantify this           mance gains, even when some variables are related through
+closed-form relationships. Inspired by this idea, we adopt                                                                                                                                                                             where \protect \mathcal  {L}_{\text {depth}},\,\mathcal {L}_{\text {anchor}},\,\mathcal {L}_{\text {tv}},\,\mathcal {L}_{\text {var}} denote the depth regression
+over-complete losses in our framework. For example, in hu-                                                                                                                                                                             loss on valid pixels, the anchor consistency loss on HMR
+man body modeling, height and shape parameters are inher-                                                                                                                                                                              front-surface points, the total-variation regularization on
+ently coupled. Prior work [9] shows that height supervision                                                                                                                                                                            (s,b), and the spatial variance regularization on (s,b) to
+improves the accuracy of human mesh regression.                                                                                                                                                                                        keep them near their global means, respectively. The \lambda ’s
+                                                                                                                                                                                                                                       are scalar weights.
+3.4. Human-Guided Metric Depth Refinement
+Human scale and body structure provide strong priors for                                                                                                                                                                               4. Experiments
+MMDE. Human [65] leverages this idea by inpainting hu-
+mans into images, estimating human meshes with HMR
+                                                                                                                                                                                                                                       4.1. Implementation Details
+2.0 [15], and using them as metric references to scale                                                                                                                                                                                 We train MetricHMR on BEDLAM [4], AIC [55],
+monocular depth predictions. However, since HMR 2.0                                                                                                                                                                                    COCO [29], MPII [1], and 3DPW [48] for 40 epochs with
+cannot recover metric body shape or global 3D position,                                                                                                                                                                                a weight decay of 1 × 10−4 . We use the AdamW optimizer
+and Metric from Human only achieves global scaling, its                                                                                                                                                                                with a batch size of 64 on a single NVIDIA A100 GPU, and
+performance remains limited in accuracy.                                                                                                                                                                                               set the learning rate to 1 × 10−5 . For the depth refinement
+    In contrast, MetricHMR recovers human meshes in met-                                                                                                                                                                               network, we further train the model on the PROX RGB-D
+ric 3D space. This enables us to use the reconstructed met-                                                                                                                                                                            dataset [18] to learn human-aware metric depth correction.
+ric human mesh as a geometric reference to refine MMDE.
+Consequently, the human mesh can align not only with the                                                                                                                                                                               4.2. Comparisons
+2D image but also with the 3D scene geometry.                                                                                                                                                                                          We present comprehensive evaluations of MetricHMSR,
+                                                                                                                                                                                                                                       benchmarking it against state-of-the-art methods in human
+                                                                                                                                                                                                                                       pose estimation. Following the established convention in
+                                                                                                                                                                                                                                       Human3R [8], we categorize the baselines into online and
+                                                                                                                                                                                                                                       offline paradigms. Offline methods typically employ batch
+                                                                                                                                                                                                                                       processing of complete video sequences to achieve globally
+                                                                                                                                                                                                                                       consistent reconstructions, thereby pursuing globally opti-
+                                 Original image
+                                                                                                                                                                                                                                       mal solutions. In contrast, online methods operate via a
+                                                                                                                                                                                                                                       streaming framework that recursively reconstructs human
+                                                                                                                                        Before refinement                                                                              motion as new frames arrive, maintaining low memory and
+                                                                                                                                            (1.59m)                                                                                    computational footprints. Within this framework, we sys-
+                                                                                                   After refinement                                                                                                                    tematically evaluate the accuracy of our method in local
+                                                                                                       (1.68m)
+                                                                                                                                                                                                                                       pose estimation and global trajectory recovery. We further
+                                                                                                                                                                                                                                       compare MetricHMSR against state-of-the-art methods un-
+ Figure 6. Illustration of human-guided metric depth refinement.                                                                                                                                                                       der varying camera intrinsic settings.
+                                                                                                                                                                                                                                          We first evaluate human mesh recovery from both lo-
+   To this end, we introduce a per-pixel metric depth refine-                                                                                                                                                                          cal pose and global motion. For local pose estimation, we
+ment module that calibrates monocular depth using metric                                                                                                                                                                               report per-vertex error (PVE), mean per-joint position er-
+human meshes as geometric references (Fig. 6).                                                                                                                                                                                         ror (MPJPE), and Procrustes-aligned MPJPE (PA-MPJPE).
+   Given a depth map z_{\text {in}}(x) predicted by MapAny-                                                                                                                                                                            For global motion and trajectory estimation, we adopt WA-
+thing [22], a hybrid UNet–ViT backbone predicts spatially                                                                                                                                                                              MPJPE100 (WA-M.), W-MPJPE100 (W-M.), Root Transla-
+varying affine fields (s(x),\,b(x)) to correct the depth:                                                                                                                                                                              tion Error (RTE), and Egocentric-frame Root Velocity Er-
+                                                                                                                                                                                                                                       ror (ERVE). RTE is reported in percentage (%), ERVE in
+                                                              \hat z(x)=s(x)\, z_{\text {in}}(x) + b(x).                                                                                                                         (6)   mm/frame, and all other metrics are reported in mm.
+The predicted fields are locally adaptive while regularized
+to remain globally smooth and coherent, enabling metric-                                                                                                                                                                               Global trajectory estimation. For global motion and tra-
+scale calibration with gentle local adjustments.                                                                                                                                                                                       jectory estimation, MetricHMSR exhibits robust and com-
+       To anchor the solution to an absolute metric scale, we                                                                                                                                                                          petitive performance across both the EMDB-2 [21] (with
+project the human mesh onto the image and extract the                                                                                                                                                                                  dynamic camera) and RICH (with static camera) datasets
+visible-surface depth per pixel to form a sparse anchor map                                                                                                                                                                            under varying camera parameter conditions, as shown in
+z_{\text {hmr}}(x) with mask M_a(x). An anchor consistency loss is                                                                                                                                                                     Tab. 1, Tab. 2, and Tab. 3. Notably, in dynamic camera
+applied at these pixels during training. The overall loss is                                                                                                                                                                           scenarios, MetricHMSR achieves performance on par with
+                                                                                                                                                                                                                                       SOTA offline methods, regardless of whether camera pa-
+     \mathcal {L} = \lambda _d\,\mathcal {L}_{\text {depth}} + \lambda _a\,\mathcal {L}_{\text {anchor}} + \lambda _{\mathrm {tv}}\,\mathcal {L}_{\mathrm {tv}} + \lambda _{\mathrm {var}}\,\mathcal {L}_{\mathrm {var}} \, ,    (7)   rameters are estimated or ideal. Furthermore, on the RICH
+dataset, our method also exhibits highly competitive results.                                                      RICH
+It achieves the best Root Translation Error (RTE) among all
+                                                                                       Method           WA-M. W-M.          RTE
+online and offline approaches, while also attaining strong
+performance in both WA-MPJPE and W-MPJPE metrics.                                     COIN [27]            169.5   254.5      -
+                                                                                     GVHMR [41]             78.8   126.3     2.4
+
+
+
+
+                                                                        offline
+                                          EMDB-2                                      TRAM [53]            127.8   238.0     6.0
+                                                                                     GLAMR [61]            129.4   236.2     3.8
+                 Method       WA-M. W-M. RTE ERVE
+                                                                                     SLAHMR [58]           132.2   237.1     6.4
+               SLAHMR [58]     326.9     776.1 10.2       -                       PromptHMR-vid [54]       118.2   207.0     5.6
+ offline
+
+
+
+
+               GVHMR [41]      111.0     276.5 2.0        -
+                                                                                     TRACE [44]            238.1   925.4 610.4
+                TRAM [53]       76.4     222.4 1.4       10.3
+
+
+
+
+                                                                        online
+                                                                                     WHAM [42]             108.4   196.1 4.5
+            PromptHMR-vid [54] 71.0      216.5 1.3        -
+                                                                                     Human3R [8]           110.0   184.9 3.3
+               TRACE [44]      529.0 1702.3 17.7 370.7                               MetricHMSR            109.6   165.5 1.9
+ online
+
+
+
+
+               WHAM [42]       133.3 343.9 4.6 14.7
+               Human3R [8]     112.2 267.9 2.2     -                Table 3. Quantitative comparisons of global motion and trajectory
+               MetricHMSR       72.1 199.5 1.4 10.6                 estimation on RICH, a static camera dataset.
+
+Table 1. Quantitative comparisons of global motion and trajectory                                   3DPW              EMDB-1
+estimation with predicted extrinsic parameters on EMDB-2, a dy-
+namic camera dataset.                                                Method                 PA-M. M. PVE PA-M. M. PVE
+                                                                     HMR2.0a [15]            44.4    69.8 82.2     61.5   97.8 120.0
+                                                                     WHAM [42]               35.9    57.8 68.7     50.4   79.7 94.4
+                                          EMDB-2                     TRAM [53]               35.6    59.3 69.6     45.7   74.4 86.6
+                  Method       WA-M. W-M. RTE ERVE                   PersPose [17]           39.1    60.1 72.4      -      -     -
+                                                                     Human3R [8]             44.1    72.1 84.9     48.5   73.9 86
+               GVHMR [41]      109.1     274.9    1.9     -          CameraHMR [35]          35.1    56.0 65.9     43.3   70.3 81.7
+  offline
+
+
+
+
+               GLAMR [61]      100.5     308.0    0.8    11.9        PromptHMR [54]          35.5    56.9 67.3     40.1   68.1 79.2
+                TRAM [53]       62.7     182.8    0.2    9.6         MetricHMSR              33.6    53.0 62.7     43.2   70.7 81.6
+            PromptHMR-vid [54] 52.9      142.1    0.2    7.8
+               TRACE [44]       131.4    422.0 1.4       18.8       Table 4. Quantitative comparisons with SOTA methods on human
+  online
+
+
+
+
+               WHAM [42]        131.1    335.3 4.1       13.7       local body poses. (PA-M.: PA-MPJPE, M.: MPJPE.)
+               MetricHMSR        55.6    152.5 0.2        9.4
+
+Table 2. Quantitative comparisons of global motion and trajectory
+estimation with GT extrinsic parameters on EMDB-2, a dynamic
+camera dataset.
+
+
+
+Local pose estimation. For human mesh recovery (lo-
+cal pose) evaluation, as summarized in Tab. 4, our pro-
+posed MetricHMSR demonstrates highly competitive per-
+formance across both the 3DPW and EMDB-1 [21]. On
+3DPW, MetricHMSR achieves the best results across all
+three metrics. On EMDB-1, MetricHMSR also delivers
+strong performance, ranking second in PA-MPJPE and PVE
+and third in MPJPE, remaining competitive and closely
+                                                                    Figure 7. Distribution of normalized SMPL root joints in cam-
+comparable to the top-performing method, PromptHMR.
+                                                                    era coordinates. Green points indicate results from MetricHMSR,
+                                                                    while blue points correspond to Human3R results.
+Human mesh recovery under varying intrinsics. Exist-
+ing benchmarks typically assume fixed camera intrinsics,
+making it difficult to evaluate robustness to focal length          varying focal lengths (see Supp. Mat.). Fig. 7 visualizes the
+variations. To address this limitation, we construct Syn-           distribution of normalized SMPL root joints. Our predic-
+Focal, a synthetic dataset of human images rendered with            tions remain consistently closer to the ground truth.
+                                                                                            3DPW               EMDB-2
+                                                                                    PA-M. MPJPE PVE WA-M. W-M.
+   1.27m                         1.96
+                                  m
+                                                                Image only           35.6     57.2    66.8    64.5    191.8
+                                                                + Ray                34.4     55.0    64.9    56.4    154.1
+                           Ground truth                         + Ray & MoE          33.6     53.0    62.7    55.6    152.5
+                                                                Global MoE only      34.1     54.1    63.9    56.0    157.9
+      1.51m                                                     Patch MoE only       34.2     54.3    64.0    55.6    154.7
+                               2.39m
+                                                                0 Route Experts      34.6     54.4    64.3    60.8    162.9
+                   1.00m
+                           MapAnything            1.64m         2 Route Experts      34.3     53.8    63.5    55.7    153.0
+                                                                8 Route Experts      33.9     53.7    63.4    55.4    152.8
+                                                                32 Route Experts     34.2     53.9    63.8    56.3    154.8
+       1.22m
+                               1.89m
+                                                               Table 6. Ablation study of the key components of our method and
+                   0.78m                                       additional ablation study on HumanMoE. (PA-M.: PA-MPJPE,
+                              Ours                1.30m
+                                                               WA-M.: WA-MPJPE, W-M.: W-MPJPE.)
+  Figure 8. Comparison of the metric measurement on PROX.
+
+                                                               5. Conclusion
+Metric Depth Estimation Comparison We evaluate the
+performance of our depth refinement module using standard      In this paper, we propose a novel framework, MetricHMSR,
+depth-estimation metrics: AbsRel (absolute relative error:     to regress human pose, metric shape, global 3D position
+|d∗ −d|/d), MAE (mean absolute error: |d∗ −d|), and δ1 (the    as well as metric 3D scene from a single image. Met-
+percentage of pixels satisfying max(d/d∗ , d∗ /d) < 1.25).     ricHMSR unified the representation of camera projection
+   Tab. 5 presents the results of MMDE. By incorporat-         model and human bounding box as the pixel-aligned cam-
+ing human body information, our method enhances perfor-        era ray map for encoding perspective 3D information. An
+mance demonstrates superior performance.                       specific designed HumanMoE network based on Mixture-
+                                                               of-Experts structure also proposed for more accurate and
+     Method                  AbsRel ↓     MAE ↓      δ1 ↑      robust metric human mesh recovery. We refined the monoc-
+                                                               ular depth estimation given the metric human mesh, which
+     Metric3D [59]              0.76       2.40      0.01      further recovering the corresponding 3D scene in metric
+     Unidepth [38]              0.24       0.73      0.56      scale. Comprehensive experiments demonstrate that Met-
+     MapAnything [22]           0.18       0.58      0.83      ricHMSR achieves the best overall performance compared
+     Ours                       0.13       0.46      0.91      with existing online (single-frame input) methods. With
+                                                               MetricHMSR, it becomes possible to obtain metric pseudo-
+    Table 5. Depth estimation comparison on PROX dataset.      ground truth for in-the-wild public datasets.
+                                                               Limitations and future work: Our method currently does
+   Fig. 8 presents a comparison of metric measurement re-      not support multi-person interaction perception and may
+sults, demonstrating that our method achieves higher mea-      struggle with severe occlusion. We have extended in-the-
+surement accuracy.                                             wild image datasets such as COCO, MPII, and AIC with
+                                                               generated pseudo-GT human meshes and 3D scenes. In
+4.3. Ablation Study                                            future work, we plan to extend this annotation pipeline to
+We validate the effectiveness of the key building blocks. As   large-scale internet data and investigate how such annota-
+shown in Tab. 6, the ablation study shows that our frame-      tions can improve the performance and generalization of 3D
+work effectively exploits pixel-level camera ray informa-      human–scene reconstruction.
+tion for 3D position estimation. Under a similar model         Acknowledgments: This work was supported in part by
+size, replacing a standard transformer with the HumanMoE       the NSFC (No.62171255 and No.82441013), the National
+yields further gains. Moreover, both the Global MoE only       Key R&D Program of China (No.2024YFB2809101), the
+and Patch MoE only variants underperform the full Human-       fellowship of China National Postdoctoral Program for In-
+MoE, suggesting that the two designs are complementary.        novative Talents (BX20250399), Shuimu Tsinghua Scholar
+We further study the impact of the number of route experts     Program, and the Tsinghua University-Fuzhou Joint Insti-
+(the full + Ray & MoE model uses 4 route experts).             tute for Data Technology (No. JIDT2024003).
+References                                                                the IEEE/CVF Conference on Computer Vision and Pattern
+                                                                          Recognition, pages 1323–1333, 2024. 2, 3
+ [1] Mykhaylo Andriluka, Leonid Pishchulin, Peter Gehler, and        [13] William Fedus, Barret Zoph, and Noam Shazeer. Switch
+     Bernt Schiele. 2d human pose estimation: New benchmark               transformers: Scaling to trillion parameter models with sim-
+     and state of the art analysis. In Proceedings of the IEEE/CVF        ple and efficient sparsity. Journal of Machine Learning Re-
+     Conference on Computer Vision and Pattern Recognition,               search, 23(120):1–39, 2022. 5
+     pages 3686–3693, 2014. 6
+                                                                     [14] Huan Fu, Bowen Cai, Lin Gao, Ling-Xiao Zhang, Jiaming
+ [2] Fabien Baradel, Matthieu Armando, Salma Galaaoui, Ro-                Wang, Cao Li, Qixun Zeng, Chengyue Sun, Rongfei Jia, Bin-
+     main Brégier, Philippe Weinzaepfel, Grégory Rogez, and             qiang Zhao, et al. 3d-front: 3d furnished rooms with layouts
+     Thomas Lucas. Multi-hmr: Multi-person whole-body hu-                 and semantics. In Proceedings of the IEEE/CVF Interna-
+     man mesh recovery in a single shot. In Proceedings of the            tional Conference on Computer Vision, pages 10933–10942,
+     European conference on computer vision, 2024. 2, 1                   2021. 3
+ [3] Shariq Farooq Bhat, Reiner Birkl, Diana Wofk, Peter             [15] Shubham Goel, Georgios Pavlakos, Jathushan Rajasegaran,
+     Wonka, and Matthias Müller. Zoedepth: Zero-shot trans-              Angjoo Kanazawa, and Jitendra Malik. Humans in 4d: Re-
+     fer by combining relative and metric depth. arXiv preprint           constructing and tracking humans with transformers. In
+     arXiv:2302.12288, 2023. 2, 3, 1                                      Proceedings of the IEEE/CVF International Conference on
+ [4] Michael J Black, Priyanka Patel, Joachim Tesch, and Jin-             Computer Vision, pages 14783–14794, 2023. 1, 2, 3, 6, 7
+     long Yang. Bedlam: A synthetic dataset of bodies exhibit-       [16] Xumeng Han, Longhui Wei, Zhiyang Dou, Zipeng Wang,
+     ing detailed lifelike animated motion. In Proceedings of             Chenhui Qiang, Xin He, Yingfei Sun, Zhenjun Han, and
+     the IEEE/CVF Conference on Computer Vision and Pattern               Qi Tian. Vimoe: An empirical study of designing vision
+     Recognition, pages 8726–8737, 2023. 6                                mixture-of-experts. arXiv preprint arXiv:2410.15732, 2024.
+ [5] Blender, 2025. https://www.blender.org. 3                            5
+ [6] Federica Bogo, Angjoo Kanazawa, Christoph Lassner, Peter        [17] Xiaoyang Hao and Han Li. Perspose: 3d human pose estima-
+     Gehler, Javier Romero, and Michael J. Black. Keep it smpl:           tion with perspective encoding and perspective rotation. In
+     Automatic estimation of 3d human pose and shape from a               Proceedings of the IEEE/CVF International Conference on
+     single image. In Proceedings of the European Conference              Computer Vision, pages 8110–8119, 2025. 2, 7, 1
+     on Computer Vision, pages 561–578, 2016. 1                      [18] Mohamed Hassan, Vasileios Choutas, Dimitrios Tzionas,
+ [7] Zhongang Cai, Wanqi Yin, Ailing Zeng, Chen Wei, Qing-                and Michael J Black. Resolving 3d human pose ambiguities
+     ping Sun, Wang Yanjun, Hui En Pang, Haiyi Mei, Mingyuan              with 3d scene constraints. In Proceedings of the IEEE/CVF
+     Zhang, Lei Zhang, et al. Smpler-x: Scaling up expressive             International Conference on Computer Vision, pages 2282–
+     human pose and shape estimation. Advances in Neural In-              2292, 2019. 6
+     formation Processing Systems, 36, 2024. 1, 2                    [19] Wonbong Jang, Philippe Weinzaepfel, Vincent Leroy, Lour-
+ [8] Yue Chen, Xingyu Chen, Yuxuan Xue, Anpei Chen, Yuliang               des Agapito, and Jerome Revaud. Pow3r: Empowering un-
+     Xiu, and Pons-Moll Gerard. Human3r: Everyone every-                  constrained 3d reconstruction with camera and scene priors.
+     where all at once. arXiv preprint arXiv:2510.06219, 2025.            In Proceedings of the IEEE/CVF Conference on Computer
+     1, 3, 6, 7                                                           Vision and Pattern Recognition, pages 1071–1081, 2025. 3
+ [9] Vasileios Choutas, Lea Müller, Chun-Hao P Huang, Siyu          [20] Angjoo Kanazawa, Michael J Black, David W Jacobs, and Ji-
+     Tang, Dimitrios Tzionas, and Michael J Black. Accurate 3d            tendra Malik. End-to-end recovery of human shape and pose.
+     body shape regression using metric and semantic attributes.          In Proceedings of the IEEE/CVF Conference on Computer
+     In Proceedings of the IEEE/CVF Conference on Computer                Vision and Pattern Recognition, pages 7122–7131, 2018. 1,
+     Vision and Pattern Recognition, pages 2718–2728, 2022. 6             2, 4
+[10] Damai Dai, Chengqi Deng, Chenggang Zhao, RX Xu,                 [21] Manuel Kaufmann, Jie Song, Chen Guo, Kaiyue Shen, Tian-
+     Huazuo Gao, Deli Chen, Jiashi Li, Wangding Zeng, Xingkai             jian Jiang, Chengcheng Tang, Juan José Zárate, and Otmar
+     Yu, Yu Wu, et al. Deepseekmoe: Towards ultimate ex-                  Hilliges. Emdb: The electromagnetic database of global 3d
+     pert specialization in mixture-of-experts language models.           human pose and shape in the wild. In Proceedings of the
+     In Proceedings of the 62nd Annual Meeting of the Associa-            IEEE/CVF International Conference on Computer Vision,
+     tion for Computational Linguistics (Volume 1: Long Papers),          pages 14632–14643, 2023. 6, 7
+     pages 1280–1297, 2024. 4, 5                                     [22] Nikhil Keetha, Norman Müller, Johannes Schönberger,
+[11] Alexey Dosovitskiy, Lucas Beyer, Alexander Kolesnikov,               Lorenzo Porzi, Yuchen Zhang, Tobias Fischer, Arno
+     Dirk Weissenborn, Xiaohua Zhai, Thomas Unterthiner,                  Knapitsch, Duncan Zauss, Ethan Weber, Nelson Antunes,
+     Mostafa Dehghani, Matthias Minderer, Georg Heigold, Syl-             et al. Mapanything: Universal feed-forward metric 3d re-
+     vain Gelly, Jakob Uszkoreit, and Neil Houlsby. An image is           construction. arXiv preprint arXiv:2509.13414, 2025. 1, 3,
+     worth 16×16 words: Transformers for image recognition at             6, 8
+     scale. In International Conference on Learning Representa-      [23] Imry Kissos, Lior Fritz, Matan Goldman, Omer Meir, Ed-
+     tions, 2021. 4                                                       uard Oks, and Mark Kliger. Beyond weak perspective for
+[12] Sai Kumar Dwivedi, Yu Sun, Priyanka Patel, Yao Feng, and             monocular 3d human pose estimation. In Proceedings of the
+     Michael J Black. Tokenhmr: Advancing human mesh recov-               European Conference on Computer Vision, pages 541–554.
+     ery with a tokenized pose representation. In Proceedings of          Springer, 2020. 2
+[24] Muhammed Kocabas, Nikos Athanasiou, and Michael J.                    Michael J Black. Expressive body capture: 3d hands,
+     Black. Vibe: Video inference for human body pose and                  face, and body from a single image. In Proceedings of
+     shape estimation. In Proceedings of the IEEE/CVF Con-                 the IEEE/CVF Conference on Computer Vision and Pattern
+     ference on Computer Vision and Pattern Recognition, pages             Recognition, pages 10975–10985, 2019. 3
+     5252–5262, 2020. 2                                               [37] Duc-Hai Pham, Tung Do, Phong Nguyen, Binh-Son Hua,
+[25] Muhammed Kocabas, Chun-Hao P Huang, Joachim Tesch,                    Khoi Nguyen, and Rang Nguyen. Sharpdepth: Sharpening
+     Lea Müller, Otmar Hilliges, and Michael J Black. Spec:               metric depth predictions using diffusion distillation. arXiv
+     Seeing people in the wild with an estimated camera. In                preprint arXiv:2411.18229, 2024. 3, 1
+     Proceedings of the IEEE/CVF International Conference on          [38] Luigi Piccinelli, Yung-Hsu Yang, Christos Sakaridis, Mattia
+     Computer Vision, pages 11035–11045, 2021. 2                           Segu, Siyuan Li, Luc Van Gool, and Fisher Yu. Unidepth:
+[26] Nikos Kolotouros, Georgios Pavlakos, Michael J Black, and             Universal monocular metric depth estimation. In Proceed-
+     Kostas Daniilidis. Learning to reconstruct 3d human pose              ings of the IEEE/CVF Conference on Computer Vision and
+     and shape via model-fitting in the loop. In Proceedings of the        Pattern Recognition, pages 10106–10116, 2024. 3, 8, 1
+     IEEE International Conference on Computer Vision, pages          [39] István Sárándi and Gerard Pons-Moll. Neural localizer
+     2252–2261, 2019. 1, 2                                                 fields for continuous 3d human pose and shape estimation.
+[27] Jiefeng Li, Ye Yuan, Davis Rempe, Haotian Zhang, Pavlo                Advances in Neural Information Processing Systems, 37:
+     Molchanov, Cewu Lu, Jan Kautz, and Umar Iqbal. Coin:                  140032–140065, 2025. 2
+     Control-inpainting diffusion prior for human and camera          [40] Noam Shazeer, Azalia Mirhoseini, Krzysztof Maziarz, Andy
+     motion estimation. In Proceedings of the European Con-                Davis, Quoc Le, Geoffrey Hinton, and Jeff Dean. Outra-
+     ference on Computer Vision, pages 426–446. Springer, 2024.            geously large neural networks: The sparsely-gated mixture-
+     7                                                                     of-experts layer. arXiv preprint arXiv:1701.06538, 2017. 5
+[28] Zhihao Li, Jianzhuang Liu, Zhensong Zhang, Songcen Xu,           [41] Zehong Shen, Huaijin Pi, Yan Xia, Zhi Cen, Sida Peng,
+     and Youliang Yan. Cliff: Carrying location information in             Zechen Hu, Hujun Bao, Ruizhen Hu, and Xiaowei Zhou.
+     full frames into human pose and shape estimation. In Pro-             World-grounded human motion recovery via gravity-view
+     ceedings of the European Conference on Computer Vision,               coordinates. In SIGGRAPH Asia 2024 Conference Papers,
+     pages 590–606, 2022. 2, 4, 1                                          pages 1–11, 2024. 2, 3, 7
+[29] Tsung-Yi Lin, Michael Maire, Serge Belongie, James Hays,         [42] Soyong Shin, Juyong Kim, Eni Halilaj, and Michael J Black.
+     Pietro Perona, Deva Ramanan, Piotr Dollár, and C Lawrence            Wham: Reconstructing world-grounded humans with accu-
+     Zitnick. Microsoft coco: Common objects in context. In                rate 3d motion. In Proceedings of the IEEE/CVF Conference
+     Proceedings of the European Conference on Computer Vi-                on Computer Vision and Pattern Recognition, pages 2070–
+     sion, pages 740–755. Springer, 2014. 6                                2080, 2024. 2, 3, 7
+[30] Aixin Liu, Bei Feng, Bin Wang, Bingxuan Wang, Bo Liu,            [43] Yu Sun, Wu Liu, Qian Bao, Yili Fu, Tao Mei, and Michael J
+     Chenggang Zhao, Chengqi Dengr, Chong Ruan, Damai Dai,                 Black. Putting people in their place: Monocular regression
+     Daya Guo, et al. Deepseek-v2: A strong, economical, and               of 3d people in depth. In Proceedings of the IEEE/CVF Con-
+     efficient mixture-of-experts language model. arXiv preprint           ference on Computer Vision and Pattern Recognition, pages
+     arXiv:2405.04434, 2024. 4                                             13243–13252, 2022. 3
+[31] Matthew Loper, Naureen Mahmood, Javier Romero, Gerard            [44] Yu Sun, Qian Bao, Wu Liu, Tao Mei, and Michael J Black.
+     Pons-Moll, and Michael J Black. Smpl: A skinned multi-                Trace: 5d temporal regression of avatars with dynamic cam-
+     person linear model. ACM Transactions on Graphics, 34(6):             eras in 3d environments. In Proceedings of the IEEE/CVF
+     1–16, 2015. 4                                                         Conference on Computer Vision and Pattern Recognition,
+[32] Ben Mildenhall, Pratul P Srinivasan, Matthew Tancik,                  pages 8856–8866, 2023. 2, 3, 7
+     Jonathan T Barron, Ravi Ramamoorthi, and Ren Ng. Nerf:           [45] Zachary Teed and Jia Deng. Droid-slam: Deep visual slam
+     Representing scenes as neural radiance fields for view syn-           for monocular, stereo, and rgb-d cameras. Advances in neu-
+     thesis. Communications of the ACM, 65(1):99–106, 2021. 2,             ral information processing systems, 34:16558–16569, 2021.
+     4, 1                                                                  3
+[33] Lea Müller, Ahmed A. A. Osman, Siyu Tang, Chun-Hao P.           [46] Joachim Tesch, Giorgio Becherini, Prerana Achar, Anasta-
+     Huang, and Michael J. Black. On self-contact and human                sios Yiannakidis, Muhammed Kocabas, Priyanka Patel, and
+     pose. In Proceedings of the IEEE/CVF Conference on Com-               Michael J. Black. BEDLAM2.0: Synthetic humans and cam-
+     puter Vision and Pattern Recognition, pages 9990–9999,                eras in motion. In The Thirty-ninth Annual Conference on
+     2021. 2                                                               Neural Information Processing Systems Datasets and Bench-
+[34] Mohammed Muqeeth, Haokun Liu, and Colin Raffel. Soft                  marks Track, 2025. 3
+     merging of experts with adaptive routing. arXiv preprint         [47] Javier Tirado-Garı́n and Javier Civera. Anycalib: On-
+     arXiv:2306.03745, 2023. 2, 4                                          manifold learning for model-agnostic single-view camera
+[35] Priyanka Patel and Michael J. Black. Camerahmr: Aligning              calibration. In Proceedings of the IEEE/CVF International
+     people with perspective. In 2025 International Conference             Conference on Computer Vision, pages 8044–8055, 2025. 4
+     on 3D Vision, 2025. 2, 7, 3                                      [48] Timo Von Marcard, Roberto Henschel, Michael J Black,
+[36] Georgios Pavlakos, Vasileios Choutas, Nima Ghorbani,                  Bodo Rosenhahn, and Gerard Pons-Moll. Recovering ac-
+     Timo Bolkart, Ahmed AA Osman, Dimitrios Tzionas, and                  curate 3d human pose in the wild using imus and a moving
+     camera. In Proceedings of the European conference on com-          Proceedings of the IEEE/CVF Conference on Computer Vi-
+     puter vision, pages 601–617, 2018. 6                               sion and Pattern Recognition, pages 5746–5756, 2021. 3
+[49] Jianyuan Wang, Minghao Chen, Nikita Karaev, Andrea            [61] Ye Yuan, Umar Iqbal, Pavlo Molchanov, Kris Kitani, and Jan
+     Vedaldi, Christian Rupprecht, and David Novotny. Vggt:             Kautz. Glamr: Global occlusion-aware human mesh recov-
+     Visual geometry grounded transformer. In Proceedings of            ery with dynamic cameras. In Proceedings of the IEEE/CVF
+     the IEEE/CVF Conference on Computer Vision and Pattern             Conference on Computer Vision and Pattern Recognition,
+     Recognition, pages 5294–5306, 2025. 1, 2, 3, 5                     pages 11038–11049, 2022. 7
+[50] Qianqian Wang, Yifei Zhang, Aleksander Holynski,              [62] Wang Zeng, Sheng Jin, Wentao Liu, Chen Qian, Ping Luo,
+     Alexei A Efros, and Angjoo Kanazawa. Continuous 3d                 Wanli Ouyang, and Xiaogang Wang. Not all tokens are
+     perception model with persistent state. In Proceedings of          equal: Human-centric visual analysis via token clustering
+     the IEEE/CVF Conference on Computer Vision and Pattern             transformer. In Proceedings of the IEEE/CVF Conference
+     Recognition, pages 10510–10522, 2025. 3                            on Computer Vision and Pattern Recognition, pages 11101–
+[51] Shengze Wang, Jiefeng Li, Tianye Li, Ye Yuan, Henry Fuchs,         11111, 2022. 2
+     Koki Nagano, Shalini De Mello, and Michael Stengel. Blade:    [63] Hongwen Zhang, Yating Tian, Xinchi Zhou, Wanli Ouyang,
+     Single-view body mesh learning through accurate depth es-          Yebin Liu, Limin Wang, and Zhenan Sun. Pymaf: 3d human
+     timation. arXiv preprint arXiv:2412.08640, 2024. 2, 3              pose and shape regression with pyramidal mesh alignment
+[52] Wenjia Wang, Yongtao Ge, Haiyi Mei, Zhongang Cai, Qing-            feedback loop. In Proceedings of the IEEE/CVF Interna-
+     ping Sun, Yanjun Wang, Chunhua Shen, Lei Yang, and Taku            tional Conference on Computer Vision, pages 11446–11456,
+     Komura. Zolly: Zoom focal length correctly for perspective-        2021. 1, 2
+     distorted human mesh reconstruction. In Proceedings of the    [64] Hongwen Zhang, Yating Tian, Yuxiang Zhang, Mengcheng
+     IEEE/CVF International Conference on Computer Vision,              Li, Liang An, Zhenan Sun, and Yebin Liu. Pymaf-x: To-
+     pages 3925–3935, 2023. 2                                           wards well-aligned full-body model regression from monoc-
+[53] Yufu Wang, Ziyun Wang, Lingjie Liu, and Kostas Daniilidis.         ular images. IEEE Transactions on Pattern Analysis and Ma-
+     Tram: Global trajectory and motion of 3d humans from in-           chine Intelligence, 45(10):12287–12303, 2023. 1, 2
+     the-wild videos. In Proceedings of the European Conference    [65] Yizhou Zhao, Hengwei Bian, Kaihua Chen, Pengliang Ji,
+     on Computer Vision, pages 467–487. Springer, 2024. 2, 3, 4,        Liao Qu, Shao-yu Lin, Weichen Yu, Haoran Li, Hao Chen,
+     7, 1                                                               Jun Shen, et al. Metric from human: Zero-shot monoc-
+[54] Yufu Wang, Yu Sun, Priyanka Patel, Kostas Daniilidis,              ular metric depth estimation via test-time adaptation. In
+     Michael J Black, and Muhammed Kocabas. Prompthmr:                  The Thirty-eighth Annual Conference on Neural Information
+     Promptable human mesh recovery. In Proceedings of the              Processing Systems, 2024. 3, 6, 1
+     IEEE/CVF Conference on Computer Vision and Pattern
+     Recognition, pages 1148–1159, 2025. 2, 7
+[55] Jiahong Wu, He Zheng, Bo Zhao, Yixin Li, Baoming
+     Yan, Rui Liang, Wenjia Wang, Shipei Zhou, Guosen Lin,
+     Yanwei Fu, et al. Ai challenger: A large-scale dataset
+     for going deeper in image understanding. arXiv preprint
+     arXiv:1711.06475, 2017. 6
+[56] Yufei Xu, Jing Zhang, Qiming Zhang, and Dacheng Tao. Vit-
+     pose: Simple vision transformer baselines for human pose
+     estimation. Advances in neural information processing sys-
+     tems, 35:38571–38584, 2022. 4
+[57] Lihe Yang, Bingyi Kang, Zilong Huang, Zhen Zhao, Xiao-
+     gang Xu, Jiashi Feng, and Hengshuang Zhao. Depth any-
+     thing v2. Advances in Neural Information Processing Sys-
+     tems, 37:21875–21911, 2024. 2, 3, 1
+[58] Vickie Ye, Georgios Pavlakos, Jitendra Malik, and Angjoo
+     Kanazawa. Decoupling human and camera motion from
+     videos in the wild. In Proceedings of the IEEE/CVF Con-
+     ference on Computer Vision and Pattern Recognition, pages
+     21222–21232, 2023. 2, 3, 7
+[59] Wei Yin, Chi Zhang, Hao Chen, Zhipeng Cai, Gang Yu,
+     Kaixuan Wang, Xiaozhi Chen, and Chunhua Shen. Metric3d:
+     Towards zero-shot metric 3d prediction from a single image.
+     In Proceedings of the IEEE/CVF International Conference
+     on Computer Vision, pages 9043–9053, 2023. 3, 8, 1
+[60] Tao Yu, Zerong Zheng, Kaiwen Guo, Pengpeng Liu, Qiong-
+     hai Dai, and Yebin Liu. Function4d: Real-time human vol-
+     umetric capture from very sparse consumer rgbd sensors. In
+                                  MetricHMSR:
+            Metric Human Mesh and Scene Recovery from Monocular Images
+                                                Supplementary Material
+6. More Implementation Details                                      6.2. Camera Ray Representation
+6.1. Camera, Image and Metrics                                      CLIFF [28] was the first to recognize the global informa-
+                                                                    tion contained in the bounding box, and it incorporated
+In human mesh recovery, full perspective projection [2, 17,         bounding-box as additional input to the network. However,
+28, 53] has gained increasing attention. The development            this approach neglects the role of camera intrinsics. To ad-
+of monocular metric depth estimation [3, 15, 37, 38, 57, 59,        dress this limitation, we draw inspiration from NeRF [32]
+65] and single-image intrinsic parameter estimation [22, 49]        and introduce the bounding ray map representation method,
+has made it possible to recover metric human mesh from a            as shown in Fig. 3.
+single image. The intrinsic parameters of the camera and
+the bounding boxes (bbox) are crucial to perceiving human           6.3. Losses of Metric Human Mesh Recovery
+metric information and the 3D position.                             In Eq. (5), each loss term is computed as
+   Fig. 9 shows the impact of the camera’s intrinsic param-
+eters on the metric depth of the human. Under the same
+resolution, if two cameras (f2 = 2f1 ) produce the same                                 \begin {aligned} \mathcal {L}_{J_{2D}} =& ||\hat {J}_{2D}-J_{2D}||_2,\\ \mathcal {L}_{J_{3D}} =& ||\hat {J}_{3D}-J_{3D}||_2,\\ \mathcal {L}_{V_{3D}} =& ||\hat {V}_{3D}-V_{3D}||_2,\\ \mathcal {L}_{\theta } =& ||\hat {\theta }-\theta ||_2,\\ \mathcal {L}_{\beta } =& ||\hat {\beta }-\beta ||_2,\\ \mathcal {L}_{h} =& ||\hat {h}-h||_2,\\ \end {aligned}
+image size for the same person, their metric depths are dif-
+ferent (d2 = 2d1 ). If the focal length can be provided as
+a known parameter to the network, it becomes possible for
+                                                                                                                                                                                                                                                                                                                                                                                                                                                        (8)
+the network to infer the metric depth of human body.
+
+
+
+  𝑓1                        𝑓2 = 2𝑓1
+                                                                    where J2D , J3D , V3D , θ, β, and h represent the ground
+   𝑑1                        𝑑2 = 2𝑑1                               truth of the 2D keypoints, the 3D keypoints, the vertices
+                                                                    of the SMPL model, the pose parameters of the SMPL and
+                                                                    the shape parameters of the SMPL, respectively. Jˆ2D , Jˆ3D ,
+Figure 9. Illustration of the human body’s metric distance under
+the same 2D projection with different focal lengths. Focal: f ,
+                                                                    V̂3D , θ̂, β̂, and ĥ represent the corresponding network pre-
+distance: d.                                                        dictions of the 2D keypoints, the 3D keypoints, the vertices
+                                                                    of the SMPL model, the pose parameters of the SMPL and
+                                                                    the shape parameters of the SMPL, respectively.
+  As shown in Fig. 10, the distance between the bounding
+box and the principal point (cx , cy ) is directly related to the   6.4. HumanMoE
+3D position of the human body in the camera space.                  On one hand, HumanMoE condenses all 3D attributes into
+                                                                    different experts within a single module. On the other hand,
+                                                                    it assigns features from different hierarchies and dimensions
+                                                                    to specialized experts.
+                                                                        At the patch level, the Patch MoE routes patches of dif-
+                                                                    ferent body parts to distinct experts. As shown in Fig. 5,
+                                                                    this leads to semantic decoupling and feature-level disen-
+                                                                    tanglement, enabling specialized processing and improving
+                                                                    performance.
+                                                                        At the global image level, the Global MoE routes the
+                                                                    aggregated image feature to specialized experts via a single
+Figure 10. Illustration of the human body’s metric position with    query token. Complementing the Patch MoE, it operates
+different bounding box. The position of the bounding box directly
+                                                                    holistically to capture global context and enable consistent
+influences the 3D location of the human body.
+                                                                    reasoning over metric properties for final prediction. Fig. 11
+                                                                    and Fig. 12 illustrate its role.
+                                                                                         ence we project an HMR mesh and keep only reliable vis-
+                                                                                         ible vertices. We then exclude unstable anatomical regions
+                                                                                         using a precomputed mask, form a dense anchor map by
+                                                                                         taking per-pixel nearest-Z, and apply a light depth-gradient
+                                                                                         filter to suppress boundary/occlusion outliers.
+  Frequency
+
+
+
+
+                                                                                             The predictor is a UNet encoder–decoder with a ViT
+                                                                                         bottleneck. The encoder stacks Conv–GroupNorm–GELU
+                                                                                         blocks with downsampling; the deepest feature is patch-
+                                                                                         embedded and fed to a Transformer encoder (multi-head
+                                                                                         self-attention + MLP, norm-first), then reshaped and fused
+                                                                                         in the decoder via skip connections. Inputs are concate-
+                                                   Scale                                 nated maps: the working-domain depth x_{\text {proc}} (depth or dis-
+Figure 11. Expert allocation of the global MoE across different                          parity), the anchor map, the anchor mask, and optional
+bbox sizes. Scale denotes the factor by which the cropped images                         RGB. The head outputs two channels \protect \tilde  {s},\tilde {b}, constrained as
+are resized to a fixed size.                                                             s=1+\alpha _s\tanh (\tilde {s}) (small scale around 1) and
+                                                                                                                                 b=\alpha _b\,\mathrm {median}(|x_{\text {proc}}|)\tanh (\tilde {b})
+                                                                                                                                   (scene-adaptive bias). To sta-
+                 70
+                                                                                         bilize training, x_{\text {proc}} and anchors are normalized per batch
+                                                                                  3DPW
+                                                                                  EMDB   by masked mean-absolute values and clipped.
+                                                                   58.9%
+                 60
+
+                 50
+Percentage (%)
+
+
+
+
+                                                           45.4%                             We use a depth reconstruction loss on valid GT pixels,
+                                      41.4%
+                 40                                                                      an anchor consistency loss where anchors exist, and two
+                 30
+                                                                                         regularizers on s,b: total variation (spatial smoothness, op-
+                                              22.1%                                      tionally edge-aware) and spatial variance (keeps fields near
+                 20                                                                      global). The total loss is a weighted sum of these terms. Op-
+                              11.1%
+                 10   8.7%                                                        7.9%   erating in disparity is supported (we convert back to depth
+                                                                           4.4%
+                                                                                         for output); tight constraints on s and regularization on s,b
+                  0
+                       Expert 1         Expert 2            Expert 3        Expert 4     preserve near-planarity and prevent over-correction. For
+                                              Image Allocation                           training, we split a human-centric RGB-D dataset (PROX)
+                                                                                         into train/test with a 9:1 ratio.
+Figure 12.                   Expert allocation of the global MoE on different
+datasets.
+                                                                                            We would like to clarify that our design is motivated
+                                                                                         by the observation that human reconstruction from Met-
+   We tested on the fixed-intrinsics dataset 3DPW. The                                   ricHMR is relatively reliable in metric scale and can there-
+cropped images are scaled to a fixed size of 256 × 256                                   fore serve as a geometric anchor for refining monocular
+to feed to our network. This scale reflects the size of the                              depth estimation. Specifically, we use the reconstructed
+bounding box (bbox). Fig. 12 shows how the first layer of                                metric human mesh to guide the refinement of MapAny-
+the global MoE allocates images in accordance with this                                  thing depth predictions. Unlike prior approaches that apply
+scale. It can be observed that images with larger bounding                               a simple global scaling factor, we introduce a per-pixel re-
+boxes (i.e., closer people) tend to be assigned to Expert 3,                             finement module to correct spatially varying depth errors.
+while those with smaller bounding boxes (i.e., farther peo-                              This design accounts for the non-uniform inaccuracies com-
+ple) are more often assigned to Expert 1.                                                monly observed in monocular depth estimation.
+   Fig. 12 shows the assignment of images from the 3DPW
+and EMDB datasets to experts in the final layer of the MoE.                                 As shown in Tab. 5, this human-guided refinement im-
+Due to differences in human pose, scene, and other factors                               proves the metric accuracy of scene depth on the PROX
+across datasets, the allocation to experts also differs.                                 dataset. The current accuracy of monocular depth estima-
+                                                                                         tion methods, such as MapAnything, remains insufficient
+6.5. Human-Guided Metric Depth Refinement
+                                                                                         to be reliable. For example, in Fig. 6, the estimated sub-
+We refine a predicted dense depth x_{\text {in}} into metric-consistent                  ject height is 1.59 m while the ground-truth height is 1.72
+depth by learning per-pixel affine parameters (s,b) so that                              m. Due to this limitation, we use the predicted depth only
+x_{\text {out}}(u,v)=s(u,v)\,x_{\text {in}}(u,v)+b(u,v). Absolute-scale con-             as an initialization for scene reconstruction rather than as a
+straints (“anchors”) come from human geometry: at infer-                                 constraint to further refine the human pose.
+7. Additional Results                                                             Method          RDE       RPSD
+7.1. SynFocal dataset.                                                            Human3R [8]      0.14       21.6
+                                                                                  MetricHMSR       0.10        1.1
+Across images with varying camera parameters, Met-
+ricHMSR consistently achieves accurate metric distance           Table 7. Quantitative comparisons of 3D position estimation under
+perception. Recognizing that existing datasets predomi-          different intrinsics. RDE is in % and RPSD is in cm.
+nantly feature fixed focal lengths, we construct SynFocal, a
+synthetic dataset of human images that vary in focal length,
+to further validate the performance of MetricHMSR.
+    Our scenes are constructed using 3D-FRONT [14], a
+synthetic dataset characterized by extensive layout varia-
+tions and high-fidelity furniture models. Human models are
+sourced from THuman [60], which comprises a large collec-
+tion of high-quality 3D human models with corresponding
+SMPL-X [36] annotations. We used Blender [5] to arrange
+the human and scene in a plausible configuration and ren-
+dered images at different focal lengths. Fig. 13 shows some
+examples of SynFocal.
+
+
+
+
+       f = 693             f = 1049             f = 1404
+
+Figure 13. Examples of SynFocal. Each column of images was
+rendered using a distinct focal length (pixels).
+
+
+   Note that, to the best of our knowledge, there were no
+human datasets with varying focal lengths before our work.                Input                   Overlay with point cloud
+Meanwhile, our concurrent work Bedlam2.0 [46] provides           Figure 14. Metric human and scene reconstruction results of in-
+richer camera motion and focal length diversity, which can       the-wild data from COCO.
+serve as a more comprehensive alternative to SynFocal.
+
+7.2. Human mesh recovery under varying intrinsics
+                                                                 7.3. Pseudo-GT Depth for 2D Image Datasets
+For quantitative comparisons, we evaluate performance us-
+ing two metrics: Root Distance Error (RDE) and Root Po-          Based on our Human-Guided Metric Depth Refinement
+sition Standard Deviation (RPSD). RDE measures accuracy          module, we introduce in the main text a new pseudo-
+in the camera coordinate system as the Euclidean distance        GT dataset that supplements background depth information
+between predicted and ground-truth root positions, normal-       for the commonly used 2D image datasets AI Challenger,
+ized by the distance from the ground-truth root to the origin.   COCO, and MPII. Fig. 14 illustrates some examples on in-
+RPSD measures robustness as the standard deviation of the        the-wild data from the COCO dataset. We use Human-
+Euclidean distances from predicted root joints to their cen-     FoV [35] to estimate the intrinsics of the image, then re-
+troid. We conduct a systematic comparison between Met-           construct the metric human mesh along with the scene.
+ricHMSR and Human3R [8] under varying camera intrin-                More broadly, our method reconstructs metrically accu-
+sics. Quantitative results are reported in Tab. 7. The Results   rate humans and scenes from a single image without requir-
+demonstrate that MetricHMSR exhibits stronger robustness         ing video, making it possible to leverage the vast amount of
+to focal length variations than Human3R.                         image data available across the internet.
+                                           H PVE-T
+Method                 H-MAE H-MAPE PVE-T Var. Var.
+
+PromptHMR               76.0        4.3          32.4      11.2   67.7
+MetricHMSR              70.1        3.9          29.9      4.1    27.9
+
+           Table 8. Metrics on 3DPW. Var. denotes variance.
+
+120 (mm)                                                           (%)
+                                              PVE-T (mm)
+100                                           H-MAE (mm)                 6
+ 80                                           H-MAPE (%)
+ 60                                                                      5
+ 40
+                                                                         4
+    0.50        0.75      1.00      1.25        1.50       1.75   2.00
+                                 bbox scale
+
+Figure 15. Impact of bounding box scale variation on shape and
+height accuracy. H: height, T: T-pose, MAE: Mean Absolute Error,
+MAPE: Mean Absolute Percentage Error.
+
+
+7.4. Metric Comparison
+The metric properties mainly concern metric 3D position
+and metric body shape. Tab. 8 reports the error and stability
+of the shape, showing that our method outperforms SOTA.
+
+7.5. Impact of Bbox Scale
+Fig. 15 plots the variation of the metric against the bbox,
+where a scale of 1.0 denotes the standard bbox. It is evident
+that the proposed method demonstrates strong robustness to
+variations in the bbox.
+7.6. Trajectory Comparison
+In the quantitative comparisons presented in the main text,
+our method significantly outperforms existing online ap-
+proaches in terms of trajectory accuracy, and achieves com-
+petitive performance with video-based methods while oper-                        Ground truth         Ours          WHAM            Human3R
+ating on frame-by-frame inputs rather than video sequences.
+                                                                             Figure 16. Qualitative comparison of global motion trajectories.
+   Fig. 16 shows qualitative comparisons with existing on-
+line method on RICH. Our method demonstrates stronger
+scale awareness and reduced positional drift.
+

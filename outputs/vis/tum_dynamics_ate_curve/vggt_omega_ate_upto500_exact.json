@@ -1,0 +1,65 @@
+{
+  "reference": "C:\\Users\\ROG\\AppData\\Local\\Temp\\codex-clipboard-c1eaece7-774f-4361-b534-bd3885fe5ead.png",
+  "output": "outputs\\vis\\tum_dynamics_ate_curve\\vggt_omega_ate_upto500_exact.png",
+  "plot_pixel_bounds": {
+    "left": 86.0,
+    "right": 610.0,
+    "top": 36.0,
+    "bottom": 403.0
+  },
+  "axis_bounds": {
+    "x": [
+      0.0,
+      1050.0
+    ],
+    "y_m": [
+      0.0,
+      0.2
+    ]
+  },
+  "series": "VGGT-Omega",
+  "points": [
+    {
+      "views": 50,
+      "ate_m": 0.0029932083135804973,
+      "pixel_x": 110.95238095238095,
+      "pixel_y": 397.5074627445798
+    },
+    {
+      "views": 100,
+      "ate_m": 0.0043409809895220515,
+      "pixel_x": 135.9047619047619,
+      "pixel_y": 395.03429988422704
+    },
+    {
+      "views": 150,
+      "ate_m": 0.004930351035055057,
+      "pixel_x": 160.85714285714283,
+      "pixel_y": 393.952805850674
+    },
+    {
+      "views": 200,
+      "ate_m": 0.005909471782128872,
+      "pixel_x": 185.8095238095238,
+      "pixel_y": 392.15611927979353
+    },
+    {
+      "views": 300,
+      "ate_m": 0.006341055280197789,
+      "pixel_x": 235.7142857142857,
+      "pixel_y": 391.364163560837
+    },
+    {
+      "views": 400,
+      "ate_m": 0.006451712633021363,
+      "pixel_x": 285.6190476190476,
+      "pixel_y": 391.1611073184058
+    },
+    {
+      "views": 500,
+      "ate_m": 0.006916918533247201,
+      "pixel_x": 335.5238095238095,
+      "pixel_y": 390.3074544914914
+    }
+  ]
+}

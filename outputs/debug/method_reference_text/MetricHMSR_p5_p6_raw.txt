@@ -1,0 +1,225 @@
+Router
+Routed Image Expert
+Shared Image Expert
+Ray Expert
+1 6
+5
+4
+3
+2
+Figure 4. The architecture of MoE Layer. We designed a ray ex-
+pert to learn features from camera rays, 4 routed image experts to
+process specialized image knowledge, and a shared image expert
+to capture common image knowledge.
+ken is only processed by the top-K experts, Soft MoE as-
+signs a weighted combination of tokens to each expert. This
+approach demonstrates better training stability and expert
+scalability. We also introduce shared experts [10, 16] that
+remain active for all tokens and are designed to capture fun-
+damental common knowledge. Shared expert prevents re-
+dundant learning of generic patterns across specialized ex-
+perts, thereby optimizing model capacity utilization. We de-
+sign 4 routed experts to learn specialized visual knowledge,
+and a shared expert to capture common visual knowledge.
+We also design a ray expert specifically for processing ray
+tokens. The architecture is illustrated in Fig. 4.
+HumanMoE. HumanMoE comprises two components: a
+Patch MoE and a Global MoE, which model representations
+at different levels. In metric human mesh recovery, image
+patches play distinct roles and vary in importance. To cap-
+ture this heterogeneity, we introduce the Patch MoE, which
+dynamically routes patches to specialized experts based on
+semantic content. Patches with similar semantics or roles
+are processed by the same expert, enabling effective and
+explicit feature-level disentanglement. Building on this, we
+further introduce the Global MoE to aggregate full-image
+representations and capture global contextual information.
+This complements the Patch MoE by enabling consistent
+reasoning about metric properties across the entire image.
+Token routing. Here, we analyze the routing behavior of
+HumanMoE and its role in disentangling features related
+to local pose and global position. The deepest (last) MoE
+layer exhibits the strongest semantic representation [16].
+For Patch MoE, distinct body regions are consistently as-
+signed to different experts, while similar body parts across
+images are predominantly routed to the same experts, in-
+dicating emergent semantic specialization. To quantify this
+nose
+right
+shoulder
+left
+shoulder
+chest
+right
+elbow
+left
+elbow
+right
+knee
+left
+knee
+right
+wrist
+left
+wrist
+right
+ankle
+left
+ankle
+right
+hip
+left
+hip
+right
+eye
+left
+eye
+right
+ear
+left
+ear
+Joint
+Expert
+0.29 0.11 0.11 0.12 0.32 0.29 0.11 0.38 0.27 0.29 0.20 0.39 0.31 0.39 0.32 0.36 0.42 0.55
+0.07 0.08 0.05 0.02 0.31 0.19 0.22 0.18 0.43 0.37 0.32 0.32 0.37 0.38 0.07 0.08 0.08 0.09
+0.08 0.34 0.65 0.46 0.28 0.35 0.54 0.30 0.11 0.17 0.32 0.17 0.22 0.09 0.07 0.07 0.04 0.04
+0.56 0.47 0.20 0.40 0.08 0.17 0.14 0.14 0.19 0.17 0.15 0.12 0.10 0.13 0.54 0.49 0.46 0.31
+0.0 0.1 0.2 0.3 0.4 0.5 0.6
+4
+3
+2
+1
+Figure 5. Routing heatmap of the deepest (last) MoE layer for
+image feature on 3DPW.
+behavior, we analyze the expert assignments of patches con-
+taining 2D human keypoints on the 3DPW dataset and com-
+pute the corresponding routing statistics, as shown in Fig. 5.
+Despite potential noise from keypoint detection errors and
+coarse patch partitioning, the large-scale statistics provide
+reliable evidence for this observation. For Global MoE, we
+analyze details in the supplementary materials.
+MoE Loss. Following prior works [13, 40], to encourage
+balanced expert utilization, we add a soft load-balancing
+loss on the gating probabilities. Let pi denote the average
+routing probability of expert i over all tokens in a batch.
+The auxiliary loss is defined as
+  \mathcal {L}_{\text {aux}} = \lambda \, K \sum _{i=1}^{K} p_i^{2},  (4)
+where K is the number of experts and λ is the weights.
+Since
+P
+i pi = 1, this term is minimized when all experts
+are used uniformly, i.e., pi = 1/K, and increases when
+routing collapses onto a few experts, thus promoting a more
+even load distribution. This loss is introduced solely to bal-
+ance the usage among the routed image experts.
+Over-complete Loss Design for MetricHMR. We train
+our model with the following losses:
+  \begin {aligned} \mathcal {L} =& \lambda _{J_{2D}}\mathcal {L}_{J_{2D}}+\lambda _{J_{3D}}\mathcal {L}_{J_{3D}}+\lambda _{V_{3D}}\mathcal {L}_{V_{3D}}+\\ &\lambda _{\theta }\mathcal {L}_{\theta }+\lambda _{\beta }\mathcal {L}_{\beta }+\lambda _{h}\mathcal {L}_{h}. \end {aligned} \label {eq:hmr_losses}
+(5)
+LJ2D
+, λJ3D
+, LV3D
+, Lθ, Lβ, and Lh are the loss of 2D key-
+points, 3D joints, vertices, SMPL pose, SMPL shape and
+SMPL body height. λJ2D
+, λJ3D
+, λV3D
+, λθ, λβ and λh
+are their corresponding weights. For detailed definitions of
+each loss term, please refer to the supplementary material.
+In particular, VGGT [49] suggests that over-complete
+predictions during training can bring substantial perfor-
+mance gains, even when some variables are related through
+closed-form relationships. Inspired by this idea, we adopt
+over-complete losses in our framework. For example, in hu-
+man body modeling, height and shape parameters are inher-
+ently coupled. Prior work [9] shows that height supervision
+improves the accuracy of human mesh regression.
+3.4. Human-Guided Metric Depth Refinement
+Human scale and body structure provide strong priors for
+MMDE. Human [65] leverages this idea by inpainting hu-
+mans into images, estimating human meshes with HMR
+2.0 [15], and using them as metric references to scale
+monocular depth predictions. However, since HMR 2.0
+cannot recover metric body shape or global 3D position,
+and Metric from Human only achieves global scaling, its
+performance remains limited in accuracy.
+In contrast, MetricHMR recovers human meshes in met-
+ric 3D space. This enables us to use the reconstructed met-
+ric human mesh as a geometric reference to refine MMDE.
+Consequently, the human mesh can align not only with the
+2D image but also with the 3D scene geometry.
+After refinement
+(1.68m)
+Original image
+Before refinement
+(1.59m)
+Figure 6. Illustration of human-guided metric depth refinement.
+To this end, we introduce a per-pixel metric depth refine-
+ment module that calibrates monocular depth using metric
+human meshes as geometric references (Fig. 6).
+Given a depth map z_{\text {in}}(x) predicted by MapAny-
+thing [22], a hybrid UNet–ViT backbone predicts spatially
+varying affine fields (s(x),\,b(x)) to correct the depth:
+  \hat z(x)=s(x)\, z_{\text {in}}(x) + b(x).  (6)
+The predicted fields are locally adaptive while regularized
+to remain globally smooth and coherent, enabling metric-
+scale calibration with gentle local adjustments.
+To anchor the solution to an absolute metric scale, we
+project the human mesh onto the image and extract the
+visible-surface depth per pixel to form a sparse anchor map
+z_{\text {hmr}}(x) with mask M_a(x). An anchor consistency loss is
+applied at these pixels during training. The overall loss is
+  \mathcal {L} = \lambda _d\,\mathcal {L}_{\text {depth}} + \lambda _a\,\mathcal {L}_{\text {anchor}} + \lambda _{\mathrm {tv}}\,\mathcal {L}_{\mathrm {tv}} + \lambda _{\mathrm {var}}\,\mathcal {L}_{\mathrm {var}} \, ,  (7)
+where \protect \mathcal  {L}_{\text {depth}},\,\mathcal {L}_{\text {anchor}},\,\mathcal {L}_{\text {tv}},\,\mathcal {L}_{\text {var}} denote the depth regression
+loss on valid pixels, the anchor consistency loss on HMR
+front-surface points, the total-variation regularization on
+(s,b), and the spatial variance regularization on (s,b) to
+keep them near their global means, respectively. The \lambda ’s
+are scalar weights.
+4. Experiments
+4.1. Implementation Details
+We train MetricHMR on BEDLAM [4], AIC [55],
+COCO [29], MPII [1], and 3DPW [48] for 40 epochs with
+a weight decay of 1 × 10−4
+. We use the AdamW optimizer
+with a batch size of 64 on a single NVIDIA A100 GPU, and
+set the learning rate to 1 × 10−5
+. For the depth refinement
+network, we further train the model on the PROX RGB-D
+dataset [18] to learn human-aware metric depth correction.
+4.2. Comparisons
+We present comprehensive evaluations of MetricHMSR,
+benchmarking it against state-of-the-art methods in human
+pose estimation. Following the established convention in
+Human3R [8], we categorize the baselines into online and
+offline paradigms. Offline methods typically employ batch
+processing of complete video sequences to achieve globally
+consistent reconstructions, thereby pursuing globally opti-
+mal solutions. In contrast, online methods operate via a
+streaming framework that recursively reconstructs human
+motion as new frames arrive, maintaining low memory and
+computational footprints. Within this framework, we sys-
+tematically evaluate the accuracy of our method in local
+pose estimation and global trajectory recovery. We further
+compare MetricHMSR against state-of-the-art methods un-
+der varying camera intrinsic settings.
+We first evaluate human mesh recovery from both lo-
+cal pose and global motion. For local pose estimation, we
+report per-vertex error (PVE), mean per-joint position er-
+ror (MPJPE), and Procrustes-aligned MPJPE (PA-MPJPE).
+For global motion and trajectory estimation, we adopt WA-
+MPJPE100 (WA-M.), W-MPJPE100 (W-M.), Root Transla-
+tion Error (RTE), and Egocentric-frame Root Velocity Er-
+ror (ERVE). RTE is reported in percentage (%), ERVE in
+mm/frame, and all other metrics are reported in mm.
+Global trajectory estimation. For global motion and tra-
+jectory estimation, MetricHMSR exhibits robust and com-
+petitive performance across both the EMDB-2 [21] (with
+dynamic camera) and RICH (with static camera) datasets
+under varying camera parameter conditions, as shown in
+Tab. 1, Tab. 2, and Tab. 3. Notably, in dynamic camera
+scenarios, MetricHMSR achieves performance on par with
+SOTA offline methods, regardless of whether camera pa-
+rameters are estimated or ideal. Furthermore, on the RICH
+
