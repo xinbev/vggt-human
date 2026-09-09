@@ -7,6 +7,7 @@ from typing import Literal, TypeVar
 
 T = TypeVar("T")
 SamplingStrategy = Literal["head", "uniform"]
+LONG_SEQUENCE_FRAME_LIMIT = 500
 
 
 def uniform_sample_indices(total_count: int, target_count: int) -> list[int]:
@@ -33,3 +34,18 @@ def sample_sequence(items: Sequence[T], max_count: int, strategy: SamplingStrate
     if strategy == "uniform":
         return [values[index] for index in uniform_sample_indices(len(values), limit)]
     raise ValueError(f"Unknown sampling strategy: {strategy}")
+
+
+def sample_with_max_frames(
+    items: Sequence[T],
+    max_frames: int,
+    strategy: SamplingStrategy | str,
+    long_sequence_limit: int = LONG_SEQUENCE_FRAME_LIMIT,
+) -> list[T]:
+    """Apply viewer MAX_FRAMES semantics, including -1 long-sequence mode."""
+    requested = int(max_frames)
+    if requested < -1:
+        raise ValueError(f"max_frames must be -1, 0, or a positive integer; got {requested}")
+    if requested == -1:
+        return sample_sequence(items, max_count=int(long_sequence_limit), strategy="uniform")
+    return sample_sequence(items, max_count=requested, strategy=strategy)

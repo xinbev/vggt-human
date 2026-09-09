@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.vis.sequence_sampling import sample_sequence, uniform_sample_indices
+from scripts.vis.sequence_sampling import sample_sequence, sample_with_max_frames, uniform_sample_indices
 
 
 def main() -> None:
@@ -25,6 +25,9 @@ def main() -> None:
     assert all(left < right for left, right in zip(smpl_indices, smpl_indices[1:]))
 
     frames = [f"frame_{index:04d}.jpg" for index in range(22)]
+    assert sample_with_max_frames(frames, 0, "head") == frames
+    assert sample_with_max_frames(frames, 5, "head") == frames[:5]
+    assert sample_with_max_frames(frames, -1, "head") == frames
     assert sample_sequence(frames, 5, "head") == frames[:5]
     assert sample_sequence(frames, 5, "uniform") == [
         "frame_0000.jpg",
@@ -33,6 +36,18 @@ def main() -> None:
         "frame_0015.jpg",
         "frame_0021.jpg",
     ]
+
+    long_frames = list(range(2200))
+    long_selected = sample_with_max_frames(long_frames, -1, "head")
+    assert len(long_selected) == 500
+    assert long_selected[0] == 0 and long_selected[-1] == 2199
+    assert sample_with_max_frames(list(range(300)), -1, "head") == list(range(300))
+    try:
+        sample_with_max_frames(frames, -2, "head")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("MAX_FRAMES values below -1 must be rejected")
 
     print("[ok] sequence viewer sampling checks passed")
 

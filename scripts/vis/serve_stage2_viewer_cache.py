@@ -46,6 +46,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--point-size", type=float, default=0.006)
     parser.add_argument("--smpl-display-frames", type=int, default=50)
+    parser.add_argument("--display-people", type=int, default=0, help="Maximum people displayed per frame; 0 shows all.")
     parser.add_argument("--initial-timestep", type=int, default=-1, help="Negative starts at the final cached frame.")
     parser.add_argument(
         "--viewer-mode",
@@ -85,7 +86,7 @@ class CachedSequenceViewer:
             frame_path = self.cache_root / str(record["file"])
             if not frame_path.is_file():
                 raise FileNotFoundError(f"Missing cached frame: {frame_path}")
-            handles: dict[str, list[Any]] = {"points": [], "humans": [], "labels": []}
+            handles: dict[str, list[Any]] = {"points": [], "humans": [], "labels": [], "people": []}
             with np.load(frame_path, allow_pickle=False) as data:
                 points = np.asarray(data["points"], dtype=np.float32).reshape(-1, 3)
                 colors = np.asarray(data["colors"], dtype=np.uint8).reshape(-1, 3)
@@ -109,8 +110,8 @@ class CachedSequenceViewer:
                     query_index = int(query_indices[person_index])
                     mesh = vertices[person_index]
                     color = tuple(int(value) for value in mesh_colors[person_index])
-                    handles["humans"].append(
-                        add_mesh(
+                    person_handles: dict[str, list[Any]] = {"humans": [], "labels": []}
+                    mesh_handle = add_mesh(
                             self.server,
                             f"/frames/{position:04d}/human_t{track_id}_q{query_index}",
                             mesh,
@@ -118,19 +119,21 @@ class CachedSequenceViewer:
                             color,
                             1.0,
                         )
-                    )
+                    handles["humans"].append(mesh_handle)
+                    person_handles["humans"].append(mesh_handle)
                     label_position = mesh[int(np.argmin(mesh[:, 1]))].copy()
                     label_position[1] -= 0.12
                     quality = float(track_qualities[person_index])
                     label_text = f"ID {track_id}" if not np.isfinite(quality) else f"ID {track_id}  {quality:.2f}"
-                    handles["labels"].append(
-                        add_label(
+                    label_handle = add_label(
                             self.server,
                             f"/frames/{position:04d}/track_t{track_id}_q{query_index}",
                             label_text,
                             label_position,
                         )
-                    )
+                    handles["labels"].append(label_handle)
+                    person_handles["labels"].append(label_handle)
+                    handles["people"].append(person_handles)
             self.frame_handles.append(handles)
             if (position + 1) % 25 == 0 or position + 1 == frame_count:
                 print(f"[cached-viewer] loaded {position + 1}/{frame_count} frames", flush=True)
@@ -138,6 +141,9 @@ class CachedSequenceViewer:
     def _build_gui(self) -> None:
         frame_count = len(self.frame_handles)
         target = max(1, min(frame_count, int(self.args.smpl_display_frames)))
+        max_people = max(1, max((len(handles["people"]) for handles in self.frame_handles), default=0))
+        requested_people = int(self.args.display_people)
+        people_initial = max_people if requested_people <= 0 else min(max_people, requested_people)
         self.frame_info = add_text(self.server, "Frame Info", "")
         self.sampling_info = add_text(self.server, "SMPL Sampling", "")
         set_disabled(self.frame_info, True)
@@ -156,6 +162,7 @@ class CachedSequenceViewer:
         self.show_points = add_checkbox(self.server, "Show Point Clouds", True)
         self.show_smpl = add_checkbox(self.server, "Show SMPL", True)
         self.show_track_ids = add_checkbox(self.server, "Show Track IDs", bool(self.args.show_track_ids))
+        self.display_people = add_slider(self.server, "Max People Per Frame", 1, max_people, 1, people_initial)
         self.smpl_display_frames = add_slider(self.server, "Accumulated SMPL Frames", 1, frame_count, 1, target)
         self.point_size = add_slider(self.server, "Point Size", 0.0005, 0.08, 0.0005, float(self.args.point_size))
         self.smpl_opacity = add_slider(self.server, "SMPL Opacity", 0.05, 1.0, 0.05, 1.0)
@@ -165,6 +172,7 @@ class CachedSequenceViewer:
             self.show_points,
             self.show_smpl,
             self.show_track_ids,
+            self.display_people,
             self.smpl_display_frames,
         ):
             bind_update(handle, self._on_gui_update)
@@ -213,6 +221,7 @@ class CachedSequenceViewer:
         mode = str(self.mode.value)
         target = max(1, min(len(self.frame_handles), int(self.smpl_display_frames.value)))
         smpl_indices = set(uniform_sample_indices(len(self.frame_handles), target))
+        display_people = max(1, int(self.display_people.value))
         for index, handles in enumerate(self.frame_handles):
             if mode == "3D accumulate":
                 show_points_at_frame = index <= current
@@ -224,11 +233,10 @@ class CachedSequenceViewer:
                 show_points_at_frame = index == current
                 show_human_at_frame = index == current
             set_group_visible(handles["points"], bool(self.show_points.value) and show_points_at_frame)
-            set_group_visible(handles["humans"], bool(self.show_smpl.value) and show_human_at_frame)
-            set_group_visible(
-                handles["labels"],
-                bool(self.show_smpl.value) and bool(self.show_track_ids.value) and show_human_at_frame,
-            )
+            for person_rank, person_handles in enumerate(handles["people"]):
+                show_person = bool(self.show_smpl.value) and show_human_at_frame and person_rank < display_people
+                set_group_visible(person_handles["humans"], show_person)
+                set_group_visible(person_handles["labels"], show_person and bool(self.show_track_ids.value))
         record = self.manifest["frames"][current]
         set_text_value(
             self.frame_info,

@@ -30,7 +30,11 @@ if str(ROOT) not in sys.path:
 
 from scripts.train.train_smpl import apply_overrides, build_model, load_yaml_config  # noqa: E402
 from scripts.vis.full_viewer_cache_io import export_full_sequence_viewer_cache  # noqa: E402
-from scripts.vis.sequence_sampling import sample_sequence, uniform_sample_indices  # noqa: E402
+from scripts.vis.sequence_sampling import (  # noqa: E402
+    LONG_SEQUENCE_FRAME_LIMIT,
+    sample_with_max_frames,
+    uniform_sample_indices,
+)
 from scripts.vis.viewer_cache_io import export_sequence_viewer_cache  # noqa: E402
 from scripts.vis.visualize_smpl_inference import (  # noqa: E402
     estimate_scene_to_smpl_scale,
@@ -285,7 +289,15 @@ def parse_args() -> argparse.Namespace:
             "'head' preserves the baseline prefix behavior; 'uniform' covers the full candidate sequence."
         ),
     )
-    parser.add_argument("--max-frames", type=int, default=32)
+    parser.add_argument(
+        "--max-frames",
+        type=int,
+        default=32,
+        help=(
+            "Frame-count mode after start/stride: 0 uses the full sequence, N>0 limits to N using "
+            "--frame-sampling, and -1 uniformly samples the full range to at most 500 frames."
+        ),
+    )
     parser.add_argument("--max-humans", type=int, default=20)
     parser.add_argument("--conf-threshold", type=float, default=0.10)
     parser.add_argument("--tracking-overlay", choices=["none", "base_smpl"], default="none")
@@ -307,6 +319,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--env-mesh-overlay-point-size-scale", type=float, default=0.75, help="Point-size scale for RGB overlay points in point_overlay mesh color mode.")
     parser.add_argument("--smpl-edit-output", default="", help="Optional JSON path for viewer-only SMPL translation edits. Defaults to <output-dir>/smpl_edit_offsets.json.")
     parser.add_argument("--show-track-ids", action=argparse.BooleanOptionalAction, default=True, help="Initial visibility for SMPL track ID labels. The Viser GUI can still toggle this live.")
+    parser.add_argument(
+        "--display-people",
+        type=int,
+        default=0,
+        help=(
+            "Initial maximum number of highest-confidence people displayed per frame. "
+            "0 displays every decoded person; this can be changed live in the GUI."
+        ),
+    )
     parser.add_argument(
         "--smpl-display-frames",
         type=int,
@@ -367,9 +388,9 @@ def select_frames(frames_dir: Path, args: argparse.Namespace) -> list[Path]:
     start = max(0, int(args.start_index))
     stride = max(1, int(args.frame_stride))
     selected = paths[start::stride]
-    return sample_sequence(
+    return sample_with_max_frames(
         selected,
-        max_count=int(args.max_frames),
+        max_frames=int(args.max_frames),
         strategy=str(getattr(args, "frame_sampling", "head")),
     )
 
@@ -1570,13 +1591,19 @@ def build_summary(
         "frames_dir": str(resolve_project_path(args.frames_dir)),
         "num_frames": len(frame_paths),
         "frame_selection": {
-            "strategy": str(getattr(args, "frame_sampling", "head")),
+            "strategy": (
+                f"uniform_long_sequence_{LONG_SEQUENCE_FRAME_LIMIT}"
+                if int(args.max_frames) == -1
+                else str(getattr(args, "frame_sampling", "head"))
+            ),
             "start_index": int(args.start_index),
             "frame_stride": int(args.frame_stride),
             "max_frames": int(args.max_frames),
+            "long_sequence_limit": int(LONG_SEQUENCE_FRAME_LIMIT),
             "selected_files": [path.name for path in frame_paths],
         },
         "smpl_display_frames_initial": int(getattr(args, "smpl_display_frames", 0)),
+        "display_people_initial": int(getattr(args, "display_people", 0)),
         "checkpoint": str(checkpoint),
         "query_source": str(args.query_source),
         "tracking_overlay": str(args.tracking_overlay),
@@ -1727,6 +1754,16 @@ class SequenceViewer:
             max(HSI_VISUAL_SCALE_MIN, float(args.hsi_visual_scale)),
         )
         self.smpl_opacity_value = 1.0
+        self.max_people_per_frame = max(
+            1,
+            max((len(frame.get("people", [])) for frame in scene["frames"]), default=0),
+        )
+        requested_display_people = int(getattr(args, "display_people", 0))
+        self.display_people_value = (
+            self.max_people_per_frame
+            if requested_display_people <= 0
+            else min(self.max_people_per_frame, requested_display_people)
+        )
         requested_smpl_frames = int(getattr(args, "smpl_display_frames", 0))
         self.smpl_display_frames_value = (
             len(scene["frames"])
@@ -1793,6 +1830,7 @@ class SequenceViewer:
                 "base_humans": [],
                 "hsi_humans": [],
                 "track_labels": [],
+                "people": [],
                 "cameras_raw": [],
                 "cameras_hsi": [],
             }
@@ -1820,9 +1858,18 @@ class SequenceViewer:
                 track_id = int(person["track_id"])
                 query_idx = int(person["query_index"])
                 label_handle = None
+                person_handles: dict[str, Any] = {
+                    "base_humans": [],
+                    "hsi_humans": [],
+                    "track_labels": [],
+                    "confidence": float(person.get("confidence", 0.0)),
+                    "track_id": track_id,
+                    "query_index": query_idx,
+                }
                 if "base_vertices" in person:
                     handle = add_mesh(self.server, f"/frames/{idx:04d}/human_base_t{track_id}_q{query_idx}", person["base_vertices"], person["faces"], color, self.smpl_opacity_value)
                     frame_handles["base_humans"].append(handle)
+                    person_handles["base_humans"].append(handle)
                     self._register_human_entry(
                         frame_index=idx,
                         frame_id=str(frame["frame_id"]),
@@ -1838,6 +1885,7 @@ class SequenceViewer:
                 if "hsi_vertices" in person:
                     handle = add_mesh(self.server, f"/frames/{idx:04d}/human_hsi_t{track_id}_q{query_idx}", person["hsi_vertices"], person["faces"], color, self.smpl_opacity_value)
                     frame_handles["hsi_humans"].append(handle)
+                    person_handles["hsi_humans"].append(handle)
                     self._register_human_entry(
                         frame_index=idx,
                         frame_id=str(frame["frame_id"]),
@@ -1859,11 +1907,13 @@ class SequenceViewer:
                     label_text = f"ID {track_id}" if quality is None else f"ID {track_id}  {float(quality):.2f}"
                     label_handle = add_label(self.server, f"/frames/{idx:04d}/track_label_t{track_id}_q{query_idx}", label_text, label_position)
                     frame_handles["track_labels"].append(label_handle)
+                    person_handles["track_labels"].append(label_handle)
                     for kind in ("base", "hsi"):
                         entry = self.human_entry_by_key.get(human_entry_key(idx, kind, track_id, query_idx))
                         if entry is not None:
                             entry["label_handle"] = label_handle
                             entry["label_base_position"] = label_position.astype(np.float32, copy=False)
+                frame_handles["people"].append(person_handles)
             frame_handles["cameras_raw"].append(add_camera(self.server, self.transforms, f"/frames/{idx:04d}/camera_raw_vggt", frame["raw_camera"], self.camera_scale_value, (255, 255, 255)))
             if not tracking_only:
                 frame_handles["cameras_hsi"].append(add_camera(self.server, self.transforms, f"/frames/{idx:04d}/camera_hsi_scaled", self._scaled_hsi_camera(frame), self.camera_scale_value, (255, 176, 0)))
@@ -2018,6 +2068,16 @@ class SequenceViewer:
             set_handle_disabled(self.show_hsi, True)
             set_handle_disabled(self.show_base, True)
         self.show_track_ids = add_checkbox(self.server, "Show Track IDs", bool(getattr(self.args, "show_track_ids", True)))
+        self.display_people = add_slider(
+            self.server,
+            "Max People Per Frame",
+            1,
+            self.max_people_per_frame,
+            1,
+            self.display_people_value,
+        )
+        self.display_people_info = add_text(self.server, "People Display", "")
+        set_handle_disabled(self.display_people_info, True)
         self.smpl_opacity = add_slider(self.server, "SMPL Opacity", 0.05, 1.00, 0.05, self.smpl_opacity_value)
         self.smpl_color = add_rgb(self.server, "SMPL Color", (204, 51, 51))
         self.smpl_sampling_mode = add_dropdown(
@@ -2072,6 +2132,7 @@ class SequenceViewer:
             self.show_hsi,
             self.show_base,
             self.show_track_ids,
+            self.display_people,
             self.smpl_sampling_mode,
             self.smpl_downsample,
             self.smpl_display_frames,
@@ -3019,6 +3080,7 @@ class SequenceViewer:
         smpl_target_count = max(1, min(len(self.handles), int(self.smpl_display_frames.value)))
         smpl_sample_indices = set(uniform_sample_indices(len(self.handles), smpl_target_count))
         use_smpl_target_count = smpl_sampling_mode == "target frame count"
+        display_people_limit = max(1, min(self.max_people_per_frame, int(self.display_people.value)))
         set_handle_disabled(self.smpl_downsample, use_smpl_target_count)
         set_handle_disabled(self.smpl_display_frames, not use_smpl_target_count)
         camera_stride = max(1, int(self.camera_downsample.value))
@@ -3054,9 +3116,14 @@ class SequenceViewer:
             else:
                 show_base_smpl = bool(self.show_base.value)
                 show_hsi_smpl = bool(self.show_hsi.value)
-            set_group_visible(frame_handles["base_humans"], show_humans and show_decimated_smpl and show_base_smpl)
-            set_group_visible(frame_handles["hsi_humans"], show_humans and show_decimated_smpl and show_hsi_smpl)
-            set_group_visible(frame_handles["track_labels"], show_humans and show_decimated_smpl and bool(self.show_track_ids.value))
+            for person_rank, person_handles in enumerate(frame_handles["people"]):
+                show_person = show_humans and show_decimated_smpl and person_rank < display_people_limit
+                set_group_visible(person_handles["base_humans"], show_person and show_base_smpl)
+                set_group_visible(person_handles["hsi_humans"], show_person and show_hsi_smpl)
+                set_group_visible(
+                    person_handles["track_labels"],
+                    show_person and bool(self.show_track_ids.value),
+                )
             set_group_visible(frame_handles["cameras_raw"], bool(self.show_cameras.value) and show_raw_camera and show_camera_frame and show_decimated_camera)
             set_group_visible(frame_handles["cameras_hsi"], bool(self.show_cameras.value) and show_hsi_camera and show_camera_frame and show_decimated_camera)
         if mode == "3D accumulate" and use_smpl_target_count:
@@ -3080,6 +3147,12 @@ class SequenceViewer:
                 self.smpl_sampling_info,
                 f"Current-frame mode; {sampling_status} applies to 3D accumulate",
             )
+        current_people = len(self.handles[current]["people"])
+        set_text_value(
+            self.display_people_info,
+            f"Showing up to {display_people_limit} highest-confidence people per frame | "
+            f"current frame: {min(display_people_limit, current_people)}/{current_people}",
+        )
         self._update_info_text(current)
 
     def _ensure_depth_meshes_for_frame(self, frame: dict[str, Any], frame_handles: dict[str, Any], idx: int, depth_source: str) -> None:

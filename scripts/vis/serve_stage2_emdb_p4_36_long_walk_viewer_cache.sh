@@ -6,6 +6,7 @@ CACHE_DIR="${CACHE_DIR:-${REPO_ROOT}/outputs/vis/stage2_emdb_p4_36_long_walk_coa
 PORT="${PORT:-8081}"
 POINT_SIZE="${POINT_SIZE:-0.006}"
 SMPL_DISPLAY_FRAMES="${SMPL_DISPLAY_FRAMES:-50}"
+DISPLAY_PEOPLE="${DISPLAY_PEOPLE:-0}"
 INITIAL_TIMESTEP="${INITIAL_TIMESTEP:--1}"
 VIEWER_MODE="${VIEWER_MODE:-3d}"
 SHOW_TRACK_IDS="${SHOW_TRACK_IDS:-true}"
@@ -25,6 +26,7 @@ ARGS=(
   --port "${PORT}"
   --point-size "${POINT_SIZE}"
   --smpl-display-frames "${SMPL_DISPLAY_FRAMES}"
+  --display-people "${DISPLAY_PEOPLE}"
   --initial-timestep "${INITIAL_TIMESTEP}"
   --viewer-mode "${VIEWER_MODE_ARG}"
 )
