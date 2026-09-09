@@ -1,0 +1,104 @@
+{
+  "benchmark": "human3r_tum_dynamics_ate_v1",
+  "protocol": "translation APE RMSE after Sim(3) alignment (Human3R/evo align=True, correct_scale=True)",
+  "dataset_root": "/home/zhw/xyb_space/tum_dynamics_long_s1",
+  "prediction_root": "outputs/eval/tum_dynamics_predictions/tum_50_vggt",
+  "length": 50,
+  "sequence_count": 8,
+  "ate_rmse_m_mean_over_sequences": 0.0029932083135804973,
+  "ate_rmse_m_median_over_sequences": 0.002814672038620836,
+  "associated_pose_count": 400,
+  "prediction_quaternion_order": "wxyz",
+  "association_mode": "auto",
+  "max_time_difference_s": 0.02,
+  "sequences": [
+    {
+      "sequence": "rgbd_dataset_freiburg3_sitting_halfsphere",
+      "prediction_file": "outputs/eval/tum_dynamics_predictions/tum_50_vggt/rgbd_dataset_freiburg3_sitting_halfsphere/pred_traj.txt",
+      "groundtruth_file": "/home/zhw/xyb_space/tum_dynamics_long_s1/rgbd_dataset_freiburg3_sitting_halfsphere/groundtruth_50.txt",
+      "prediction_poses": 50,
+      "groundtruth_poses": 50,
+      "associated_poses": 50,
+      "ate_rmse_m": 0.0032936071837326815,
+      "alignment_scale": 2.273570063720661,
+      "association": "index"
+    },
+    {
+      "sequence": "rgbd_dataset_freiburg3_sitting_rpy",
+      "prediction_file": "outputs/eval/tum_dynamics_predictions/tum_50_vggt/rgbd_dataset_freiburg3_sitting_rpy/pred_traj.txt",
+      "groundtruth_file": "/home/zhw/xyb_space/tum_dynamics_long_s1/rgbd_dataset_freiburg3_sitting_rpy/groundtruth_50.txt",
+      "prediction_poses": 50,
+      "groundtruth_poses": 50,
+      "associated_poses": 50,
+      "ate_rmse_m": 0.0019456796718238343,
+      "alignment_scale": 2.5239843880029986,
+      "association": "index"
+    },
+    {
+      "sequence": "rgbd_dataset_freiburg3_sitting_static",
+      "prediction_file": "outputs/eval/tum_dynamics_predictions/tum_50_vggt/rgbd_dataset_freiburg3_sitting_static/pred_traj.txt",
+      "groundtruth_file": "/home/zhw/xyb_space/tum_dynamics_long_s1/rgbd_dataset_freiburg3_sitting_static/groundtruth_50.txt",
+      "prediction_poses": 50,
+      "groundtruth_poses": 50,
+      "associated_poses": 50,
+      "ate_rmse_m": 0.002664731842259505,
+      "alignment_scale": 2.620722361078855,
+      "association": "index"
+    },
+    {
+      "sequence": "rgbd_dataset_freiburg3_sitting_xyz",
+      "prediction_file": "outputs/eval/tum_dynamics_predictions/tum_50_vggt/rgbd_dataset_freiburg3_sitting_xyz/pred_traj.txt",
+      "groundtruth_file": "/home/zhw/xyb_space/tum_dynamics_long_s1/rgbd_dataset_freiburg3_sitting_xyz/groundtruth_50.txt",
+      "prediction_poses": 50,
+      "groundtruth_poses": 50,
+      "associated_poses": 50,
+      "ate_rmse_m": 0.0015906426359175213,
+      "alignment_scale": 2.8883902568386457,
+      "association": "index"
+    },
+    {
+      "sequence": "rgbd_dataset_freiburg3_walking_halfsphere",
+      "prediction_file": "outputs/eval/tum_dynamics_predictions/tum_50_vggt/rgbd_dataset_freiburg3_walking_halfsphere/pred_traj.txt",
+      "groundtruth_file": "/home/zhw/xyb_space/tum_dynamics_long_s1/rgbd_dataset_freiburg3_walking_halfsphere/groundtruth_50.txt",
+      "prediction_poses": 50,
+      "groundtruth_poses": 50,
+      "associated_poses": 50,
+      "ate_rmse_m": 0.004784851311744066,
+      "alignment_scale": 3.311555648539647,
+      "association": "index"
+    },
+    {
+      "sequence": "rgbd_dataset_freiburg3_walking_rpy",
+      "prediction_file": "outputs/eval/tum_dynamics_predictions/tum_50_vggt/rgbd_dataset_freiburg3_walking_rpy/pred_traj.txt",
+      "groundtruth_file": "/home/zhw/xyb_space/tum_dynamics_long_s1/rgbd_dataset_freiburg3_walking_rpy/groundtruth_50.txt",
+      "prediction_poses": 50,
+      "groundtruth_poses": 50,
+      "associated_poses": 50,
+      "ate_rmse_m": 0.004662424290644587,
+      "alignment_scale": 2.6898330422149637,
+      "association": "index"
+    },
+    {
+      "sequence": "rgbd_dataset_freiburg3_walking_static",
+      "prediction_file": "outputs/eval/tum_dynamics_predictions/tum_50_vggt/rgbd_dataset_freiburg3_walking_static/pred_traj.txt",
+      "groundtruth_file": "/home/zhw/xyb_space/tum_dynamics_long_s1/rgbd_dataset_freiburg3_walking_static/groundtruth_50.txt",
+      "prediction_poses": 50,
+      "groundtruth_poses": 50,
+      "associated_poses": 50,
+      "ate_rmse_m": 0.0020391173375396156,
+      "alignment_scale": 2.8479333568291145,
+      "association": "index"
+    },
+    {
+      "sequence": "rgbd_dataset_freiburg3_walking_xyz",
+      "prediction_file": "outputs/eval/tum_dynamics_predictions/tum_50_vggt/rgbd_dataset_freiburg3_walking_xyz/pred_traj.txt",
+      "groundtruth_file": "/home/zhw/xyb_space/tum_dynamics_long_s1/rgbd_dataset_freiburg3_walking_xyz/groundtruth_50.txt",
+      "prediction_poses": 50,
+      "groundtruth_poses": 50,
+      "associated_poses": 50,
+      "ate_rmse_m": 0.002964612234982167,
+      "alignment_scale": 2.8442394760748866,
+      "association": "index"
+    }
+  ]
+}

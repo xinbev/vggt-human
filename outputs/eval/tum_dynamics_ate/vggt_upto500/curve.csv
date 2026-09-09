@@ -1,0 +1,8 @@
+length,sequence_count,ate_rmse_m_mean_over_sequences,ate_rmse_m_median_over_sequences,prediction_root
+50,8,0.0029932083135804973,0.002814672038620836,outputs/eval/tum_dynamics_predictions/tum_50_vggt
+100,8,0.0043409809895220515,0.0037600128460491206,outputs/eval/tum_dynamics_predictions/tum_100_vggt
+150,8,0.004930351035055057,0.004206963861878025,outputs/eval/tum_dynamics_predictions/tum_150_vggt
+200,8,0.005909471782128872,0.004982135206455945,outputs/eval/tum_dynamics_predictions/tum_200_vggt
+300,8,0.006341055280197789,0.005952011794798869,outputs/eval/tum_dynamics_predictions/tum_300_vggt
+400,8,0.006451712633021363,0.006529120108321018,outputs/eval/tum_dynamics_predictions/tum_400_vggt
+500,8,0.006916918533247201,0.007324185113535293,outputs/eval/tum_dynamics_predictions/tum_500_vggt

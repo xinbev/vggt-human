@@ -33,12 +33,6 @@ echo "分配的 GPU: ${CUDA_VISIBLE_DEVICES}"
 
 
 
-DATASET_ROOT=/home/zhw/xyb_space/tum_dynamics_long_s1 \
-CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt \
-PRED_PARENT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/tum_dynamics_predictions \
-LENGTHS=50,100,150,200,300,400,500,600,700,800,900,1000 \
-MODEL=vggt \
-bash benchmarks/tum_dynamics_ate/infer_vggt.sh
 
 
 

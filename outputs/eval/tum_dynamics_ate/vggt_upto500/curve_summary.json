@@ -1,0 +1,68 @@
+{
+  "benchmark": "human3r_tum_dynamics_ate_curve_v1",
+  "protocol": "Human3R/evo translation APE RMSE with Sim(3) alignment",
+  "dataset_root": "/home/zhw/xyb_space/tum_dynamics_long_s1",
+  "pred_parent": "outputs/eval/tum_dynamics_predictions",
+  "lengths": [
+    50,
+    100,
+    150,
+    200,
+    300,
+    400,
+    500
+  ],
+  "model": "vggt",
+  "prediction_quaternion_order": "wxyz",
+  "rows": [
+    {
+      "length": 50,
+      "sequence_count": 8,
+      "ate_rmse_m_mean_over_sequences": 0.0029932083135804973,
+      "ate_rmse_m_median_over_sequences": 0.002814672038620836,
+      "prediction_root": "outputs/eval/tum_dynamics_predictions/tum_50_vggt"
+    },
+    {
+      "length": 100,
+      "sequence_count": 8,
+      "ate_rmse_m_mean_over_sequences": 0.0043409809895220515,
+      "ate_rmse_m_median_over_sequences": 0.0037600128460491206,
+      "prediction_root": "outputs/eval/tum_dynamics_predictions/tum_100_vggt"
+    },
+    {
+      "length": 150,
+      "sequence_count": 8,
+      "ate_rmse_m_mean_over_sequences": 0.004930351035055057,
+      "ate_rmse_m_median_over_sequences": 0.004206963861878025,
+      "prediction_root": "outputs/eval/tum_dynamics_predictions/tum_150_vggt"
+    },
+    {
+      "length": 200,
+      "sequence_count": 8,
+      "ate_rmse_m_mean_over_sequences": 0.005909471782128872,
+      "ate_rmse_m_median_over_sequences": 0.004982135206455945,
+      "prediction_root": "outputs/eval/tum_dynamics_predictions/tum_200_vggt"
+    },
+    {
+      "length": 300,
+      "sequence_count": 8,
+      "ate_rmse_m_mean_over_sequences": 0.006341055280197789,
+      "ate_rmse_m_median_over_sequences": 0.005952011794798869,
+      "prediction_root": "outputs/eval/tum_dynamics_predictions/tum_300_vggt"
+    },
+    {
+      "length": 400,
+      "sequence_count": 8,
+      "ate_rmse_m_mean_over_sequences": 0.006451712633021363,
+      "ate_rmse_m_median_over_sequences": 0.006529120108321018,
+      "prediction_root": "outputs/eval/tum_dynamics_predictions/tum_400_vggt"
+    },
+    {
+      "length": 500,
+      "sequence_count": 8,
+      "ate_rmse_m_mean_over_sequences": 0.006916918533247201,
+      "ate_rmse_m_median_over_sequences": 0.007324185113535293,
+      "prediction_root": "outputs/eval/tum_dynamics_predictions/tum_500_vggt"
+    }
+  ]
+}
