@@ -1,0 +1,11 @@
+Create a simple standalone scientific diagram titled "Analytic Absolute Scale", landscape 1536×1024, designed as an easy-to-copy PowerPoint/Figma drawing. Warm off-white background, one pale cream rounded panel, thin charcoal outlines, muted yellow accent. Flat 2D vector, large labels, no gradients, no tiny text, no watermark.
+
+Show one horizontal three-step process with equal spacing and straight arrows.
+
+Step 1 title "1  Project body anchors". Draw a small wireframe human with a few colored anchor dots and dotted lines pointing to a small grayscale depth tile. Keep this icon simple.
+
+Step 2 title "2  Compute scale ratios". Draw exactly THREE large rounded white cards in one row. Each card uses the same simple layout: top line "z_smpl", one horizontal fraction bar, bottom line "z_depth", then a right arrow and result "r₁" for card one, "r₂" for card two, "r₃" for card three. Add an ellipsis after the third card. Below the row write "one ratio per valid anchor". No bead columns, no depth marker icons, no extra equations.
+
+Step 3 title "3  Select the median". Draw exactly SEVEN equal rounded boxes in one horizontal sorted strip, labeled r₁, r₂, r₃, r₄, r₅, r₆, r₇. Use muted neutral fills. Highlight only the center fourth box r₄ in restrained yellow. Draw one short downward arrow from r₄ into a large yellow output chip labeled "C_coarse". Under the chip write "robust coarse scale". No crosses, outlier icons, gauges, plots, or mathematical derivation.
+
+The visual story must be obvious: body anchors produce multiple ratios; ratio values are sorted; the center value becomes C_coarse. Use only basic rounded rectangles, one human icon, one depth tile, arrows, fraction bars, and labels. At bottom add a small palette strip: #E7DAAC #E9D36E #A9CFD8 #AFCAB2 #CBBAD8 #2F3438.

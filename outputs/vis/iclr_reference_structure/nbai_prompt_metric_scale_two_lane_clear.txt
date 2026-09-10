@@ -1,0 +1,30 @@
+Use the supplied cropped diagram only as a content and palette reference. Recreate the same Metric Scale Calibration concept as a much larger, simpler standalone diagram that is easy to understand and manually reproduce. Do not add extra algorithmic detail.
+
+Canvas: landscape 1536×1024, warm off-white #F7F6F2 background, thin charcoal #2F3438 outlines, large labels, straight arrows, flat 2D scientific vector style. Use pale cream #E7DAAC for the analytic path, pale sage #AFCAB2 for the learned path, plus #A9CFD8, #99ADD4, #CBBAD8, #D9ACA6, #E9D36E. No gradients, photorealism, glow, poster effects, watermark, or tiny text.
+
+Title exactly "Metric Scale Calibration".
+
+LEFT INPUT COLUMN: two large simple input cards stacked vertically:
+- depth-map thumbnail labeled exactly "Raw VGGT depth D_vggt";
+- small SMPL wireframe labeled exactly "Metric SMPL {θ, β, τ}".
+From the shared inputs, split into TWO LARGE PARALLEL HORIZONTAL LANES.
+
+UPPER CREAM LANE title exactly "A  Analytic Absolute Scale". Show only three big steps connected by straight arrows:
+1. icon: SMPL body with colored anchor dots projecting to a depth tile; label exactly "Project body anchors".
+2. icon: three paired vertical depth markers joined by ratio symbols; label exactly "Compare anchor depths". Beneath it show only "r_i = z_smpl,i / z_depth,i".
+3. icon: six colored ratio dots in a row, two red outliers crossed out, remaining dots flow into a median symbol; label exactly "Robust median".
+At the lane's right end place one large yellow output chip exactly "C_coarse". Under it write exactly "absolute metric gauge".
+
+LOWER SAGE LANE title exactly "B  Learned Residual Correction". Show only three big steps connected by straight arrows:
+1. icon: a simple 4×6 grid of exactly 24 colored squares; label exactly "24 body-anchor tokens".
+2. icon: three selected tokens pointing to three small local depth patches with a dot and short offset arrow; label exactly "Local scene probing".
+3. icon: one compact MLP box splitting into two output chips; label exactly "Residual affine head".
+At the lane's right end place two large output chips exactly "R_hsi" and "b_hsi". Under them write exactly "residual scale + bias".
+
+RIGHT FUSION AREA: draw one large merge symbol receiving C_coarse from the upper lane and R_hsi, b_hsi from the lower lane. Raw depth D_vggt also enters this merge. To the right, show the exact formula in one large rounded strip:
+"D_metric = (C_coarse · R_hsi) D_vggt + b_hsi"
+Then one calibrated depth-map thumbnail labeled exactly "Metric depth D_metric".
+
+At the bottom, add one simple bracket spanning both lanes with exact text "reliable absolute scale + learned residual correction".
+
+The visual logic must be readable without explanation: same inputs feed two complementary paths, the upper produces C_coarse, the lower produces R_hsi and b_hsi, and the three quantities merge to produce D_metric. Use only the exact labels listed. Add a compact bottom strip titled "Figure palette" with exact codes #E7DAAC #AFCAB2 #A9CFD8 #99ADD4 #CBBAD8 #D9ACA6 #E9D36E #2F3438.

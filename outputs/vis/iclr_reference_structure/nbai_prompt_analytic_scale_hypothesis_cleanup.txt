@@ -1,0 +1,9 @@
+Use the provided Analytic Absolute Scale diagram as a strict reference. Preserve the exact three-step structure, sophisticated correspondence glyph in step 2, hypothesis-axis visualization in step 3, colors, icons, labels, and linework. Do not redesign.
+
+Make only these editorial corrections:
+1. Correct the bottom-right equation to exactly "C_coarse = median_{i∈V}(s_i)" with clean mathematical typography.
+2. Keep the yellow median line centered on the inlier cluster and connected to C_coarse.
+3. Remove any stray or malformed characters.
+4. Vertically center the complete cream panel on the canvas and reduce excessive empty margin below it, while preserving landscape format.
+
+No new content, no watermark, no gradients, no cartoon styling.

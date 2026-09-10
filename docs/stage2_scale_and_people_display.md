@@ -43,6 +43,14 @@
 - `MAX_FRAMES=-1`：启用长序列模式；候选帧不超过 500 时全部进入，超过 500 时从完整范围均匀抽取恰好 500 帧并覆盖首尾。
 - 小于 `-1` 的值视为配置错误。
 
+## 开始与结束帧范围
+
+- `START_INDEX=0`：排序后源图片列表的起始下标，包含该帧。
+- `END_INDEX=-1`：默认读取到序列末尾。
+- `END_INDEX=N`：结束下标，包含该帧。例如 `START_INDEX=100 END_INDEX=299` 的候选范围是 200 帧。
+- 处理顺序固定为：闭区间范围 `[START_INDEX, END_INDEX]` → `FRAME_STRIDE` → `MAX_FRAMES` 三态限制。
+- `END_INDEX < START_INDEX` 或 `END_INDEX < -1` 会直接报错；超过序列末尾的结束下标会自然截到最后一帧。
+
 ## 人数显示控制
 
 原 `SequenceViewer` 新增 `Max People Per Frame` 滑条：

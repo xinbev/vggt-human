@@ -1,0 +1,14 @@
+Use the supplied generated mechanism figure as the strict visual reference. Preserve its three-panel composition, dimensions, typography hierarchy, muted palette, equations, and technical line-art. Do not redesign. Make only the following scientific corrections and clarity improvements.
+
+DATA BUSES:
+- Place "Human stream: Metric SMPL {θ, β, τ, c}" as a clean rose horizontal input bus above panels (a) and (b). One branch supplies body anchors to HSI; the main bus bypasses HSI and enters TRSTR Inputs directly.
+- Place "Scene stream: Raw VGGT depth D_vggt" as a clean cyan horizontal input bus entering panel (a) from the left. Do not place this raw-depth bus below the HSI output.
+- Only "Metric depth D_metric" exits HSI and enters TRSTR. HSI must not appear to output Metric SMPL.
+
+PANEL (a): preserve the two-lane Analytic Coarse Gauge and Learned HSI Residual design. Keep exact output formula "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi". Make the 24 body-anchor tokens visually a 4×6 matrix, exactly 24 cells. Keep ratio outlier rejection and C_coarse median.
+
+PANEL (b): in column 4, redraw "Per-region prediction" as THREE PARALLEL HEADS branching from the same regional feature token, not a vertical sequence. The parallel outputs are exactly "vote Δτ_r", "gate g_r", and "log-variance ℓ_r". All three flow independently into column 5 Robust consensus. Use exact weight formula "w_r = valid_r · g_r · exp(−ℓ_r)" and exact consensus "Δτ = Σ_r w_r Δτ_r / Σ_r w_r". Connect the "2× re-probe" loop visibly from the first translation update back to columns 2–3, indicating regenerate mesh regions and probe again. Preserve output "refined translation τ* = τ + Δτ" and bypass "θ, β unchanged".
+
+PANEL (c): the neighbor-only motion proposal receives arrows ONLY from t−2, t−1, t+1, t+2. Draw no arrow from center t or O_t into the proposal block. Highlight O_t separately and route it only to Fusion gate. M_t also routes to Fusion gate. Track validity and confidence route to Fusion gate. Preserve "0 ≤ α_t ≤ 0.5" and exact equation "X*_t = O_t + α_t(M_t − O_t)". Preserve three ID lanes and "invalid track / gap → no-op".
+
+Remove stray characters and garbled microtext. Keep all labels crisp and large. No new modules, photorealism, gradients, promotional effects, or watermark. Preserve the exact bottom palette codes.

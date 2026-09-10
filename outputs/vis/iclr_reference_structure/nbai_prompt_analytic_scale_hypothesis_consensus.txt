@@ -1,0 +1,33 @@
+Use the supplied Metric Scale Calibration figure as a strict visual-style reference. Recreate ONLY the upper cream lane "A  Analytic Absolute Scale" as a polished ICLR paper-figure component. Preserve its pale cream background, muted pastel palette, thin charcoal outlines, academic typography, rounded panel, and left-to-right three-step rhythm. This is a sophisticated redesign of steps 2 and 3, not a simplification into teaching cards.
+
+Canvas: landscape 1536×1024, warm paper #F7F6F2. One wide pale-cream #E7DAAC panel with restrained yellow #E9D36E, sage #AFCAB2, cyan #A9CFD8, periwinkle #99ADD4, lavender #CBBAD8, dusty blush #D9ACA6, charcoal #2F3438. Flat 2D scientific vector graphics. No gradients, shadows, cartoon styling, large title, red crosses, gauges, childish cards, photorealism, or watermark.
+
+Panel header exactly "A  Analytic Absolute Scale".
+
+STEP 1, left 30%, preserve the existing concept and title exactly "1  Project body anchors". Show a compact technical SMPL wireframe with several colored body-anchor dots. Thin dashed projection rays connect matching anchors to colored samples on a small grayscale depth tile. Keep it precise and elegant.
+
+STEP 2, center 35%, title exactly "2  Per-anchor scale hypotheses". Design a compact CORRESPONDENCE-AND-RATIO GLYPH:
+- two clean aligned horizontal rows, not separate cards;
+- upper row label "SMPL anchor depth" and five small colored nodes labeled z_smpl,i;
+- lower row label "VGGT depth sample" and five corresponding colored nodes labeled z_depth,i;
+- connect each upper/lower pair with a thin vertical line in the matching color;
+- beneath each pair, a compact pill or small tick labeled s_i;
+- place one concise equation below the glyph exactly "s_i = z_smpl,i / z_depth,i";
+- use an ellipsis after the fifth pair to indicate many valid anchors.
+The visual should resemble a compact correspondence matrix or bipartite measurement diagram used in a top computer-vision paper—not a row of flash cards.
+
+STEP 3, right 35%, title exactly "3  Robust scale consensus". Design a refined ONE-DIMENSIONAL SCALE-HYPOTHESIS DISTRIBUTION:
+- one horizontal axis labeled "scale hypothesis s";
+- place about twelve small hypothesis ticks/dots along the axis;
+- most inlier hypotheses form a tight central cluster in cyan, sage, periwinkle, and lavender;
+- two or three extreme hypotheses appear as small hollow gray or desaturated dots at the far ends, without red crosses;
+- behind the central cluster place a very light translucent rounded band labeled "inlier support";
+- place one bold restrained-yellow vertical line through the center of the cluster, labeled exactly "median";
+- a clean downward arrow leads from the median line to a prominent yellow output chip labeled exactly "C_coarse";
+- below it show the concise equation exactly "C_coarse = median_{i∈V}(s_i)".
+The axis, support band, clustered ticks, and median line should look like a robust-estimation visualization from a top-tier research paper.
+
+Use thin straight arrows between the three steps. The complete scientific story must read immediately:
+project anchors → generate one scale hypothesis per valid correspondence → aggregate the hypothesis distribution with a robust median → C_coarse.
+
+Keep labels crisp and restrained. Do not show the learned HSI residual lane, final metric-depth equation, palette legend, or any unrelated modules in this standalone component.

@@ -1,0 +1,23 @@
+Use the provided cropped architecture figure as the strict content reference. Recreate ONLY the same three modules at a much larger, clearer scale. Preserve the same left-to-right order, same abstraction level, and same restrained pastel academic style. Do not add mechanisms, formulas, intermediate steps, tensor shapes, numbered stages, extra arrows, or explanatory text.
+
+Canvas: landscape 1536×1024, warm off-white background, generous margins. Three large rounded panels aligned horizontally with equal height and clear straight arrows between them. Thin charcoal outlines, large bold headings, large simple icons, lots of breathing room. Colors: pale cream #E7DAAC, pale blue #99ADD4, pale cyan #A9CFD8, pale lavender #CBBAD8, pale sage #AFCAB2, charcoal #2F3438. No gradients, photorealism, glow, poster effects, or watermark.
+
+LEFT PANEL, about 25% width, title exactly "HSI Scale Calibration". Keep only two stacked rounded subcards:
+- upper subcard: title exactly "Analytic Coarse Scale". Show one simple gauge icon. Beneath it, one short label exactly "C_coarse".
+- lower subcard: title exactly "Residual Affine". Show a simple 4×4 token grid plus a short vertical output vector. Beneath them, two labels exactly "R_hsi" and "b_hsi".
+At the bottom of the panel show one output chip exactly "Metric depth D_metric". No formula and no other text.
+
+MIDDLE PANEL, about 45% width, title exactly "TRSTR Spatial Refinement". Keep only four large visual elements arranged in a clean 2×2 composition:
+- upper-left: small segmented SMPL body, label exactly "Metric SMPL";
+- upper-right: simple 4×4 region-token matrix, label exactly "96 body regions";
+- lower-left: four simple probe icons in one row, labels exactly "3×3", "7×7", "adaptive", "annulus";
+- lower-right: one funnel icon, label exactly "Weighted voting".
+At the bottom show a lock icon and exact label "θ, β fixed", followed by one output chip exactly "refined translation τ*". Do not show vote/gate/uncertainty internals or equations.
+
+RIGHT PANEL, about 30% width, title exactly "Track-wise Temporal Stabilizer". Show one large nine-node horizontal timeline with the center node highlighted center node highlighted and labeled exactly "O_t". Below it show one second simple curved dotted timeline labeled exactly "Motion proposal M_t". Below that show one large gate diamond labeled exactly "α_t ≤ 0.5". At the bottom show one output chip exactly "Stable sequence". No formula, no track lanes, no extra inputs, and no other text.
+
+CONNECTORS:
+- Two clean input arrows enter the middle panel: a blue arrow from "Metric depth D_metric" and a rose arrow labeled "Metric SMPL" that visually bypasses the left HSI panel.
+- One straight arrow connects TRSTR output to Temporal Stabilizer.
+
+The final result must be easy for a researcher to manually recreate in PowerPoint, Figma, Illustrator, or diagrams.net: simple shapes, few labels, no fine detail. Preserve a compact bottom palette strip titled exactly "Figure palette" with the exact codes #E7DAAC #99ADD4 #A9CFD8 #CBBAD8 #AFCAB2 #2F3438.

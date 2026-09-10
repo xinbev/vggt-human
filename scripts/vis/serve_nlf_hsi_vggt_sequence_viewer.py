@@ -32,7 +32,7 @@ from scripts.train.train_smpl import apply_overrides, build_model, load_yaml_con
 from scripts.vis.full_viewer_cache_io import export_full_sequence_viewer_cache  # noqa: E402
 from scripts.vis.sequence_sampling import (  # noqa: E402
     LONG_SEQUENCE_FRAME_LIMIT,
-    sample_with_max_frames,
+    select_frame_candidates,
     uniform_sample_indices,
 )
 from scripts.vis.viewer_cache_io import export_sequence_viewer_cache  # noqa: E402
@@ -279,13 +279,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--image-size", type=int, default=0)
     parser.add_argument("--start-index", type=int, default=0)
+    parser.add_argument(
+        "--end-index",
+        type=int,
+        default=-1,
+        help="Inclusive index in the sorted source image list; -1 keeps frames through the sequence end.",
+    )
     parser.add_argument("--frame-stride", type=int, default=1)
     parser.add_argument(
         "--frame-sampling",
         choices=["head", "uniform"],
         default="head",
         help=(
-            "How --max-frames is applied after --start-index/--frame-stride: "
+            "How --max-frames is applied after the inclusive index range and --frame-stride: "
             "'head' preserves the baseline prefix behavior; 'uniform' covers the full candidate sequence."
         ),
     )
@@ -294,7 +300,7 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=32,
         help=(
-            "Frame-count mode after start/stride: 0 uses the full sequence, N>0 limits to N using "
+            "Frame-count mode after range/stride: 0 uses every candidate, N>0 limits to N using "
             "--frame-sampling, and -1 uniformly samples the full range to at most 500 frames."
         ),
     )
@@ -385,11 +391,11 @@ def resolve_project_path(path: str | Path) -> Path:
 
 def select_frames(frames_dir: Path, args: argparse.Namespace) -> list[Path]:
     paths = iter_image_files(frames_dir)
-    start = max(0, int(args.start_index))
-    stride = max(1, int(args.frame_stride))
-    selected = paths[start::stride]
-    return sample_with_max_frames(
-        selected,
+    return select_frame_candidates(
+        paths,
+        start_index=int(args.start_index),
+        end_index=int(getattr(args, "end_index", -1)),
+        frame_stride=int(args.frame_stride),
         max_frames=int(args.max_frames),
         strategy=str(getattr(args, "frame_sampling", "head")),
     )
@@ -1597,6 +1603,7 @@ def build_summary(
                 else str(getattr(args, "frame_sampling", "head"))
             ),
             "start_index": int(args.start_index),
+            "end_index_inclusive": int(getattr(args, "end_index", -1)),
             "frame_stride": int(args.frame_stride),
             "max_frames": int(args.max_frames),
             "long_sequence_limit": int(LONG_SEQUENCE_FRAME_LIMIT),

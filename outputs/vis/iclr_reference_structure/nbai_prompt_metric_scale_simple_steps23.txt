@@ -1,0 +1,16 @@
+Use the provided Metric Scale Calibration image as a strict reference. Preserve the entire layout, lower Learned Residual Correction lane, left input cards, right fusion equation, output depth tile, colors, typography, and all connectors. Redesign ONLY step 2 and step 3 of the upper cream "Analytic Absolute Scale" lane so they are extremely easy to draw manually.
+
+Keep step 1 "Project body anchors" unchanged.
+
+NEW STEP 2, title exactly "2  Compute scale ratios". Replace all vertical bead columns and detailed depth-pair graphics with THREE SIMPLE ROUNDED RATIO CARDS arranged in one horizontal row. Each card contains only a small fraction and result:
+- card 1: "z_smpl / z_depth" then "= r₁"
+- card 2: "z_smpl / z_depth" then "= r₂"
+- card 3: "z_smpl / z_depth" then "= r₃"
+After the third card show an ellipsis "…". Beneath the cards show one concise label exactly "one ratio per valid anchor". Use simple cream cards, black fraction bars, and no icons.
+
+NEW STEP 3, title exactly "3  Select the median". Replace colored dots, crossed-out outliers, and robust-statistics graphics with ONE SIMPLE HORIZONTAL SORTED STRIP made of seven equal rounded boxes. Put simple values inside: "r₁", "r₂", "r₃", "r₄", "r₅", "r₆", "r₇". Highlight the center fourth box in yellow and draw one short downward arrow from it to a large output chip exactly "C_coarse = median({r_i})". Beneath it write exactly "robust coarse scale". Do not draw crosses, outlier symbols, gauges, distribution plots, or extra equations.
+
+The upper lane must read visually as:
+Project anchors → compute several ratio cards → sort values and pick the center → C_coarse.
+
+All shapes must be basic PowerPoint/Figma shapes: rounded rectangles, fraction bars, one arrow, and one highlighted center box. Keep large crisp labels. Do not modify anything else in the figure. No watermark.

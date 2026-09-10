@@ -1,0 +1,5 @@
+Use the provided architecture image as a strict reference. Preserve the exact outer container, two stacked modules, all icons, colors, labels, arrows, sizes, and positions. Do not redesign or add mechanisms.
+
+Make only one correction in the lower "Track-wise Temporal Stabilization" module: replace the current top timeline with exactly NINE evenly spaced circular nodes connected by one straight line. Highlight the fifth center node in periwinkle and label it exactly "O_t". Keep four nodes on its left and four nodes on its right. Preserve the separate five-node dotted curve labeled "Motion proposal M_t", the diamond "α_t ≤ 0.5", and the green "Stable sequence" chip.
+
+Remove any stray marks. Everything else must remain visually identical. Flat 2D scientific vector diagram, no watermark.

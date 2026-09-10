@@ -35,7 +35,17 @@ def main() -> None:
         "camera_trajectory_hsi": np.asarray([[0.0, 0.0, 0.0]], dtype=np.float32),
         "trstr_active": True,
     }
-    args = SimpleNamespace(point_size=0.006, viewer_mode="Hybrid", filter_human_points=True)
+    args = SimpleNamespace(
+        point_size=0.006,
+        viewer_mode="Hybrid",
+        filter_human_points=True,
+        start_index=100,
+        end_index=299,
+        frame_stride=2,
+        max_frames=-1,
+        display_people=1,
+        cascade_effective_affine_mode="clip_median",
+    )
     with tempfile.TemporaryDirectory() as temp_dir:
         manifest = export_full_sequence_viewer_cache(scene, args, Path(temp_dir) / "full_cache")
         restored, restored_args, restored_manifest = load_full_sequence_viewer_cache(manifest.parent)
@@ -45,6 +55,12 @@ def main() -> None:
         assert np.array_equal(restored["frames"][0]["people"][0]["faces"], faces)
         assert restored_args.viewer_mode == "Hybrid"
         assert restored_args.filter_human_points is True
+        assert restored_args.start_index == 100
+        assert restored_args.end_index == 299
+        assert restored_args.frame_stride == 2
+        assert restored_args.max_frames == -1
+        assert restored_args.display_people == 1
+        assert restored_args.cascade_effective_affine_mode == "clip_median"
     print("[ok] full sequence viewer cache round-trip passed")
 
 

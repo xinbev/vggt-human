@@ -10,6 +10,19 @@ SamplingStrategy = Literal["head", "uniform"]
 LONG_SEQUENCE_FRAME_LIMIT = 500
 
 
+def select_inclusive_range(items: Sequence[T], start_index: int = 0, end_index: int = -1) -> list[T]:
+    """Select an inclusive index range; ``end_index=-1`` means the sequence end."""
+    values = list(items)
+    start = max(0, int(start_index))
+    end = int(end_index)
+    if end < -1:
+        raise ValueError(f"end_index must be -1 or a non-negative integer; got {end}")
+    if end >= 0 and end < start:
+        raise ValueError(f"end_index must be >= start_index; got start={start}, end={end}")
+    stop = None if end == -1 else end + 1
+    return values[start:stop]
+
+
 def uniform_sample_indices(total_count: int, target_count: int) -> list[int]:
     """Return exactly ``target_count`` ordered indices spanning both endpoints."""
     total = max(0, int(total_count))
@@ -49,3 +62,23 @@ def sample_with_max_frames(
     if requested == -1:
         return sample_sequence(items, max_count=int(long_sequence_limit), strategy="uniform")
     return sample_sequence(items, max_count=requested, strategy=strategy)
+
+
+def select_frame_candidates(
+    items: Sequence[T],
+    start_index: int = 0,
+    end_index: int = -1,
+    frame_stride: int = 1,
+    max_frames: int = 0,
+    strategy: SamplingStrategy | str = "head",
+    long_sequence_limit: int = LONG_SEQUENCE_FRAME_LIMIT,
+) -> list[T]:
+    """Apply the complete range -> stride -> frame-count selection pipeline."""
+    selected_range = select_inclusive_range(items, start_index=start_index, end_index=end_index)
+    strided = selected_range[:: max(1, int(frame_stride))]
+    return sample_with_max_frames(
+        strided,
+        max_frames=max_frames,
+        strategy=strategy,
+        long_sequence_limit=long_sequence_limit,
+    )

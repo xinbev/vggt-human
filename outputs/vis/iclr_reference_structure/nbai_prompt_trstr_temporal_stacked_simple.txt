@@ -1,0 +1,29 @@
+Use the provided cropped architecture image as the content and palette reference. Redesign only the TRSTR and temporal part into a simple VERTICAL STACK that is easy to reproduce manually. Keep the same abstraction level as the reference: simple icons, few labels, no formulas, no detailed internal mechanisms.
+
+Canvas: landscape 1536×1024, warm off-white #F7F6F2 background. Thin charcoal #2F3438 outlines, pale periwinkle #99ADD4, cyan #A9CFD8, lavender #CBBAD8, sage #AFCAB2, cream #E7DAAC. Flat 2D scientific diagram. No photorealism, gradients, glow, decorative effects, watermark, or tiny text.
+
+Create one large rounded outer container titled exactly "Spatial–Temporal Translation Refinement". Inside it place TWO WIDE ROUNDED MODULES stacked vertically with a single bold downward arrow between them.
+
+UPPER MODULE, pale blue, title exactly "1  TRSTR Spatial Refinement". Arrange four large icons in one horizontal row:
+1. a small segmented SMPL body labeled exactly "Metric SMPL";
+2. a simple 4×4 colored square matrix labeled exactly "96 body regions";
+3. four compact probe symbols labeled exactly "3×3", "7×7", "adaptive", "annulus";
+4. a simple funnel labeled exactly "Weighted voting".
+At the far right of this upper module show one green output chip exactly "refined translation τ*". Along the bottom edge place a lock icon and exact label "θ, β fixed".
+
+LOWER MODULE, pale cyan, title exactly "2  Track-wise Temporal Stabilization". Directly under the TRSTR output, show:
+- one large nine-node horizontal timeline with the center node highlighted and labeled exactly "O_t";
+- beneath it, one simple curved dotted line with five nodes labeled exactly "Motion proposal M_t";
+- beside the curve, one lavender diamond labeled exactly "α_t ≤ 0.5";
+- at the far right one green output chip exactly "Stable sequence".
+Add a small subtitle directly under the lower module title exactly "optional · post-alignment". Do not show formulas or multiple track lanes.
+
+INPUTS: on the left of the outer container, draw two separate straight input arrows into the UPPER module only:
+- blue arrow labeled exactly "Metric depth D_metric";
+- rose arrow labeled exactly "Metric SMPL".
+
+OUTPUT: one straight arrow exits the LOWER module to a small technical thumbnail of three ghosted SMPL poses on a simple scene grid, labeled exactly "Stable Metric Human–Scene Sequence".
+
+IMPORTANT SCIENTIFIC SEMANTICS: the lower temporal module is visually contained in the same overall translation-refinement stage, but it remains a separate optional post-alignment step. Do not label it as an internal TRSTR layer. Do not add new operations.
+
+At bottom add a compact legend titled exactly "Figure palette" with exact codes #E7DAAC #99ADD4 #A9CFD8 #CBBAD8 #AFCAB2 #2F3438. Use large crisp labels and generous spacing; make every shape easy to recreate in PowerPoint or Figma.

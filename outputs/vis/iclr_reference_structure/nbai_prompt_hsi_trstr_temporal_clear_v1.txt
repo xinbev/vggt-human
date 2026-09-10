@@ -1,0 +1,40 @@
+Use the supplied cropped architecture image only as a content and palette reference. Redesign it as a clear, rigorous ICLR mechanism figure. Landscape 1536×1024, warm paper #F7F6F2, thin charcoal #2F3438 outlines, pale cream #E7DAAC, sage #AFCAB2, cyan #A9CFD8, periwinkle #99ADD4, lavender #CBBAD8, blush #D9ACA6, restrained yellow #E9D36E. Flat 2D scientific vector graphics. No photorealism, gradient, glow, hero visual, advertising style, or watermark.
+
+Title exactly "Metric Calibration, Spatial Alignment, and Temporal Stabilization".
+
+Use TWO HORIZONTAL DATA BUSES running across the figure:
+- upper rose/sage bus titled exactly "Human stream: Metric SMPL {θ, β, τ, c}";
+- lower cyan bus titled exactly "Scene stream: Raw VGGT depth D_vggt".
+The Human stream bypasses HSI and enters TRSTR directly. The Scene stream enters HSI and becomes "Metric depth D_metric" before entering TRSTR. Make this bypass visually explicit so HSI is never shown as producing Metric SMPL.
+
+PANEL 1 at left, about 32% width, title exactly "(a) HSI Scale Calibration". Split it into two parallel subpaths:
+
+Upper cream subpath "Analytic Coarse Gauge": Metric SMPL anchors and Raw depth enter together. Show a small SMPL wireframe with 24 colored anchor dots projected onto a depth grid. Then show ratio samples and exact formula "r_i = z_smpl,i / z_depth,i". Cross out two outlier samples and aggregate with a median symbol. Output exact chip "C_coarse = median({r_i})".
+
+Lower sage subpath "Learned HSI Residual": show a 4×6 matrix labeled exactly "24 body-anchor tokens". Each selected token connects to a compact local depth patch and a body-scene offset arrow. Feed tokens into a small two-head MLP labeled "Residual affine head". Outputs exact chips "R_hsi" and "b_hsi".
+
+The two subpaths converge into a large formula strip exactly "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi". Output one calibrated depth tile labeled exactly "Metric depth D_metric". Bottom note exactly "absolute gauge + residual correction".
+
+PANEL 2 in center, about 40% width and visually largest, title exactly "(b) TRSTR Translation Refinement". It has five numbered columns with straight arrows:
+
+1 "Inputs": one small segmented SMPL wireframe labeled "Metric SMPL {θ, β, τ}" above one metric-depth tile labeled "D_metric".
+2 "Regionalization": show the SMPL partitioned into colored anatomical groups, beside a compact 96-row token matrix, label exactly "96 regions / person".
+3 "Multi-scale scene probing": show four clearly different depth windows labeled exactly "3×3", "7×7", "adaptive", "annulus". Project representative region centers into these windows. Add a small mask legend "self / other human / environment".
+4 "Per-region prediction": three aligned colored vectors labeled exactly "vote Δτ_r", "gate g_r", "uncertainty σ_r".
+5 "Robust consensus": show exact compact weighting "w_r = valid_r · g_r · exp(−σ_r)" flowing into "Δτ = Σ_r w_r Δτ_r / Σ_r w_r". Add a circular arrow labeled exactly "2× re-probe".
+
+TRSTR output is a prominent chip "refined translation τ* = τ + Δτ". Draw pose θ and shape β on a thin bypass line around all five columns, ending in a lock note exactly "θ, β unchanged". Add bottom descriptor exactly "translation-only spatial alignment".
+
+PANEL 3 at right, about 28% width, title exactly "(c) Track-wise Temporal Stabilizer". Show one horizontal 9-frame window with nodes t−4, t−3, t−2, t−1, t, t+1, t+2, t+3, t+4. Highlight the center observation "O_t = {τ*_t, root orientation_t}". Draw four arrows from t−2, t−1, t+1, t+2 into a compact block labeled exactly "Neighbour-only motion proposal" producing "M_t"; do not connect the center frame to M_t.
+
+Below, show a second block "Fusion gate" taking O_t, M_t, track validity, and confidence. Output exact "0 ≤ α_t ≤ 0.5". Then render the final equation large and exact "X*_t = O_t + α_t(M_t − O_t)".
+
+At the bottom of the temporal panel show three separate horizontal lanes labeled ID 1, ID 2, ID 3 with gaps; include note exactly "invalid track / gap → no-op". Final output label exactly "Stable aligned SMPL sequence".
+
+CONNECTORS AND SEMANTICS:
+- Human stream branches: one arrow contributes anchors to HSI coarse/residual estimation, while the unchanged Metric SMPL bus continues directly to TRSTR.
+- Scene stream enters HSI; only D_metric exits HSI and enters TRSTR.
+- TRSTR output τ* and unchanged θ, β form per-frame observation O_t for temporal stabilization.
+- Temporal stabilization is post-alignment and track-wise.
+
+Use large crisp labels and equations, restrained whitespace, no decorative imagery. Add a slim bottom legend titled "Figure palette" with exact codes #D9ACA6 #AFCAB2 #A9CFD8 #99ADD4 #CBBAD8 #E7DAAC #E9D36E #2F3438.

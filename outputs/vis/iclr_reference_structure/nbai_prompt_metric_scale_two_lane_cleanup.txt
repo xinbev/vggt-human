@@ -1,0 +1,7 @@
+Use the provided Metric Scale Calibration diagram as a strict reference. Preserve the exact composition, two lanes, all labels, equations, icons, colors, sizes, and output arrangement. Do not redesign or add details.
+
+Make only two scientific corrections:
+1. In "24 body-anchor tokens", draw exactly 24 square tokens as a clear 4-row × 6-column grid. No missing cells and no extra cells.
+2. The left input "Raw VGGT depth D_vggt" must branch with two thin cyan arrows: one enters the upper "Analytic Absolute Scale" lane, and one enters the lower "Learned Residual Correction" lane at "Local scene probing". Preserve the Metric SMPL branches to both lanes.
+
+Keep the exact final equation "D_metric = (C_coarse · R_hsi) D_vggt + b_hsi". Remove stray marks only. Everything else remains identical. Flat 2D scientific vector style, no watermark.

@@ -1,0 +1,9 @@
+Use the provided image as a strict reference. Preserve every panel, icon, color, label, size, position, spacing, and connector exactly. Do not redesign or add any content.
+
+Make only these cleanup corrections:
+1. Replace the garbled duplicated label above the rose arrow between HSI and TRSTR with the single exact label "Metric SMPL".
+2. Keep the rose Metric SMPL arrow entering the TRSTR panel and the blue Metric depth arrow entering TRSTR.
+3. Ensure the title is exactly "TRSTR Spatial Refinement".
+4. Remove any tiny stray glyphs or duplicated characters while preserving all intended labels.
+
+Everything else must remain identical. Flat 2D scientific vector style, no watermark.
