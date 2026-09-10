@@ -1,0 +1,20 @@
+Clean ICLR scientific architecture blueprint, 1536×1024 landscape, warm white background, thin charcoal outlines, flat 2D vector, crisp large labels. Upper pale blue panel and lower pale cyan panel. Muted pastel chips: blush, sage, cyan, periwinkle, lavender, cream, yellow. No photorealism, gradients, shadows, poster effects or watermark.
+
+Small top callout: "Expanded view" with chips "TRSTR" → "Temporal Stabilizer".
+
+Upper title "TRSTR Regional Translator". Six numbered modules with arrows:
+1 "Surface Regionalization": Metric SMPL + Metric depth; 6890 vertices → 96 anatomical regions.
+2 "Projective Probing": region points project to depth windows 3×3, 7×7, adaptive, annulus.
+3 NEW sage module "Human-aware Scene Evidence": split patch evidence into self surface, masked other humans, environment; patch attention → region token h_r.
+4 "Per-region Prediction": vote Δτ_r, gate g_r, uncertainty σ_r.
+5 "Person Consensus": weighted regional aggregation, per person only.
+6 "2× Re-projection": iter 1 → iter 2 → refined translation τ*.
+Bottom lock note "θ, β fixed · translation only".
+
+Lower title "Track-wise Temporal Fusion". Four modules with arrows:
+1 "Track assembly": three separate ID lanes across 9 frames.
+2 "Masked motion proposal": O_t crossed out for proposal; neighbors t−2,t−1,t+1,t+2 → M_t; note "O_t is not read".
+3 "Fusion gate": O_t + M_t → α_t ≤ 0.5.
+4 "Stable output": X*_t = O_t + α_t(M_t − O_t), then three smooth separate trajectories.
+
+Caption "(C) Spatial–Temporal Refinement". Make the NEW Human-aware Scene Evidence module visibly explain what was hidden inside the top-level TRSTR block. Large text, precise straight arrows, no extra labels.

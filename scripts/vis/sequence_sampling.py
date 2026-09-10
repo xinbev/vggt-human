@@ -19,6 +19,10 @@ def select_inclusive_range(items: Sequence[T], start_index: int = 0, end_index: 
         raise ValueError(f"end_index must be -1 or a non-negative integer; got {end}")
     if end >= 0 and end < start:
         raise ValueError(f"end_index must be >= start_index; got start={start}, end={end}")
+    if values and start >= len(values):
+        raise ValueError(
+            f"start_index is outside the source sequence: start={start}, total_frames={len(values)}"
+        )
     stop = None if end == -1 else end + 1
     return values[start:stop]
 
@@ -82,3 +86,21 @@ def select_frame_candidates(
         strategy=strategy,
         long_sequence_limit=long_sequence_limit,
     )
+
+
+def select_inference_frame_candidates(
+    items: Sequence[T],
+    start_index: int = 0,
+    end_index: int = -1,
+    inference_frames: int = 0,
+) -> list[T]:
+    """Select a range, then uniformly sample the requested inference count."""
+    selected_range = select_inclusive_range(items, start_index=start_index, end_index=end_index)
+    target = int(inference_frames)
+    if target < 0:
+        raise ValueError(f"inference_frames must be 0 or a positive integer; got {target}")
+    if target == 0 or target >= len(selected_range):
+        return selected_range
+    if target == 1:
+        return [selected_range[(len(selected_range) - 1) // 2]]
+    return [selected_range[index] for index in uniform_sample_indices(len(selected_range), target)]

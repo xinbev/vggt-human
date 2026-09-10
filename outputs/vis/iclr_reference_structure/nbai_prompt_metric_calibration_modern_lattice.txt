@@ -1,0 +1,23 @@
+Use the provided Metric Scale Calibration figure only as a method-content and color reference. Create an alternative modern ICLR/CVPR architecture design organized around a shared METRIC LATTICE rather than stacked A/B boxes. Preserve the computation but make the geometric-to-learned transition visually premium and contemporary.
+
+Canvas: landscape 1536×1024, warm paper #F7F6F2, thin charcoal #2F3438 lines, muted #E7DAAC #E9D36E #AFCAB2 #A9CFD8 #99ADD4 #CBBAD8 #D9ACA6. Flat vector scientific figure, faint coordinate grids, small matrices, translucent planar meshes, precise arrows. No photorealism, glow, heavy gradient, cartoon, poster, or watermark.
+
+Title exactly "Coarse-to-Fine Metric Scene Calibration".
+
+Build one continuous horizontal composition around a large central perspective depth lattice that evolves from left to right. Avoid equal rectangular submodules.
+
+LEFT: compact inputs "Raw VGGT depth D_vggt" and "Metric SMPL {θ, β, τ}". Show the raw depth as a shallow warped cyan grid with uncertain scale; show the SMPL as a fine technical wireframe standing above it.
+
+PHASE I, upper-left overlay in cream, title exactly "Metric Prior Extraction". Project sparse body anchors down to the warped scene grid. Along the top edge show a thin scale-hypothesis spectrum with a colored inlier cluster and a yellow median line. Collapse the spectrum into a compact prior badge "C_coarse". Subtitle exactly "geometry-derived initialization". Keep this phase concise and integrated with the lattice, not enclosed in a large box.
+
+After C_coarse, visually expand the warped grid into a roughly metric coordinate lattice. Label this intermediate state exactly "coarse metric scene". Use a small meter ruler and camera-depth axis, making the scale correction visually tangible.
+
+PHASE II, central and dominant, title exactly "Human–Scene Residual Adaptation". Overlay exactly 24 colored anchor tokens on the SMPL and connect selected anchors to local cells of the coarse metric lattice. Around four selected cells show small zoomed probe windows with offset vectors and patch tokens. Gather the evidence into an elegant compact module titled exactly "Interaction Encoder" composed of interleaved colored token rows and a small attention matrix. Output two strips "R_hsi" and "b_hsi". Subtitle exactly "learned residual correction".
+
+RIGHT: show the lattice after adaptation as a clean regularly spaced metric grid aligned with the SMPL. Title exactly "Calibrated Metric Scene". Between coarse and final lattices place one concise formula:
+"D_metric = (C_coarse · R_hsi) D_vggt + b_hsi"
+At far right show a metric depth tile, axis triad, and vertical meter ruler labeled exactly "Metric depth D_metric".
+
+Add one subtle upper arrow spanning Phase I to Phase II labeled "coarse-to-fine calibration". Add one subtle bottom brace labeled "geometric metric prior + human-conditioned residual". The modern design should come from the evolving lattice, layered geometry, token overlays, and controlled information density—not from decorative effects.
+
+At bottom add "Figure palette" with exact codes #E7DAAC #E9D36E #AFCAB2 #A9CFD8 #99ADD4 #CBBAD8 #D9ACA6 #2F3438.

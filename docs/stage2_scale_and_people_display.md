@@ -51,6 +51,31 @@
 - 处理顺序固定为：闭区间范围 `[START_INDEX, END_INDEX]` → `FRAME_STRIDE` → `MAX_FRAMES` 三态限制。
 - `END_INDEX < START_INDEX` 或 `END_INDEX < -1` 会直接报错；超过序列末尾的结束下标会自然截到最后一帧。
 
+## 推荐的自动目标帧数接口
+
+日常使用推荐只设置：
+
+```bash
+START_INDEX=250
+END_INDEX=1749
+INFERENCE_FRAMES=300
+```
+
+程序会在闭区间 `[250,1749]` 内自动均匀选择 300 帧，包含范围首尾。不再需要手算 `FRAME_STRIDE`。
+
+- `INFERENCE_FRAMES=0`：范围内所有帧进入。
+- `INFERENCE_FRAMES=1`：选择范围中间帧。
+- 请求数量大于范围长度：范围内全部帧进入，不重复。
+- 只要设置了 `INFERENCE_FRAMES`，旧的 `FRAME_STRIDE`、`FRAME_SAMPLING` 和 `MAX_FRAMES` 就会被忽略；未设置时旧采样接口完全保留。
+- 实际选中的源序列下标和文件名会写入 `run_summary.json` 的 `frame_selection`。
+
+## NLF 检测置信度
+
+- `NLF_DETECTOR_THRESHOLD` 控制 NLF `detect_smpl_batched()` 是否生成候选，默认 `0.3`。
+- `CONF_THRESHOLD` 是检测后的使用阈值，控制人物是否进入 coarse scale、TRSTR、跟踪、人体 mask 和 Viewer scene，Stage2 cascade 默认 `0.05`。
+- 对漏检序列建议依次比较 `NLF_DETECTOR_THRESHOLD=0.30/0.15/0.10`，不要直接降到极低值，以免假阳性污染共享尺度和人体点云过滤。
+- `run_summary.json` 的 `nlf_detection` 会记录两个阈值、逐帧原始检测人数、通过下游阈值的人数，以及两种空人物帧列表和比例。
+
 ## 人数显示控制
 
 原 `SequenceViewer` 新增 `Max People Per Frame` 滑条：
@@ -69,3 +94,35 @@ DISPLAY_PEOPLE=1 bash scripts/vis/serve_stage2_walking_coarse_scale_hsi_cascade.
 ```
 
 若不设置或设置为 0，启动行为与修改前一致。
+
+## 推荐的两阶段处理命令
+
+第一阶段只推理并写完整 Viewer 缓存：
+
+```bash
+cd /home/zhw/lab_users/xyb/home/projects/vggt-human
+
+FRAMES_DIR=/path/to/sequence/images \
+STAGE2_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full \
+CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt \
+SCALE_CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt \
+OUTPUT_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/my_sequence \
+FULL_VIEWER_CACHE_OUTPUT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/my_sequence/full_viewer_cache \
+CUDA_VISIBLE_DEVICES_VALUE="${CUDA_VISIBLE_DEVICES:-0}" \
+START_INDEX=250 \
+END_INDEX=-1 \
+INFERENCE_FRAMES=300 \
+NLF_DETECTOR_THRESHOLD=0.15 \
+CONF_THRESHOLD=0.05 \
+CASCADE_EFFECTIVE_AFFINE_MODE=clip_median \
+SMOKE_ONLY=true \
+bash scripts/vis/serve_stage2_walking_coarse_scale_hsi_cascade.sh
+```
+
+第二阶段只读取缓存启动原 `SequenceViewer`：
+
+```bash
+CACHE_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/my_sequence/full_viewer_cache \
+PORT=8080 \
+bash scripts/vis/serve_full_sequence_viewer_cache.sh
+```

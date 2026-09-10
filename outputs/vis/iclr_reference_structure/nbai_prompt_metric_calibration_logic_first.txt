@@ -1,0 +1,32 @@
+Use the supplied Metric Scale Calibration image only as a method-content and muted-color reference. Redesign it as a modern, logic-rich but visually restrained ICLR/CVPR architecture figure. The sophistication must come from information hierarchy, branching, conditioning, and clear operator roles—not from 3D grids, perspective geometry, futuristic effects, decorative lattices, or cinematic rendering.
+
+Canvas: landscape 1536×1024, warm white #F7F6F2 background, thin charcoal #2F3438 outlines, subtle pale section fills. Palette #E7DAAC cream, #E9D36E yellow, #AFCAB2 sage, #A9CFD8 cyan, #99ADD4 periwinkle, #CBBAD8 lavender, #D9ACA6 blush. Flat 2D vector, crisp academic sans-serif, restrained serif math. No gradients, glow, shadows, 3D cubes, perspective grids, oversized title, cartoon icons, promotional style, or watermark.
+
+Title exactly "Prior-Guided Metric Scale Calibration". Small subtitle exactly "geometric initialization followed by human-conditioned residual refinement".
+
+Create ONE large rounded method container with a dominant LEFT-TO-RIGHT MAINLINE and two compact SUPPORTING BRANCHES.
+
+MAINLINE across the middle, using four similarly sized operator blocks:
+1. input card "Raw VGGT depth D_vggt" with a small flat grayscale depth tile;
+2. operator block "Coarse metric initialization" receiving C_coarse from the upper branch, output chip exactly "D_coarse = C_coarse · D_vggt";
+3. dominant sage block "Human-Conditioned Residual Calibration" receiving D_coarse, body-anchor tokens, and local scene evidence, output chips "R_hsi" and "b_hsi";
+4. composition block "Metric depth composition" with exact formula "D_metric = R_hsi · D_coarse + b_hsi", followed by output card "Metric depth D_metric".
+
+UPPER SUPPORTING BRANCH: a compact cream strip above blocks 1–2 titled exactly "Geometric Prior". Inputs are a tiny "Metric SMPL" wireframe and a small copy of the raw-depth tile. Show only three concise connected glyphs: "anchor projection" → "scale hypotheses {s_i}" → "robust consensus". Use a small one-dimensional dot strip with a highlighted median, but no tutorial numbering and no detailed derivation. Output one circular yellow token exactly "C_coarse". A thin downward conditioning arrow from C_coarse enters "Coarse metric initialization". Add a small tag "analytic · parameter-free".
+
+LOWER SUPPORTING BRANCH: a compact pale-sage strip below blocks 2–3 titled exactly "Human–Scene Evidence". Show a small SMPL silhouette with exactly 24 colored anchor dots, a compact 4×6 token matrix labeled "body-anchor tokens", and three simple local depth patches labeled "local scene probes". These flow into one compact evidence strip labeled "interaction tokens". A thin upward arrow injects this evidence into "Human-Conditioned Residual Calibration". Add a small tag "learned residual".
+
+Inside the dominant residual-calibration block, show only a compact attention-style matrix icon between input evidence and two parallel output heads R_hsi and b_hsi. Do not add deep network layers or 3D graphics.
+
+Use a subtle brace above the Geometric Prior and mainline blocks 1–2 labeled exactly "absolute metric initialization". Use a second subtle brace below blocks 2–4 labeled exactly "coarse-to-fine correction". These braces create modern logical grouping without visual spectacle.
+
+At the far right, show the raw-depth and metric-depth tiles as a small before/after pair with one vertical metric ruler beside the final tile. Keep it flat and technical.
+
+The hierarchy must be unmistakable:
+- Geometric Prior is small and auxiliary;
+- Human-Conditioned Residual Calibration is the largest and primary learned component;
+- C_coarse initializes the mainline;
+- R_hsi and b_hsi refine the initialized depth;
+- final output is D_metric.
+
+Use only the exact labels listed. Add a slim bottom legend titled "Figure palette" with exact codes #E7DAAC #E9D36E #AFCAB2 #A9CFD8 #99ADD4 #CBBAD8 #D9ACA6 #2F3438.

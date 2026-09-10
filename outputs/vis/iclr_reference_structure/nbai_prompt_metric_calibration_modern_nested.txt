@@ -1,0 +1,35 @@
+Use the provided Metric Scale Calibration figure only as a content and palette reference. Redesign the complete module as a sophisticated modern ICLR/CVPR method figure. You may introduce abstract grids, metric rulers, token lattices, scale fields, translucent coordinate planes, and elegant visual metaphors, but preserve the real high-level computation: a simple analytic coarse scale initializes a learned human-conditioned residual correction.
+
+Canvas: landscape 1536×1024, warm paper #F7F6F2. Thin charcoal #2F3438 linework. Palette #E7DAAC cream, #E9D36E yellow, #AFCAB2 sage, #A9CFD8 cyan, #99ADD4 periwinkle, #CBBAD8 lavender, #D9ACA6 blush. Flat vector scientific design, subtle dot grid and fine technical line texture, no photorealism, no heavy gradients, no glow, no marketing poster, no watermark.
+
+Title exactly "Human-Conditioned Metric Calibration". Subtitle exactly "geometry prior initialization + learned residual adaptation".
+
+Create one unified large rounded container, not two equal stacked boxes. The main visual language is NESTED PRIOR INJECTION.
+
+LEFT INPUT PORTAL: two compact vertical cards "Raw VGGT depth D_vggt" and "Metric SMPL {θ, β, τ}". Between them and the main module draw a faint perspective metric lattice / coordinate plane, showing that both are geometric observations.
+
+UPPER-LEFT SMALL PRIOR CAPSULE, about 25% of the module, cream with restrained yellow accent, title exactly "Geometry-Derived Metric Prior". This is intentionally compact and subordinate, not presented as the main contribution. Inside show:
+- a miniature SMPL wireframe projected onto a depth plane using thin correspondence rays;
+- those correspondences collapse into a slim one-dimensional scale-hypothesis strip;
+- a bold median marker produces one circular prior token labeled exactly "C_coarse".
+Use a small descriptor exactly "robust metric initialization". Do not show three numbered steps or a tutorial sequence. The entire traditional computation should read as one elegant geometric prior extractor.
+
+MAIN CENTRAL PANEL, about 55% of the module, pale sage/cyan, title exactly "Human-Conditioned Residual Adapter". Make this the visual focus. Show a clean 4×6 lattice of exactly 24 body-anchor tokens overlaid on a faint articulated body silhouette. Several anchor tokens fan out into local scene windows sampled from a subtle depth grid. Connect them through a compact interaction block titled exactly "Anchor–Scene Interaction". Use a small attention/grid icon rather than a generic MLP. The prior token C_coarse enters this interaction block from above through a dotted conditioning arrow labeled exactly "metric prior".
+
+The interaction block outputs two elegant vector strips:
+- "Residual scale R_hsi"
+- "Depth bias b_hsi"
+Place a small descriptor "human-conditioned adaptation".
+
+RIGHT METRIC COMPOSITION PANEL, about 25%, pale periwinkle, title exactly "Metric Composition". Show a three-layer visual stack:
+1. raw depth grid, slightly compressed and labeled "relative scene";
+2. coarse metric grid expanded by C_coarse, labeled "metric initialization";
+3. clean aligned grid refined by R_hsi and b_hsi, labeled "calibrated scene".
+Use fine coordinate-grid transformation arrows between layers. At the center render the exact formula cleanly:
+"D_metric = (C_coarse · R_hsi) D_vggt + b_hsi"
+At far right output a refined metric depth tile with a small vertical ruler and unit marks, labeled exactly "Metric depth D_metric".
+
+FLOW AND HIERARCHY: C_coarse is a prior token, not a large independent method. It conditions the learned residual adapter and also enters metric composition. R_hsi and b_hsi perform the learned correction. Use varied module scale, curved conditioning arrow, subtle grids, precise port labels, and balanced negative space to make the figure look like a current top-tier vision paper.
+
+At bottom add a slim palette strip titled "Figure palette" with exact codes #E7DAAC #E9D36E #AFCAB2 #A9CFD8 #99ADD4 #CBBAD8 #D9ACA6 #2F3438.
+

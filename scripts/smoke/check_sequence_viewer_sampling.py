@@ -14,6 +14,7 @@ from scripts.vis.sequence_sampling import (
     sample_sequence,
     sample_with_max_frames,
     select_frame_candidates,
+    select_inference_frame_candidates,
     select_inclusive_range,
     uniform_sample_indices,
 )
@@ -39,6 +40,10 @@ def main() -> None:
     assert ranged_stride == [frames[4], frames[7], frames[10], frames[13]]
     assert select_frame_candidates(frames, 4, 14, 3, 0, "head") == ranged_stride
     assert select_frame_candidates(frames, 4, 14, 3, 2, "head") == [frames[4], frames[7]]
+    assert select_inference_frame_candidates(frames, 4, 14, 0) == frames[4:15]
+    assert select_inference_frame_candidates(frames, 4, 14, 1) == [frames[9]]
+    assert select_inference_frame_candidates(frames, 4, 14, 3) == [frames[4], frames[9], frames[14]]
+    assert select_inference_frame_candidates(frames, 4, 14, 99) == frames[4:15]
     assert sample_with_max_frames(frames, 0, "head") == frames
     assert sample_with_max_frames(frames, 5, "head") == frames[:5]
     assert sample_with_max_frames(frames, -1, "head") == frames
@@ -66,6 +71,14 @@ def main() -> None:
     )
     assert len(ranged_long) == 500
     assert ranged_long[0] == 100 and ranged_long[-1] == 2100
+    simple_target = select_inference_frame_candidates(
+        long_frames,
+        start_index=250,
+        end_index=1749,
+        inference_frames=300,
+    )
+    assert len(simple_target) == 300
+    assert simple_target[0] == 250 and simple_target[-1] == 1749
     try:
         sample_with_max_frames(frames, -2, "head")
     except ValueError:
@@ -79,6 +92,16 @@ def main() -> None:
             pass
         else:
             raise AssertionError(f"Invalid end index must be rejected: {invalid_end}")
+    for invalid_call in (
+        lambda: select_inference_frame_candidates(frames, 0, -1, -1),
+        lambda: select_inference_frame_candidates(frames, len(frames), -1, 5),
+    ):
+        try:
+            invalid_call()
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("Invalid primary sampling arguments must be rejected")
 
     print("[ok] sequence viewer sampling checks passed")
 

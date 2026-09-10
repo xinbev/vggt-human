@@ -19,9 +19,11 @@ PORT="${PORT:-8080}"
 MAX_FRAMES="${MAX_FRAMES:-32}"
 START_INDEX="${START_INDEX:-0}"
 END_INDEX="${END_INDEX:--1}"
+INFERENCE_FRAMES="${INFERENCE_FRAMES:-}"
 FRAME_STRIDE="${FRAME_STRIDE:-1}"
 FRAME_SAMPLING="${FRAME_SAMPLING:-head}"
 MAX_HUMANS="${MAX_HUMANS:-20}"
+NLF_DETECTOR_THRESHOLD="${NLF_DETECTOR_THRESHOLD:-}"
 CONF_THRESHOLD="${CONF_THRESHOLD:-0.10}"
 TRACKING_OVERLAY="${TRACKING_OVERLAY:-none}"
 TRACK_MAX_AGE="${TRACK_MAX_AGE:-90}"
@@ -107,11 +109,14 @@ echo "Port        : ${PORT}"
 echo "Max frames  : ${MAX_FRAMES}"
 echo "Frame modes : 0=all, N=limit N, -1=uniformly sample at most 500"
 echo "Frame range : [${START_INDEX}, ${END_INDEX}] inclusive (-1 end means sequence end)"
+echo "Inference N : ${INFERENCE_FRAMES:-<legacy sampling>} (0 means full selected range)"
 echo "Frame sample: ${FRAME_SAMPLING} (after range/stride)"
 echo "SMPL frames : ${SMPL_DISPLAY_FRAMES} (0 means all; GUI adjustable)"
 echo "ID overlay  : ${TRACKING_OVERLAY} (post-HSI display only)"
 echo "Show IDs    : ${SHOW_TRACK_IDS} (initial GUI state)"
 echo "Show people : ${DISPLAY_PEOPLE} per frame (0 means all; GUI adjustable)"
+echo "NLF det conf: ${NLF_DETECTOR_THRESHOLD:-<config default>}"
+echo "Result conf : ${CONF_THRESHOLD}"
 echo "Align compat: ${HSI_ALIGN_FEATURE_VERSION:-<config default>}"
 echo "Depth stride: ${DEPTH_POINT_STRIDE} (can be changed in Viser GUI)"
 echo "Max depth   : ${MAX_SCENE_DEPTH} (0 disables clipping; GUI adjustable)"
@@ -185,6 +190,13 @@ ARGS=(
   --alignment-vertex-stride "${ALIGNMENT_VERTEX_STRIDE}"
   --image-size "${IMAGE_SIZE}"
 )
+
+if [[ -n "${INFERENCE_FRAMES}" ]]; then
+  ARGS+=(--inference-frames "${INFERENCE_FRAMES}")
+fi
+if [[ -n "${NLF_DETECTOR_THRESHOLD}" ]]; then
+  ARGS+=(--nlf-detector-threshold "${NLF_DETECTOR_THRESHOLD}")
+fi
 
 case "${SHOW_TRACK_IDS}" in
   0|false|FALSE|False|no|NO|No|off|OFF|Off)

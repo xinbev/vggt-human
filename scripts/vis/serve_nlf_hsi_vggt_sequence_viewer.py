@@ -33,6 +33,7 @@ from scripts.vis.full_viewer_cache_io import export_full_sequence_viewer_cache  
 from scripts.vis.sequence_sampling import (  # noqa: E402
     LONG_SEQUENCE_FRAME_LIMIT,
     select_frame_candidates,
+    select_inference_frame_candidates,
     uniform_sample_indices,
 )
 from scripts.vis.viewer_cache_io import export_sequence_viewer_cache  # noqa: E402
@@ -109,6 +110,12 @@ def main() -> None:
     total_start = time.perf_counter()
     timings: dict[str, Any] = {}
     args = parse_args()
+    if args.nlf_detector_threshold is not None and not 0.0 <= float(args.nlf_detector_threshold) <= 1.0:
+        raise ValueError(
+            f"--nlf-detector-threshold must be within [0, 1], got {args.nlf_detector_threshold}"
+        )
+    if not 0.0 <= float(args.conf_threshold) <= 1.0:
+        raise ValueError(f"--conf-threshold must be within [0, 1], got {args.conf_threshold}")
     if not np.isfinite(args.hsi_visual_scale) or not HSI_VISUAL_SCALE_MIN <= float(args.hsi_visual_scale) <= HSI_VISUAL_SCALE_MAX:
         raise ValueError(
             f"--hsi-visual-scale must be finite and within "
@@ -133,11 +140,18 @@ def main() -> None:
     frame_paths = select_frames(frames_dir, args)
     if not frame_paths:
         raise RuntimeError(f"No RGB frames found under {frames_dir}. Supported extensions: {sorted(IMAGE_EXTENSIONS)}")
+    print_frame_selection(frames_dir, frame_paths, args)
     timings["select_frames"] = {"seconds": time.perf_counter() - step_start}
 
     step_start = time.perf_counter()
     config = load_config(args)
     model_config = config.get("model", {})
+    args.nlf_detector_threshold = float(model_config.get("nlf_detector_threshold", 0.3))
+    print(
+        f"[nlf] detector_threshold={float(args.nlf_detector_threshold):.6g} "
+        f"downstream_conf_threshold={float(args.conf_threshold):.6g}",
+        flush=True,
+    )
     args.hsi_scene_affine_mode = str(model_config.get("hsi_scene_affine_mode", "per_frame"))
     args.hsi_scene_affine_ema_alpha = float(model_config.get("hsi_scene_affine_ema_alpha", 0.25))
     patch_size = int(config.get("model", {}).get("patch_size", 16))
@@ -177,6 +191,7 @@ def main() -> None:
     geometry_snapshot = snapshot_viewer_geometry(predictions)
     apply_posthoc_tracking_overlay(predictions, args)
     assert_viewer_geometry_unchanged(predictions, geometry_snapshot, args)
+    print_nlf_detection_summary(predictions, frame_paths, args)
     sync_if_cuda(device)
     timings["posthoc_tracking_overlay"] = {"seconds": time.perf_counter() - step_start}
 
@@ -285,6 +300,15 @@ def parse_args() -> argparse.Namespace:
         default=-1,
         help="Inclusive index in the sorted source image list; -1 keeps frames through the sequence end.",
     )
+    parser.add_argument(
+        "--inference-frames",
+        type=int,
+        default=None,
+        help=(
+            "Primary sampling interface: uniformly select this many frames from the inclusive "
+            "start/end range. 0 uses the whole range. When set, legacy stride/sampling/max options are ignored."
+        ),
+    )
     parser.add_argument("--frame-stride", type=int, default=1)
     parser.add_argument(
         "--frame-sampling",
@@ -305,6 +329,12 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument("--max-humans", type=int, default=20)
+    parser.add_argument(
+        "--nlf-detector-threshold",
+        type=float,
+        default=None,
+        help="NLF detect_smpl_batched candidate threshold. Omitted keeps the model-config default (normally 0.3).",
+    )
     parser.add_argument("--conf-threshold", type=float, default=0.10)
     parser.add_argument("--tracking-overlay", choices=["none", "base_smpl"], default="none")
     parser.add_argument("--track-max-age", type=int, default=90)
@@ -391,6 +421,13 @@ def resolve_project_path(path: str | Path) -> Path:
 
 def select_frames(frames_dir: Path, args: argparse.Namespace) -> list[Path]:
     paths = iter_image_files(frames_dir)
+    if getattr(args, "inference_frames", None) is not None:
+        return select_inference_frame_candidates(
+            paths,
+            start_index=int(args.start_index),
+            end_index=int(getattr(args, "end_index", -1)),
+            inference_frames=int(args.inference_frames),
+        )
     return select_frame_candidates(
         paths,
         start_index=int(args.start_index),
@@ -399,6 +436,55 @@ def select_frames(frames_dir: Path, args: argparse.Namespace) -> list[Path]:
         max_frames=int(args.max_frames),
         strategy=str(getattr(args, "frame_sampling", "head")),
     )
+
+
+def print_frame_selection(frames_dir: Path, frame_paths: list[Path], args: argparse.Namespace) -> None:
+    all_paths = iter_image_files(frames_dir)
+    index_by_path = {path: index for index, path in enumerate(all_paths)}
+    selected_indices = [index_by_path[path] for path in frame_paths]
+    if getattr(args, "inference_frames", None) is not None:
+        mode = f"target_uniform requested={int(args.inference_frames)}"
+        ignored = (
+            f" | legacy options ignored: stride={int(args.frame_stride)}, "
+            f"sampling={args.frame_sampling}, max_frames={int(args.max_frames)}"
+        )
+    else:
+        mode = (
+            f"legacy stride={int(args.frame_stride)} sampling={args.frame_sampling} "
+            f"max_frames={int(args.max_frames)}"
+        )
+        ignored = ""
+    print(
+        f"[frames] source={len(all_paths)} range=[{int(args.start_index)},{int(args.end_index)}] "
+        f"mode={mode} selected={len(frame_paths)} "
+        f"source_indices=[{selected_indices[0]},{selected_indices[-1]}]{ignored}",
+        flush=True,
+    )
+
+
+def frame_selection_summary(
+    frames_dir: Path,
+    frame_paths: list[Path],
+    args: argparse.Namespace,
+) -> dict[str, Any]:
+    all_paths = iter_image_files(frames_dir)
+    index_by_path = {path: index for index, path in enumerate(all_paths)}
+    target_mode = getattr(args, "inference_frames", None) is not None
+    return {
+        "mode": "target_uniform" if target_mode else "legacy",
+        "source_frame_count": len(all_paths),
+        "start_index": int(args.start_index),
+        "end_index_inclusive": int(getattr(args, "end_index", -1)),
+        "inference_frames_requested": (
+            int(args.inference_frames) if target_mode else None
+        ),
+        "legacy_frame_stride": int(args.frame_stride),
+        "legacy_frame_sampling": str(getattr(args, "frame_sampling", "head")),
+        "legacy_max_frames": int(args.max_frames),
+        "selected_frame_count": len(frame_paths),
+        "selected_source_indices": [index_by_path[path] for path in frame_paths],
+        "selected_files": [path.name for path in frame_paths],
+    }
 
 
 def load_config(args: argparse.Namespace) -> dict[str, Any]:
@@ -423,6 +509,8 @@ def load_config(args: argparse.Namespace) -> dict[str, Any]:
     model_cfg["smpl_query_patch_pool"] = False
     model_cfg["nlf_use_detector"] = args.query_source == "nlf_detector"
     model_cfg["nlf_require_boxes"] = args.query_source == "bedlam_sidecar"
+    if args.nlf_detector_threshold is not None:
+        model_cfg["nlf_detector_threshold"] = float(args.nlf_detector_threshold)
     trstr_enabled = bool(model_cfg.get("enable_hsi_trstr", False))
     model_cfg["hsi_trstr_fast_gt"] = False
     model_cfg["smpl_track_assignment_mode"] = (
@@ -1566,6 +1654,66 @@ def prediction_scalar(predictions: dict[str, torch.Tensor], key: str, frame_inde
     return float(value[0, frame_index].detach().float().reshape(-1)[0].cpu())
 
 
+def summarize_nlf_detections(
+    predictions: dict[str, torch.Tensor],
+    frame_paths: list[Path],
+    args: argparse.Namespace,
+) -> dict[str, Any]:
+    confs = predictions.get("pred_confs")
+    if not isinstance(confs, torch.Tensor):
+        return {
+            "available": False,
+            "detector_threshold": float(args.nlf_detector_threshold),
+            "downstream_conf_threshold": float(args.conf_threshold),
+        }
+    confidence = confs.detach().float()[0, ..., 0].cpu()
+    raw_mask = predictions.get("nlf_valid_mask")
+    if isinstance(raw_mask, torch.Tensor):
+        detected = raw_mask.detach().bool()[0, ..., 0].cpu()
+    else:
+        detected = confidence > 0.0
+    accepted = detected & (confidence >= float(args.conf_threshold))
+    detected_counts = detected.sum(dim=-1).tolist()
+    accepted_counts = accepted.sum(dim=-1).tolist()
+    empty_detected = [index for index, count in enumerate(detected_counts) if int(count) == 0]
+    empty_accepted = [index for index, count in enumerate(accepted_counts) if int(count) == 0]
+    return {
+        "available": True,
+        "detector_threshold": float(args.nlf_detector_threshold),
+        "downstream_conf_threshold": float(args.conf_threshold),
+        "detected_counts_by_frame": [int(value) for value in detected_counts],
+        "accepted_counts_by_frame": [int(value) for value in accepted_counts],
+        "empty_detected_frame_indices": empty_detected,
+        "empty_detected_frame_ids": [frame_paths[index].stem for index in empty_detected],
+        "empty_accepted_frame_indices": empty_accepted,
+        "empty_accepted_frame_ids": [frame_paths[index].stem for index in empty_accepted],
+        "empty_detected_ratio": float(len(empty_detected) / max(len(frame_paths), 1)),
+        "empty_accepted_ratio": float(len(empty_accepted) / max(len(frame_paths), 1)),
+    }
+
+
+def print_nlf_detection_summary(
+    predictions: dict[str, torch.Tensor],
+    frame_paths: list[Path],
+    args: argparse.Namespace,
+) -> None:
+    summary = summarize_nlf_detections(predictions, frame_paths, args)
+    if not summary.get("available", False):
+        print("[nlf-summary] prediction confidence unavailable", flush=True)
+        return
+    detected_counts = summary["detected_counts_by_frame"]
+    accepted_counts = summary["accepted_counts_by_frame"]
+    print(
+        f"[nlf-summary] detector_threshold={summary['detector_threshold']:.6g} "
+        f"downstream_threshold={summary['downstream_conf_threshold']:.6g} "
+        f"detected min/mean/max={min(detected_counts)}/{np.mean(detected_counts):.3f}/{max(detected_counts)} "
+        f"accepted min/mean/max={min(accepted_counts)}/{np.mean(accepted_counts):.3f}/{max(accepted_counts)} "
+        f"empty_detected={len(summary['empty_detected_frame_indices'])}/{len(frame_paths)} "
+        f"empty_accepted={len(summary['empty_accepted_frame_indices'])}/{len(frame_paths)}",
+        flush=True,
+    )
+
+
 def validate_scene(scene: dict[str, Any], predictions: dict[str, torch.Tensor], images: torch.Tensor) -> None:
     required = ["pose_enc", "depth", "hsi_scene_scale", "hsi_scene_depth_bias"]
     missing = [key for key in required if key not in predictions]
@@ -1596,19 +1744,9 @@ def build_summary(
     return {
         "frames_dir": str(resolve_project_path(args.frames_dir)),
         "num_frames": len(frame_paths),
-        "frame_selection": {
-            "strategy": (
-                f"uniform_long_sequence_{LONG_SEQUENCE_FRAME_LIMIT}"
-                if int(args.max_frames) == -1
-                else str(getattr(args, "frame_sampling", "head"))
-            ),
-            "start_index": int(args.start_index),
-            "end_index_inclusive": int(getattr(args, "end_index", -1)),
-            "frame_stride": int(args.frame_stride),
-            "max_frames": int(args.max_frames),
-            "long_sequence_limit": int(LONG_SEQUENCE_FRAME_LIMIT),
-            "selected_files": [path.name for path in frame_paths],
-        },
+        "frame_selection": frame_selection_summary(resolve_project_path(args.frames_dir), frame_paths, args),
+        "legacy_long_sequence_limit": int(LONG_SEQUENCE_FRAME_LIMIT),
+        "nlf_detection": summarize_nlf_detections(predictions, frame_paths, args),
         "smpl_display_frames_initial": int(getattr(args, "smpl_display_frames", 0)),
         "display_people_initial": int(getattr(args, "display_people", 0)),
         "checkpoint": str(checkpoint),

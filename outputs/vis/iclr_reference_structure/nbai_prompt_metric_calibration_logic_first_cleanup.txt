@@ -1,0 +1,19 @@
+Use the provided Prior-Guided Metric Scale Calibration image as a strict style and content reference. Preserve its restrained flat scientific style, palette, upper Geometric Prior branch, middle mainline, equations, input/output cards, and logical hierarchy. Redesign only to make the composition more compact and publication-ready.
+
+Remove the separate large bottom "Human–Scene Evidence" panel entirely. Move its three concise elements inside the left half of the existing green "Human-Conditioned Residual Calibration" block:
+- small 4×6 token matrix labeled "24 body-anchor tokens";
+- three compact patches labeled "local scene probes";
+- one short colored token strip labeled "interaction evidence".
+These three elements flow left-to-right into the existing compact attention matrix, then split to R_hsi and b_hsi. Keep this internal process readable but compact.
+
+The final figure now has ONLY TWO horizontal levels:
+1. a narrow upper cream branch "Geometric Prior": Metric SMPL + Raw depth → anchor projection → scale hypotheses {s_i} → robust consensus → C_coarse. Keep tag "analytic · parameter-free".
+2. a wide middle mainline: Raw VGGT depth D_vggt → Coarse metric initialization → Human-Conditioned Residual Calibration → Metric depth composition → Metric depth D_metric.
+
+Keep one thin downward arrow from C_coarse into Coarse metric initialization. Keep the exact equations:
+"D_coarse = C_coarse · D_vggt"
+"D_metric = R_hsi · D_coarse + b_hsi"
+
+Make the green Human-Conditioned Residual Calibration block the widest block and the visual focus, but not dramatically oversized. Keep all boxes aligned to one baseline with equal gaps. Use small braces "absolute metric initialization" and "coarse-to-fine correction" only if they fit cleanly; otherwise omit them.
+
+Correct any malformed text. Title exactly "Prior-Guided Metric Scale Calibration". Subtitle exactly "geometric initialization followed by human-conditioned residual refinement". Use no extra text, no 3D grids, no perspective, no gradients, no glow, no shadows, no marketing visual, no watermark. Preserve the bottom Figure palette and exact codes.

@@ -1,0 +1,78 @@
+Use the provided cropped panel only as a visual and palette reference. Redraw it from scratch as a sharp, high-resolution ICLR scientific mechanism figure. Preserve the restrained warm-paper background, thin charcoal outlines, pale blue TRSTR group, pale cyan temporal group, muted pastel chips, rounded rectangles, and two-row organization. Do not preserve its blur, duplicated cards, or ambiguous flow.
+
+Canvas: 1536×1024 landscape, flat 2D vector diagram, crisp academic sans-serif, restrained serif math, strong alignment and whitespace. No photorealism, gradients, glow, shadows, promotional rendering, giant human, watermark, or decorative effects. Every visual element must explain an operation or tensor flow.
+
+At the top-left of the panel, add a small callout strip that explicitly establishes the relation to the paper overview:
+"Expanded view of the top-level blocks"
+followed by two compact outlined chips:
+"TRSTR Spatial Refinement" → "Track-wise Temporal Stabilizer".
+Use a small magnifying-glass or zoom-in symbol. This callout is important: the panel must visibly explain the two blocks from the overview rather than repeat them.
+
+MAIN TITLE at lower-left edge exactly:
+"(C) Spatial–Temporal Refinement"
+
+UPPER GROUP: a large pale periwinkle-blue rounded panel titled exactly "TRSTR Regional Translator". Organize it as a precise six-step left-to-right mechanism, with numbered circles 1–6 and straight arrows.
+
+INPUT PORT, outside the six steps but inside the group:
+- a small technical SMPL wireframe labeled "Metric SMPL {θ, β, τ}"
+- a compact depth tile labeled "Metric scene depth D_metric"
+Both feed Step 1.
+
+STEP 1, title exactly "Surface Regionalization".
+Show a small neutral SMPL mesh followed by a segmented pastel SMPL mesh. Add concise labels "6890 vertices" and "96 anatomical regions". Show 4–6 representative dots on several regions and label them "representative vertices".
+
+STEP 2, title exactly "Multi-scale Projective Probing".
+Show one selected body region projecting with dotted rays into four compact depth-window icons labeled exactly "3×3", "7×7", "adaptive", "annulus". Do not show only four floating grids; clearly show that they are sampled around projected regional surface points.
+
+STEP 3 is the NEW MODULE and must be visually emphasized with a pale sage inner box. Title exactly "Human-aware Scene Evidence".
+Inside, show a small depth patch partitioned into three scientifically labeled evidence channels:
+- "self surface" in muted blue,
+- "other humans" in dusty blush with a small mask/cross symbol,
+- "environment" in sage.
+These channels flow into a tiny attention glyph labeled exactly "patch attention" and produce one compact output token labeled "region token h_r".
+Add one short note exactly "owner-aware depth filtering".
+This module explains how scene evidence is cleaned before regional voting.
+
+STEP 4, title exactly "Per-region Prediction".
+From region token h_r, produce three vertically stacked pastel chips with exact labels:
+"vote Δτ_r", "gate g_r", "uncertainty σ_r".
+
+STEP 5, title exactly "Robust Person Consensus".
+Show a weighted funnel or summation node. Render one clear compact equation exactly:
+"w_r = valid_r · g_r · exp(−σ_r)"
+and below it:
+"Δτ = Σ_r w_r Δτ_r / Σ_r w_r".
+Make clear that aggregation occurs within each person only; add exact note "per-person aggregation".
+
+STEP 6, title exactly "Iterative Re-projection".
+Show two small looped mesh/depth states labeled "iter 1" and "iter 2", connected by a circular arrow. Add exact label "2× re-probe". Output one prominent chip "refined translation τ*".
+
+Across the bottom edge of the TRSTR group, add a lock strip with exact text:
+"pose θ and shape β remain fixed · translation only".
+
+LOWER GROUP: a pale powder-cyan rounded panel titled exactly "Track-wise Temporal Fusion". This group must explain the temporal block, not repeat the TRSTR pipeline. Use four clear stages from left to right.
+
+TEMPORAL STEP 1, title "Track assembly".
+Show three horizontal identity lanes labeled "ID 1", "ID 2", "ID 3" across nine positions t−4, t−3, t−2, t−1, t, t+1, t+2, t+3, t+4. Highlight the center t column. Add exact note "identities never mixed".
+
+TEMPORAL STEP 2, title "Masked motion proposal".
+Show O_t in a small outlined observation card, but place a visible cross/mask over its connection to the proposal branch. Only t−2, t−1, t+1, t+2 connect to a smooth curve or compact MLP/TCN icon. Output label exactly "neighbor-only proposal M_t". Add exact note "O_t is not read".
+
+TEMPORAL STEP 3, title "Conservative fusion gate".
+Show two inputs O_t and M_t entering a small gate. Output exact label "α_t ≤ 0.5". Show one compact confidence/validity chip, but no extra paragraph.
+
+TEMPORAL STEP 4, title "Stable track output".
+Render the exact equation large and clean:
+"X*_t = O_t + α_t(M_t − O_t)".
+Then show three smoother identity-separated trajectories and a compact output card labeled "Stable sequence".
+
+DATAFLOW AND SCIENTIFIC ACCURACY:
+- TRSTR reads metric SMPL and metric depth.
+- TRSTR modifies translation only; θ and β are passthrough.
+- Each person owns an independent 96-region bank.
+- Other-human evidence is masked before environmental evidence enters the region token.
+- The two TRSTR iterations re-project and re-probe after each translation update.
+- Temporal fusion is applied after spatial alignment, per track, and uses neighbor-only evidence for M_t.
+- Do not add contact, grounding, pose refinement, shape refinement, physics, SAM, or unrelated modules.
+
+Use the same color system as the reference: #D9ACA6 dusty blush, #AFCAB2 sage, #A9CFD8 powder cyan, #99ADD4 periwinkle blue, #CBBAD8 lavender, #E7DAAC cream, #E9D36E yellow accent, #2F3438 charcoal. Add a slim bottom strip titled exactly "Figure palette" with these exact codes. Prioritize crisp readable labels; if space is tight, simplify icons rather than shrinking text.

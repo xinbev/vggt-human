@@ -1,0 +1,20 @@
+Redraw the provided cropped panel as a sharp ICLR scientific mechanism figure, 1536×1024 landscape. Preserve its pale periwinkle TRSTR group above, pale cyan temporal group below, rounded thin charcoal outlines, muted pastel palette, and flat 2D style. Remove blur, duplicate cards and garbled text. No gradients, photorealism, shadows, poster effects or watermark.
+
+Top callout: "Expanded view of the top-level blocks" with chips "TRSTR Spatial Refinement" → "Track-wise Temporal Stabilizer" and a zoom icon. This panel must explain those overview blocks in detail.
+
+UPPER GROUP title "TRSTR Regional Translator". Six numbered steps left-to-right:
+1 "Surface Regionalization": inputs "Metric SMPL {θ, β, τ}" and "Metric scene depth D_metric"; show 6890-vertex mesh partitioned into "96 anatomical regions" with representative vertices.
+2 "Multi-scale Projective Probing": selected regional surface points project to depth windows "3×3", "7×7", "adaptive", "annulus".
+3 NEW sage module "Human-aware Scene Evidence": depth patch split into "self surface" blue, "other humans" blush and masked, "environment" sage; then "patch attention" → "region token h_r". Note "owner-aware depth filtering".
+4 "Per-region Prediction": outputs "vote Δτ_r", "gate g_r", "uncertainty σ_r".
+5 "Robust Person Consensus": show "w_r = valid_r · g_r · exp(−σ_r)" and "Δτ = Σ_r w_r Δτ_r / Σ_r w_r"; note "per-person aggregation".
+6 "Iterative Re-projection": iter 1 → iter 2 loop, "2× re-probe", output "refined translation τ*".
+Bottom lock strip: "pose θ and shape β remain fixed · translation only".
+
+LOWER GROUP title "Track-wise Temporal Fusion". Four stages left-to-right:
+1 "Track assembly": ID 1, ID 2, ID 3 across t−4 … t+4, center highlighted, note "identities never mixed".
+2 "Masked motion proposal": show O_t visibly blocked from proposal; only t−2, t−1, t+1, t+2 feed a small TCN/curve; output "neighbor-only proposal M_t"; note "O_t is not read".
+3 "Conservative fusion gate": O_t and M_t enter gate "α_t ≤ 0.5".
+4 "Stable track output": exact equation "X*_t = O_t + α_t(M_t − O_t)" then three smooth identity-separated trajectories and card "Stable sequence".
+
+Main caption "(C) Spatial–Temporal Refinement". Use #D9ACA6 #AFCAB2 #A9CFD8 #99ADD4 #CBBAD8 #E7DAAC #E9D36E #2F3438. Bottom "Figure palette" with exact codes. Large crisp labels, straight arrows, no unrelated modules.

@@ -1,0 +1,7 @@
+Use the provided Prior-Guided Metric Scale Calibration figure as a strict reference. Preserve the exact two-level composition, module sizes, colors, labels, equations, icons, spacing, and restrained flat scientific style. Do not redesign or add content.
+
+Make only these two scientific corrections:
+1. The yellow prior token "C_coarse" must connect with one thin vertical downward arrow directly into the blue block "Coarse metric initialization" and its equation D_coarse = C_coarse · D_vggt. Remove any vertical arrow from C_coarse into "Metric depth composition". The later composition block receives D_coarse from the main horizontal flow and R_hsi, b_hsi from residual calibration.
+2. Inside "Human-Conditioned Residual Calibration", draw the body-anchor token array as exactly 24 small squares in a clean 4-row × 6-column matrix. Keep label "24 body-anchor tokens".
+
+Remove any stray line caused by the old C_coarse connection. Keep all remaining arrows straight and clean. Preserve exact formulas and bottom palette. No gradients, 3D grids, perspective, promotional effects, or watermark.
