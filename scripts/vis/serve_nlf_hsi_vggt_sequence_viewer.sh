@@ -59,6 +59,8 @@ HSI_OVERLAY_CHECKPOINT="${HSI_OVERLAY_CHECKPOINT:-}"
 SCENE_SCALE_PREALIGN="${SCENE_SCALE_PREALIGN:-none}"
 COARSE_SCALE_MIN="${COARSE_SCALE_MIN:-0.10}"
 COARSE_SCALE_MAX="${COARSE_SCALE_MAX:-10.0}"
+COARSE_CONF_THRESHOLD="${COARSE_CONF_THRESHOLD:-}"
+COARSE_MAX_PEOPLE="${COARSE_MAX_PEOPLE:-0}"
 COARSE_ANCHOR_STRIDE="${COARSE_ANCHOR_STRIDE:-8}"
 COARSE_MIN_ANCHOR_PIXELS="${COARSE_MIN_ANCHOR_PIXELS:-32}"
 COARSE_FALLBACK="${COARSE_FALLBACK:-unit}"
@@ -126,6 +128,7 @@ echo "HSI vis scale: ${HSI_VISUAL_SCALE} (viewer-only; GUI adjustable)"
 echo "Scale prealign: ${SCENE_SCALE_PREALIGN}"
 if [[ "${SCENE_SCALE_PREALIGN}" == "smpl_median" ]]; then
   echo "Coarse scale : range=[${COARSE_SCALE_MIN},${COARSE_SCALE_MAX}] stride=${COARSE_ANCHOR_STRIDE} min_pixels=${COARSE_MIN_ANCHOR_PIXELS}"
+  echo "Coarse people: conf=${COARSE_CONF_THRESHOLD:-${CONF_THRESHOLD}} max=${COARSE_MAX_PEOPLE} (0 means all)"
   echo "Coarse fallback: ${COARSE_FALLBACK}"
 fi
 echo "HSI overlay : ${HSI_OVERLAY_CHECKPOINT:-<none>}"
@@ -196,6 +199,7 @@ ARGS=(
   --scene-scale-prealign "${SCENE_SCALE_PREALIGN}"
   --coarse-scale-min "${COARSE_SCALE_MIN}"
   --coarse-scale-max "${COARSE_SCALE_MAX}"
+  --coarse-max-people "${COARSE_MAX_PEOPLE}"
   --coarse-anchor-stride "${COARSE_ANCHOR_STRIDE}"
   --coarse-min-anchor-pixels "${COARSE_MIN_ANCHOR_PIXELS}"
   --coarse-fallback "${COARSE_FALLBACK}"
@@ -217,6 +221,9 @@ if [[ -n "${INFERENCE_FRAMES}" ]]; then
 fi
 if [[ -n "${NLF_DETECTOR_THRESHOLD}" ]]; then
   ARGS+=(--nlf-detector-threshold "${NLF_DETECTOR_THRESHOLD}")
+fi
+if [[ -n "${COARSE_CONF_THRESHOLD}" ]]; then
+  ARGS+=(--coarse-conf-threshold "${COARSE_CONF_THRESHOLD}")
 fi
 
 case "${SHOW_TRACK_IDS}" in

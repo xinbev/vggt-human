@@ -1,0 +1,25 @@
+Use the supplied architecture diagram as a strict reference. Create a COMPACT 4:3 paper-layout solution using the smallest possible rearrangement. Treat every existing module as a finished group that must not be internally redesigned. Preserve all colors, icons, labels, sizes relative to each other, and scientific content. The design operation is only cut, move, align, and reconnect.
+
+Canvas 1536×1024, warm off-white background, same muted pastel scientific style. No new module, no removed module, no new visual metaphor, no gradients, no 3D effects, no watermark.
+
+MINIMUM-EDIT LAYOUT:
+
+TOP OVERVIEW becomes a TWO-ROW SERPENTINE FLOW inside one rounded outer frame.
+
+Top row, left to right: keep the existing RGB sequence group, the existing stacked VGGT/NLF group, the existing Metric Human–Scene Evidence group, and the existing HSI Scale Calibration group. Do not change their internals. At the end of HSI, use one clean elbow arrow downward.
+
+Second overview row, right to left: place the existing TRSTR Spatial Refinement block directly below HSI, then the existing Track-wise Temporal Stabilizer block to its left, then the existing final output image to the far left. This creates a clear S-shaped reading order:
+RGB → VGGT/NLF → Evidence → HSI
+                              ↓
+Final output ← Temporal ← TRSTR
+
+Use a subtle numbered path 1, 2, 3 only at the three major stages Encoding, Calibration, Refinement. Do not alter internal labels.
+
+LOWER DETAILS: preserve the existing detailed modules as completed groups. Stack them in TWO FULL-WIDTH BANDS:
+- first band: the existing Validity-Aware Metric Prior Tokenizer directly above the existing Human-Conditioned Residual Calibration, maintaining their current relationship and connector;
+- second band: the existing TRSTR Regional Translator directly above the existing Track Temporal Fusion, maintaining their current relationship.
+Both bands use the same width, left and right margins, and vertical gap. Do not redesign their internal mini-panels.
+
+To keep the complete figure near 4:3, reduce empty whitespace only. Do not uniformly scale down the modules. The typography should remain approximately the same visual size as in the reference. Use alignment guides, consistent 18–24 px gaps, and orthogonal arrows.
+
+Keep the final palette strip at the bottom. The output should clearly look like the user's same labor-intensive diagram reorganized through group movement, not a newly redrawn architecture.

@@ -116,6 +116,12 @@ def main() -> None:
         )
     if not 0.0 <= float(args.conf_threshold) <= 1.0:
         raise ValueError(f"--conf-threshold must be within [0, 1], got {args.conf_threshold}")
+    if args.coarse_conf_threshold is not None and not 0.0 <= float(args.coarse_conf_threshold) <= 1.0:
+        raise ValueError(
+            f"--coarse-conf-threshold must be within [0, 1], got {args.coarse_conf_threshold}"
+        )
+    if int(args.coarse_max_people) < 0:
+        raise ValueError(f"--coarse-max-people must be >= 0, got {args.coarse_max_people}")
     if not np.isfinite(args.hsi_visual_scale) or not HSI_VISUAL_SCALE_MIN <= float(args.hsi_visual_scale) <= HSI_VISUAL_SCALE_MAX:
         raise ValueError(
             f"--hsi-visual-scale must be finite and within "
@@ -382,6 +388,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--scene-scale-prealign", choices=["none", "smpl_median"], default="none")
     parser.add_argument("--coarse-scale-min", type=float, default=0.10)
     parser.add_argument("--coarse-scale-max", type=float, default=10.0)
+    parser.add_argument(
+        "--coarse-conf-threshold",
+        type=float,
+        default=None,
+        help="Confidence threshold used only for analytic coarse scale. Omitted reuses --conf-threshold.",
+    )
+    parser.add_argument(
+        "--coarse-max-people",
+        type=int,
+        default=0,
+        help="Maximum highest-confidence people used per frame for analytic coarse scale; 0 uses all accepted people.",
+    )
     parser.add_argument("--coarse-anchor-stride", type=int, default=8)
     parser.add_argument("--coarse-min-anchor-pixels", type=int, default=32)
     parser.add_argument("--coarse-fallback", choices=["unit", "sequence_median"], default="unit")
@@ -740,10 +758,31 @@ def run_smpl_coarse_hsi_cascade(
     coarse_scale = raw_depth.new_ones(raw_depth.shape[:2])
     coarse_records: list[dict[str, Any]] = []
     confs = first_pass["pred_confs"].detach().float()
+    coarse_conf_threshold = (
+        float(args.conf_threshold)
+        if getattr(args, "coarse_conf_threshold", None) is None
+        else float(args.coarse_conf_threshold)
+    )
+    coarse_max_people = max(0, int(getattr(args, "coarse_max_people", 0)))
     for frame_idx in range(raw_depth.shape[1]):
-        valid_people = confs[0, frame_idx, :, 0] >= float(args.conf_threshold)
+        frame_conf = confs[0, frame_idx, :, 0]
+        valid_people = frame_conf >= coarse_conf_threshold
+        if coarse_max_people > 0 and int(valid_people.sum()) > coarse_max_people:
+            accepted_indices = torch.nonzero(valid_people, as_tuple=False).flatten()
+            top_local = torch.topk(frame_conf[accepted_indices], k=coarse_max_people).indices
+            limited = torch.zeros_like(valid_people)
+            limited[accepted_indices[top_local]] = True
+            valid_people = limited
         if not bool(valid_people.any()):
-            coarse_records.append({"applied": False, "reason": "no_confident_people", "scale": 1.0})
+            coarse_records.append(
+                {
+                    "applied": False,
+                    "reason": "no_confident_people",
+                    "scale": 1.0,
+                    "coarse_conf_threshold": coarse_conf_threshold,
+                    "coarse_people_used": 0,
+                }
+            )
             continue
         record = estimate_scene_to_smpl_scale(
             smpl_vertices=base_vertices[0, frame_idx, valid_people],
@@ -757,6 +796,8 @@ def run_smpl_coarse_hsi_cascade(
         )
         if bool(record.get("applied", False)):
             coarse_scale[0, frame_idx] = float(record["scale"])
+        record["coarse_conf_threshold"] = coarse_conf_threshold
+        record["coarse_people_used"] = int(valid_people.sum().detach().cpu())
         coarse_records.append(record)
 
     if str(args.coarse_fallback) == "sequence_median":
@@ -823,6 +864,16 @@ def run_smpl_coarse_hsi_cascade(
     cascade["hsi_frame_scene_depth_bias"] = frame_effective_bias
     cascade["hsi_translation_depth"] = final_metric_depth
     cascade["hsi_cascade_effective_affine_mode"] = effective_affine_mode
+    base_consistency = compare_base_smpl_predictions(first_pass, cascade)
+    cascade["_viewer_base_smpl_consistency"] = base_consistency
+    print(
+        "[base-smpl-consistency] "
+        + " ".join(
+            f"{key}=max_abs:{value['max_abs']:.6g},equal:{value['equal']}"
+            for key, value in base_consistency.items()
+        ),
+        flush=True,
+    )
 
     if delay_trstr_until_global_depth:
         trstr_outputs = run_spatial_trstr_in_frame_chunks(
@@ -901,6 +952,37 @@ def run_smpl_coarse_hsi_cascade(
     ).reshape(1, -1)
     cascade["_hsi_coarse_scale_records"] = coarse_records
     return cascade
+
+
+def compare_base_smpl_predictions(
+    first_pass: dict[str, Any],
+    cascade: dict[str, Any],
+) -> dict[str, dict[str, Any]]:
+    """Audit whether the second cascade forward changed NLF base predictions."""
+    result: dict[str, dict[str, Any]] = {}
+    for key in ("pred_poses", "pred_betas", "pred_transl_cam", "pred_confs", "pred_boxes"):
+        first = first_pass.get(key)
+        second = cascade.get(key)
+        if not isinstance(first, torch.Tensor) or not isinstance(second, torch.Tensor):
+            continue
+        same_shape = tuple(first.shape) == tuple(second.shape)
+        if not same_shape:
+            result[key] = {
+                "equal": False,
+                "same_shape": False,
+                "first_shape": list(first.shape),
+                "second_shape": list(second.shape),
+                "max_abs": float("inf"),
+            }
+            continue
+        delta = (first.detach().float() - second.detach().float()).abs()
+        result[key] = {
+            "equal": bool(torch.equal(first, second)),
+            "same_shape": True,
+            "max_abs": float(delta.max().cpu()) if delta.numel() else 0.0,
+            "mean_abs": float(delta.mean().cpu()) if delta.numel() else 0.0,
+        }
+    return result
 
 
 @torch.no_grad()
@@ -1747,6 +1829,15 @@ def build_summary(
         "frame_selection": frame_selection_summary(resolve_project_path(args.frames_dir), frame_paths, args),
         "legacy_long_sequence_limit": int(LONG_SEQUENCE_FRAME_LIMIT),
         "nlf_detection": summarize_nlf_detections(predictions, frame_paths, args),
+        "base_smpl_consistency": predictions.get("_viewer_base_smpl_consistency", {}),
+        "coarse_person_selection": {
+            "confidence_threshold": (
+                float(args.conf_threshold)
+                if getattr(args, "coarse_conf_threshold", None) is None
+                else float(args.coarse_conf_threshold)
+            ),
+            "max_people_per_frame": int(getattr(args, "coarse_max_people", 0)),
+        },
         "smpl_display_frames_initial": int(getattr(args, "smpl_display_frames", 0)),
         "display_people_initial": int(getattr(args, "display_people", 0)),
         "checkpoint": str(checkpoint),

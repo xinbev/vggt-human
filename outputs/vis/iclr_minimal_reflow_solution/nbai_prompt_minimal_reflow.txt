@@ -1,0 +1,22 @@
+Use the supplied architecture diagram as a strict reference. Create a MINIMAL-CHANGE PORTRAIT-REFLOW version for a paper page. Preserve all existing modules, internal icons, colors, text, proportions, and semantic content. Do not redesign the method and do not simplify the internals. Only rearrange the existing groups to fix the current overly wide aspect ratio.
+
+Canvas 1024×1536, warm off-white background, same muted pastel palette, thin charcoal outlines, flat modern scientific paper style. No new decorative effects, no 3D perspective, no gradients, no glow, no photorealistic hero elements, no watermark.
+
+MINIMAL CHANGE RECOMPOSITION:
+
+1. Keep the RGB input strip, VGGT Scene Encoder, NLF Human Estimator, Metric Human–Scene Evidence, and HSI Scale Calibration as the SAME existing blocks. Arrange them in the upper half using two compact rows:
+- row 1: RGB input strip → VGGT Scene Encoder → Metric Human–Scene Evidence;
+- row 2: NLF Human Estimator → HSI Scale Calibration.
+Use short orthogonal connectors and preserve the intrinsics connection from VGGT Camera K to NLF.
+
+2. Keep the existing TRSTR Spatial Refinement block unchanged in content and visual style, but place it as a wide centered panel in the lower-middle. Its inputs remain Metric depth D_metric and Metric SMPL. Preserve the segmented SMPL, 96-region token matrix, multi-scale probes, weighted voting, lock note, and refined translation output.
+
+3. Keep the existing Track-wise Temporal Stabilizer block unchanged in content and visual style, but place it directly BELOW TRSTR in the same centered outer group. Preserve the 9-frame window, O_t, neighbor-only proposal M_t, gating α_t ≤ 0.5, and Stable sequence.
+
+4. Put the final stable human–scene image as a small output card to the RIGHT of the lower shared Spatial–Temporal group, centered vertically between TRSTR and Temporal. Use one short arrow from Temporal to the output.
+
+5. Keep the existing two detailed lower modules, but place them as two stacked full-width detail bands at the very bottom: first the Metric Prior / HSI detail, then the TRSTR + Temporal detail. Do not remove information; only reflow the existing blocks and slightly enlarge their vertical spacing.
+
+READING ORDER: top input encoding → HSI calibration → TRSTR spatial refinement → temporal stabilization → final output. Use vertical hierarchy and orthogonal connectors instead of a single left-to-right chain. The result should look like the same carefully drawn figure adapted to a portrait paper layout, not a newly invented illustration.
+
+Preserve the exact palette and bottom legend: #D9ACA6, #AFCAB2, #A9CFD8, #99ADD4, #CBBAD8, #E7DAAC, #E9D36E, #2F3438. Keep labels crisp and avoid tiny text.

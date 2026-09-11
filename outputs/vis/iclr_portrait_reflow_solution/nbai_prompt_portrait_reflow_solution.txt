@@ -1,0 +1,20 @@
+Use the supplied current architecture figure as a content reference only. Redesign the whole composition for a PORTRAIT paper layout so it remains readable after insertion into a narrow two-column paper. Do not uniformly shrink the wide figure; recompose it.
+
+Canvas 1024×1536, warm off-white paper background #F7F6F2. Sophisticated ICLR/CVPR scientific figure style: flat 2D vector, thin charcoal lines #2F3438, muted pastel panels #D9ACA6 blush, #AFCAB2 sage, #A9CFD8 cyan, #99ADD4 periwinkle, #CBBAD8 lavender, #E7DAAC cream, #E9D36E yellow. No 3D perspective, no sci-fi effects, no glow, no giant hero image, no poster styling, no watermark.
+
+Use a clear vertical hierarchy with three major horizontal bands and a narrow right output rail. The figure must feel designed for paper, not a webpage.
+
+BAND 1, top 22%: "Input Encoding". Put a small RGB sequence strip at left. To its right place two compact stacked modules: lavender "VGGT Scene Encoder" with token row and outputs "Camera K", "Raw depth D_vggt", "Scene tokens F_scene"; blush "NLF Human Estimator" with a small wireframe and outputs "pose θ", "shape β", "translation τ", "confidence c". Camera K enters NLF through one curved arrow labeled "intrinsics". Use only essential labels.
+
+BAND 2, middle 32%: "Metric Human–Scene Calibration". This is the central focal band, wider and taller than Band 1. Use two nested horizontal lanes rather than many columns:
+- upper cream auxiliary lane "Metric Prior Initialization": Metric SMPL + Raw depth → anchor correspondences → scale hypotheses {s_i} → robust median → yellow prior token "C_coarse";
+- lower sage primary lane "Human-Conditioned Residual Calibration": Raw depth → Apply metric prior → Coarse depth → compact 24 body-anchor token matrix plus three local scene-probe tiles → attention icon → two output chips "R_hsi" and "b_hsi".
+At the right of Band 2 place a lavender composition card with formula exactly "D_metric = R_hsi · D_coarse + b_hsi" and output tile "Metric depth D_metric". Draw C_coarse downward as a conditioning arrow into Apply metric prior. Make clear the upper lane is a parameter-free geometric prior and the lower lane is learned residual refinement.
+
+BAND 3, lower 38%: one shared rounded outer group titled "Spatial–Temporal Translation Refinement". Inside use two vertically stacked large subpanels:
+- upper blue subpanel "TRSTR Spatial Refinement": a small segmented SMPL, compact 96-region matrix, four small probe icons labeled "3×3", "7×7", "adaptive", "annulus", and weighted voting funnel. Output "refined translation τ*" with lock note "θ, β fixed".
+- lower cyan subpanel "Track-wise Temporal Stabilization": a 9-node timeline with center O_t, a simple neighbor-only motion proposal M_t, a lavender gate α_t ≤ 0.5, and output "Stable sequence". No track ribbons.
+
+RIGHT OUTPUT RAIL: aligned beside Band 2–3, show one small flat scene thumbnail with the final person sequence and label exactly "Stable metric human–scene sequence". Use one clean arrow from the temporal subpanel to the output rail.
+
+COMPOSITION RULES: prefer stacked sections, two-column internal layouts, and short labels. Keep typography large enough for a paper column. Avoid a long horizontal pipeline. Preserve the real order RGB/VGGT/NLF → HSI calibration → TRSTR → temporal. Add a thin bottom palette legend titled "Figure palette" with exact codes #D9ACA6 #AFCAB2 #A9CFD8 #99ADD4 #CBBAD8 #E7DAAC #E9D36E #2F3438.

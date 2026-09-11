@@ -1,0 +1,19 @@
+Use the supplied architecture figure only as a content and visual-style reference. Create a new PORTRAIT-REFLOW version of the same scientific architecture diagram so it works in a paper column instead of a wide webpage. Do not shrink the existing wide figure. Recompose it.
+
+Canvas 1024×1536, warm off-white background. Modern top-tier computer-vision paper style: flat 2D vector, thin charcoal outlines, muted pastel panels, compact tensor/token graphics, precise arrows, readable typography. Use #F7F6F2 paper, #D9ACA6 dusty blush, #AFCAB2 sage, #A9CFD8 cyan, #99ADD4 periwinkle, #CBBAD8 lavender, #E7DAAC cream, #E9D36E yellow, #2F3438 charcoal. No photorealistic scenes, no 3D cubes, no perspective grids, no glowing effects, no futuristic interface, no promotional hero image, no watermark.
+
+Title exactly "Prior-Guided Metric Human–Scene Reconstruction".
+
+RECOMPOSED HIERARCHY:
+
+TOP 22% — INPUT ENCODING. Put a compact RGB frame strip at left. Beside it make two stacked compact branches: upper lavender "VGGT Scene Encoder" with only three outputs "Camera K", "Raw depth D_vggt", "Scene tokens F_scene"; lower dusty blush "NLF Human Estimator" with a small SMPL wireframe and outputs "pose θ", "shape β", "translation τ", "confidence c". A small curved arrow from Camera K to NLF is labeled "intrinsics". Do not use a long horizontal chain.
+
+MIDDLE 30% — METRIC CALIBRATION. Make one large two-lane rounded panel titled exactly "Metric Human–Scene Calibration". Upper cream lane is a compact auxiliary branch "Metric Prior Initialization": Metric SMPL + Raw depth → anchor correspondences → scale hypotheses {s_i} → robust median → yellow prior token "C_coarse". Lower sage lane is the primary learned branch: Raw depth → "Apply metric prior" → "Coarse depth" → 24 body-anchor token matrix + three local scene probes → compact attention icon → parallel outputs "R_hsi" and "b_hsi". Both converge to a prominent formula strip "D_metric = R_hsi · D_coarse + b_hsi" and a small depth tile "Metric depth D_metric". Make the upper lane visibly smaller and subordinate to the lower lane.
+
+LOWER 36% — SPATIAL–TEMPORAL REFINEMENT. Use one shared rounded outer panel titled exactly "Spatial–Temporal Translation Refinement" with two vertically stacked subpanels:
+- upper blue panel "TRSTR Spatial Refinement": four compact horizontal cells labeled "Metric SMPL", "96 body regions", "3×3 / 7×7 / adaptive / annulus", "Weighted voting". Bottom output "refined translation τ*" and lock note "θ, β fixed".
+- lower cyan panel "Track-wise Temporal Stabilization": a nine-node frame window with center O_t, neighbor-only proposal M_t, gate α_t ≤ 0.5, and green output "Stable sequence". Keep it simple with no track lanes.
+
+RIGHT EDGE — a narrow final output card aligned with the lower panel, containing three small ghosted SMPL poses on a scene grid and label exactly "Stable metric human–scene sequence". Use a single rightward connector from the temporal subpanel.
+
+GRAPHIC PRINCIPLE: all information should fit within a narrow vertical page using stacking, not tiny text. Maintain visible logical dependencies: VGGT/NLF parallel encoding → HSI metric calibration → TRSTR spatial refinement → temporal stabilization. Use modestly different module sizes to show that HSI and TRSTR are the main contributions. Add a slim bottom palette legend with exact codes #D9ACA6 #AFCAB2 #A9CFD8 #99ADD4 #CBBAD8 #E7DAAC #E9D36E #2F3438.

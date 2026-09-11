@@ -1,0 +1,40 @@
+Create a clean scientific LAYOUT BLUEPRINT for rearranging an existing architecture figure with minimal editing. Do not draw internal model details. Represent each already-finished group as a labeled rounded rectangle with a tiny abstract thumbnail. The goal is to show where to move groups, not to redesign them.
+
+Square 1024×1024, warm off-white background, thin charcoal outlines, muted pastel blocks. Flat 2D academic design. No gradients, no 3D effects, no watermark.
+
+Title exactly "Minimal-Edit Reflow Blueprint". Subtitle "move groups, preserve internals".
+
+Use a compact 4:3-style composition inside the square.
+
+TOP OVERVIEW occupies the upper 43% and uses a TWO-ROW S-FLOW:
+
+Row 1 left-to-right:
+A "RGB Sequence"
+B "VGGT + NLF Encoding"
+C "Human–Scene Evidence"
+D "HSI Scale Calibration"
+
+At D draw one elbow arrow downward.
+
+Row 2 right-to-left:
+E "TRSTR Spatial Refinement"
+F "Temporal Stabilizer"
+G "Final Output"
+
+Draw arrows to make the exact reading order A → B → C → D ↓ E → F → G, while the second row is positioned right-to-left. Use matching pastel colors from the original figure. Put a small caption "only move these seven finished groups".
+
+LOWER DETAILS occupy the lower 48% as THREE FULL-WIDTH STACKED BANDS:
+H1 "Validity-Aware Metric Prior Tokenizer"
+H2 "Human-Conditioned Residual Calibration"
+H3 "TRSTR Regional Translator + Track Temporal Fusion"
+
+Each H band is a wide rounded rectangle with a small miniature wireframe of its existing internal panels, but no readable internal labels. Connect H1 downward to H2. Keep H3 separate under them. Add caption "preserve every internal object; resize groups uniformly only if necessary".
+
+On the left margin add a concise three-step instruction:
+"1 Group existing objects"
+"2 Move groups to new positions"
+"3 Redraw connectors only"
+
+At bottom add a small comparison icon: long thin rectangle labeled "before 1.8:1" arrow to compact rectangle labeled "after ≈1.25:1".
+
+Use large crisp text. This is a layout plan, not an architecture redraw. Palette: cream, sage, cyan, periwinkle, lavender, blush, yellow, charcoal.
