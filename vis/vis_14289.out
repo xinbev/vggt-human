@@ -1,0 +1,95 @@
+开始评估，作业 ID: 14289
+当前环境: zhw_env
+分配的 GPU: 0
+========== Sequence Viser: analytic coarse -> current HSI -> Stage2 align ==========
+Frames            : /home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/
+Stage2 checkpoint : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt
+Scale overlay     : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt
+Output            : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_walking_coarse_residual_v3
+Viewer cache      : <disabled>
+Full UI cache     : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_3dpw_downtown_walkBridge_01/full_viewer_cache
+Port              : 8080
+Frame range       : [250, -1] inclusive
+Frame sampling    : head, max=0, stride=2
+Accumulated SMPL  : 0 (0 means all)
+Displayed people  : 0 per frame (0 means all)
+Scale application : clip_median
+========== NLF-HSI VGGT sequence Viser viewer ==========
+Repo        : /home/zhw/lab_users/xyb/home/projects/vggt-human
+Frames      : /home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/
+Query source: nlf_detector
+BEDLAM      : /home/zhw/xyb_space/bedlam/processed_bedlam
+Sidecars    : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/bedlam_boxes
+Stage2 dir  : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full
+Checkpoint  : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt
+Output      : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_walking_coarse_residual_v3
+Viewer cache: <disabled>
+Full UI cache: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_3dpw_downtown_walkBridge_01/full_viewer_cache
+Port        : 8080
+Max frames  : 0
+Frame modes : 0=all, N=limit N, -1=uniformly sample at most 500
+Frame range : [250, -1] inclusive (-1 end means sequence end)
+Frame sample: head (after range/stride)
+SMPL frames : 0 (0 means all; GUI adjustable)
+ID overlay  : base_smpl (post-HSI display only)
+Show IDs    : true (initial GUI state)
+Show people : 0 per frame (0 means all; GUI adjustable)
+Align compat: legacy_scale_bias_v0
+Depth stride: 2 (can be changed in Viser GUI)
+Max depth   : 80 (0 disables clipping; GUI adjustable)
+Viewer mode : Hybrid (initial GUI state)
+Env display : points (points|mesh|both; GUI adjustable)
+HSI vis scale: 1.0 (viewer-only; GUI adjustable)
+Scale prealign: smpl_median
+Coarse scale : range=[0.10,10.0] stride=8 min_pixels=32
+Coarse fallback: sequence_median
+HSI overlay : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt
+Human mask  : projected SMPL triangles + 12px dilation (unconditional removal)
+Filter human: true (initial GUI state)
+Point size  : 0.006
+SMPL edits  : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_walking_coarse_residual_v3/smpl_edit_offsets.json
+GPU visible : 0
+Smoke only  : true
+CUDA available: count=1, device0=NVIDIA A800-SXM4-80GB, visible=0
+[ckpt] loaded VGGT baseline for camera: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt
+[ckpt] baseline missing=165 unexpected=0
+[ckpt] loaded training checkpoint: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt
+[ckpt] missing=1412 unexpected=0
+[ckpt] overlaid HSI prefixes ('hsi_refinement_head.',): /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt
+[ckpt] overlay tensors=140 missing=1436 unexpected=0
+[coarse-hsi] final_depth = raw_vggt_depth * coarse_scale * hsi_residual_scale + hsi_residual_bias
+[coarse-hsi] shared-world application: clip_median of composed effective scale/bias scale=14.0514 bias=-0.0169429
+[coarse-hsi-summary] min/median/max coarse=1.34384/4.93234/9.33228 hsi_residual=1.38049/2.87594/3.95464 effective=14.0514/14.0514/14.0514 bias=-0.0169429/-0.0169429/-0.0169429
+[human-mask] frames=561 mask_pixels=41002223 points_removed=10245953/37026765 (27.67%) dilation=12px
+[full-viewer-cache] exported 25/561 frames
+[full-viewer-cache] exported 50/561 frames
+[full-viewer-cache] exported 75/561 frames
+[full-viewer-cache] exported 100/561 frames
+[full-viewer-cache] exported 125/561 frames
+[full-viewer-cache] exported 150/561 frames
+[full-viewer-cache] exported 175/561 frames
+[full-viewer-cache] exported 200/561 frames
+[full-viewer-cache] exported 225/561 frames
+[full-viewer-cache] exported 250/561 frames
+[full-viewer-cache] exported 275/561 frames
+[full-viewer-cache] exported 300/561 frames
+[full-viewer-cache] exported 325/561 frames
+[full-viewer-cache] exported 350/561 frames
+[full-viewer-cache] exported 375/561 frames
+[full-viewer-cache] exported 400/561 frames
+[full-viewer-cache] exported 425/561 frames
+[full-viewer-cache] exported 450/561 frames
+[full-viewer-cache] exported 475/561 frames
+[full-viewer-cache] exported 500/561 frames
+[full-viewer-cache] exported 525/561 frames
+[full-viewer-cache] exported 550/561 frames
+[full-viewer-cache] exported 561/561 frames
+[full-viewer-cache] ready: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_3dpw_downtown_walkBridge_01/full_viewer_cache/manifest.json
+{
+  "viewer": "http://127.0.0.1:8080",
+  "summary": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_walking_coarse_residual_v3/run_summary.json",
+  "viewer_cache": null,
+  "full_viewer_cache": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_3dpw_downtown_walkBridge_01/full_viewer_cache/manifest.json"
+}
+[ok] NLF-HSI VGGT sequence viewer smoke passed
+评估完成

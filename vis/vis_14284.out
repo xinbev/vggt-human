@@ -1,0 +1,52 @@
+开始评估，作业 ID: 14284
+当前环境: zhw_env
+分配的 GPU: 0
+========== Sequence Viser: analytic coarse -> current HSI -> Stage2 align ==========
+Frames            : /home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/
+Stage2 checkpoint : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt
+Scale overlay     : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt
+Output            : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_walking_coarse_residual_v3
+Viewer cache      : <disabled>
+Full UI cache     : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_walking_coarse_residual_v3/full_viewer_cache
+Port              : 8080
+Frame range       : [250, -1] inclusive
+Frame sampling    : head, max=0, stride=2
+Accumulated SMPL  : 0 (0 means all)
+Displayed people  : 0 per frame (0 means all)
+Scale application : clip_median
+========== NLF-HSI VGGT sequence Viser viewer ==========
+Repo        : /home/zhw/lab_users/xyb/home/projects/vggt-human
+Frames      : /home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/
+Query source: nlf_detector
+BEDLAM      : /home/zhw/xyb_space/bedlam/processed_bedlam
+Sidecars    : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/bedlam_boxes
+Stage2 dir  : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full
+Checkpoint  : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt
+Output      : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_walking_coarse_residual_v3
+Viewer cache: <disabled>
+Full UI cache: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_walking_coarse_residual_v3/full_viewer_cache
+Port        : 8080
+Max frames  : 0
+Frame modes : 0=all, N=limit N, -1=uniformly sample at most 500
+Frame range : [250, -1] inclusive (-1 end means sequence end)
+Frame sample: head (after range/stride)
+SMPL frames : 0 (0 means all; GUI adjustable)
+ID overlay  : base_smpl (post-HSI display only)
+Show IDs    : true (initial GUI state)
+Show people : 0 per frame (0 means all; GUI adjustable)
+Align compat: legacy_scale_bias_v0
+Depth stride: 2 (can be changed in Viser GUI)
+Max depth   : 80 (0 disables clipping; GUI adjustable)
+Viewer mode : Hybrid (initial GUI state)
+Env display : points (points|mesh|both; GUI adjustable)
+HSI vis scale: 1.0 (viewer-only; GUI adjustable)
+Scale prealign: smpl_median
+Coarse scale : range=[0.10,10.0] stride=8 min_pixels=32
+Coarse fallback: sequence_median
+HSI overlay : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt
+Human mask  : projected SMPL triangles + 12px dilation (unconditional removal)
+Filter human: true (initial GUI state)
+Point size  : 0.006
+SMPL edits  : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_walking_coarse_residual_v3/smpl_edit_offsets.json
+GPU visible : 7
+Smoke only  : true

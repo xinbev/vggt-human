@@ -1,0 +1,8 @@
+{
+  "available": false,
+  "frames_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/assets/image/f2",
+  "num_frames_found": 2,
+  "required_window": 9,
+  "reason": "insufficient_consecutive_rgb_frames",
+  "note": "This exporter does not synthesize temporal motion from a single image."
+}

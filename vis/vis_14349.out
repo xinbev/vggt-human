@@ -1,0 +1,103 @@
+开始评估，作业 ID: 14349
+当前环境: zhw_env
+分配的 GPU: 0
+========== Sequence Viser: analytic coarse -> current HSI -> Stage2 align ==========
+Frames            : /home/zhw/xyb_space/emdb/P7/55_outdoor_walk/images/
+Stage2 checkpoint : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt
+Scale overlay     : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt
+Output            : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/55_outdoor_walk2
+Viewer cache      : <disabled>
+Full UI cache     : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/55_outdoor_walk2/full_viewer_cache
+Port              : 8080
+Frame range       : [80, -1] inclusive
+Inference frames  : 540
+Frame sampling    : head, max=20, stride=1
+Accumulated SMPL  : 0 (0 means all)
+Displayed people  : 0 per frame (0 means all)
+NLF detector conf : 0.15
+Result conf       : 0.05
+Scale application : clip_median
+========== NLF-HSI VGGT sequence Viser viewer ==========
+Repo        : /home/zhw/lab_users/xyb/home/projects/vggt-human
+Frames      : /home/zhw/xyb_space/emdb/P7/55_outdoor_walk/images/
+Query source: nlf_detector
+BEDLAM      : /home/zhw/xyb_space/bedlam/processed_bedlam
+Sidecars    : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/bedlam_boxes
+Stage2 dir  : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full
+Checkpoint  : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt
+Output      : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/55_outdoor_walk2
+Viewer cache: <disabled>
+Full UI cache: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/55_outdoor_walk2/full_viewer_cache
+Port        : 8080
+Max frames  : 20
+Frame modes : 0=all, N=limit N, -1=uniformly sample at most 500
+Frame range : [80, -1] inclusive (-1 end means sequence end)
+Inference N : 540 (0 means full selected range)
+Frame sample: head (after range/stride)
+SMPL frames : 0 (0 means all; GUI adjustable)
+ID overlay  : base_smpl (post-HSI display only)
+Show IDs    : true (initial GUI state)
+Show people : 0 per frame (0 means all; GUI adjustable)
+NLF det conf: 0.15
+Result conf : 0.05
+Align compat: legacy_scale_bias_v0
+Depth stride: 2 (can be changed in Viser GUI)
+Max depth   : 80 (0 disables clipping; GUI adjustable)
+Viewer mode : Hybrid (initial GUI state)
+Env display : points (points|mesh|both; GUI adjustable)
+HSI vis scale: 1.0 (viewer-only; GUI adjustable)
+Scale prealign: smpl_median
+Coarse scale : range=[0.10,10.0] stride=8 min_pixels=32
+Coarse fallback: sequence_median
+HSI overlay : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt
+Human mask  : projected SMPL triangles + 12px dilation (unconditional removal)
+Filter human: true (initial GUI state)
+Point size  : 0.006
+SMPL edits  : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/55_outdoor_walk2/smpl_edit_offsets.json
+GPU visible : 0
+Smoke only  : true
+CUDA available: count=1, device0=NVIDIA A800-SXM4-80GB, visible=0
+[frames] source=2179 range=[80,-1] mode=target_uniform requested=540 selected=540 source_indices=[80,2178] | legacy options ignored: stride=1, sampling=head, max_frames=20
+[nlf] detector_threshold=0.15 downstream_conf_threshold=0.05
+[ckpt] loaded VGGT baseline for camera: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt
+[ckpt] baseline missing=165 unexpected=0
+[ckpt] loaded training checkpoint: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt
+[ckpt] missing=1412 unexpected=0
+[ckpt] overlaid HSI prefixes ('hsi_refinement_head.',): /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt
+[ckpt] overlay tensors=140 missing=1436 unexpected=0
+[coarse-hsi] final_depth = raw_vggt_depth * coarse_scale * hsi_residual_scale + hsi_residual_bias
+[coarse-hsi] shared-world application: clip_median of composed effective scale/bias scale=9.01558 bias=0.00125312
+[coarse-hsi-summary] min/median/max coarse=5.8354/5.8354/5.8354 hsi_residual=0.952632/1.54498/2.53784 effective=9.01558/9.01558/9.01558 bias=0.00125312/0.00125312/0.00125312
+[nlf-summary] detector_threshold=0.15 downstream_threshold=0.05 detected min/mean/max=0/1.048/3 accepted min/mean/max=0/1.048/3 empty_detected=7/540 empty_accepted=7/540
+[human-mask] frames=540 mask_pixels=50685653 points_removed=12672480/35804160 (35.39%) dilation=12px
+[full-viewer-cache] exported 25/540 frames
+[full-viewer-cache] exported 50/540 frames
+[full-viewer-cache] exported 75/540 frames
+[full-viewer-cache] exported 100/540 frames
+[full-viewer-cache] exported 125/540 frames
+[full-viewer-cache] exported 150/540 frames
+[full-viewer-cache] exported 175/540 frames
+[full-viewer-cache] exported 200/540 frames
+[full-viewer-cache] exported 225/540 frames
+[full-viewer-cache] exported 250/540 frames
+[full-viewer-cache] exported 275/540 frames
+[full-viewer-cache] exported 300/540 frames
+[full-viewer-cache] exported 325/540 frames
+[full-viewer-cache] exported 350/540 frames
+[full-viewer-cache] exported 375/540 frames
+[full-viewer-cache] exported 400/540 frames
+[full-viewer-cache] exported 425/540 frames
+[full-viewer-cache] exported 450/540 frames
+[full-viewer-cache] exported 475/540 frames
+[full-viewer-cache] exported 500/540 frames
+[full-viewer-cache] exported 525/540 frames
+[full-viewer-cache] exported 540/540 frames
+[full-viewer-cache] ready: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/55_outdoor_walk2/full_viewer_cache/manifest.json
+{
+  "viewer": "http://127.0.0.1:8080",
+  "summary": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/55_outdoor_walk2/run_summary.json",
+  "viewer_cache": null,
+  "full_viewer_cache": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/55_outdoor_walk2/full_viewer_cache/manifest.json"
+}
+[ok] NLF-HSI VGGT sequence viewer smoke passed
+评估完成

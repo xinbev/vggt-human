@@ -1,0 +1,7 @@
+{
+  "coarse_scale_C_coarse": 9.726273536682129,
+  "residual_scale_R_hsi": 0.9419206380844116,
+  "residual_bias_b_hsi_m": -0.043439578264951706,
+  "effective_scale_C_times_R": 9.161377775855158,
+  "formula": "D_metric = (C_coarse * R_hsi) * D_vggt + b_hsi"
+}

@@ -141,6 +141,27 @@ echo "SMPL edits  : ${SMPL_EDIT_OUTPUT:-${OUTPUT_DIR}/smpl_edit_offsets.json}"
 echo "GPU visible : ${CUDA_VISIBLE_DEVICES_VALUE}"
 echo "Smoke only  : ${SMOKE_ONLY}"
 
+# Fail before checkpoint/model construction when Slurm did not expose a CUDA
+# device, and preserve the visible-device context in the job log.
+CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" python - <<'PY'
+import os
+import torch
+
+visible_devices = os.environ.get("CUDA_VISIBLE_DEVICES", "<unset>")
+if not torch.cuda.is_available():
+    raise SystemExit(
+        "[ERROR] CUDA is unavailable after CUDA_VISIBLE_DEVICES="
+        f"{visible_devices}. In a Slurm job, pass its assigned logical GPU "
+        "(normally 0), not a physical GPU ID."
+    )
+print(
+    "CUDA available: "
+    f"count={torch.cuda.device_count()}, "
+    f"device0={torch.cuda.get_device_name(0)}, "
+    f"visible={visible_devices}"
+)
+PY
+
 ARGS=(
   --frames-dir "${FRAMES_DIR}"
   --query-source "${QUERY_SOURCE}"

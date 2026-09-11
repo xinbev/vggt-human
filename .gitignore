@@ -38,3 +38,6 @@ outputs/eval/emdb2_s7_match_v2_smoke/predictions/
 outputs/eval/emdb2_s7_chunk16_full/predictions/
 outputs/eval/emdb2_global_chunk100/predictions/
 outputs/eval/tum_dynamics_predictions/
+outputs/vis/stage2_emdb_p4_36_long_walk_coarse_residual_v3/
+*smpl_faces.npy
+*.err

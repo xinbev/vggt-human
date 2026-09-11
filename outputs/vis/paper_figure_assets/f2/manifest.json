@@ -1,0 +1,249 @@
+{
+  "purpose": "Real-data assets for the RGB/VGGT/NLF/HSI/TRSTR/temporal paper architecture figure.",
+  "source_image": "/home/zhw/lab_users/xyb/home/projects/vggt-human/assets/image/f2/f2.jpg",
+  "model_config": "configs/infer_smpl_hsi_v3_trstr_spatial.yaml",
+  "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_stage2_trstr_v3_refine/checkpoint_latest.pt",
+  "scale_checkpoint": null,
+  "device": "cuda:0",
+  "input_shape": [
+    1,
+    1,
+    3,
+    416,
+    624
+  ],
+  "selected_queries": [
+    0,
+    1
+  ],
+  "coarse_scale": {
+    "coarse_scale_C_coarse": 9.726273536682129,
+    "residual_scale_R_hsi": 0.9419206380844116,
+    "residual_bias_b_hsi_m": -0.043439578264951706,
+    "effective_scale_C_times_R": 9.161377775855158,
+    "formula": "D_metric = (C_coarse * R_hsi) * D_vggt + b_hsi"
+  },
+  "people": [
+    {
+      "query_index": 0,
+      "confidence": 0.93310546875,
+      "pose_shape_translation": {
+        "pose_6d_shape": [
+          144
+        ],
+        "betas": [
+          1.0249642133712769,
+          0.5429108738899231,
+          0.0008983630686998367,
+          0.0038993116468191147,
+          -0.00011298381286906078,
+          0.00026815911405719817,
+          -0.00041531043825671077,
+          -0.0002448271552566439,
+          0.000418404204538092,
+          0.0004719979770015925
+        ],
+        "base_translation_m": [
+          0.018612919375300407,
+          0.17196384072303772,
+          8.608295440673828
+        ]
+      },
+      "selected_local_probe_anchors": [
+        12,
+        2,
+        6
+      ],
+      "trstr": {
+        "available": true,
+        "num_regions": 96,
+        "valid_region_ratio": 1.0,
+        "gate_mean_valid": 0.9999993443489075,
+        "uncertainty_mean_valid": 15.712605476379395,
+        "vote_norm_mean_valid_m": 0.009129817597568035,
+        "base_translation_m": [
+          0.018612919375300407,
+          0.17196384072303772,
+          8.608295440673828
+        ],
+        "refined_translation_m": [
+          0.01860298588871956,
+          0.17393137514591217,
+          8.613136291503906
+        ],
+        "delta_translation_m": [
+          -9.933486580848694e-06,
+          0.0019675344228744507,
+          0.004840850830078125
+        ],
+        "delta_norm_m": 0.005225430708378553
+      },
+      "files": [
+        "04_person00_q00_metric_smpl.png",
+        "04_person00_q00_metric_smpl.ply",
+        "05_person00_q00_24anchors_overlay.png",
+        "05_person00_q00_anchor_values.json",
+        "07_person00_q00_local_probe_anchor12.png",
+        "07_person00_q00_local_probe_anchor02.png",
+        "07_person00_q00_local_probe_anchor06.png",
+        "07_person00_q00_local_scene_probes_triplet.png",
+        "07_person00_q00_anchor_residual_tokens.png",
+        "09_person00_q00_trstr_96_regions.csv",
+        "09_person00_q00_trstr_gate_matrix.png",
+        "09_person00_q00_trstr_uncertainty_matrix.png",
+        "09_person00_q00_trstr_vote_norm_matrix.png",
+        "09_person00_q00_trstr_valid_matrix.png",
+        "09_person00_q00_trstr_segmented_smpl.png",
+        "09_person00_q00_trstr_segmented_smpl.ply",
+        "10_person00_q00_trstr_base_refined_overlay.png",
+        "10_person00_q00_trstr_summary.json"
+      ]
+    },
+    {
+      "query_index": 1,
+      "confidence": 0.8740234375,
+      "pose_shape_translation": {
+        "pose_6d_shape": [
+          144
+        ],
+        "betas": [
+          -0.7273712158203125,
+          1.1410338878631592,
+          0.0008396002231165767,
+          -6.531289545819163e-05,
+          -0.0003257548960391432,
+          9.514921839581802e-05,
+          -0.0003429313946980983,
+          0.00022326273028738797,
+          0.00012319983216002584,
+          0.0002424016856821254
+        ],
+        "base_translation_m": [
+          -0.5777121186256409,
+          0.20952504873275757,
+          9.17248821258545
+        ]
+      },
+      "selected_local_probe_anchors": [
+        12,
+        21,
+        6
+      ],
+      "trstr": {
+        "available": true,
+        "num_regions": 96,
+        "valid_region_ratio": 1.0,
+        "gate_mean_valid": 0.9999988079071045,
+        "uncertainty_mean_valid": 9.53738784790039,
+        "vote_norm_mean_valid_m": 0.02268836461007595,
+        "base_translation_m": [
+          -0.5777121186256409,
+          0.20952504873275757,
+          9.17248821258545
+        ],
+        "refined_translation_m": [
+          -0.5788305401802063,
+          0.21371705830097198,
+          9.208420753479004
+        ],
+        "delta_translation_m": [
+          -0.0011184215545654297,
+          0.0041920095682144165,
+          0.03593254089355469
+        ],
+        "delta_norm_m": 0.03619352728128433
+      },
+      "files": [
+        "04_person01_q01_metric_smpl.png",
+        "04_person01_q01_metric_smpl.ply",
+        "05_person01_q01_24anchors_overlay.png",
+        "05_person01_q01_anchor_values.json",
+        "07_person01_q01_local_probe_anchor12.png",
+        "07_person01_q01_local_probe_anchor21.png",
+        "07_person01_q01_local_probe_anchor06.png",
+        "07_person01_q01_local_scene_probes_triplet.png",
+        "07_person01_q01_anchor_residual_tokens.png",
+        "09_person01_q01_trstr_96_regions.csv",
+        "09_person01_q01_trstr_gate_matrix.png",
+        "09_person01_q01_trstr_uncertainty_matrix.png",
+        "09_person01_q01_trstr_vote_norm_matrix.png",
+        "09_person01_q01_trstr_valid_matrix.png",
+        "09_person01_q01_trstr_segmented_smpl.png",
+        "09_person01_q01_trstr_segmented_smpl.ply",
+        "10_person01_q01_trstr_base_refined_overlay.png",
+        "10_person01_q01_trstr_summary.json"
+      ]
+    }
+  ],
+  "temporal": {
+    "available": false,
+    "frames_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/assets/image/f2",
+    "num_frames_found": 2,
+    "required_window": 9,
+    "reason": "insufficient_consecutive_rgb_frames",
+    "note": "This exporter does not synthesize temporal motion from a single image."
+  },
+  "files": [
+    "00_input_rgb_original.png",
+    "00_input_rgb_processed.png",
+    "01_raw_vggt_depth.npy",
+    "01_raw_vggt_depth_color.png",
+    "01_raw_vggt_depth_gray.png",
+    "02_camera_intrinsics.json",
+    "03_nlf_detection_overlay.png",
+    "04_person00_q00_metric_smpl.ply",
+    "04_person00_q00_metric_smpl.png",
+    "04_person01_q01_metric_smpl.ply",
+    "04_person01_q01_metric_smpl.png",
+    "05_person00_q00_24anchors_overlay.png",
+    "05_person00_q00_anchor_values.json",
+    "05_person01_q01_24anchors_overlay.png",
+    "05_person01_q01_anchor_values.json",
+    "06_scale_hypotheses.csv",
+    "06_scale_hypothesis_strip.png",
+    "07_person00_q00_anchor_residual_tokens.png",
+    "07_person00_q00_local_probe_anchor02.png",
+    "07_person00_q00_local_probe_anchor06.png",
+    "07_person00_q00_local_probe_anchor12.png",
+    "07_person00_q00_local_scene_probes_triplet.png",
+    "07_person01_q01_anchor_residual_tokens.png",
+    "07_person01_q01_local_probe_anchor06.png",
+    "07_person01_q01_local_probe_anchor12.png",
+    "07_person01_q01_local_probe_anchor21.png",
+    "07_person01_q01_local_scene_probes_triplet.png",
+    "08_coarse_metric_depth.npy",
+    "08_coarse_metric_depth_color.png",
+    "08_coarse_metric_depth_gray.png",
+    "09_person00_q00_trstr_96_regions.csv",
+    "09_person00_q00_trstr_gate_matrix.png",
+    "09_person00_q00_trstr_segmented_smpl.ply",
+    "09_person00_q00_trstr_segmented_smpl.png",
+    "09_person00_q00_trstr_uncertainty_matrix.png",
+    "09_person00_q00_trstr_valid_matrix.png",
+    "09_person00_q00_trstr_vote_norm_matrix.png",
+    "09_person01_q01_trstr_96_regions.csv",
+    "09_person01_q01_trstr_gate_matrix.png",
+    "09_person01_q01_trstr_segmented_smpl.ply",
+    "09_person01_q01_trstr_segmented_smpl.png",
+    "09_person01_q01_trstr_uncertainty_matrix.png",
+    "09_person01_q01_trstr_valid_matrix.png",
+    "09_person01_q01_trstr_vote_norm_matrix.png",
+    "10_person00_q00_trstr_base_refined_overlay.png",
+    "10_person00_q00_trstr_summary.json",
+    "10_person01_q01_trstr_base_refined_overlay.png",
+    "10_person01_q01_trstr_summary.json",
+    "11_hsi_scale_values.json",
+    "12_final_metric_depth.npy",
+    "12_final_metric_depth_color.png",
+    "12_final_metric_depth_gray.png",
+    "13_depth_raw_coarse_metric_triptych.png",
+    "14_temporal_rgb_inventory.png",
+    "14_temporal_status.json"
+  ],
+  "coordinate_contract": {
+    "SMPL": "NLF metric camera coordinates, meters",
+    "depth": "VGGT processed-image depth plane; raw depth is scale-ambiguous",
+    "projection": "processed RGB/depth plane using VGGT intrinsics",
+    "TRSTR": "translation-only; pose and betas are unchanged"
+  }
+}

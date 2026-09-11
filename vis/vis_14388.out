@@ -1,0 +1,20 @@
+开始评估，作业 ID: 14388
+当前环境: zhw_env
+分配的 GPU: 0
+========== Paper architecture real-asset export ==========
+Image      : /home/zhw/lab_users/xyb/home/projects/vggt-human/assets/image/f2/f2.jpg
+Config     : configs/infer_smpl_hsi_v3_trstr_spatial.yaml
+Checkpoint : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_stage2_trstr_v3_refine/checkpoint_latest.pt
+Output     : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/paper_figure_assets/f2
+[ckpt] loaded VGGT baseline for camera: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt
+[ckpt] baseline missing=187 unexpected=0
+[ckpt] loaded training checkpoint: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_stage2_trstr_v3_refine/checkpoint_latest.pt
+[ckpt] missing=1412 unexpected=0
+{
+  "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/paper_figure_assets/f2",
+  "num_people": 2,
+  "files": 55
+}
+========== Export complete ==========
+Manifest: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/paper_figure_assets/f2/manifest.json
+评估完成
