@@ -54,9 +54,35 @@ PALETTE = np.asarray(
     ],
     dtype=np.uint8,
 )
+# High-contrast categorical colors used only for the TRSTR surface regions.
+# Keep these more saturated than the paper UI palette: the mesh is a measured
+# data layer and its 96-way partition must survive reduction in the final PDF.
+REGION_PALETTE = np.asarray(
+    [
+        (231, 76, 96),    # coral red
+        (244, 145, 55),   # orange
+        (235, 193, 62),   # yellow
+        (91, 180, 105),   # green
+        (48, 174, 181),   # teal
+        (65, 132, 208),   # blue
+        (112, 91, 190),   # violet
+        (190, 84, 166),   # magenta
+        (222, 112, 151),  # rose
+        (113, 165, 78),   # olive green
+        (45, 146, 205),   # cyan blue
+        (151, 98, 185),   # purple
+    ],
+    dtype=np.uint8,
+)
 INK = (47, 52, 56)
 PAPER = (247, 246, 242)
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+
+# Google's Turbo colormap polynomial.  Using the coefficients directly avoids
+# adding matplotlib as a runtime dependency to the server exporter.
+TURBO_RED = np.asarray([0.13572138, 4.61539260, -42.66032258, 132.13108234, -152.94239396, 59.28637943])
+TURBO_GREEN = np.asarray([0.09140261, 2.19418839, 4.84296658, -14.18503333, 4.27729857, 2.82956604])
+TURBO_BLUE = np.asarray([0.10667330, 12.64194608, -60.58204836, 110.36276771, -89.90310912, 27.34824973])
 
 
 def parse_args() -> argparse.Namespace:
@@ -356,13 +382,17 @@ def depth_color(depth: torch.Tensor) -> Image.Image:
     array = depth.detach().float().cpu().numpy()
     valid = np.isfinite(array) & (array > 1e-6)
     lo, hi = np.percentile(array[valid], [2, 98]) if valid.any() else (0.0, 1.0)
-    t = np.clip((array - lo) / max(float(hi - lo), 1e-6), 0, 1)
-    stops = np.asarray([(231, 218, 172), (169, 207, 216), (153, 173, 212), (203, 186, 216), (47, 52, 56)], dtype=np.float32)
-    position = t * (len(stops) - 1)
-    index = np.floor(position).astype(np.int32).clip(0, len(stops) - 2)
-    fraction = (position - index)[..., None]
-    rgb = ((1 - fraction) * stops[index] + fraction * stops[index + 1]).clip(0, 255).astype(np.uint8)
-    rgb[~valid] = np.asarray(PAPER, dtype=np.uint8)
+    # The familiar monocular-depth convention is warm/bright for near points
+    # and cool/dark for far points, hence the inversion before applying Turbo.
+    normalized_depth = np.clip((array - lo) / max(float(hi - lo), 1e-6), 0, 1)
+    t = 1.0 - normalized_depth
+    powers = np.stack([np.ones_like(t), t, t**2, t**3, t**4, t**5], axis=-1)
+    rgb = np.stack(
+        [powers @ TURBO_RED, powers @ TURBO_GREEN, powers @ TURBO_BLUE],
+        axis=-1,
+    )
+    rgb = (np.clip(rgb, 0.0, 1.0) * 255.0).round().astype(np.uint8)
+    rgb[~valid] = 255
     return Image.fromarray(rgb, mode="RGB")
 
 
@@ -552,13 +582,21 @@ def render_projected_mesh(
     valid_faces = valid_faces[np.argsort(face_depth)[::-1]]
     canvas = Image.new("RGBA", (width, height), (255, 255, 255, 0))
     draw = ImageDraw.Draw(canvas, "RGBA")
-    for face in valid_faces:
+    segmented = vertex_region_ids is not None
+    for face_index, face in enumerate(valid_faces):
         polygon = [tuple(projected[index]) for index in face]
-        if vertex_region_ids is None:
+        if not segmented:
             color = (169, 207, 216)
         else:
-            color = tuple(int(value) for value in PALETTE[int(vertex_region_ids[int(face[0])]) % 7])
-        draw.polygon(polygon, fill=(*color, 62), outline=(*INK, 75))
+            color = tuple(int(value) for value in REGION_PALETTE[int(vertex_region_ids[int(face[0])]) % len(REGION_PALETTE)])
+        if segmented:
+            # Strong opaque fills reveal the region partition.  Only a sparse
+            # subset of triangle edges is retained so gray wireframe texture
+            # cannot overpower the categorical colors at paper scale.
+            outline = (*INK, 34) if face_index % 9 == 0 else None
+            draw.polygon(polygon, fill=(*color, 232), outline=outline)
+        else:
+            draw.polygon(polygon, fill=(*color, 72), outline=(*INK, 72))
     bbox = canvas.getbbox()
     if bbox is None:
         return canvas
@@ -696,7 +734,7 @@ def export_trstr_assets(
     segmented_png = f"09_{prefix}_trstr_segmented_smpl.png"
     render_projected_mesh(base_vertices, faces, k, rgb.size, region_ids).save(output_dir / segmented_png)
     files.append(segmented_png)
-    region_colors = PALETTE[region_ids % 7]
+    region_colors = REGION_PALETTE[region_ids % len(REGION_PALETTE)]
     segmented_ply = f"09_{prefix}_trstr_segmented_smpl.ply"
     write_ply_vertices_faces(output_dir / segmented_ply, base_vertices.detach().cpu().numpy(), region_colors, faces)
     files.append(segmented_ply)

@@ -109,9 +109,18 @@ The `manifest.json` file records the source image, checkpoints, selected NLF
 queries, coordinate conventions, scalar values, temporal availability, and all
 generated filenames.
 
+## Rendering colors
+
+- All `*_depth_color.png` files use the classic reversed Turbo depth convention:
+  near surfaces are warm red/yellow and far surfaces are cool cyan/blue.
+- `09_*_trstr_segmented_smpl.png` uses an intentionally saturated 12-color
+  categorical palette with near-opaque faces and sparse mesh edges. This keeps
+  the 96-region partition visible after the figure is reduced for a two-column
+  paper PDF.
+- The corresponding segmented `.ply` uses the same categorical region colors.
+
 ## Validation boundaries
 
 Windows local validation can check syntax and helper rendering only. Full
 inference requires the Linux server's CUDA environment, VGGT baseline, NLF
 TorchScript model, SMPL assets, and accepted HSI/TRSTR checkpoint.
-
