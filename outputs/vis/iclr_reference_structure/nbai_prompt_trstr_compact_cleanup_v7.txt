@@ -1,0 +1,8 @@
+Use the provided compact scientific diagram as a strict reference. Preserve the exact canvas, two-group layout, all module sizes, positions, arrows, colors, diagrams, typography scale, and information density. Do not redesign and do not add content.
+
+Make only these three editorial corrections:
+1. In the left input card, replace the duplicated wording "Metric depth depth" with exactly "Metric depth". Keep the depth image unchanged.
+2. In Regional Consensus, replace the garbled wording above the funnel with exactly "Weighted vote".
+3. In Neighbor proposal, make the exclusion of O_t unmistakable: keep O_t separate at the right and place one clear red × directly on its dashed connection toward M_t. The four neighbor nodes t−2, t−1, t+1, t+2 remain the only solid inputs to M_t.
+
+Preserve all other text exactly, including "Zoom-in of TRSTR + Temporal blocks", "Scene-aware Region Encoding", "self", "other humans", "scene", "region token h_r", "θ, β fixed", and the fusion equation. Remove any small stray glyph caused by the correction. Flat 2D ICLR vector style, high readability, no watermark.

@@ -1,0 +1,29 @@
+Use the provided cropped figure as a strict layout and palette reference. Redraw the same RIGHT-BOTTOM subfigure only, sharper and cleaner, with approximately the same information density and footprint. This is a compact inset inside a larger architecture figure, not a standalone full method figure. Preserve two horizontal rounded groups: TRSTR above, temporal fusion below. Flat 2D scientific vector style, large readable labels, thin charcoal outlines, pale periwinkle upper background, pale cyan lower background, muted pastel chips. No gradients, shadows, photorealism, poster effects, extra detail, or watermark.
+
+At the upper-left edge add one tiny callout label: "Zoom-in of TRSTR + Temporal blocks". This should make clear that the inset explains the corresponding blocks in the overview.
+
+UPPER GROUP title exactly "TRSTR Regional Translator". Keep it compact with only FIVE modules from left to right:
+
+1. One shared input card containing a small SMPL wireframe labeled "Metric SMPL" and a depth tile labeled "Metric depth".
+
+2. A card titled "96 Body Regions" showing one small segmented SMPL body.
+
+3. A card titled "Multi-scale Probing" showing four tiny grids labeled "3×3", "7×7", "adaptive", "annulus".
+
+4. Add ONE new compact sage-colored card titled exactly "Scene-aware Region Encoding". Inside show three tiny colored chips: blue "self", crossed blush "other humans", green "scene". A small attention symbol combines them into "region token h_r". No more explanation inside this card.
+
+5. A card titled "Regional Consensus" containing three stacked chips "vote Δτ_r", "gate g_r", "uncertainty σ_r", followed by a small weighted funnel. Attach one small circular arrow labeled "2× re-probe". Output a single chip "τ*" with subtitle "translation only".
+
+Place a slim lock note below the upper flow: "θ, β fixed".
+
+LOWER GROUP title exactly "Track-wise Temporal Fusion". Use only THREE modules from left to right:
+
+1. "Per-ID 9-frame track": show three compact lanes ID 1, ID 2, ID 3; highlight the center frame.
+
+2. "Neighbor proposal": show four neighbor nodes t−2, t−1, t+1, t+2 feeding M_t; show O_t separately with a small crossed connection to indicate it is excluded from proposal.
+
+3. "Capped fusion": O_t and M_t enter α_t ≤ 0.5; show exact equation "X*_t = O_t + α_t(M_t − O_t)" and a small output card "Stable sequence".
+
+Bottom-left caption exactly "(C) Spatial–Temporal Refinement".
+
+Technical meaning must remain accurate: TRSTR uses metric SMPL and metric depth, builds 96 regional evidence tokens, filters other-human evidence in the new encoding module, predicts regional translation evidence, aggregates per person, and re-probes twice. Temporal fusion follows TRSTR and never mixes identities. Keep all arrows straight and the entire panel easy to reproduce manually. Use palette #99ADD4 #CBBAD8 #E7DAAC #E9D36E #AFCAB2 #A9CFD8 #D9ACA6 #2F3438. Do not add a palette legend inside this inset because the full architecture already contains one.

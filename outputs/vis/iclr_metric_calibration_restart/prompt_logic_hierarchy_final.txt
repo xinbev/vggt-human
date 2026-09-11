@@ -1,0 +1,21 @@
+Use the provided structure draft as a strict reference. Preserve its exact restrained two-level architecture, warm white background, flat 2D style, muted palette, module hierarchy, mainline, typography scale, and bottom palette. Produce a polished high-resolution ICLR/CVPR figure. No 3D grids, perspective, gradients, glow, shadows, futuristic effects, poster styling, or watermark.
+
+Keep the title "Prior-Guided Metric Scale Calibration".
+
+TOP narrow strip "Metric Prior Initialization" remains auxiliary and tagged "analytic · parameter-free". Preserve flow:
+Metric SMPL + Raw depth → Anchor correspondences → Scale hypotheses {s_i} → Robust consensus → C_coarse.
+
+Correct the robust-estimation graphics: inside "Scale hypotheses {s_i}", show only a slim row of colored hypothesis dots without a median label. Inside "Robust consensus", show a compact one-dimensional hypothesis axis with a central inlier cluster, faint peripheral dots, and one highlighted median tick. Do not use a bar chart. Then output C_coarse.
+
+Draw one clean orthogonal conditioning connector directly from the C_coarse token downward and left into the "Apply metric prior" block. Place label "initializes" beside this connector. Remove the incorrect vertical arrow from the lower section heading.
+
+BOTTOM dominant section "Human-Conditioned Residual Calibration" preserves the mainline:
+Raw VGGT depth D_vggt → Apply metric prior → Coarse depth D_coarse → Anchor–Scene Interaction → Residual scale R_hsi and Depth bias b_hsi → Metric Composition → Metric depth D_metric.
+
+Inside Anchor–Scene Interaction, draw exactly 24 body-anchor token squares in a clear 4-row × 6-column matrix. Preserve three local scene probe thumbnails, Human state {θ, β, τ}, a compact attention matrix, and the two parallel output heads R_hsi and b_hsi.
+
+Preserve exact equations:
+D_coarse = C_coarse · D_vggt
+D_metric = R_hsi · D_coarse + b_hsi
+
+Keep bottom brace "coarse-to-fine residual correction". Remove stray characters and keep all arrows aligned. Palette codes remain #E7DAAC #E9D36E #AFCAB2 #A9CFD8 #99ADD4 #CBBAD8 #D9ACA6 #2F3438.

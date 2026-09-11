@@ -1,0 +1,32 @@
+Use the reference only for method content and muted color mood. Create a restrained, modern ICLR/CVPR architecture diagram whose sophistication comes from logical hierarchy, not visual spectacle.
+
+Landscape scientific figure, warm white background, flat 2D vector, thin charcoal outlines, subtle pastel fills, crisp academic typography. No 3D lattice, perspective grid, glow, gradient, shadows, futuristic UI, hero illustration, poster composition, or watermark.
+
+Title: "Prior-Guided Metric Scale Calibration".
+
+Use one large rounded container with TWO LEVELS.
+
+TOP LEVEL: a narrow auxiliary strip titled "Metric Prior Initialization" with a small tag "analytic · parameter-free". From left to right show compact inputs "Metric SMPL" plus "Raw depth", then three concise operator glyphs: "Anchor correspondences" → "Scale hypotheses {s_i}" → "Robust consensus". Represent hypotheses as a slim one-dimensional row of colored dots with one highlighted median. Output one small yellow prior token "C_coarse". This strip is visually subordinate and occupies about 25% of the height.
+
+BOTTOM LEVEL: the dominant learned main path titled "Human-Conditioned Residual Calibration". Arrange a clear left-to-right pipeline:
+
+"Raw VGGT depth D_vggt" → a compact block "Apply metric prior" receiving a thin downward conditioning arrow from C_coarse → output chip "Coarse depth D_coarse".
+
+Next, one wide sage module "Anchor–Scene Interaction". Inside it, show exactly three compact evidence groups feeding one small attention-style matrix:
+- a 4×6 grid labeled "24 body-anchor tokens";
+- three small flat depth patches labeled "Local scene probes";
+- a short parameter strip labeled "Human state {θ, β, τ}".
+The attention matrix splits into two parallel output heads "Residual scale R_hsi" and "Depth bias b_hsi".
+
+Next, a compact lavender block "Metric Composition" with the exact equation:
+"D_metric = R_hsi · D_coarse + b_hsi".
+
+At far right, output a flat calibrated depth tile with a small vertical meter ruler, labeled "Metric depth D_metric".
+
+Use two small logical annotations only:
+- above the downward C_coarse arrow: "initializes";
+- below the learned main path: "coarse-to-fine residual correction".
+
+Make the hierarchy unmistakable: the analytic top strip supplies one prior scalar; the learned lower module is the primary method; final composition produces metric depth. Use straight arrows, aligned ports, modest rounded rectangles, token matrices, and flat depth thumbnails. No extra steps or decorative geometry.
+
+Palette: cream #E7DAAC, yellow #E9D36E, sage #AFCAB2, cyan #A9CFD8, periwinkle #99ADD4, lavender #CBBAD8, blush #D9ACA6, charcoal #2F3438. Add a slim bottom strip "Figure palette" with these exact codes.

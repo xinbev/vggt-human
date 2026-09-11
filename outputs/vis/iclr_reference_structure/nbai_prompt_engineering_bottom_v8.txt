@@ -1,0 +1,32 @@
+Use the provided paper figure as a structural reference for its lower-row engineering panels: two side-by-side model-internal diagrams with tensors, small network blocks, concatenation symbols, arrows and outputs. Create ONLY the lower explanatory row of a larger ICLR architecture figure. Do not repeat the high-level pipeline and do not draw input-video or final-scene illustrations.
+
+Canvas 1536×1024 landscape. Warm white #F7F6F2. Left panel pale periwinkle-blue, right panel pale powder-cyan. Thin charcoal #2F3438 outlines, compact pastel tensor blocks using #D9ACA6 #AFCAB2 #A9CFD8 #99ADD4 #CBBAD8 #E7DAAC #E9D36E. Flat 2D scientific vector style. No gradients, shadows, photorealism, poster styling, giant body, palette legend, or watermark.
+
+At the very top place two small source chips with downward zoom arrows:
+"TRSTR Spatial Refinement" above the left panel and "Temporal Stabilizer" above the right panel. Add tiny label "internal expansion". This visually proves the lower row explains the overview blocks.
+
+LEFT PANEL occupies 60% width. Title exactly "(B) TRSTR Internal Dataflow". Show a real engineering computation graph from left to right with six compact columns:
+
+Column 1 "Inputs": tensor strips labeled "pose6d [B,S,Q,144]", "betas [B,S,Q,10]", "transl [B,S,Q,3]", "D_metric [F,H,W]", "K [F,3,3]".
+
+Column 2 "Frozen Geometry": a small block "SMPL Decode" outputs "V [F,Q,6890,3]"; then block "Region Bank" outputs two tensor blocks "centers [F,Q,96,3]" and "reps [F,Q,96,8,3]". Use a small technical wireframe only.
+
+Column 3 "RegionalSceneProbe": show projection by K into depth patches. A miniature owner map splits samples into blue "self", crossed blush "other", green "scene". Four scale chips "3×3", "7×7", "adaptive", "annulus". Attention pooling outputs one stacked tensor labeled "probe [FQ,96,8,16]". This is an internal operator, not a high-level feature card.
+
+Column 4 "Region Encoder": show a concatenate symbol joining geometry, projected uv, probe tokens, valid ratios and region embedding. Output "x_r [FQ,96,178]". Then a vertical MLP block labeled exactly "MLP 178 → 256 → 256" and output hidden tensor "h_r [FQ,96,256]".
+
+Column 5 "Prediction Heads": split h_r into three narrow heads "vote head → Δτ_r [96,3]", "gate head → g_r [96,1]", "logvar head → σ_r [96,1]". Merge at a weighted-sum symbol with compact equation "w_r = valid_r · g_r · exp(−σ_r)". Output "Δτ [FQ,3]". Show a fourth small branch from pooled h_r through "person gate".
+
+Column 6 "Shared Iterative Update": show equation "τ^{k+1} = τ^k + g_person Δτ" inside a loop labeled "k = 1,2". A feedback arrow returns to SMPL Decode / RegionalSceneProbe. Final output tensor "τ* [B,S,Q,3]". Bottom lock note "θ, β unchanged".
+
+RIGHT PANEL occupies 40% width. Title exactly "(C) Temporal Stabilizer Internal Dataflow". Show a concise engineering graph, not track illustrations.
+
+Start with input tensors "O [B,9,3]" and "valid [B,9]". Next block "Center Mask + Neighbor Pack" selects four nodes t−2,t−1,t+1,t+2 while center O_t is visibly crossed out. Output a 12-dimensional tensor "relative neighbors [B,12]".
+
+Upper branch: block "Proposal MLP" with layer notation "12 → 128 → 128 → 3", then "tanh × 0.25 m", output "M_t [B,3]".
+
+Lower branch: concatenate three 3D feature strips labeled "O_t−M_t", "|O_t−M_t|", "neighbor velocity" into "gate feature [B,9]". Feed block "Gate MLP 9 → 64 → 64 → 1", then "sigmoid × 0.5", output "α_t [B,1]".
+
+Merge O_t, M_t and α_t in a bounded-blend node. Render exact equation "X*_t = O_t + α_t(M_t − O_t)". Final output tensor "X* [B,9,3]". Add two small engineering invariants at bottom: "invalid context → no-op" and "tracks processed independently".
+
+Use crisp readable typography and straight orthogonal arrows. The left panel must look like an internal neural-network/tensor graph and the right panel like a masked two-branch computation graph. Avoid module-level repetition such as 96 regions → probes → consensus without tensors or layers.

@@ -1,0 +1,33 @@
+Use the provided cropped subfigure as the strict composition reference. Redraw the same compact right-bottom inset for an ICLR main-paper architecture figure. Preserve the original logic and footprint: one TRSTR row above, one Temporal row below, thin rounded outlines, restrained pastel colors, clear left-to-right arrows. Improve clarity and model-level explanation, but DO NOT turn it into a low-level implementation graph. No tensor-shape lists, layer dimensions, raw equations for weights, many columns, or dense annotations.
+
+Canvas 1536×1024 landscape, warm white background, flat 2D scientific vector style, crisp academic typography. Upper group pale periwinkle blue, lower group pale powder cyan. Use muted #99ADD4 #CBBAD8 #E7DAAC #E9D36E #AFCAB2 #A9CFD8 #D9ACA6 and charcoal #2F3438. No gradients, shadows, photorealism, poster effects, watermark, or palette legend.
+
+At the upper-left add a very small label "Detailed architecture". Add two thin dotted callout arrows from small source tags "TRSTR" and "Temporal" into their corresponding groups, indicating these are expansions of the overview blocks. Keep this subtle.
+
+UPPER GROUP title exactly "TRSTR Regional Translator". Use only FOUR main model stages plus input/output:
+
+Input card: small "Metric SMPL" wireframe and "Metric scene depth" tile.
+
+Stage 1 title "Region Construction". Show one segmented body and a compact 96×C token matrix. Inside the card use only two small labels: "96 body regions" and "multi-scale probes". Represent 3×3, 7×7, adaptive and annulus as four small colored probe icons without extra explanation.
+
+Stage 2 is the one NEW explanatory module. Title exactly "Human–Scene Interaction Encoder". Make it a modest pale-sage card, not larger than the others. Inside show three small parallel feature strips labeled "region geometry", "local scene", "owner mask". Concatenate them, then pass through two simple stacked blocks labeled "MLP" and "interaction token". This visually explains what happens between probing and prediction without exposing code-level details.
+
+Stage 3 title "Regional Correction Heads". Show one shared interaction-token strip branching to three compact colored heads: "vote Δτ_r", "gate g_r", "uncertainty σ_r".
+
+Stage 4 title "Robust Aggregation". Show the three regional outputs entering a clean weighted-fusion symbol, followed by a small "person gate". Add one circular feedback arrow labeled "2× re-probe" returning toward Region Construction. Output chip exactly "refined translation τ*".
+
+Below the TRSTR row add one slim lock note exactly "pose θ and shape β unchanged".
+
+LOWER GROUP title exactly "Track-wise Temporal Fusion". Use only THREE model stages plus output:
+
+Stage 1 title "Track Window". Show three identity-separated lanes ID 1, ID 2, ID 3 over nine frames, center frame highlighted. Do not label every frame; use "t−4 … t … t+4" once.
+
+Stage 2 title "Motion Proposal". Show neighboring track tokens entering a compact center-masked encoder made of two simple blocks labeled "Masked Temporal MLP". Visibly exclude the center observation O_t with a small crossed connection. Output exactly "M_t" and note "neighbors only".
+
+Stage 3 title "Conservative Fusion". Show O_t and M_t entering a small "Gate MLP" that outputs "α_t ≤ 0.5". Then render exact equation "X*_t = O_t + α_t(M_t − O_t)".
+
+Output card: three smoother identity-separated lanes labeled "Stable sequence".
+
+Bottom-left caption exactly "(C) Spatial–Temporal Refinement".
+
+The abstraction level must match a top-conference main figure: internal model components, feature streams, shared encoder, prediction heads, feedback loop and constrained fusion are visible; code-level shapes and every intermediate tensor are omitted. The lower inset must clearly explain the top-level TRSTR and Temporal blocks without repeating the same high-level pipeline.

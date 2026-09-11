@@ -1,0 +1,26 @@
+Use the provided architecture draft as a strict layout and color reference. Preserve the complete lower "Human-Conditioned Residual Calibration" mainline, its module sizes, evidence groups, attention icon, residual heads, equations, output depth tile, palette, and restrained flat scientific style.
+
+Redesign ONLY the upper auxiliary strip as a polished modern component titled "Validity-Aware Metric Prior Tokenizer" with a small tag "analytic · parameter-free".
+
+Upper strip flow:
+
+Compact inputs "Metric SMPL" + "Raw depth" → a short token sequence of six paired geometry tokens. Each paired token is a small rounded capsule split into two halves labeled z_smpl and z_depth. Use alternating muted colors.
+
+Below the paired-token sequence, draw one aligned binary strip titled "Validity mask" with values 1, 1, 0, 1, 1, 0. Thin vertical gating lines connect valid token pairs to the next row; invalid pairs are pale and do not continue.
+
+The valid pairs map to a concise row titled "Scale hypothesis tokens {s_i}". These tokens enter one compact lavender operator capsule titled "Robust median pool". The operator outputs one yellow circular token titled "Metric prior C_coarse".
+
+Draw one clean orthogonal arrow from Metric prior C_coarse downward into the lower block "Apply metric prior". Label this connector "initializes". No arrow from C_coarse directly to final Metric Composition.
+
+Keep the lower mainline exactly:
+Raw VGGT depth D_vggt → Apply metric prior → Coarse depth D_coarse → Anchor–Scene Interaction → Residual scale R_hsi and Depth bias b_hsi → Metric Composition → Metric depth D_metric.
+
+Preserve exact equations:
+D_coarse = C_coarse · D_vggt
+D_metric = R_hsi · D_coarse + b_hsi
+
+Inside Anchor–Scene Interaction, show exactly 24 body-anchor tokens as a 4×6 matrix, three local scene probe thumbnails, Human state {θ, β, τ}, one compact attention matrix, and two parallel output heads.
+
+Title the complete figure "Prior-Guided Metric Scale Calibration". Subtitle "parameter-free metric prior + human-conditioned residual refinement".
+
+Use modern ICLR/CVPR diagram styling: warm white background, thin charcoal outlines, compact token strips, precise masks and ports, muted cream, yellow, sage, cyan, periwinkle, lavender, blush. No 3D grids, perspective, glow, gradients, shadows, futuristic UI, cartoons, promotional visuals, or watermark. Preserve exact palette codes #E7DAAC #E9D36E #AFCAB2 #A9CFD8 #99ADD4 #CBBAD8 #D9ACA6 #2F3438.

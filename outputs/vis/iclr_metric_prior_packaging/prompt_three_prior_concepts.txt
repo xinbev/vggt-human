@@ -1,0 +1,15 @@
+Create a refined ICLR/CVPR scientific design board showing THREE alternative visual packagings for the same parameter-free geometric coarse-scale computation. The sophistication must come from logic and representation design, not sci-fi effects.
+
+Square 1024×1024, warm white background, flat 2D vector, thin charcoal outlines, muted cream, sage, cyan, periwinkle, lavender, blush, restrained yellow. No 3D grids, perspective, glow, gradients, shadows, futuristic UI, cartoons, or watermark.
+
+Header: "Geometric Metric Prior — Design Concepts". Small subtitle: "same computation, three visual abstractions".
+
+Arrange three wide horizontal concept panels stacked vertically. Each starts with compact inputs "Metric SMPL + Raw depth" and ends with a yellow circular token "C_coarse". Use concise labels.
+
+CONCEPT A title "Anchor Correspondence Bank". Show a small wireframe human and depth tile. Matching anchor pairs become a neat two-row correspondence matrix: upper row SMPL depths, lower row VGGT samples, vertical colored links. The correspondence matrix feeds a slim row of scale-hypothesis tokens {s_i}; a dark median marker selects C_coarse. Add tag "explicit geometric correspondences".
+
+CONCEPT B title "Metric Voting Graph". Show six small anchor nodes on the left and six matched depth nodes on the right as a clean bipartite graph. Each connecting edge carries a tiny scale vote s_i. All edge votes converge into one central hexagonal node labeled "robust consensus", then output C_coarse. Add tag "multi-anchor metric voting". Keep it technical and sparse, not decorative.
+
+CONCEPT C title "Validity-Aware Scale Tokenizer". Show a compact token sequence made of paired mini tokens [z_smpl | z_depth]. A binary validity-mask strip gates the sequence. Valid pairs map to colored scale tokens {s_i}, then enter a simple operator capsule labeled "median pool" and produce C_coarse. Add tag "parameter-free prior token". Do not imply learned attention or Transformer.
+
+Use only basic research-figure elements: matrices, nodes, masks, token strips, operator capsules, arrows. Make all three concepts equally polished and easy to adapt into an existing architecture figure. Palette: #E7DAAC #E9D36E #AFCAB2 #A9CFD8 #99ADD4 #CBBAD8 #D9ACA6 #2F3438.
