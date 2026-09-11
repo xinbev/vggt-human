@@ -147,6 +147,8 @@ def main() -> None:
     frame_paths = select_frames(frames_dir, args)
     if not frame_paths:
         raise RuntimeError(f"No RGB frames found under {frames_dir}. Supported extensions: {sorted(IMAGE_EXTENSIONS)}")
+    selection_summary = frame_selection_summary(frames_dir, frame_paths, args)
+    args.selected_source_indices = selection_summary["selected_source_indices"]
     print_frame_selection(frames_dir, frame_paths, args)
     timings["select_frames"] = {"seconds": time.perf_counter() - step_start}
 
@@ -1272,6 +1274,9 @@ def build_scene_data(
         frames.append(
             {
                 "frame_index": int(idx),
+                "source_frame_index": int(
+                    getattr(args, "selected_source_indices", list(range(len(frame_paths))))[idx]
+                ),
                 "frame_id": image_path.stem,
                 "image": str(image_path),
                 "raw_points": raw_points,

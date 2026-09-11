@@ -54,7 +54,9 @@ def export_full_sequence_viewer_cache(
             {
                 "position": int(position),
                 "frame_index": int(frame.get("frame_index", position)),
+                "source_frame_index": int(frame.get("source_frame_index", -1)),
                 "frame_id": str(frame.get("frame_id", position)),
+                "source_image": str(frame.get("image", "")),
                 "file": frame_file,
             }
         )
