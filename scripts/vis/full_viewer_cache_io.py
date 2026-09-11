@@ -66,6 +66,22 @@ def export_full_sequence_viewer_cache(
         "num_frames": len(records),
         "scene_metadata_file": SCENE_METADATA_NAME,
         "smpl_faces_file": SMPL_FACES_NAME,
+        "camera_parameters": {
+            "per_frame": [
+                "intrinsic",
+                "raw_extrinsic",
+                "hsi_extrinsic",
+                "raw_camera",
+                "hsi_camera",
+                "camera",
+            ],
+            "scene": [
+                "camera_trajectory",
+                "camera_trajectory_raw",
+                "camera_trajectory_hsi",
+            ],
+            "storage": "frame pickle and scene_metadata.pkl",
+        },
         "viewer_args": _json_safe(vars(args)),
         "frames": records,
         "note": "Trusted local pickle cache containing the complete SequenceViewer scene.",

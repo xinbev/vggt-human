@@ -37,6 +37,7 @@ from scripts.vis.sequence_sampling import (  # noqa: E402
     uniform_sample_indices,
 )
 from scripts.vis.viewer_cache_io import export_sequence_viewer_cache  # noqa: E402
+from scripts.vis.viewer_visibility import human_frame_visible  # noqa: E402
 from scripts.vis.visualize_smpl_inference import (  # noqa: E402
     estimate_scene_to_smpl_scale,
     load_training_checkpoint,
@@ -2034,6 +2035,8 @@ class SequenceViewer:
         self.human_entry_by_key: dict[str, dict[str, Any]] = {}
         self.selected_human_key = "none"
         self._syncing_smpl_controls = False
+        self._syncing_pinned_frame_controls = False
+        self.pinned_frame_checkboxes: list[Any] = []
         self.smpl_edit_output = resolve_smpl_edit_output(args)
         self.transform_controls = None
         self._build_scene()
@@ -2345,6 +2348,7 @@ class SequenceViewer:
         self.show_camera_trajectory = add_checkbox(self.server, "Show Camera Trajectory", True)
         self.camera_downsample = add_slider(self.server, "Camera Downsample", 1, max(1, len(self.scene["frames"])), 1, 1)
         self.follow_camera = add_checkbox(self.server, "Follow Pred Camera", False)
+        self._build_pinned_smpl_gui()
         self.smpl_edit_info = add_text(self.server, "SMPL Edit", "Select or click an SMPL mesh to edit viewer-only translation.")
         self.selected_smpl = add_dropdown(self.server, "Selected SMPL", self._human_dropdown_options(), "none")
         self.smpl_edit_scope = add_dropdown(self.server, "SMPL Edit Scope", ["selected frame", "same track all frames"], "selected frame")
@@ -2411,6 +2415,67 @@ class SequenceViewer:
         bind_click(self.apply_human_filter_dilation, self._apply_human_filter_dilation)
         bind_click(self.reset_human_filter_dilation, self._reset_human_filter_dilation)
         bind_click(self.clear_measurement, self._clear_current_measurement)
+
+    def _build_pinned_smpl_gui(self) -> None:
+        with add_folder(self.server, "Pinned SMPL Frames", expand_by_default=False):
+            self.pinned_smpl_info = add_text(
+                self.server,
+                "Pinned SMPL",
+                "Hybrid mode: checked frames stay visible; click a pinned mesh to edit it.",
+            )
+            set_handle_disabled(self.pinned_smpl_info, True)
+            self.pin_current_smpl_frame = add_button(self.server, "Pin Current Frame")
+            self.clear_pinned_smpl_frames = add_button(self.server, "Clear Pinned Frames")
+            frame_count = len(self.scene["frames"])
+            chunk_size = 50
+            for chunk_start in range(0, frame_count, chunk_size):
+                chunk_end = min(frame_count, chunk_start + chunk_size)
+                folder_name = f"Frames {chunk_start:04d}-{chunk_end - 1:04d}"
+                with add_folder(self.server, folder_name, expand_by_default=False):
+                    for frame_index in range(chunk_start, chunk_end):
+                        frame = self.scene["frames"][frame_index]
+                        checkbox = add_checkbox(
+                            self.server,
+                            (
+                                f"{frame_index:04d} | {frame['frame_id']} | "
+                                f"people={len(frame.get('people', []))}"
+                            ),
+                            False,
+                        )
+                        self.pinned_frame_checkboxes.append(checkbox)
+                        bind_update(
+                            checkbox,
+                            lambda *_, pinned_index=frame_index: self._on_pinned_frame_update(pinned_index),
+                        )
+            bind_click(self.pin_current_smpl_frame, self._pin_current_smpl_frame)
+            bind_click(self.clear_pinned_smpl_frames, self._clear_pinned_smpl_frames)
+
+    def _pinned_frame_indices(self) -> set[int]:
+        return {
+            index
+            for index, checkbox in enumerate(self.pinned_frame_checkboxes)
+            if bool(getattr(checkbox, "value", False))
+        }
+
+    def _on_pinned_frame_update(self, _: int | None = None) -> None:
+        if self._syncing_pinned_frame_controls:
+            return
+        self._update_visibility()
+
+    def _pin_current_smpl_frame(self, _: Any = None) -> None:
+        frame_index = int(self.timestep.value)
+        if 0 <= frame_index < len(self.pinned_frame_checkboxes):
+            self.pinned_frame_checkboxes[frame_index].value = True
+        self._update_visibility()
+
+    def _clear_pinned_smpl_frames(self, _: Any = None) -> None:
+        self._syncing_pinned_frame_controls = True
+        try:
+            for checkbox in self.pinned_frame_checkboxes:
+                checkbox.value = False
+        finally:
+            self._syncing_pinned_frame_controls = False
+        self._update_visibility()
 
     def _register_clients(self) -> None:
         if hasattr(self.server, "on_client_connect"):
@@ -3317,19 +3382,18 @@ class SequenceViewer:
         smpl_sample_indices = set(uniform_sample_indices(len(self.handles), smpl_target_count))
         use_smpl_target_count = smpl_sampling_mode == "target frame count"
         display_people_limit = max(1, min(self.max_people_per_frame, int(self.display_people.value)))
+        pinned_frame_indices = self._pinned_frame_indices()
         set_handle_disabled(self.smpl_downsample, use_smpl_target_count)
         set_handle_disabled(self.smpl_display_frames, not use_smpl_target_count)
         camera_stride = max(1, int(self.camera_downsample.value))
         for idx, frame_handles in enumerate(self.handles):
             if mode == "3D accumulate":
                 show_points = idx <= current
-                show_humans = idx <= current
             elif mode == "Hybrid":
                 show_points = idx <= current
-                show_humans = idx == current
             else:
                 show_points = idx == current
-                show_humans = idx == current
+            show_humans = human_frame_visible(mode, idx, current, pinned_frame_indices)
             if mode != "3D accumulate":
                 show_decimated_smpl = True
             elif use_smpl_target_count:
@@ -3388,6 +3452,17 @@ class SequenceViewer:
             self.display_people_info,
             f"Showing up to {display_people_limit} highest-confidence people per frame | "
             f"current frame: {min(display_people_limit, current_people)}/{current_people}",
+        )
+        pinned_preview = ", ".join(str(index) for index in sorted(pinned_frame_indices)[:12])
+        if len(pinned_frame_indices) > 12:
+            pinned_preview += ", ..."
+        pinned_mode_note = "active" if mode == "Hybrid" else "saved; switch Mode to Hybrid to display"
+        set_text_value(
+            self.pinned_smpl_info,
+            (
+                f"{len(pinned_frame_indices)} pinned frame(s) | {pinned_mode_note} | "
+                f"indices: {pinned_preview or '<none>'} | click a visible pinned mesh to edit"
+            ),
         )
         self._update_info_text(current)
 
@@ -4083,10 +4158,13 @@ def add_rgb(server: Any, name: str, initial: tuple[int, int, int]) -> Any:
     return server.add_gui_rgb(name, initial)
 
 
-def add_folder(server: Any, name: str) -> Any:
+def add_folder(server: Any, name: str, expand_by_default: bool = True) -> Any:
     api = gui_api(server)
     if hasattr(api, "add_folder"):
-        return api.add_folder(name, expand_by_default=True)
+        try:
+            return api.add_folder(name, expand_by_default=bool(expand_by_default))
+        except TypeError:
+            return api.add_folder(name)
     if hasattr(server, "add_gui_folder"):
         return server.add_gui_folder(name)
     return nullcontext()

@@ -11,6 +11,8 @@ import numpy as np
 CACHE_FORMAT = "vggt_omega_sequence_viewer_cache_v1"
 MANIFEST_NAME = "manifest.json"
 FACES_NAME = "smpl_faces.npy"
+RAW_CAMERA_TRAJECTORY_NAME = "camera_trajectory_raw.npy"
+HSI_CAMERA_TRAJECTORY_NAME = "camera_trajectory_hsi.npy"
 
 
 def export_sequence_viewer_cache(scene: dict[str, Any], cache_dir: str | Path) -> Path:
@@ -23,6 +25,16 @@ def export_sequence_viewer_cache(scene: dict[str, Any], cache_dir: str | Path) -
 
     faces, vertex_count = _find_smpl_topology(frames)
     np.save(root / FACES_NAME, faces.astype(np.int32, copy=False), allow_pickle=False)
+    raw_trajectory = np.asarray(
+        scene.get("camera_trajectory_raw", np.empty((0, 3))),
+        dtype=np.float32,
+    ).reshape(-1, 3)
+    hsi_trajectory = np.asarray(
+        scene.get("camera_trajectory_hsi", np.empty((0, 3))),
+        dtype=np.float32,
+    ).reshape(-1, 3)
+    np.save(root / RAW_CAMERA_TRAJECTORY_NAME, raw_trajectory, allow_pickle=False)
+    np.save(root / HSI_CAMERA_TRAJECTORY_NAME, hsi_trajectory, allow_pickle=False)
 
     frame_records: list[dict[str, Any]] = []
     total_points = 0
@@ -34,6 +46,7 @@ def export_sequence_viewer_cache(scene: dict[str, Any], cache_dir: str | Path) -
             raise ValueError(f"Point/color count mismatch at cache frame {position}: {points.shape} vs {colors.shape}")
 
         people = _collect_frame_people(frame, vertex_count)
+        camera = _collect_frame_camera(frame)
         frame_file = f"frame_{position:04d}.npz"
         np.savez(
             root / frame_file,
@@ -45,6 +58,17 @@ def export_sequence_viewer_cache(scene: dict[str, Any], cache_dir: str | Path) -
             smpl_confidences=people["confidences"],
             smpl_track_qualities=people["track_qualities"],
             smpl_colors=people["colors"],
+            intrinsic=camera["intrinsic"],
+            raw_extrinsic=camera["raw_extrinsic"],
+            hsi_extrinsic=camera["hsi_extrinsic"],
+            raw_camera_rotation_c2w=camera["raw_camera_rotation_c2w"],
+            raw_camera_position=camera["raw_camera_position"],
+            raw_camera_fov=camera["raw_camera_fov"],
+            raw_camera_aspect=camera["raw_camera_aspect"],
+            hsi_camera_rotation_c2w=camera["hsi_camera_rotation_c2w"],
+            hsi_camera_position=camera["hsi_camera_position"],
+            hsi_camera_fov=camera["hsi_camera_fov"],
+            hsi_camera_aspect=camera["hsi_camera_aspect"],
         )
         point_count = int(points.shape[0])
         people_count = int(people["vertices"].shape[0])
@@ -74,6 +98,23 @@ def export_sequence_viewer_cache(scene: dict[str, Any], cache_dir: str | Path) -
         "smpl_vertex_count": int(vertex_count),
         "smpl_face_count": int(faces.shape[0]),
         "smpl_faces_file": FACES_NAME,
+        "camera_parameters": {
+            "per_frame": [
+                "intrinsic",
+                "raw_extrinsic",
+                "hsi_extrinsic",
+                "raw_camera_rotation_c2w",
+                "raw_camera_position",
+                "raw_camera_fov",
+                "raw_camera_aspect",
+                "hsi_camera_rotation_c2w",
+                "hsi_camera_position",
+                "hsi_camera_fov",
+                "hsi_camera_aspect",
+            ],
+            "raw_trajectory_file": RAW_CAMERA_TRAJECTORY_NAME,
+            "hsi_trajectory_file": HSI_CAMERA_TRAJECTORY_NAME,
+        },
         "scene_metadata": {
             "image_hw": scene.get("image_hw", []),
             "hsi_scene_affine_mode": scene.get("hsi_scene_affine_mode", "unknown"),
@@ -156,4 +197,52 @@ def _collect_frame_people(frame: dict[str, Any], vertex_count: int) -> dict[str,
         "confidences": np.asarray(confidences, dtype=np.float32),
         "track_qualities": np.asarray(track_qualities, dtype=np.float32),
         "colors": np.asarray(colors, dtype=np.uint8).reshape(-1, 3),
+    }
+
+
+def _collect_frame_camera(frame: dict[str, Any]) -> dict[str, np.ndarray]:
+    intrinsic = _matrix(frame, "intrinsic", (3, 3))
+    raw_extrinsic = _matrix(frame, "raw_extrinsic", (3, 4))
+    hsi_extrinsic = _matrix(frame, "hsi_extrinsic", (3, 4))
+    raw_camera = _camera_pose(frame.get("raw_camera"))
+    hsi_camera = _camera_pose(frame.get("hsi_camera", frame.get("camera")))
+    return {
+        "intrinsic": intrinsic,
+        "raw_extrinsic": raw_extrinsic,
+        "hsi_extrinsic": hsi_extrinsic,
+        "raw_camera_rotation_c2w": raw_camera["rotation_c2w"],
+        "raw_camera_position": raw_camera["position"],
+        "raw_camera_fov": raw_camera["fov"],
+        "raw_camera_aspect": raw_camera["aspect"],
+        "hsi_camera_rotation_c2w": hsi_camera["rotation_c2w"],
+        "hsi_camera_position": hsi_camera["position"],
+        "hsi_camera_fov": hsi_camera["fov"],
+        "hsi_camera_aspect": hsi_camera["aspect"],
+    }
+
+
+def _matrix(frame: dict[str, Any], key: str, shape: tuple[int, int]) -> np.ndarray:
+    value = frame.get(key)
+    if value is None:
+        raise ValueError(f"Viewer cache frame is missing required camera matrix: {key}")
+    array = np.asarray(value, dtype=np.float32)
+    if array.shape != shape:
+        raise ValueError(f"Viewer cache camera matrix {key} must have shape {shape}, got {array.shape}")
+    return array
+
+
+def _camera_pose(value: Any) -> dict[str, np.ndarray]:
+    if not isinstance(value, dict):
+        raise ValueError("Viewer cache frame is missing required camera pose")
+    rotation = np.asarray(value.get("rotation_c2w"), dtype=np.float32)
+    position = np.asarray(value.get("position"), dtype=np.float32)
+    if rotation.shape != (3, 3) or position.shape != (3,):
+        raise ValueError(
+            f"Viewer cache camera pose has invalid shapes: rotation={rotation.shape}, position={position.shape}"
+        )
+    return {
+        "rotation_c2w": rotation,
+        "position": position,
+        "fov": np.asarray(float(value.get("fov", 0.0)), dtype=np.float32),
+        "aspect": np.asarray(float(value.get("aspect", 0.0)), dtype=np.float32),
     }

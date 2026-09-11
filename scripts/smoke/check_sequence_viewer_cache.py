@@ -22,8 +22,29 @@ def main() -> None:
         dtype=np.float32,
     )
     faces = np.asarray([[0, 1, 2], [0, 2, 3]], dtype=np.int32)
+    intrinsic = np.asarray([[100.0, 0.0, 1.0], [0.0, 100.0, 1.0], [0.0, 0.0, 1.0]], dtype=np.float32)
+    raw_extrinsic = np.concatenate(
+        [np.eye(3, dtype=np.float32), np.asarray([[0.0], [0.0], [1.0]], dtype=np.float32)],
+        axis=1,
+    )
+    hsi_extrinsic = raw_extrinsic.copy()
+    hsi_extrinsic[:, 3] *= 2.0
+    raw_camera = {
+        "rotation_c2w": np.eye(3, dtype=np.float32),
+        "position": np.asarray([0.0, 0.0, -1.0], dtype=np.float32),
+        "fov": 0.8,
+        "aspect": 1.0,
+    }
+    hsi_camera = {
+        "rotation_c2w": np.eye(3, dtype=np.float32),
+        "position": np.asarray([0.0, 0.0, -2.0], dtype=np.float32),
+        "fov": 0.8,
+        "aspect": 1.0,
+    }
     scene = {
         "image_hw": [2, 2],
+        "camera_trajectory_raw": np.asarray([[0.0, 0.0, -1.0]], dtype=np.float32),
+        "camera_trajectory_hsi": np.asarray([[0.0, 0.0, -2.0]], dtype=np.float32),
         "frames": [
             {
                 "frame_index": 0,
@@ -31,6 +52,11 @@ def main() -> None:
                 "image": "/dataset/frame_0000.jpg",
                 "hsi_points": np.asarray([[0.0, 0.0, 1.0], [1.0, 1.0, 2.0]], dtype=np.float32),
                 "hsi_colors": np.asarray([[255, 0, 0], [0, 255, 0]], dtype=np.uint8),
+                "intrinsic": intrinsic,
+                "raw_extrinsic": raw_extrinsic,
+                "hsi_extrinsic": hsi_extrinsic,
+                "raw_camera": raw_camera,
+                "hsi_camera": hsi_camera,
                 "people": [
                     {
                         "hsi_vertices": vertices,
@@ -51,10 +77,18 @@ def main() -> None:
         assert manifest["num_frames"] == 1
         assert manifest["total_points"] == 2
         assert manifest["total_people"] == 1
+        assert manifest["camera_parameters"]["raw_trajectory_file"] == "camera_trajectory_raw.npy"
+        assert np.load(root / "camera_trajectory_raw.npy", allow_pickle=False).shape == (1, 3)
+        assert np.load(root / "camera_trajectory_hsi.npy", allow_pickle=False).shape == (1, 3)
         with np.load(root / manifest["frames"][0]["file"], allow_pickle=False) as frame:
             assert frame["points"].shape == (2, 3)
             assert frame["smpl_vertices"].shape == (1, 4, 3)
             assert int(frame["smpl_track_ids"][0]) == 7
+            assert frame["intrinsic"].shape == (3, 3)
+            assert frame["raw_extrinsic"].shape == (3, 4)
+            assert frame["hsi_extrinsic"].shape == (3, 4)
+            assert np.allclose(frame["raw_camera_position"], [0.0, 0.0, -1.0])
+            assert np.allclose(frame["hsi_camera_position"], [0.0, 0.0, -2.0])
     print("[ok] sequence viewer cache round-trip passed")
 
 
