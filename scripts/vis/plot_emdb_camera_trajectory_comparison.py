@@ -300,22 +300,26 @@ def plot_paper_figure(
 ) -> None:
     import matplotlib.pyplot as plt  # noqa: PLC0415
 
-    fig, axis = plt.subplots(figsize=(5.0, 5.0), constrained_layout=True)
-    draw_trajectory(axis, project(gt, axes_name), "Ground Truth", COLORS["gt"], linestyle="--")
-    draw_trajectory(axis, project(pred, axes_name), "VGGT-Omega (Sim3 aligned)", COLORS["hsi"])
+    gt_2d = project(gt, axes_name)
+    pred_2d = project(pred, axes_name)
+    fig, axis = plt.subplots(figsize=(5.6, 5.6))
+    draw_point_trajectory(axis, gt_2d, "GT", COLORS["gt"], marker_size=9.0, alpha=0.78)
+    draw_point_trajectory(axis, pred_2d, "Ours", COLORS["hsi"], marker_size=5.0, alpha=0.90)
     axis.set_title(title, fontsize=12, fontweight="semibold")
-    style_axis(axis, axes_name)
-    axis.text(
-        0.02,
-        0.02,
-        f"ATE {metrics['hsi_metric']['sim3_ate_rmse_m']:.3f} m · N={metrics['matched_frames']}",
-        transform=axis.transAxes,
-        fontsize=8,
-        color="#555555",
+    style_axis(axis, axes_name, show_axis_labels=False)
+    set_centered_limits(axis, (gt_2d, pred_2d), padding_ratio=0.10)
+    axis.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.075),
+        ncol=2,
+        frameon=False,
+        fontsize=9,
+        handletextpad=0.45,
+        columnspacing=1.4,
     )
-    axis.legend(loc="upper center", bbox_to_anchor=(0.5, -0.10), ncol=2, frameon=False, fontsize=8)
-    fig.savefig(png_path, dpi=300, bbox_inches="tight", facecolor="white")
-    fig.savefig(pdf_path, bbox_inches="tight", facecolor="white")
+    fig.subplots_adjust(left=0.09, right=0.97, top=0.91, bottom=0.16)
+    fig.savefig(png_path, dpi=300, facecolor="white")
+    fig.savefig(pdf_path, facecolor="white")
     plt.close(fig)
 
 
@@ -365,6 +369,27 @@ def plot_diagnostic_figure(
     plt.close(fig)
 
 
+def draw_point_trajectory(
+    axis: Any,
+    points: np.ndarray,
+    label: str,
+    color: str,
+    marker_size: float,
+    alpha: float,
+) -> None:
+    axis.scatter(
+        points[:, 0],
+        points[:, 1],
+        color=color,
+        marker="o",
+        s=float(marker_size),
+        linewidths=0.0,
+        alpha=float(alpha),
+        label=label,
+        zorder=3,
+    )
+
+
 def draw_trajectory(
     axis: Any,
     points: np.ndarray,
@@ -378,14 +403,33 @@ def draw_trajectory(
     axis.scatter(points[-1, 0], points[-1, 1], color=color, marker="X", s=28, zorder=5)
 
 
-def style_axis(axis: Any, axes_name: str) -> None:
-    axis.set_xlabel(f"{axes_name[0].upper()} (m)", fontsize=9)
-    axis.set_ylabel(f"{axes_name[1].upper()} (m)", fontsize=9)
-    axis.set_aspect("equal", adjustable="datalim")
+def style_axis(axis: Any, axes_name: str, show_axis_labels: bool = True) -> None:
+    if show_axis_labels:
+        axis.set_xlabel(f"{axes_name[0].upper()} (m)", fontsize=9)
+        axis.set_ylabel(f"{axes_name[1].upper()} (m)", fontsize=9)
+    else:
+        axis.set_xlabel("")
+        axis.set_ylabel("")
+    axis.set_aspect("equal", adjustable="box")
     axis.grid(True, color="#E7E7E7", linewidth=0.7)
     axis.tick_params(labelsize=8, colors="#555555")
     for spine in axis.spines.values():
         spine.set_color("#D0D0D0")
+
+
+def set_centered_limits(
+    axis: Any,
+    trajectories: tuple[np.ndarray, ...],
+    padding_ratio: float = 0.10,
+) -> None:
+    combined = np.concatenate([np.asarray(value, dtype=np.float64) for value in trajectories], axis=0)
+    minimum = combined.min(axis=0)
+    maximum = combined.max(axis=0)
+    center = (minimum + maximum) * 0.5
+    span = max(float(np.max(maximum - minimum)), 1e-6)
+    half_span = 0.5 * span * (1.0 + 2.0 * max(float(padding_ratio), 0.0))
+    axis.set_xlim(center[0] - half_span, center[0] + half_span)
+    axis.set_ylim(center[1] - half_span, center[1] + half_span)
 
 
 def write_frame_csv(
