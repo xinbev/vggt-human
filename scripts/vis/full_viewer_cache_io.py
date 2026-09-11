@@ -140,6 +140,31 @@ def load_full_sequence_viewer_cache(cache_dir: str | Path) -> tuple[dict[str, An
     return scene, viewer_args, manifest_path
 
 
+def apply_full_viewer_startup_overrides(
+    viewer_args: SimpleNamespace,
+    point_size: float | None = None,
+    human_mask_dilation_px: int | None = None,
+    filter_human_points: bool | None = None,
+) -> SimpleNamespace:
+    """Apply validated display/filter overrides to cached SequenceViewer args."""
+    if point_size is not None:
+        if not 0.0005 <= float(point_size) <= 0.08:
+            raise ValueError(f"point_size must be within [0.0005, 0.08], got {point_size}")
+        viewer_args.point_size = float(point_size)
+    if human_mask_dilation_px is not None:
+        if not 0 <= int(human_mask_dilation_px) <= 32:
+            raise ValueError(
+                f"human_mask_dilation_px must be within [0, 32], got {human_mask_dilation_px}"
+            )
+        viewer_args.human_mask_dilation_px = int(human_mask_dilation_px)
+        viewer_args.rebuild_human_filter_on_start = True
+    else:
+        viewer_args.rebuild_human_filter_on_start = False
+    if filter_human_points is not None:
+        viewer_args.filter_human_points = bool(filter_human_points)
+    return viewer_args
+
+
 def _find_smpl_faces(frames: list[dict[str, Any]]) -> np.ndarray:
     for frame in frames:
         for person in frame.get("people", []):

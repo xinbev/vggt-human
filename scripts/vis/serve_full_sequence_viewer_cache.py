@@ -11,7 +11,10 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.vis.full_viewer_cache_io import load_full_sequence_viewer_cache  # noqa: E402
+from scripts.vis.full_viewer_cache_io import (  # noqa: E402
+    apply_full_viewer_startup_overrides,
+    load_full_sequence_viewer_cache,
+)
 from scripts.vis.serve_nlf_hsi_vggt_sequence_viewer import (  # noqa: E402
     SequenceViewer,
     ensure_viser_available,
@@ -26,6 +29,12 @@ def main() -> None:
 
     scene, viewer_args, manifest_path = load_full_sequence_viewer_cache(resolve_path(cli_args.cache_dir))
     viewer_args.port = int(cli_args.port)
+    apply_full_viewer_startup_overrides(
+        viewer_args,
+        point_size=cli_args.point_size,
+        human_mask_dilation_px=cli_args.human_mask_dilation_px,
+        filter_human_points=cli_args.filter_human_points,
+    )
     if cli_args.smpl_edit_output:
         viewer_args.smpl_edit_output = str(resolve_path(cli_args.smpl_edit_output))
 
@@ -47,6 +56,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cache-dir", required=True)
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--smpl-edit-output", default="")
+    parser.add_argument("--point-size", type=float, default=None)
+    parser.add_argument("--human-mask-dilation-px", type=int, default=None)
+    parser.add_argument("--filter-human-points", action=argparse.BooleanOptionalAction, default=None)
     return parser.parse_args()
 
 

@@ -2039,6 +2039,13 @@ class SequenceViewer:
         self.pinned_frame_checkboxes: list[Any] = []
         self.smpl_edit_output = resolve_smpl_edit_output(args)
         self.transform_controls = None
+        if bool(getattr(args, "rebuild_human_filter_on_start", False)):
+            print(
+                f"[viewer] rebuilding human-point filter from full cache with "
+                f"dilation={self.human_mask_dilation_px_value}px",
+                flush=True,
+            )
+            self._recompute_human_filter_scene_data(report_progress=True)
         self._build_scene()
         self._build_gui()
         self._register_clients()
@@ -3008,46 +3015,52 @@ class SequenceViewer:
     def _rebuild_human_filter_masks_and_points(self) -> None:
         self._rebuilding_points = True
         try:
-            for frame in self.scene["frames"]:
-                intrinsic = np.asarray(frame["intrinsic"], dtype=np.float32)
-                raw_depth = torch.from_numpy(np.asarray(frame["raw_depth_map"], dtype=np.float32))
-                hsi_depth = torch.from_numpy(np.asarray(frame["hsi_depth_map"], dtype=np.float32))
-                frame["raw_human_exclusion_mask"] = projected_human_exclusion_mask(
-                    raw_depth,
-                    frame["people"],
-                    intrinsic,
-                    "base_vertices_cam",
-                    self.args,
-                    dilation_px_override=self.human_mask_dilation_px_value,
-                )
-                hsi_vertex_key = "hsi_vertices_cam" if self.trstr_correction_enabled_value else "base_vertices_cam"
-                frame["hsi_human_exclusion_mask"] = projected_human_exclusion_mask(
-                    hsi_depth,
-                    frame["people"],
-                    intrinsic,
-                    hsi_vertex_key,
-                    self.args,
-                    dilation_px_override=self.human_mask_dilation_px_value,
-                )
-                frame["raw_points"], frame["raw_colors"] = rebuild_depth_points_for_frame(
-                    frame,
-                    depth_key="raw_depth_map",
-                    extrinsic_key="raw_extrinsic",
-                    depth_point_stride=self.depth_point_stride_value,
-                    max_scene_depth=self.max_scene_depth_value,
-                    exclude_mask_key="raw_human_exclusion_mask",
-                )
-                frame["hsi_points"], frame["hsi_colors"] = rebuild_depth_points_for_frame(
-                    frame,
-                    depth_key="hsi_depth_map",
-                    extrinsic_key="hsi_extrinsic",
-                    depth_point_stride=self.depth_point_stride_value,
-                    max_scene_depth=self.max_scene_depth_value,
-                    exclude_mask_key="hsi_human_exclusion_mask",
-                )
+            self._recompute_human_filter_scene_data(report_progress=False)
         finally:
             self._rebuilding_points = False
         self._rebuild_environment_point_handles()
+
+    def _recompute_human_filter_scene_data(self, report_progress: bool) -> None:
+        frames = self.scene["frames"]
+        for position, frame in enumerate(frames):
+            intrinsic = np.asarray(frame["intrinsic"], dtype=np.float32)
+            raw_depth = torch.from_numpy(np.asarray(frame["raw_depth_map"], dtype=np.float32))
+            hsi_depth = torch.from_numpy(np.asarray(frame["hsi_depth_map"], dtype=np.float32))
+            frame["raw_human_exclusion_mask"] = projected_human_exclusion_mask(
+                raw_depth,
+                frame["people"],
+                intrinsic,
+                "base_vertices_cam",
+                self.args,
+                dilation_px_override=self.human_mask_dilation_px_value,
+            )
+            hsi_vertex_key = "hsi_vertices_cam" if self.trstr_correction_enabled_value else "base_vertices_cam"
+            frame["hsi_human_exclusion_mask"] = projected_human_exclusion_mask(
+                hsi_depth,
+                frame["people"],
+                intrinsic,
+                hsi_vertex_key,
+                self.args,
+                dilation_px_override=self.human_mask_dilation_px_value,
+            )
+            frame["raw_points"], frame["raw_colors"] = rebuild_depth_points_for_frame(
+                frame,
+                depth_key="raw_depth_map",
+                extrinsic_key="raw_extrinsic",
+                depth_point_stride=self.depth_point_stride_value,
+                max_scene_depth=self.max_scene_depth_value,
+                exclude_mask_key="raw_human_exclusion_mask",
+            )
+            frame["hsi_points"], frame["hsi_colors"] = rebuild_depth_points_for_frame(
+                frame,
+                depth_key="hsi_depth_map",
+                extrinsic_key="hsi_extrinsic",
+                depth_point_stride=self.depth_point_stride_value,
+                max_scene_depth=self.max_scene_depth_value,
+                exclude_mask_key="hsi_human_exclusion_mask",
+            )
+            if report_progress and ((position + 1) % 25 == 0 or position + 1 == len(frames)):
+                print(f"[viewer] rebuilt human filter {position + 1}/{len(frames)} frames", flush=True)
 
     def _rebuild_environment_point_handles(self) -> None:
         self._clear_current_measurement(status="Cleared because the displayed point clouds changed")

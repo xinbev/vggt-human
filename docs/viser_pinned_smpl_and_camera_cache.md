@@ -41,6 +41,29 @@ Hybrid 模式行为：
 
 旧的完整缓存本身已经包含相机数据，可直接使用新 UI，无需重新推理。旧的轻量缓存没有新增字段；如果需要读取轻量 cache 的相机参数，需要重新导出轻量缓存。
 
+## Viewer 启动时的点大小与人体过滤
+
+人体过滤在第一阶段构建 scene 时已经执行，完整缓存同时保存过滤前/后的点云、depth、RGB、相机参数、人体 mask 和 SMPL。第二阶段默认直接读取缓存结果。
+
+完整缓存 Viewer 现在支持启动时覆盖：
+
+```bash
+CACHE_DIR=/path/to/full_viewer_cache \
+POINT_SIZE=0.006 \
+HUMAN_MASK_DILATION_PX=12 \
+FILTER_HUMAN_POINTS=true \
+PORT=8080 \
+bash scripts/vis/serve_full_sequence_viewer_cache.sh
+```
+
+- `POINT_SIZE`：Viser 渲染点大小，范围 `[0.0005,0.08]`，只影响显示。
+- `HUMAN_MASK_DILATION_PX`：SMPL 投影轮廓向外扩张的像素数，范围 `[0,32]`。
+- `FILTER_HUMAN_POINTS=true/false`：启动时默认显示过滤后或完整点云。
+
+如果启动命令覆盖 `HUMAN_MASK_DILATION_PX`，Viewer 会在启动阶段利用完整缓存内的 depth、RGB、intrinsic/extrinsic 和 SMPL 重新计算 mask 与过滤点云，不重新执行 VGGT/NLF/HSI。500 帧缓存可能需要一些 CPU 处理时间，终端会每 25 帧打印进度。
+
+第一阶段推理/缓存导出脚本也已暴露同名参数。若不设置，继续使用 `POINT_SIZE=0.006`、`HUMAN_MASK_DILATION_PX=12` 和 `FILTER_HUMAN_POINTS=true`。
+
 ## 验证
 
 ```bash

@@ -14,7 +14,11 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.vis.full_viewer_cache_io import export_full_sequence_viewer_cache, load_full_sequence_viewer_cache
+from scripts.vis.full_viewer_cache_io import (
+    apply_full_viewer_startup_overrides,
+    export_full_sequence_viewer_cache,
+    load_full_sequence_viewer_cache,
+)
 
 
 def main() -> None:
@@ -93,6 +97,18 @@ def main() -> None:
         assert restored_args.max_frames == -1
         assert restored_args.display_people == 1
         assert restored_args.cascade_effective_affine_mode == "clip_median"
+        apply_full_viewer_startup_overrides(
+            restored_args,
+            point_size=0.01,
+            human_mask_dilation_px=7,
+            filter_human_points=False,
+        )
+        assert restored_args.point_size == 0.01
+        assert restored_args.human_mask_dilation_px == 7
+        assert restored_args.filter_human_points is False
+        assert restored_args.rebuild_human_filter_on_start is True
+        apply_full_viewer_startup_overrides(restored_args)
+        assert restored_args.rebuild_human_filter_on_start is False
     print("[ok] full sequence viewer cache round-trip passed")
 
 
