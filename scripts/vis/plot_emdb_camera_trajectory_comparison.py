@@ -106,8 +106,9 @@ def main() -> None:
     title = str(args.title or gt["name"])
     paper_png = output_dir / "camera_trajectory_sim3_paper.png"
     paper_pdf = output_dir / "camera_trajectory_sim3_paper.pdf"
+    paper_svg = output_dir / "camera_trajectory_sim3_paper.svg"
     diagnostic_png = output_dir / "camera_trajectory_alignment_diagnostic.png"
-    plot_paper_figure(paper_png, paper_pdf, title, axes_name, gt_centers, hsi_sim3, metrics)
+    plot_paper_figure(paper_png, paper_pdf, paper_svg, title, axes_name, gt_centers, hsi_sim3, metrics)
     plot_diagnostic_figure(
         diagnostic_png,
         title,
@@ -124,6 +125,7 @@ def main() -> None:
             {
                 "paper_png": str(paper_png),
                 "paper_pdf": str(paper_pdf),
+                "paper_svg": str(paper_svg),
                 "diagnostic_png": str(diagnostic_png),
                 "metrics": str(metrics_path),
                 "frames_csv": str(csv_path),
@@ -292,6 +294,7 @@ def project(points: np.ndarray, axes_name: str) -> np.ndarray:
 def plot_paper_figure(
     png_path: Path,
     pdf_path: Path,
+    svg_path: Path,
     title: str,
     axes_name: str,
     gt: np.ndarray,
@@ -299,27 +302,43 @@ def plot_paper_figure(
     metrics: dict[str, Any],
 ) -> None:
     import matplotlib.pyplot as plt  # noqa: PLC0415
+    from matplotlib.lines import Line2D  # noqa: PLC0415
 
     gt_2d = project(gt, axes_name)
     pred_2d = project(pred, axes_name)
-    fig, axis = plt.subplots(figsize=(5.6, 5.6))
-    draw_point_trajectory(axis, gt_2d, "GT", COLORS["gt"], marker_size=9.0, alpha=0.78)
-    draw_point_trajectory(axis, pred_2d, "Ours", COLORS["hsi"], marker_size=5.0, alpha=0.90)
-    axis.set_title(title, fontsize=12, fontweight="semibold")
+    fig, axis = plt.subplots(figsize=(6.4, 5.8))
+    draw_point_trajectory(axis, gt_2d, "GT", COLORS["gt"], marker_size=12.0, alpha=0.86)
+    draw_point_trajectory(axis, pred_2d, "Ours", COLORS["hsi"], marker_size=8.0, alpha=0.96)
+    axis.set_title(title, fontsize=13, fontweight="semibold")
     style_axis(axis, axes_name, show_axis_labels=False)
     set_centered_limits(axis, (gt_2d, pred_2d), padding_ratio=0.10)
+    legend_handles = [
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            linestyle="None",
+            markerfacecolor=COLORS[key],
+            markeredgecolor="none",
+            markersize=8.5,
+            label=label,
+        )
+        for key, label in (("gt", "GT"), ("hsi", "Ours"))
+    ]
     axis.legend(
+        handles=legend_handles,
         loc="upper center",
         bbox_to_anchor=(0.5, -0.075),
         ncol=2,
         frameon=False,
-        fontsize=9,
+        fontsize=10,
         handletextpad=0.45,
         columnspacing=1.4,
     )
     fig.subplots_adjust(left=0.09, right=0.97, top=0.91, bottom=0.16)
-    fig.savefig(png_path, dpi=300, facecolor="white")
+    fig.savefig(png_path, dpi=600, facecolor="white")
     fig.savefig(pdf_path, facecolor="white")
+    fig.savefig(svg_path, facecolor="white")
     plt.close(fig)
 
 
@@ -411,8 +430,8 @@ def style_axis(axis: Any, axes_name: str, show_axis_labels: bool = True) -> None
         axis.set_xlabel("")
         axis.set_ylabel("")
     axis.set_aspect("equal", adjustable="box")
-    axis.grid(True, color="#E7E7E7", linewidth=0.7)
-    axis.tick_params(labelsize=8, colors="#555555")
+    axis.grid(True, color="#E7E7E7", linewidth=0.8)
+    axis.tick_params(labelsize=9, colors="#555555")
     for spine in axis.spines.values():
         spine.set_color("#D0D0D0")
 

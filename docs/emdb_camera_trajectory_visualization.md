@@ -34,7 +34,7 @@ bash scripts/vis/plot_emdb_p8_68_handstand_camera_trajectory.sh
 
 输出包括论文风格 Sim(3) PNG/PDF、SE(3)/Sim(3) 诊断图、逐帧 CSV 和指标 JSON。
 
-论文图使用灰色 `GT` 与蓝色 `Ours` 的密集圆点轨迹，不显示坐标轴名称或图内指标文字；四周范围根据两条轨迹联合边界设置等量留白。数值指标保留在 JSON 和诊断图中。
+论文图使用灰色 `GT` 与蓝色 `Ours` 的密集圆点轨迹，不显示坐标轴名称或图内指标文字；四周范围根据两条轨迹联合边界设置等量留白。图例使用独立的 8.5 pt 大圆点。PNG 以 600 DPI 输出，同时提供矢量 PDF/SVG；论文排版优先使用 PDF 或 SVG。数值指标保留在 JSON 和诊断图中。
 
 如 EMDB 的主要运动平面不是 X-Z，可设置 `PLOT_AXES=xy`、`yz` 或 `auto`。如果图像文件编号与 GT 数组下标存在固定偏移，使用 `FRAME_INDEX_OFFSET`；默认 0。
 

@@ -97,6 +97,7 @@ def main() -> None:
         expected = (
             "camera_trajectory_sim3_paper.png",
             "camera_trajectory_sim3_paper.pdf",
+            "camera_trajectory_sim3_paper.svg",
             "camera_trajectory_alignment_diagnostic.png",
             "camera_trajectory_metrics.json",
             "camera_trajectory_aligned.csv",
