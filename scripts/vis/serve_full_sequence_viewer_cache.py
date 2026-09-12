@@ -35,6 +35,16 @@ def main() -> None:
         human_mask_dilation_px=cli_args.human_mask_dilation_px,
         filter_human_points=cli_args.filter_human_points,
     )
+    if cli_args.viewer_mode:
+        viewer_args.viewer_mode = str(cli_args.viewer_mode)
+    if cli_args.smpl_display_frames is not None:
+        if int(cli_args.smpl_display_frames) < 0:
+            raise ValueError("--smpl-display-frames must be >= 0")
+        viewer_args.smpl_display_frames = int(cli_args.smpl_display_frames)
+    if cli_args.display_people is not None:
+        if int(cli_args.display_people) < 0:
+            raise ValueError("--display-people must be >= 0")
+        viewer_args.display_people = int(cli_args.display_people)
     if cli_args.smpl_edit_output:
         viewer_args.smpl_edit_output = str(resolve_path(cli_args.smpl_edit_output))
 
@@ -59,6 +69,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--point-size", type=float, default=None)
     parser.add_argument("--human-mask-dilation-px", type=int, default=None)
     parser.add_argument("--filter-human-points", action=argparse.BooleanOptionalAction, default=None)
+    parser.add_argument(
+        "--viewer-mode",
+        choices=["4D current frame", "3D accumulate", "Hybrid"],
+        default="",
+    )
+    parser.add_argument("--smpl-display-frames", type=int, default=None)
+    parser.add_argument("--display-people", type=int, default=None)
     return parser.parse_args()
 
 
