@@ -1,0 +1,34 @@
+{
+  "sequence": "P3_28_outdoor_walk_lunges",
+  "gt_pkl": "/home/zhw/xyb_space/emdb/P3/28_outdoor_walk_lunges/P3_28_outdoor_walk_lunges_data.pkl",
+  "cache_manifest": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_emdb_p3_28_outdoor_walk_lunges_800_1835_550f/full_viewer_cache/manifest.json",
+  "cache_frames_dir": "/home/zhw/xyb_space/emdb/P3/28_outdoor_walk_lunges/images",
+  "frame_index_source": "full_cache_manifest.source_frame_index",
+  "frame_index_offset": 0,
+  "good_frames_only": true,
+  "matched_frames": 550,
+  "first_frame_index": 800,
+  "last_frame_index": 1835,
+  "plot_axes": "xz",
+  "raw_vggt": {
+    "se3_rmse_m": 9.140737197393598,
+    "sim3_ate_rmse_m": 0.41209196924778135,
+    "sim3_alignment_scale": 23.495106722430716,
+    "pred_path_length_m_before_alignment": 3.7681488163393264,
+    "gt_path_length_m": 37.29790510387903,
+    "path_length_ratio_pred_over_gt": 0.10102843057390465
+  },
+  "hsi_metric": {
+    "se3_rmse_m": 3.288806833242935,
+    "sim3_ate_rmse_m": 0.41209200023243114,
+    "sim3_alignment_scale": 1.5200245094507687,
+    "pred_path_length_m_before_alignment": 58.24451754021943,
+    "gt_path_length_m": 37.29790510387903,
+    "path_length_ratio_pred_over_gt": 1.5616029205394144
+  },
+  "alignment_note": "SE3 preserves predicted scale; Sim3 estimates rotation, translation, and scale. ATE is translation RMSE after Sim3.",
+  "camera_convention": {
+    "gt": "EMDB camera.extrinsics is T_w2c; camera center comes from inverse(T_w2c)",
+    "prediction": "cached raw_camera/hsi_camera position is camera center in predicted world coordinates"
+  }
+}

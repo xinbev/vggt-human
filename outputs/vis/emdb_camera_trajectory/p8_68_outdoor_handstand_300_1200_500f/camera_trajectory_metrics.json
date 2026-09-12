@@ -1,0 +1,34 @@
+{
+  "sequence": "P8_68_outdoor_handstand",
+  "gt_pkl": "/home/zhw/xyb_space/emdb/P8/68_outdoor_handstand/P8_68_outdoor_handstand_data.pkl",
+  "cache_manifest": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_emdb_p8_68_outdoor_handstand_300_1200_500f/full_viewer_cache/manifest.json",
+  "cache_frames_dir": "/home/zhw/xyb_space/emdb/P8/68_outdoor_handstand/images",
+  "frame_index_source": "run_summary.frame_selection.selected_source_indices",
+  "frame_index_offset": 0,
+  "good_frames_only": true,
+  "matched_frames": 500,
+  "first_frame_index": 300,
+  "last_frame_index": 1200,
+  "plot_axes": "xz",
+  "raw_vggt": {
+    "se3_rmse_m": 1.2695266353526695,
+    "sim3_ate_rmse_m": 0.024854614542870853,
+    "sim3_alignment_scale": 5.168768384436754,
+    "pred_path_length_m_before_alignment": 2.164098993543328,
+    "gt_path_length_m": 9.722593743865463,
+    "path_length_ratio_pred_over_gt": 0.22258453356737046
+  },
+  "hsi_metric": {
+    "se3_rmse_m": 0.19673550983909494,
+    "sim3_ate_rmse_m": 0.024854618212079512,
+    "sim3_alignment_scale": 0.8896730611122444,
+    "pred_path_length_m_before_alignment": 12.572841250870308,
+    "gt_path_length_m": 9.722593743865463,
+    "path_length_ratio_pred_over_gt": 1.2931571124015366
+  },
+  "alignment_note": "SE3 preserves predicted scale; Sim3 estimates rotation, translation, and scale. ATE is translation RMSE after Sim3.",
+  "camera_convention": {
+    "gt": "EMDB camera.extrinsics is T_w2c; camera center comes from inverse(T_w2c)",
+    "prediction": "cached raw_camera/hsi_camera position is camera center in predicted world coordinates"
+  }
+}
