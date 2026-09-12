@@ -49,6 +49,20 @@ TOTAL_FRAMES=1371 \
 bash scripts/vis/merge_3dpw_gt_camera_full_caches.sh
 ```
 
+如果某一段历史上用了抽帧，导致合并时出现少量缺帧，可以先生成一个“可视化检查版”缓存：
+
+```bash
+cd /home/zhw/lab_users/xyb/home/projects/vggt-human
+INPUT_ROOT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/3dpw_downtown_walkBridge_01_gt_camera_full \
+GT_PKL=/home/zhw/xyb_space/3DPW/sequenceFiles/test/downtown_walkBridge_01.pkl \
+OUTPUT_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/3dpw_downtown_walkBridge_01_gt_camera_full/partial_viewer_cache_gt_camera \
+TOTAL_FRAMES=1371 \
+ALLOW_MISSING_FRAMES=true \
+bash scripts/vis/merge_3dpw_gt_camera_full_caches.sh
+```
+
+该模式会跳过缺失帧并继续合并，`manifest.json` 的 `coverage.complete` 会是 `false`，同时保存完整缺失帧列表。它适合先看效果；若要得到标准完整序列，仍应补跑缺失分段并使用默认严格模式。
+
 输出目录：
 
 ```text

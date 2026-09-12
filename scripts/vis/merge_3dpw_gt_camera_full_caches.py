@@ -91,10 +91,17 @@ def main() -> None:
     if first_manifest is None or first_cache_dir is None:
         raise RuntimeError("No valid chunk manifest was loaded")
     expected = int(args.expected_frames)
+    missing: list[int] = []
     if expected > 0:
         missing = sorted(set(range(expected)) - set(selected))
-        if missing:
+        if missing and not bool(args.allow_missing):
             raise ValueError(f"Merged caches do not cover all expected frames; missing {missing[:20]}")
+        if missing:
+            print(
+                f"[3dpw-gt-camera-merge] warning: skipping {len(missing)} missing frames; "
+                f"first_missing={missing[:20]}",
+                flush=True,
+            )
     manifest = write_merged_cache(
         selected=selected,
         gt=gt,
@@ -102,8 +109,12 @@ def main() -> None:
         output_dir=output_dir,
         first_cache_dir=first_cache_dir,
         first_manifest=first_manifest,
+        expected_frames=expected,
+        missing_frames=missing,
     )
     ordered_indices = sorted(selected)
+    if not ordered_indices:
+        raise RuntimeError("No cache frames could be matched to the supplied 3DPW camera sequence")
     print(
         json.dumps(
             {
@@ -111,6 +122,9 @@ def main() -> None:
                 "frames": len(ordered_indices),
                 "first_source_frame": int(ordered_indices[0]),
                 "last_source_frame": int(ordered_indices[-1]),
+                "expected_frames": expected,
+                "missing_frames": len(missing),
+                "allow_missing": bool(args.allow_missing),
                 "camera_source": "native_3dpw_cam_poses_T_w2c",
             },
             indent=2,
@@ -127,6 +141,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--expected-frames", type=int, default=0, help="Require coverage of [0, expected_frames)")
     parser.add_argument("--frame-index-offset", type=int, default=0)
+    parser.add_argument(
+        "--allow-missing",
+        action="store_true",
+        help="Write a partial merged cache instead of failing when expected frames are missing",
+    )
     return parser.parse_args()
 
 
@@ -171,6 +190,8 @@ def write_merged_cache(
     output_dir: Path,
     first_cache_dir: Path,
     first_manifest: dict[str, Any],
+    expected_frames: int,
+    missing_frames: list[int],
 ) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     incomplete = output_dir / INCOMPLETE_NAME
@@ -250,6 +271,12 @@ def write_merged_cache(
         },
         "viewer_args": viewer_args,
         "frames": output_records,
+        "coverage": {
+            "expected_frames": int(expected_frames),
+            "merged_frames": len(output_records),
+            "missing_frames": [int(index) for index in missing_frames],
+            "complete": not bool(missing_frames),
+        },
         "note": "GT-camera oracle visualisation; model-predicted depth and SMPL are retained.",
     }
     manifest_path = output_dir / MANIFEST_NAME
