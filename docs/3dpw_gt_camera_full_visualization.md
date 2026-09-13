@@ -74,3 +74,32 @@ outputs/vis/3dpw_downtown_walkBridge_01_gt_camera_full/
 ```
 
 注意：这是 GT-camera oracle visualization。若要报告 RGB-only 结果，必须使用原始预测相机，不能使用本工作流的 GT 外参。
+
+## 推荐的稳定展示方案：单次均匀 550 帧
+
+如果目标是论文展示而不是完整帧覆盖，推荐使用单次前向方案。它从整个 1371 帧范围均匀选出最多 550 帧，在同一个 VGGT/NLF forward 中建立统一的预测坐标系，然后再将这个单一缓存转换到 GT 相机世界。这样没有 chunk 间的独立尺度、旋转和原点，也不会产生三段分层。
+
+```bash
+cd /home/zhw/lab_users/xyb/home/projects/vggt-human
+FRAMES_DIR=/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01 \
+GT_PKL=/home/zhw/xyb_space/3DPW/sequenceFiles/test/downtown_walkBridge_01.pkl \
+OUTPUT_ROOT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/3dpw_downtown_walkBridge_01_gt_camera_uniform550 \
+CUDA_VISIBLE_DEVICES_VALUE=0 \
+MAX_HUMANS=64 \
+DISPLAY_PEOPLE=0 \
+SERVE_VIEWER=false \
+bash scripts/vis/run_3dpw_gt_camera_uniform_550.sh
+```
+
+完成后单独加载：
+
+```bash
+cd /home/zhw/lab_users/xyb/home/projects/vggt-human
+CACHE_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/3dpw_downtown_walkBridge_01_gt_camera_uniform550/full_viewer_cache_gt_camera \
+PORT=8090 \
+VIEWER_MODE=Hybrid \
+SMPL_DISPLAY_FRAMES=50 \
+bash scripts/vis/serve_3dpw_gt_camera_full_sequence.sh
+```
+
+这里 `MAX_HUMANS=64` 和 `DISPLAY_PEOPLE=0` 表示不设置当前序列常见的 8/20 人为显示上限；实际人数仍受有限 query 数和 NLF 检测结果限制。NLF 的相机输入仍是 VGGT 预测内参；当前 NLF provider 明确以 `extrinsic_matrix=None` 调用，不能把 GT 外参直接传给它。若要让 VGGT 在网络内部真正受 GT 相机监督，需要重新训练带相机条件/相机损失的模型，不适合作为当前展示任务的临时推理开关。
