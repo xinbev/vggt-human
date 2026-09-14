@@ -2066,6 +2066,9 @@ class SequenceViewer:
         self.pinned_frame_indices_value: set[int] = set()
         self.id_edit_history: list[list[dict[str, Any]]] = []
         self.track_color_by_id: dict[int, tuple[int, int, int]] = {}
+        self.original_track_color_by_id: dict[int, tuple[int, int, int]] = {}
+        self.track_color_handles: dict[int, Any] = {}
+        self._syncing_track_color_controls = False
         self.smpl_edit_output = resolve_smpl_edit_output(args)
         self.transform_controls = None
         if bool(getattr(args, "rebuild_human_filter_on_start", False)):
@@ -2418,6 +2421,7 @@ class SequenceViewer:
         set_handle_disabled(self.display_people_info, True)
         self.smpl_opacity = add_slider(self.server, "SMPL Opacity", 0.05, 1.00, 0.05, self.smpl_opacity_value)
         self.smpl_color = add_rgb(self.server, "SMPL Color", (204, 51, 51))
+        self._build_track_id_color_gui()
         self.smpl_sampling_mode = add_dropdown(
             self.server,
             "SMPL Sampling Mode",
@@ -2562,6 +2566,28 @@ class SequenceViewer:
         bind_click(self.apply_smpl_id, self._apply_smpl_id_reassignment)
         bind_click(self.undo_smpl_id, self._undo_smpl_id_reassignment)
         bind_click(self.restore_smpl_ids, self._restore_original_smpl_ids)
+
+    def _build_track_id_color_gui(self) -> None:
+        with add_folder(self.server, "Track ID Colors"):
+            self.track_color_info = add_text(
+                self.server,
+                "ID Color Status",
+                "Each row controls the base color for one Track ID.",
+            )
+            set_handle_disabled(self.track_color_info, True)
+            for track_id in self._available_track_ids():
+                handle = add_rgb(
+                    self.server,
+                    f"ID {track_id}",
+                    self.track_color_by_id[track_id],
+                )
+                self.track_color_handles[track_id] = handle
+                bind_update(
+                    handle,
+                    lambda *_, selected_track_id=track_id: self._on_track_id_color_update(selected_track_id),
+                )
+            self.restore_track_id_colors = add_button(self.server, "Restore Initial ID Colors")
+            bind_click(self.restore_track_id_colors, self._restore_initial_track_id_colors)
 
     def _build_pinned_smpl_gui(self) -> None:
         with add_folder(self.server, "Pinned SMPL Frames", expand_by_default=False):
@@ -3186,6 +3212,7 @@ class SequenceViewer:
         self.human_entries.append(entry)
         self.human_entry_by_key[key] = entry
         self.track_color_by_id.setdefault(int(track_id), tuple(int(v) for v in color))
+        self.original_track_color_by_id.setdefault(int(track_id), tuple(int(v) for v in color))
         bind_click(handle, lambda event=None, selected_entry=entry: self._on_human_mesh_click(selected_entry["key"], event))
 
     def _on_human_mesh_click(self, key: str, _: Any = None) -> None:
@@ -3270,6 +3297,55 @@ class SequenceViewer:
             entry["color_override"] = None
             set_handle_color(entry["handle"], entry["base_color"])
         set_text_value(self.recolor_info, f"Restored {len(targets)} pinned SMPL mesh color(s)")
+
+    def _on_track_id_color_update(self, track_id: int) -> None:
+        if self._syncing_track_color_controls:
+            return
+        handle = self.track_color_handles.get(int(track_id))
+        if handle is None:
+            return
+        color = tuple(int(np.clip(value, 0, 255)) for value in handle.value)
+        self._apply_track_id_color(int(track_id), color)
+
+    def _apply_track_id_color(self, track_id: int, color: tuple[int, int, int]) -> None:
+        color_rgb = tuple(int(np.clip(value, 0, 255)) for value in color)
+        self.track_color_by_id[int(track_id)] = color_rgb
+        affected_people: set[tuple[int, int]] = set()
+        for entry in self.human_entries:
+            if int(entry["track_id"]) != int(track_id):
+                continue
+            entry["base_color"] = color_rgb
+            affected_people.add((int(entry["frame_index"]), int(entry["query_index"])))
+            if entry["color_override"] is None:
+                set_handle_color(entry["handle"], color_rgb)
+        for frame in self.scene["frames"]:
+            for person in frame["people"]:
+                if int(person["track_id"]) == int(track_id):
+                    person["color"] = color_rgb
+        set_text_value(
+            self.track_color_info,
+            f"ID {track_id} = RGB {color_rgb} | updated {len(affected_people)} frame-person instance(s)",
+        )
+
+    def _restore_initial_track_id_colors(self, _: Any = None) -> None:
+        self._syncing_track_color_controls = True
+        try:
+            for track_id, color in self.original_track_color_by_id.items():
+                self.track_color_by_id[track_id] = color
+                handle = self.track_color_handles.get(track_id)
+                if handle is not None:
+                    handle.value = color
+        finally:
+            self._syncing_track_color_controls = False
+        for entry in self.human_entries:
+            color = self.track_color_by_id[int(entry["track_id"])]
+            entry["base_color"] = color
+            if entry["color_override"] is None:
+                set_handle_color(entry["handle"], color)
+        for frame in self.scene["frames"]:
+            for person in frame["people"]:
+                person["color"] = self.track_color_by_id[int(person["track_id"])]
+        set_text_value(self.track_color_info, "Restored the initial color for every Track ID")
 
     def _available_track_ids(self) -> list[int]:
         return sorted({int(entry["original_track_id"]) for entry in self.human_entries})
@@ -3368,6 +3444,7 @@ class SequenceViewer:
             for person in frame["people"]:
                 if int(person["query_index"]) == query_index:
                     person["track_id"] = track_id
+                    person["color"] = self.track_color_by_id[track_id]
             for person_handles in self.handles[frame_index]["people"]:
                 if int(person_handles["query_index"]) == query_index:
                     person_handles["track_id"] = track_id
@@ -3535,6 +3612,16 @@ class SequenceViewer:
         rows = []
         recolors = []
         id_reassignments = []
+        track_id_colors = []
+        for track_id in self._available_track_ids():
+            color = self.track_color_by_id[track_id]
+            if color != self.original_track_color_by_id[track_id]:
+                track_id_colors.append(
+                    {
+                        "track_id": int(track_id),
+                        "color_rgb": [int(value) for value in color],
+                    }
+                )
         for entry in self.human_entries:
             offset = np.asarray(entry["offset"], dtype=np.float32)
             identity = {
@@ -3573,6 +3660,7 @@ class SequenceViewer:
             "note": "Viewer-only edits. Model predictions, cache arrays, and saved run_summary geometry are unchanged.",
             "offsets": rows,
             "recolors": recolors,
+            "track_id_colors": track_id_colors,
             "id_reassignments": id_reassignments,
             "point_erase_strokes": erase_strokes,
         }
@@ -3582,6 +3670,7 @@ class SequenceViewer:
             self.smpl_edit_info,
             (
                 f"Saved {len(rows)} offset(s), {len(recolors)} recolor(s), "
+                f"{len(track_id_colors)} Track ID color(s), "
                 f"{len(id_reassignments)} ID reassignment(s), and "
                 f"{len(erase_strokes)} erase stroke(s) to {self.smpl_edit_output}"
             ),
@@ -4080,12 +4169,23 @@ class SequenceViewer:
 
     def _on_smpl_color_update(self, _: Any = None) -> None:
         color = tuple(int(np.clip(value, 0, 255)) for value in self.smpl_color.value)
-        for track_id in self.track_color_by_id:
-            self.track_color_by_id[track_id] = color
+        self._syncing_track_color_controls = True
+        try:
+            for track_id in self.track_color_by_id:
+                self.track_color_by_id[track_id] = color
+                handle = self.track_color_handles.get(track_id)
+                if handle is not None:
+                    handle.value = color
+        finally:
+            self._syncing_track_color_controls = False
         for entry in self.human_entries:
             entry["base_color"] = color
             if entry["color_override"] is None:
                 set_handle_color(entry["handle"], color)
+        for frame in self.scene["frames"]:
+            for person in frame["people"]:
+                person["color"] = color
+        set_text_value(self.track_color_info, f"Set all Track IDs to RGB {color}")
 
     def _update_visibility(self) -> None:
         current = int(self.timestep.value)

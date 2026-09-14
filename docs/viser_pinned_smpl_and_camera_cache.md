@@ -34,6 +34,14 @@ Hybrid 模式行为：
 
 ID 修改仅影响当前 Viewer 状态，不修改模型预测和 `full_viewer_cache`。`Save Viewer Edits` 会将仍然有效的修改写入 JSON 的 `id_reassignments` 字段；当前 Viewer 启动时不会自动重放。
 
+## Track ID 颜色列表
+
+`Track ID Colors` 面板会按序列中出现过的 Track ID 显示颜色列表。每一行的 `ID N` RGB 色块既用于查看该 ID 当前对应的颜色，也可以直接指定新颜色；修改后，该 ID 在所有帧中的 Base/HSI SMPL 会立即更新。执行 ID 重分配后，被分配的人会自动采用目标 ID 的颜色。
+
+`Restore Initial ID Colors` 恢复 Viewer 启动时从 cache 读取的 ID 配色。顶部原有的 `SMPL Color` 仍可一次把所有 ID 设成同一种颜色，并会同步更新列表中的色块。Pin 右键重上色属于局部覆盖，不会被 ID 基础色改写；用 `Restore Pinned SMPL Colors` 清除覆盖后，SMPL 会重新跟随当前 ID 色。
+
+自定义 ID 基础色属于 Viewer 状态，不写回 cache。`Save Viewer Edits` 会把与初始值不同的 ID 配色写入 JSON 的 `track_id_colors` 字段，用于审计或后续处理；当前 Viewer 启动时不会自动重放。
+
 ## 固定 SMPL 手动重上色
 
 `Pinned SMPL Recolor` 面板提供独立于全局 `SMPL Color` 的手动上色：
@@ -61,7 +69,7 @@ ID 修改仅影响当前 Viewer 状态，不修改模型预测和 `full_viewer_c
 
 删除掩码保存在 source 的未缩放世界坐标中，因此调整 HSI visual scale、人体过滤或点采样后仍会重新应用。它只影响 points 显示，不修改环境 mesh，也不写回 `full_viewer_cache`。
 
-`Save Viewer Edits` 继续写入 `SMPL_EDIT_OUTPUT`。JSON 保留兼容字段 `offsets`，并新增 `recolors`、`id_reassignments` 与 `point_erase_strokes`；这些记录用于审计和后续处理，当前 Viewer 启动时不会自动重放。
+`Save Viewer Edits` 继续写入 `SMPL_EDIT_OUTPUT`。JSON 保留兼容字段 `offsets`，并新增 `recolors`、`track_id_colors`、`id_reassignments` 与 `point_erase_strokes`；这些记录用于审计和后续处理，当前 Viewer 启动时不会自动重放。
 
 ## 相机缓存
 
