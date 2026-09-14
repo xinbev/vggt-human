@@ -41,6 +41,31 @@ def smpl_recolor_targets(
     raise ValueError(f"Unknown SMPL recolor scope: {scope}")
 
 
+def smpl_id_reassignment_targets(
+    entries: list[dict[str, Any]],
+    selected: dict[str, Any],
+    scope: str,
+) -> list[dict[str, Any]]:
+    selected_frame = int(selected["frame_index"])
+    selected_query = int(selected["query_index"])
+    selected_id = int(selected["track_id"])
+    if scope == "selected frame person":
+        return [
+            entry
+            for entry in entries
+            if int(entry["frame_index"]) == selected_frame and int(entry["query_index"]) == selected_query
+        ]
+    if scope == "same ID from selected frame onward":
+        return [
+            entry
+            for entry in entries
+            if int(entry["frame_index"]) >= selected_frame and int(entry["track_id"]) == selected_id
+        ]
+    if scope == "same ID all frames":
+        return [entry for entry in entries if int(entry["track_id"]) == selected_id]
+    raise ValueError(f"Unknown SMPL ID reassignment scope: {scope}")
+
+
 def set_scene_node_click_button(handle: Any, button: str) -> bool:
     """Switch Viser 1.1+ node click input while keeping its registered callback."""
     if button not in {"left", "right"}:

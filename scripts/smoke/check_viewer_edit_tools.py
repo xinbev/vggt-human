@@ -18,6 +18,7 @@ if str(ROOT) not in sys.path:
 from scripts.vis.viewer_edit_tools import (  # noqa: E402
     points_outside_spheres,
     set_scene_node_click_button,
+    smpl_id_reassignment_targets,
     smpl_recolor_targets,
 )
 
@@ -108,11 +109,26 @@ def check_right_click_binding() -> None:
             sys.modules["viser"] = previous
 
 
+def check_id_reassignment_scopes() -> None:
+    entries = [
+        {"frame_index": 0, "query_index": 0, "kind": "base", "track_id": 2},
+        {"frame_index": 0, "query_index": 0, "kind": "hsi", "track_id": 2},
+        {"frame_index": 1, "query_index": 1, "kind": "base", "track_id": 2},
+        {"frame_index": 2, "query_index": 0, "kind": "base", "track_id": 2},
+        {"frame_index": 2, "query_index": 1, "kind": "base", "track_id": 3},
+    ]
+    assert smpl_id_reassignment_targets(entries, entries[0], "selected frame person") == entries[:2]
+    selected = entries[2]
+    assert smpl_id_reassignment_targets(entries, selected, "same ID from selected frame onward") == entries[2:4]
+    assert smpl_id_reassignment_targets(entries, selected, "same ID all frames") == entries[:4]
+
+
 def main() -> None:
     check_point_eraser()
     check_recolor_scopes()
     check_right_click_binding()
-    print("[ok] viewer recolor and point eraser helper checks passed")
+    check_id_reassignment_scopes()
+    print("[ok] viewer recolor, ID reassignment, and point eraser helper checks passed")
 
 
 if __name__ == "__main__":

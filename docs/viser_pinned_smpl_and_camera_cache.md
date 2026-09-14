@@ -8,7 +8,7 @@
 
 ## Hybrid 固定 SMPL
 
-Viser 新增默认折叠的 `Pinned SMPL Frames` 文件夹。长序列按每 50 帧一个子文件夹组织，每帧提供一个复选框，标签包括 Viewer 帧序号、原始 frame ID 和该帧人物数。
+Viser 新增默认折叠的 `Pinned SMPL Frames` 文件夹。长序列按每 50 帧一个按钮组组织，帧按钮会根据 Viser 控制面板当前宽度自动换行成多列。按钮标签格式为 `0042/2`，分别表示 Viewer 帧序号和该帧人物数；已固定帧显示为 `*0042/2`，再次点击即可取消固定。
 
 Hybrid 模式行为：
 
@@ -20,7 +20,19 @@ Hybrid 模式行为：
 
 固定帧使用原有 mesh handle。点击固定 SMPL 后仍进入 `Selected SMPL`，并同步到该 timestep；位移滑条、transform controls、`selected frame`/`same track all frames` scope 以及 `Save Viewer Edits` 都沿用原实现。编辑后的 handle 保持固定显示。
 
-固定帧选择属于当前 Viewer 运行状态，不写回模型结果，也不写入 cache。重新启动 Viewer 后复选框恢复为未选择。
+固定帧选择属于当前 Viewer 运行状态，不写回模型结果，也不写入 cache。重新启动 Viewer 后所有帧按钮恢复为未固定状态。
+
+## SMPL Track ID 重分配
+
+`SMPL ID Reassignment` 用于修正 Viewer 中的错配 Track ID：
+
+1. 左键点击 SMPL，或在 `Selected SMPL` 下拉框中选择目标。
+2. 在 `Assign to Existing ID` 中选择序列里已经出现过的目标 ID。
+3. 选择作用范围并点击 `Apply ID Reassignment`。
+
+作用范围包括当前帧中的这个人、从当前帧开始的同 ID，以及全序列同 ID。一次修改会同步该人物同一帧的 Base/HSI mesh、Track ID 标签、选择列表和按 ID 区分的基础颜色。若目标 ID 在受影响帧已属于另一个人，操作会被拒绝，防止同一帧出现重复 ID。`Undo Last ID Reassignment` 按操作撤销，`Restore Original IDs` 恢复 cache 中的全部原始 ID。
+
+ID 修改仅影响当前 Viewer 状态，不修改模型预测和 `full_viewer_cache`。`Save Viewer Edits` 会将仍然有效的修改写入 JSON 的 `id_reassignments` 字段；当前 Viewer 启动时不会自动重放。
 
 ## 固定 SMPL 手动重上色
 
@@ -37,17 +49,19 @@ Hybrid 模式行为：
 
 ## 点云橡皮擦
 
-`Point Cloud Eraser` 是 viewer 内的三维球形笔刷：
+`Point Cloud Eraser` 是 viewer 内可见、可移动的三维球形笔刷。红色线框球表示实际删除范围，中心的三轴/平面 gizmo 用来精确移动：
 
 1. 保持 `Environment Display` 为 `points` 或 `both`。
-2. 打开 `Enable Eraser`，设置 `Eraser Radius (world units)`。
-3. 左键单击可见点云，删除射线命中点周围球形范围内的点。
+2. 打开 `Enable Eraser`，球形笔刷会出现在当前帧点云中心。
+3. 左键单击点云可将笔刷快速吸附到该处；这一步只放置笔刷，不会删除。
+4. 拖动 gizmo 的轴或平面精确调整位置，通过 `Eraser Radius (world units)` 调整球体大小。
+5. 点击 `Erase Points Inside Brush` 执行删除。
 
-每次点击只编辑命中的一个 frame/source 点云。`Undo Last Erase` 撤销最后一次操作，`Restore All Erased Points` 恢复本次 Viewer 会话删除的全部点。橡皮擦与点云测距互斥，启用其中一个会关闭另一个。
+`Eraser Scope=picked cloud` 只编辑最后吸附时命中的 frame/source；`all visible clouds` 会擦除球体覆盖的全部可见点云。`Center Brush on Current Frame` 可随时把笔刷找回当前帧中心。`Undo Last Erase` 按一次完整笔刷操作撤销，`Restore All Erased Points` 恢复本次 Viewer 会话删除的全部点。橡皮擦与点云测距互斥，启用其中一个会关闭另一个。
 
 删除掩码保存在 source 的未缩放世界坐标中，因此调整 HSI visual scale、人体过滤或点采样后仍会重新应用。它只影响 points 显示，不修改环境 mesh，也不写回 `full_viewer_cache`。
 
-`Save Viewer Edits` 继续写入 `SMPL_EDIT_OUTPUT`。JSON 保留兼容字段 `offsets`，并新增 `recolors` 与 `point_erase_strokes`；这些记录用于审计和后续处理，当前 Viewer 启动时不会自动重放。
+`Save Viewer Edits` 继续写入 `SMPL_EDIT_OUTPUT`。JSON 保留兼容字段 `offsets`，并新增 `recolors`、`id_reassignments` 与 `point_erase_strokes`；这些记录用于审计和后续处理，当前 Viewer 启动时不会自动重放。
 
 ## 相机缓存
 
@@ -100,4 +114,4 @@ bash scripts/smoke/check_sequence_viewer_cache.sh
 bash scripts/smoke/check_full_sequence_viewer_cache.sh
 ```
 
-Windows 本地仅验证了 Hybrid 可见性规则、重上色 scope、球形删除 mask、缓存字段往返、Python/Shell 语法。Viser 右键绑定、折叠列表、点选射线和 transform gizmo 的实际交互需要在 Linux 服务器 Viewer 中确认。
+Windows 本地仅验证了 Hybrid 可见性规则、ID 重分配 scope、重上色 scope、球形删除 mask、缓存字段往返、Python/Shell 语法。Viser 右键绑定、多列按钮组、动态下拉列表、点选射线和 transform gizmo 的实际交互需要在 Linux 服务器 Viewer 中确认。

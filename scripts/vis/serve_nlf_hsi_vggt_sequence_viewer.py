@@ -40,6 +40,7 @@ from scripts.vis.viewer_cache_io import export_sequence_viewer_cache  # noqa: E4
 from scripts.vis.viewer_edit_tools import (  # noqa: E402
     points_outside_spheres,
     set_scene_node_click_button,
+    smpl_id_reassignment_targets,
     smpl_recolor_targets,
 )
 from scripts.vis.viewer_visibility import human_frame_visible  # noqa: E402
@@ -1700,6 +1701,7 @@ def select_frame_people(
         item: dict[str, Any] = {
             "query_index": int(query_idx),
             "track_id": int(track_id),
+            "original_track_id": int(track_id),
             "confidence": float(confs[query_idx].item()),
             "color": color,
             "faces": faces,
@@ -2045,13 +2047,25 @@ class SequenceViewer:
         self.eraser_pointer_api_mode = "none"
         self.eraser_click_callback = None
         self.point_erase_strokes: list[dict[str, Any]] = []
+        self.eraser_brush_position = np.zeros(3, dtype=np.float32)
+        self.eraser_brush_placed = False
+        self.eraser_target_frame_index: int | None = None
+        self.eraser_target_source: str | None = None
+        self.eraser_brush_handle = None
+        self.eraser_transform_controls = None
+        self._syncing_eraser_controls = False
+        self._next_erase_action_id = 1
         self.human_entries: list[dict[str, Any]] = []
         self.human_entry_by_key: dict[str, dict[str, Any]] = {}
         self.selected_human_key = "none"
         self.recolor_mode_enabled = False
         self._syncing_smpl_controls = False
+        self._syncing_human_dropdown = False
         self._syncing_pinned_frame_controls = False
-        self.pinned_frame_checkboxes: list[Any] = []
+        self.pinned_frame_button_groups: list[dict[str, Any]] = []
+        self.pinned_frame_indices_value: set[int] = set()
+        self.id_edit_history: list[list[dict[str, Any]]] = []
+        self.track_color_by_id: dict[int, tuple[int, int, int]] = {}
         self.smpl_edit_output = resolve_smpl_edit_output(args)
         self.transform_controls = None
         if bool(getattr(args, "rebuild_human_filter_on_start", False)):
@@ -2310,14 +2324,39 @@ class SequenceViewer:
                 0.005,
                 max(0.03, min(1.0, self.point_size_value * 8.0)),
             )
+            self.eraser_scope = add_dropdown(
+                self.server,
+                "Eraser Scope",
+                ["picked cloud", "all visible clouds"],
+                "picked cloud",
+            )
             self.eraser_info = add_text(
                 self.server,
                 "Eraser Status",
-                "Off | enable, then left-click a visible point cloud",
+                "Off | enable to show the 3D brush",
             )
             set_handle_disabled(self.eraser_info, True)
+            self.center_eraser = add_button(self.server, "Center Brush on Current Frame")
+            self.apply_eraser = add_button(self.server, "Erase Points Inside Brush")
             self.undo_erase = add_button(self.server, "Undo Last Erase")
             self.reset_erases = add_button(self.server, "Restore All Erased Points")
+            self.eraser_transform_controls = add_transform_controls(
+                self.server,
+                "/viewer_controls/point_eraser",
+                position=self.eraser_brush_position,
+                scale=0.3,
+                visible=False,
+                disable_rotations=True,
+                depth_test=False,
+            )
+            self.eraser_brush_handle = add_icosphere(
+                self.server,
+                "/viewer_controls/point_eraser/brush_volume",
+                radius=1.0,
+                color=(255, 64, 64),
+                scale=float(self.eraser_radius.value),
+                visible=False,
+            )
         with add_folder(self.server, "HSI Scale Controls"):
             self.hsi_calibration_mode = add_checkbox(self.server, "Single-Frame Scale Calibration", False)
             self.hsi_calibration_info = add_text(self.server, "Calibration Status", "Off")
@@ -2428,6 +2467,24 @@ class SequenceViewer:
             self.reset_pinned_recolors = add_button(self.server, "Restore Pinned SMPL Colors")
         self.smpl_edit_info = add_text(self.server, "SMPL Edit", "Select or click an SMPL mesh to edit viewer-only translation.")
         self.selected_smpl = add_dropdown(self.server, "Selected SMPL", self._human_dropdown_options(), "none")
+        with add_folder(self.server, "SMPL ID Reassignment"):
+            id_options = tuple(str(track_id) for track_id in self._available_track_ids()) or ("0",)
+            self.smpl_id_target = add_dropdown(self.server, "Assign to Existing ID", id_options, id_options[0])
+            self.smpl_id_scope = add_dropdown(
+                self.server,
+                "ID Reassignment Scope",
+                ["selected frame person", "same ID from selected frame onward", "same ID all frames"],
+                "selected frame person",
+            )
+            self.smpl_id_info = add_text(
+                self.server,
+                "ID Edit Status",
+                f"Select an SMPL, then assign it to one of {', '.join(id_options)}",
+            )
+            set_handle_disabled(self.smpl_id_info, True)
+            self.apply_smpl_id = add_button(self.server, "Apply ID Reassignment")
+            self.undo_smpl_id = add_button(self.server, "Undo Last ID Reassignment")
+            self.restore_smpl_ids = add_button(self.server, "Restore Original IDs")
         self.smpl_edit_scope = add_dropdown(self.server, "SMPL Edit Scope", ["selected frame", "same track all frames"], "selected frame")
         self.smpl_edit_dx = add_slider(self.server, "SMPL dX", -5.0, 5.0, 0.01, 0.0)
         self.smpl_edit_dy = add_slider(self.server, "SMPL dY", -5.0, 5.0, 0.01, 0.0)
@@ -2474,6 +2531,8 @@ class SequenceViewer:
         bind_update(self.measurement_font_size, self._on_measurement_style_update)
         bind_update(self.measurement_color, self._on_measurement_style_update)
         bind_update(self.eraser_enabled, self._on_eraser_enabled_update)
+        bind_update(self.eraser_radius, self._on_eraser_radius_update)
+        bind_update(self.eraser_transform_controls, self._on_eraser_transform_update)
         bind_update(self.recolor_enabled, self._on_recolor_enabled_update)
         bind_update(self.camera_size, self._on_camera_size_update)
         bind_update(self.smpl_opacity, self._on_smpl_opacity_update)
@@ -2494,17 +2553,22 @@ class SequenceViewer:
         bind_click(self.apply_human_filter_dilation, self._apply_human_filter_dilation)
         bind_click(self.reset_human_filter_dilation, self._reset_human_filter_dilation)
         bind_click(self.clear_measurement, self._clear_current_measurement)
+        bind_click(self.center_eraser, self._center_eraser_on_current_frame)
+        bind_click(self.apply_eraser, self._apply_eraser_brush)
         bind_click(self.undo_erase, self._undo_last_erase)
         bind_click(self.reset_erases, self._restore_all_erased_points)
         bind_click(self.recolor_all_pinned, self._recolor_all_pinned)
         bind_click(self.reset_pinned_recolors, self._restore_pinned_smpl_colors)
+        bind_click(self.apply_smpl_id, self._apply_smpl_id_reassignment)
+        bind_click(self.undo_smpl_id, self._undo_smpl_id_reassignment)
+        bind_click(self.restore_smpl_ids, self._restore_original_smpl_ids)
 
     def _build_pinned_smpl_gui(self) -> None:
         with add_folder(self.server, "Pinned SMPL Frames", expand_by_default=False):
             self.pinned_smpl_info = add_text(
                 self.server,
                 "Pinned SMPL",
-                "Hybrid mode: checked frames stay visible; click a pinned mesh to edit it.",
+                "Hybrid mode: * marks pinned frames; buttons wrap with panel width.",
             )
             set_handle_disabled(self.pinned_smpl_info, True)
             self.pin_current_smpl_frame = add_button(self.server, "Pin Current Frame")
@@ -2513,51 +2577,66 @@ class SequenceViewer:
             chunk_size = 50
             for chunk_start in range(0, frame_count, chunk_size):
                 chunk_end = min(frame_count, chunk_start + chunk_size)
-                folder_name = f"Frames {chunk_start:04d}-{chunk_end - 1:04d}"
-                with add_folder(self.server, folder_name, expand_by_default=False):
-                    for frame_index in range(chunk_start, chunk_end):
-                        frame = self.scene["frames"][frame_index]
-                        checkbox = add_checkbox(
-                            self.server,
-                            (
-                                f"{frame_index:04d} | {frame['frame_id']} | "
-                                f"people={len(frame.get('people', []))}"
-                            ),
-                            False,
-                        )
-                        self.pinned_frame_checkboxes.append(checkbox)
-                        bind_update(
-                            checkbox,
-                            lambda *_, pinned_index=frame_index: self._on_pinned_frame_update(pinned_index),
-                        )
+                indices = tuple(range(chunk_start, chunk_end))
+                handle = add_button_group(
+                    self.server,
+                    f"Frames {chunk_start:04d}-{chunk_end - 1:04d}",
+                    tuple(self._pinned_frame_button_label(index) for index in indices),
+                )
+                group_index = len(self.pinned_frame_button_groups)
+                self.pinned_frame_button_groups.append({"handle": handle, "indices": indices})
+                bind_click(
+                    handle,
+                    lambda *_, pinned_group_index=group_index: self._on_pinned_frame_button(pinned_group_index),
+                )
             bind_click(self.pin_current_smpl_frame, self._pin_current_smpl_frame)
             bind_click(self.clear_pinned_smpl_frames, self._clear_pinned_smpl_frames)
 
     def _pinned_frame_indices(self) -> set[int]:
-        return {
-            index
-            for index, checkbox in enumerate(self.pinned_frame_checkboxes)
-            if bool(getattr(checkbox, "value", False))
-        }
+        return set(self.pinned_frame_indices_value)
 
-    def _on_pinned_frame_update(self, _: int | None = None) -> None:
+    def _pinned_frame_button_label(self, frame_index: int) -> str:
+        people_count = len(self.scene["frames"][int(frame_index)].get("people", []))
+        prefix = "*" if int(frame_index) in self.pinned_frame_indices_value else ""
+        return f"{prefix}{int(frame_index):04d}/{people_count}"
+
+    def _on_pinned_frame_button(self, group_index: int) -> None:
         if self._syncing_pinned_frame_controls:
             return
+        group = self.pinned_frame_button_groups[int(group_index)]
+        value = str(group["handle"].value).lstrip("*")
+        try:
+            frame_index = int(value.split("/", 1)[0])
+        except (TypeError, ValueError):
+            return
+        if frame_index in self.pinned_frame_indices_value:
+            self.pinned_frame_indices_value.remove(frame_index)
+        else:
+            self.pinned_frame_indices_value.add(frame_index)
+        self._refresh_pinned_frame_buttons()
         self._update_visibility()
+
+    def _refresh_pinned_frame_buttons(self) -> None:
+        self._syncing_pinned_frame_controls = True
+        try:
+            for group in self.pinned_frame_button_groups:
+                set_handle_options(
+                    group["handle"],
+                    tuple(self._pinned_frame_button_label(index) for index in group["indices"]),
+                )
+        finally:
+            self._syncing_pinned_frame_controls = False
 
     def _pin_current_smpl_frame(self, _: Any = None) -> None:
         frame_index = int(self.timestep.value)
-        if 0 <= frame_index < len(self.pinned_frame_checkboxes):
-            self.pinned_frame_checkboxes[frame_index].value = True
+        if 0 <= frame_index < len(self.scene["frames"]):
+            self.pinned_frame_indices_value.add(frame_index)
+        self._refresh_pinned_frame_buttons()
         self._update_visibility()
 
     def _clear_pinned_smpl_frames(self, _: Any = None) -> None:
-        self._syncing_pinned_frame_controls = True
-        try:
-            for checkbox in self.pinned_frame_checkboxes:
-                checkbox.value = False
-        finally:
-            self._syncing_pinned_frame_controls = False
+        self.pinned_frame_indices_value.clear()
+        self._refresh_pinned_frame_buttons()
         self._update_visibility()
 
     def _register_clients(self) -> None:
@@ -2637,16 +2716,84 @@ class SequenceViewer:
                 self.eraser_enabled.value = False
                 set_text_value(self.eraser_info, "Unavailable | this Viser version has no scene click API")
                 return
+            if not self.eraser_brush_placed:
+                self._center_eraser_on_current_frame()
+            set_handle_visible(self.eraser_transform_controls, True)
+            set_handle_visible(self.eraser_brush_handle, True)
             set_text_value(
                 self.eraser_info,
-                f"Ready | radius={float(self.eraser_radius.value):.3f}; left-click a visible point cloud",
+                self._eraser_status_text("Ready | click point cloud to place, drag gizmo to adjust, then erase"),
             )
         else:
             self._set_eraser_pointer_active(False)
+            set_handle_visible(self.eraser_transform_controls, False)
+            set_handle_visible(self.eraser_brush_handle, False)
             set_text_value(
                 self.eraser_info,
                 f"Off | {len(self.point_erase_strokes)} erase stroke(s) remain applied",
             )
+
+    def _on_eraser_radius_update(self, _: Any = None) -> None:
+        radius = max(0.0, float(self.eraser_radius.value))
+        set_handle_scale(self.eraser_brush_handle, radius)
+        if bool(getattr(self.eraser_enabled, "value", False)):
+            set_text_value(self.eraser_info, self._eraser_status_text("Brush radius updated"))
+
+    def _on_eraser_transform_update(self, _: Any = None) -> None:
+        if self._syncing_eraser_controls:
+            return
+        position = get_handle_position(self.eraser_transform_controls)
+        if position is None:
+            return
+        self.eraser_brush_position = position
+        self.eraser_brush_placed = True
+        if bool(getattr(self.eraser_enabled, "value", False)):
+            set_text_value(self.eraser_info, self._eraser_status_text("Brush moved | preview only"))
+
+    def _eraser_status_text(self, prefix: str) -> str:
+        target = "none"
+        if self.eraser_target_frame_index is not None and self.eraser_target_source is not None:
+            target = f"{self.eraser_target_source} frame {self.eraser_target_frame_index + 1}"
+        position = self.eraser_brush_position
+        return (
+            f"{prefix} | target={target} | radius={float(self.eraser_radius.value):.3f} | "
+            f"center=({position[0]:.3f},{position[1]:.3f},{position[2]:.3f})"
+        )
+
+    def _set_eraser_brush_position(self, position: np.ndarray, frame_index: int, source: str) -> None:
+        position_np = np.asarray(position, dtype=np.float32).reshape(3)
+        self.eraser_brush_position = position_np
+        self.eraser_target_frame_index = int(frame_index)
+        self.eraser_target_source = str(source)
+        self.eraser_brush_placed = True
+        self._syncing_eraser_controls = True
+        try:
+            set_handle_position(self.eraser_transform_controls, position_np)
+        finally:
+            self._syncing_eraser_controls = False
+
+    def _center_eraser_on_current_frame(self, _: Any = None) -> None:
+        frame_index = int(self.timestep.value)
+        frame = self.scene["frames"][frame_index]
+        depth_source = str(self.depth_source.value)
+        tracking_only = bool(getattr(self.args, "tracking_only", False))
+        candidates: list[tuple[str, np.ndarray]] = []
+        if depth_source in {"hsi_depth", "both"} and not tracking_only:
+            candidates.append(("hsi", self._scaled_hsi_points(frame, include_humans=self.hsi_calibration_active)))
+        if depth_source in {"raw_depth", "both"}:
+            candidates.append(("raw", self._raw_display_points(frame)))
+        if not candidates:
+            set_text_value(self.eraser_info, "No point cloud source is available for the current frame")
+            return
+        source, points = max(candidates, key=lambda item: item[1].shape[0])
+        finite_points = np.asarray(points, dtype=np.float32)
+        finite_points = finite_points[np.isfinite(finite_points).all(axis=1)]
+        if finite_points.shape[0] == 0:
+            set_text_value(self.eraser_info, "Current frame has no finite points for brush placement")
+            return
+        center = np.median(finite_points, axis=0).astype(np.float32, copy=False)
+        self._set_eraser_brush_position(center, frame_index, source)
+        set_text_value(self.eraser_info, self._eraser_status_text("Centered on current frame | preview only"))
 
     def _set_eraser_pointer_active(self, active: bool) -> bool:
         api = scene_api(self.server)
@@ -2698,18 +2845,74 @@ class SequenceViewer:
             return
         ray_distance, _, point, frame_index, source = best
         radius_world = max(0.0, float(self.eraser_radius.value))
-        if ray_distance > radius_world:
+        placement_pick_radius = max(0.05, radius_world, self.point_size_value * 8.0)
+        if ray_distance > placement_pick_radius:
             set_text_value(
                 self.eraser_info,
-                f"No point within eraser radius | nearest={ray_distance:.4f}, radius={radius_world:.4f}",
+                (
+                    f"No point near click ray | nearest={ray_distance:.4f}, "
+                    f"placement tolerance={placement_pick_radius:.4f}"
+                ),
             )
             return
-        scale = self.hsi_visual_scale_value if source == "hsi" else 1.0
-        source_center = np.asarray(point, dtype=np.float32) / np.float32(scale)
-        source_radius = radius_world / max(float(scale), 1e-8)
+        self._set_eraser_brush_position(point, int(frame_index), source)
+        set_text_value(
+            self.eraser_info,
+            self._eraser_status_text("Brush placed from click | drag gizmo to adjust, then press Erase"),
+        )
+
+    def _apply_eraser_brush(self, _: Any = None) -> None:
+        if not self.eraser_brush_placed:
+            set_text_value(self.eraser_info, "Place or center the brush before erasing")
+            return
+        position = get_handle_position(self.eraser_transform_controls)
+        if position is not None:
+            self.eraser_brush_position = position
+        scope = str(self.eraser_scope.value)
+        targets: list[tuple[int, str]] = []
+        if scope == "picked cloud":
+            if self.eraser_target_frame_index is None or self.eraser_target_source is None:
+                set_text_value(self.eraser_info, "Pick a point cloud before using picked-cloud scope")
+                return
+            targets = [(self.eraser_target_frame_index, self.eraser_target_source)]
+        else:
+            targets = list(
+                dict.fromkeys(
+                    (
+                        int(frame_index),
+                        "hsi" if str(source).startswith("hsi") else str(source),
+                    )
+                    for frame_index, source, _ in self._visible_measurement_clouds()
+                )
+            )
+        action_id = self._next_erase_action_id
+        self._next_erase_action_id += 1
+        changed_targets: list[tuple[int, str]] = []
+        removed_total = 0
+        for frame_index, source in targets:
+            removed = self._append_erase_stroke(frame_index, source, action_id)
+            if removed <= 0:
+                continue
+            removed_total += removed
+            changed_targets.append((frame_index, source))
+        for frame_index, source in changed_targets:
+            self._rebuild_environment_point_handle(frame_index, source, update_visibility=False)
+        self._update_visibility()
+        set_text_value(
+            self.eraser_info,
+            self._eraser_status_text(
+                f"Erased {removed_total} point(s) from {len(changed_targets)} cloud(s) | Undo available"
+            ),
+        )
+
+    def _append_erase_stroke(self, frame_index: int, source: str, action_id: int) -> int:
         frame = self.scene["frames"][int(frame_index)]
+        scale = self.hsi_visual_scale_value if source == "hsi" else 1.0
+        source_center = self.eraser_brush_position / np.float32(scale)
+        source_radius = float(self.eraser_radius.value) / max(float(scale), 1e-8)
         before = self._display_point_count(frame, source)
         stroke = {
+            "action_id": int(action_id),
             "frame_index": int(frame_index),
             "frame_id": str(frame["frame_id"]),
             "source": str(source),
@@ -2718,15 +2921,12 @@ class SequenceViewer:
         }
         self.point_erase_strokes.append(stroke)
         after = self._display_point_count(frame, source)
-        stroke["removed_points"] = max(0, int(before - after))
-        self._rebuild_environment_point_handle(int(frame_index), source)
-        set_text_value(
-            self.eraser_info,
-            (
-                f"Erased {stroke['removed_points']} point(s) from {source} frame {int(frame_index) + 1} | "
-                f"{len(self.point_erase_strokes)} stroke(s); Undo/Restore available"
-            ),
-        )
+        removed = max(0, int(before - after))
+        if removed == 0:
+            self.point_erase_strokes.pop()
+            return 0
+        stroke["removed_points"] = removed
+        return removed
 
     def _display_point_count(self, frame: dict[str, Any], source: str) -> int:
         if source == "raw":
@@ -2737,11 +2937,18 @@ class SequenceViewer:
         if not self.point_erase_strokes:
             set_text_value(self.eraser_info, "Nothing to undo")
             return
-        stroke = self.point_erase_strokes.pop()
-        self._rebuild_environment_point_handle(int(stroke["frame_index"]), str(stroke["source"]))
+        action_id = int(self.point_erase_strokes[-1].get("action_id", -1))
+        undone = [stroke for stroke in self.point_erase_strokes if int(stroke.get("action_id", -1)) == action_id]
+        self.point_erase_strokes = [
+            stroke for stroke in self.point_erase_strokes if int(stroke.get("action_id", -1)) != action_id
+        ]
+        targets = {(int(stroke["frame_index"]), str(stroke["source"])) for stroke in undone}
+        for frame_index, source in targets:
+            self._rebuild_environment_point_handle(frame_index, source, update_visibility=False)
+        self._update_visibility()
         set_text_value(
             self.eraser_info,
-            f"Undid last erase | {len(self.point_erase_strokes)} stroke(s) remain",
+            f"Undid last brush action ({len(undone)} cloud(s)) | {len(self.point_erase_strokes)} stroke(s) remain",
         )
 
     def _restore_all_erased_points(self, _: Any = None) -> None:
@@ -2966,6 +3173,7 @@ class SequenceViewer:
             "frame_id": str(frame_id),
             "kind": str(kind),
             "track_id": int(track_id),
+            "original_track_id": int(track_id),
             "query_index": int(query_idx),
             "handle": handle,
             "label_handle": label_handle,
@@ -2977,7 +3185,8 @@ class SequenceViewer:
         }
         self.human_entries.append(entry)
         self.human_entry_by_key[key] = entry
-        bind_click(handle, lambda event=None, selected_key=key: self._on_human_mesh_click(selected_key, event))
+        self.track_color_by_id.setdefault(int(track_id), tuple(int(v) for v in color))
+        bind_click(handle, lambda event=None, selected_entry=entry: self._on_human_mesh_click(selected_entry["key"], event))
 
     def _on_human_mesh_click(self, key: str, _: Any = None) -> None:
         if self.recolor_mode_enabled:
@@ -3062,6 +3271,148 @@ class SequenceViewer:
             set_handle_color(entry["handle"], entry["base_color"])
         set_text_value(self.recolor_info, f"Restored {len(targets)} pinned SMPL mesh color(s)")
 
+    def _available_track_ids(self) -> list[int]:
+        return sorted({int(entry["original_track_id"]) for entry in self.human_entries})
+
+    def _apply_smpl_id_reassignment(self, _: Any = None) -> None:
+        selected = self.human_entry_by_key.get(self.selected_human_key)
+        if selected is None:
+            set_text_value(self.smpl_id_info, "Select an SMPL before changing its ID")
+            return
+        target_id = int(self.smpl_id_target.value)
+        targets = smpl_id_reassignment_targets(
+            self.human_entries,
+            selected,
+            str(self.smpl_id_scope.value),
+        )
+        if all(int(entry["track_id"]) == target_id for entry in targets):
+            set_text_value(self.smpl_id_info, f"Selected SMPL already uses ID {target_id}")
+            return
+        target_people = {(int(entry["frame_index"]), int(entry["query_index"])) for entry in targets}
+        conflict_frames = sorted(
+            {
+                int(entry["frame_index"])
+                for entry in self.human_entries
+                if int(entry["track_id"]) == target_id
+                and (int(entry["frame_index"]), int(entry["query_index"])) not in target_people
+                and any(int(target["frame_index"]) == int(entry["frame_index"]) for target in targets)
+            }
+        )
+        if conflict_frames:
+            preview = ", ".join(str(frame + 1) for frame in conflict_frames[:12])
+            if len(conflict_frames) > 12:
+                preview += ", ..."
+            set_text_value(
+                self.smpl_id_info,
+                f"Rejected: ID {target_id} is already used by another person in frame(s) {preview}",
+            )
+            return
+        changes = [
+            {"entry": entry, "old_id": int(entry["track_id"]), "new_id": target_id}
+            for entry in targets
+            if int(entry["track_id"]) != target_id
+        ]
+        self.id_edit_history.append(changes)
+        self._apply_smpl_id_changes(changes, use_new_id=True, selected_entry=selected)
+        people_count = len({(int(item["entry"]["frame_index"]), int(item["entry"]["query_index"])) for item in changes})
+        set_text_value(
+            self.smpl_id_info,
+            f"Assigned {people_count} frame-person instance(s) to ID {target_id} | scope={self.smpl_id_scope.value}",
+        )
+
+    def _undo_smpl_id_reassignment(self, _: Any = None) -> None:
+        if not self.id_edit_history:
+            set_text_value(self.smpl_id_info, "No ID reassignment to undo")
+            return
+        changes = self.id_edit_history.pop()
+        selected_entry = changes[0]["entry"] if changes else None
+        self._apply_smpl_id_changes(changes, use_new_id=False, selected_entry=selected_entry)
+        set_text_value(self.smpl_id_info, f"Undid ID reassignment for {len(changes)} SMPL mesh record(s)")
+
+    def _restore_original_smpl_ids(self, _: Any = None) -> None:
+        changes = [
+            {
+                "entry": entry,
+                "old_id": int(entry["track_id"]),
+                "new_id": int(entry["original_track_id"]),
+            }
+            for entry in self.human_entries
+            if int(entry["track_id"]) != int(entry["original_track_id"])
+        ]
+        if not changes:
+            set_text_value(self.smpl_id_info, "All SMPL IDs already match the original viewer data")
+            return
+        selected = self.human_entry_by_key.get(self.selected_human_key)
+        self._apply_smpl_id_changes(changes, use_new_id=True, selected_entry=selected)
+        self.id_edit_history = []
+        set_text_value(self.smpl_id_info, "Restored all original SMPL IDs")
+
+    def _apply_smpl_id_changes(
+        self,
+        changes: list[dict[str, Any]],
+        use_new_id: bool,
+        selected_entry: dict[str, Any] | None,
+    ) -> None:
+        physical_updates: dict[tuple[int, int], int] = {}
+        for change in changes:
+            entry = change["entry"]
+            track_id = int(change["new_id"] if use_new_id else change["old_id"])
+            entry["track_id"] = track_id
+            physical_updates[(int(entry["frame_index"]), int(entry["query_index"]))] = track_id
+            if track_id in self.track_color_by_id:
+                entry["base_color"] = self.track_color_by_id[track_id]
+                if entry["color_override"] is None:
+                    set_handle_color(entry["handle"], entry["base_color"])
+        for (frame_index, query_index), track_id in physical_updates.items():
+            frame = self.scene["frames"][frame_index]
+            for person in frame["people"]:
+                if int(person["query_index"]) == query_index:
+                    person["track_id"] = track_id
+            for person_handles in self.handles[frame_index]["people"]:
+                if int(person_handles["query_index"]) == query_index:
+                    person_handles["track_id"] = track_id
+        self._reindex_human_entries(selected_entry)
+        self._refresh_track_id_labels(physical_updates)
+        self._update_visibility()
+
+    def _reindex_human_entries(self, selected_entry: dict[str, Any] | None) -> None:
+        entries_by_key: dict[str, dict[str, Any]] = {}
+        for entry in self.human_entries:
+            entry["key"] = human_entry_key(
+                int(entry["frame_index"]),
+                str(entry["kind"]),
+                int(entry["track_id"]),
+                int(entry["query_index"]),
+            )
+            key = str(entry["key"])
+            if key in entries_by_key:
+                raise RuntimeError(f"Duplicate SMPL viewer key after ID reassignment: {key}")
+            entries_by_key[key] = entry
+        self.human_entry_by_key = entries_by_key
+        self.selected_human_key = "none" if selected_entry is None else str(selected_entry["key"])
+        self._syncing_human_dropdown = True
+        try:
+            set_handle_options(self.selected_smpl, tuple(self._human_dropdown_options()))
+            self.selected_smpl.value = self.selected_human_key
+        finally:
+            self._syncing_human_dropdown = False
+        self._sync_smpl_edit_controls_from_selection()
+
+    def _refresh_track_id_labels(self, physical_updates: dict[tuple[int, int], int]) -> None:
+        for (frame_index, query_index), track_id in physical_updates.items():
+            frame = self.scene["frames"][frame_index]
+            person = next(
+                (item for item in frame["people"] if int(item["query_index"]) == query_index),
+                None,
+            )
+            quality = None if person is None else person.get("track_quality")
+            label_text = f"ID {track_id}" if quality is None else f"ID {track_id}  {float(quality):.2f}"
+            for person_handles in self.handles[frame_index]["people"]:
+                if int(person_handles["query_index"]) != query_index:
+                    continue
+                for label_handle in person_handles["track_labels"]:
+                    set_handle_text(label_handle, label_text)
+
     def _human_dropdown_options(self) -> list[str]:
         return ["none"] + [str(entry["key"]) for entry in self.human_entries]
 
@@ -3085,6 +3436,8 @@ class SequenceViewer:
         self._update_visibility()
 
     def _on_selected_smpl_update(self, _: Any = None) -> None:
+        if self._syncing_human_dropdown:
+            return
         self._select_human(str(self.selected_smpl.value), sync_timestep=True)
 
     def _sync_smpl_edit_controls_from_selection(self) -> None:
@@ -3101,6 +3454,7 @@ class SequenceViewer:
                     self.smpl_edit_info,
                     (
                         f"{entry['key']} | frame={entry['frame_id']} "
+                        f"ID={entry['track_id']} original={entry['original_track_id']} "
                         f"offset=({offset[0]:.3f},{offset[1]:.3f},{offset[2]:.3f})"
                     ),
                 )
@@ -3180,6 +3534,7 @@ class SequenceViewer:
     def _save_smpl_edit_offsets(self, _: Any = None) -> None:
         rows = []
         recolors = []
+        id_reassignments = []
         for entry in self.human_entries:
             offset = np.asarray(entry["offset"], dtype=np.float32)
             identity = {
@@ -3194,8 +3549,17 @@ class SequenceViewer:
                 rows.append({**identity, "offset_world_xyz": [float(v) for v in offset.tolist()]})
             if entry["color_override"] is not None:
                 recolors.append({**identity, "color_rgb": [int(v) for v in entry["color_override"]]})
+            if int(entry["track_id"]) != int(entry["original_track_id"]):
+                id_reassignments.append(
+                    {
+                        **identity,
+                        "original_track_id": int(entry["original_track_id"]),
+                        "assigned_track_id": int(entry["track_id"]),
+                    }
+                )
         erase_strokes = [
             {
+                "action_id": int(stroke.get("action_id", -1)),
                 "frame_index": int(stroke["frame_index"]),
                 "frame_id": str(stroke["frame_id"]),
                 "source": str(stroke["source"]),
@@ -3209,6 +3573,7 @@ class SequenceViewer:
             "note": "Viewer-only edits. Model predictions, cache arrays, and saved run_summary geometry are unchanged.",
             "offsets": rows,
             "recolors": recolors,
+            "id_reassignments": id_reassignments,
             "point_erase_strokes": erase_strokes,
         }
         self.smpl_edit_output.parent.mkdir(parents=True, exist_ok=True)
@@ -3216,7 +3581,8 @@ class SequenceViewer:
         set_text_value(
             self.smpl_edit_info,
             (
-                f"Saved {len(rows)} offset(s), {len(recolors)} recolor(s), and "
+                f"Saved {len(rows)} offset(s), {len(recolors)} recolor(s), "
+                f"{len(id_reassignments)} ID reassignment(s), and "
                 f"{len(erase_strokes)} erase stroke(s) to {self.smpl_edit_output}"
             ),
         )
@@ -3400,7 +3766,12 @@ class SequenceViewer:
                 ]
         self._update_visibility()
 
-    def _rebuild_environment_point_handle(self, frame_index: int, source: str) -> None:
+    def _rebuild_environment_point_handle(
+        self,
+        frame_index: int,
+        source: str,
+        update_visibility: bool = True,
+    ) -> None:
         idx = int(frame_index)
         frame = self.scene["frames"][idx]
         frame_handles = self.handles[idx]
@@ -3428,7 +3799,8 @@ class SequenceViewer:
                 source=source,
             )
         ]
-        self._update_visibility()
+        if update_visibility:
+            self._update_visibility()
 
     def _on_hsi_visual_scale_pending(self, _: Any = None) -> None:
         if self.hsi_calibration_active:
@@ -3708,6 +4080,8 @@ class SequenceViewer:
 
     def _on_smpl_color_update(self, _: Any = None) -> None:
         color = tuple(int(np.clip(value, 0, 255)) for value in self.smpl_color.value)
+        for track_id in self.track_color_by_id:
+            self.track_color_by_id[track_id] = color
         for entry in self.human_entries:
             entry["base_color"] = color
             if entry["color_override"] is None:
@@ -4058,6 +4432,38 @@ def add_point_cloud(server: Any, name: str, points: np.ndarray, colors: np.ndarr
         return api.add_point_cloud(name=name, points=points, colors=colors, point_size=point_size)
     except TypeError:
         return api.add_point_cloud(name, points, colors, point_size=point_size)
+
+
+def add_icosphere(
+    server: Any,
+    name: str,
+    radius: float,
+    color: tuple[int, int, int],
+    scale: float,
+    visible: bool,
+) -> Any:
+    api = scene_api(server)
+    if not hasattr(api, "add_icosphere"):
+        return None
+    try:
+        return api.add_icosphere(
+            name=name,
+            radius=float(radius),
+            color=color,
+            subdivisions=2,
+            scale=float(scale),
+            wireframe=True,
+            opacity=0.45,
+            side="double",
+            cast_shadow=False,
+            receive_shadow=False,
+            visible=bool(visible),
+        )
+    except TypeError:
+        handle = api.add_icosphere(name, radius=float(radius), color=color)
+        set_handle_scale(handle, scale)
+        set_handle_visible(handle, visible)
+        return handle
 
 
 def build_measurement_text_segments(text: str, height: float) -> np.ndarray:
@@ -4454,13 +4860,28 @@ def add_label(server: Any, name: str, text: str, position: np.ndarray) -> Any:
         return api.add_label(name, text, position)
 
 
-def add_transform_controls(server: Any, name: str, position: np.ndarray, scale: float, visible: bool) -> Any:
+def add_transform_controls(
+    server: Any,
+    name: str,
+    position: np.ndarray,
+    scale: float,
+    visible: bool,
+    disable_rotations: bool = False,
+    depth_test: bool = True,
+) -> Any:
     api = scene_api(server)
     if not hasattr(api, "add_transform_controls"):
         return None
     position = np.asarray(position, dtype=np.float32)
     try:
-        handle = api.add_transform_controls(name=name, position=position, scale=float(scale), visible=bool(visible))
+        handle = api.add_transform_controls(
+            name=name,
+            position=position,
+            scale=float(scale),
+            visible=bool(visible),
+            disable_rotations=bool(disable_rotations),
+            depth_test=bool(depth_test),
+        )
     except TypeError:
         try:
             handle = api.add_transform_controls(name=name, position=position, scale=float(scale))
@@ -4576,6 +4997,24 @@ def set_text_value(handle: Any, value: str) -> None:
         pass
 
 
+def set_handle_options(handle: Any, options: tuple[str, ...]) -> None:
+    if handle is None:
+        return
+    try:
+        handle.options = tuple(str(option) for option in options)
+    except Exception:
+        pass
+
+
+def set_handle_text(handle: Any, text: str) -> None:
+    if handle is None:
+        return
+    try:
+        handle.text = str(text)
+    except Exception:
+        pass
+
+
 def set_handle_disabled(handle: Any, disabled: bool) -> None:
     if handle is None:
         return
@@ -4601,6 +5040,15 @@ def set_handle_color(handle: Any, color: tuple[int, int, int]) -> None:
     color_int = tuple(int(np.clip(value, 0, 255)) for value in color)
     try:
         handle.color = color_int
+    except Exception:
+        pass
+
+
+def set_handle_scale(handle: Any, scale: float) -> None:
+    if handle is None:
+        return
+    try:
+        handle.scale = float(scale)
     except Exception:
         pass
 
