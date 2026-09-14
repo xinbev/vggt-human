@@ -19,7 +19,7 @@ dependencies = [
 [project.optional-dependencies]
 demo = [
     "gradio>=5.17.1",
-    "viser>=0.2.23",
+    "viser>=1.1.0",
     "tqdm",
     "scipy",
     "trimesh",

@@ -18,9 +18,36 @@ Hybrid 模式行为：
 - `Max People Per Frame`、Base/HSI SMPL 开关、TRSTR 开关、颜色、透明度和 Track ID 同样作用于固定帧。
 - `Pin Current Frame` 固定当前帧；`Clear Pinned Frames` 清空选择。
 
-固定帧使用原有 mesh handle。点击固定 SMPL 后仍进入 `Selected SMPL`，并同步到该 timestep；位移滑条、transform controls、`selected frame`/`same track all frames` scope 以及 `Save SMPL Offsets` 都沿用原实现。编辑后的 handle 保持固定显示。
+固定帧使用原有 mesh handle。点击固定 SMPL 后仍进入 `Selected SMPL`，并同步到该 timestep；位移滑条、transform controls、`selected frame`/`same track all frames` scope 以及 `Save Viewer Edits` 都沿用原实现。编辑后的 handle 保持固定显示。
 
 固定帧选择属于当前 Viewer 运行状态，不写回模型结果，也不写入 cache。重新启动 Viewer 后复选框恢复为未选择。
+
+## 固定 SMPL 手动重上色
+
+`Pinned SMPL Recolor` 面板提供独立于全局 `SMPL Color` 的手动上色：
+
+1. 将 `Mode` 设为 `Hybrid`，并在 `Pinned SMPL Frames` 中固定需要检查的帧。
+2. 在 `Recolor Target` 指定颜色，在 `Right-click Scope` 选择作用范围。
+3. 打开 `Enable Right-click Recolor`，右键单击固定帧中的 SMPL mesh。
+4. 完成后关闭该模式，mesh 恢复原有的左键选择和平移编辑。
+
+作用范围包括单个 mesh、点击帧、固定帧中的同 track 同分支，以及全部固定帧。`Apply Color to All Pinned SMPL` 可一次批量应用颜色，`Restore Pinned SMPL Colors` 恢复固定 mesh 的基础颜色。手动颜色覆盖不会被后续全局 `SMPL Color` 改写；恢复后重新跟随全局颜色。
+
+精确区分左/右键使用 Viser 1.1.0 的 click binding，因此服务器环境需要 `viser>=1.1.0`。旧版 Viser 会禁用右键模式并在状态栏提示，但批量应用与恢复按钮仍可使用。
+
+## 点云橡皮擦
+
+`Point Cloud Eraser` 是 viewer 内的三维球形笔刷：
+
+1. 保持 `Environment Display` 为 `points` 或 `both`。
+2. 打开 `Enable Eraser`，设置 `Eraser Radius (world units)`。
+3. 左键单击可见点云，删除射线命中点周围球形范围内的点。
+
+每次点击只编辑命中的一个 frame/source 点云。`Undo Last Erase` 撤销最后一次操作，`Restore All Erased Points` 恢复本次 Viewer 会话删除的全部点。橡皮擦与点云测距互斥，启用其中一个会关闭另一个。
+
+删除掩码保存在 source 的未缩放世界坐标中，因此调整 HSI visual scale、人体过滤或点采样后仍会重新应用。它只影响 points 显示，不修改环境 mesh，也不写回 `full_viewer_cache`。
+
+`Save Viewer Edits` 继续写入 `SMPL_EDIT_OUTPUT`。JSON 保留兼容字段 `offsets`，并新增 `recolors` 与 `point_erase_strokes`；这些记录用于审计和后续处理，当前 Viewer 启动时不会自动重放。
 
 ## 相机缓存
 
@@ -68,8 +95,9 @@ bash scripts/vis/serve_full_sequence_viewer_cache.sh
 
 ```bash
 bash scripts/smoke/check_pinned_smpl_visibility.sh
+bash scripts/smoke/check_viewer_edit_tools.sh
 bash scripts/smoke/check_sequence_viewer_cache.sh
 bash scripts/smoke/check_full_sequence_viewer_cache.sh
 ```
 
-Windows 本地仅验证了 Hybrid 可见性规则、缓存字段往返、Python/Shell 语法。Viser 折叠列表、mesh 点击和 transform gizmo 的实际交互需要在 Linux 服务器 Viewer 中确认。
+Windows 本地仅验证了 Hybrid 可见性规则、重上色 scope、球形删除 mask、缓存字段往返、Python/Shell 语法。Viser 右键绑定、折叠列表、点选射线和 transform gizmo 的实际交互需要在 Linux 服务器 Viewer 中确认。

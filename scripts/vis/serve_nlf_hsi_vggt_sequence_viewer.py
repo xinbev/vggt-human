@@ -37,6 +37,11 @@ from scripts.vis.sequence_sampling import (  # noqa: E402
     uniform_sample_indices,
 )
 from scripts.vis.viewer_cache_io import export_sequence_viewer_cache  # noqa: E402
+from scripts.vis.viewer_edit_tools import (  # noqa: E402
+    points_outside_spheres,
+    set_scene_node_click_button,
+    smpl_recolor_targets,
+)
 from scripts.vis.viewer_visibility import human_frame_visible  # noqa: E402
 from scripts.vis.visualize_smpl_inference import (  # noqa: E402
     estimate_scene_to_smpl_scale,
@@ -2036,9 +2041,14 @@ class SequenceViewer:
         self.measurement_click_callback = None
         self.measurement_label_handle = None
         self.measurement_label_wxyz = np.asarray([1.0, 0.0, 0.0, 0.0], dtype=np.float32)
+        self.eraser_pointer_active = False
+        self.eraser_pointer_api_mode = "none"
+        self.eraser_click_callback = None
+        self.point_erase_strokes: list[dict[str, Any]] = []
         self.human_entries: list[dict[str, Any]] = []
         self.human_entry_by_key: dict[str, dict[str, Any]] = {}
         self.selected_human_key = "none"
+        self.recolor_mode_enabled = False
         self._syncing_smpl_controls = False
         self._syncing_pinned_frame_controls = False
         self.pinned_frame_checkboxes: list[Any] = []
@@ -2189,21 +2199,41 @@ class SequenceViewer:
         use_full = include_humans or not self.filter_human_points_value
         key = "hsi_points_full" if use_full else "hsi_points"
         points = np.asarray(frame.get(key, frame["hsi_points"]), dtype=np.float32)
+        keep = self._point_erase_keep_mask(int(frame["frame_index"]), "hsi", points)
+        points = points[keep]
         visual_scale = self.hsi_visual_scale_value if scale is None else float(scale)
         return points * np.float32(visual_scale)
 
     def _hsi_point_colors(self, frame: dict[str, Any], include_humans: bool = False) -> np.ndarray:
         use_full = include_humans or not self.filter_human_points_value
         key = "hsi_colors_full" if use_full else "hsi_colors"
-        return np.asarray(frame.get(key, frame["hsi_colors"]), dtype=np.uint8)
+        colors = np.asarray(frame.get(key, frame["hsi_colors"]), dtype=np.uint8)
+        points_key = "hsi_points_full" if use_full else "hsi_points"
+        points = np.asarray(frame.get(points_key, frame["hsi_points"]), dtype=np.float32)
+        keep = self._point_erase_keep_mask(int(frame["frame_index"]), "hsi", points)
+        return colors[keep] if colors.ndim == 2 else colors
 
     def _raw_display_points(self, frame: dict[str, Any]) -> np.ndarray:
         key = "raw_points" if self.filter_human_points_value else "raw_points_full"
-        return np.asarray(frame.get(key, frame["raw_points"]), dtype=np.float32)
+        points = np.asarray(frame.get(key, frame["raw_points"]), dtype=np.float32)
+        keep = self._point_erase_keep_mask(int(frame["frame_index"]), "raw", points)
+        return points[keep]
 
     def _raw_display_colors(self, frame: dict[str, Any]) -> np.ndarray:
         key = "raw_colors" if self.filter_human_points_value else "raw_colors_full"
-        return np.asarray(frame.get(key, frame["raw_colors"]), dtype=np.uint8)
+        colors = np.asarray(frame.get(key, frame["raw_colors"]), dtype=np.uint8)
+        points_key = "raw_points" if self.filter_human_points_value else "raw_points_full"
+        points = np.asarray(frame.get(points_key, frame["raw_points"]), dtype=np.float32)
+        keep = self._point_erase_keep_mask(int(frame["frame_index"]), "raw", points)
+        return colors[keep] if colors.ndim == 2 else colors
+
+    def _point_erase_keep_mask(self, frame_index: int, source: str, points: np.ndarray) -> np.ndarray:
+        relevant = [
+            stroke
+            for stroke in self.point_erase_strokes
+            if int(stroke["frame_index"]) == int(frame_index) and str(stroke["source"]) == str(source)
+        ]
+        return points_outside_spheres(points, relevant)
 
     def _scaled_hsi_camera(self, frame: dict[str, Any], scale: float | None = None) -> dict[str, Any]:
         camera = dict(frame["hsi_camera"])
@@ -2270,6 +2300,24 @@ class SequenceViewer:
             self.measurement_info = add_text(self.server, "Measurement Result", "Off")
             set_handle_disabled(self.measurement_info, True)
             self.clear_measurement = add_button(self.server, "Clear Current Measurement")
+        with add_folder(self.server, "Point Cloud Eraser"):
+            self.eraser_enabled = add_checkbox(self.server, "Enable Eraser", False)
+            self.eraser_radius = add_slider(
+                self.server,
+                "Eraser Radius (world units)",
+                0.005,
+                1.0,
+                0.005,
+                max(0.03, min(1.0, self.point_size_value * 8.0)),
+            )
+            self.eraser_info = add_text(
+                self.server,
+                "Eraser Status",
+                "Off | enable, then left-click a visible point cloud",
+            )
+            set_handle_disabled(self.eraser_info, True)
+            self.undo_erase = add_button(self.server, "Undo Last Erase")
+            self.reset_erases = add_button(self.server, "Restore All Erased Points")
         with add_folder(self.server, "HSI Scale Controls"):
             self.hsi_calibration_mode = add_checkbox(self.server, "Single-Frame Scale Calibration", False)
             self.hsi_calibration_info = add_text(self.server, "Calibration Status", "Off")
@@ -2361,6 +2409,23 @@ class SequenceViewer:
         self.camera_downsample = add_slider(self.server, "Camera Downsample", 1, max(1, len(self.scene["frames"])), 1, 1)
         self.follow_camera = add_checkbox(self.server, "Follow Pred Camera", False)
         self._build_pinned_smpl_gui()
+        with add_folder(self.server, "Pinned SMPL Recolor"):
+            self.recolor_enabled = add_checkbox(self.server, "Enable Right-click Recolor", False)
+            self.recolor_color = add_rgb(self.server, "Recolor Target", (64, 192, 255))
+            self.recolor_scope = add_dropdown(
+                self.server,
+                "Right-click Scope",
+                ["clicked mesh", "clicked frame", "same track in pinned frames", "all pinned frames"],
+                "clicked mesh",
+            )
+            self.recolor_info = add_text(
+                self.server,
+                "Recolor Status",
+                "Off | pin frames first, then enable right-click recolor",
+            )
+            set_handle_disabled(self.recolor_info, True)
+            self.recolor_all_pinned = add_button(self.server, "Apply Color to All Pinned SMPL")
+            self.reset_pinned_recolors = add_button(self.server, "Restore Pinned SMPL Colors")
         self.smpl_edit_info = add_text(self.server, "SMPL Edit", "Select or click an SMPL mesh to edit viewer-only translation.")
         self.selected_smpl = add_dropdown(self.server, "Selected SMPL", self._human_dropdown_options(), "none")
         self.smpl_edit_scope = add_dropdown(self.server, "SMPL Edit Scope", ["selected frame", "same track all frames"], "selected frame")
@@ -2368,7 +2433,7 @@ class SequenceViewer:
         self.smpl_edit_dy = add_slider(self.server, "SMPL dY", -5.0, 5.0, 0.01, 0.0)
         self.smpl_edit_dz = add_slider(self.server, "SMPL dZ", -5.0, 5.0, 0.01, 0.0)
         self.reset_smpl_edit = add_button(self.server, "Reset SMPL Offset")
-        self.save_smpl_edits = add_button(self.server, "Save SMPL Offsets")
+        self.save_smpl_edits = add_button(self.server, "Save Viewer Edits")
         self.transform_controls = add_transform_controls(
             self.server,
             "/viewer_controls/selected_smpl_translation",
@@ -2408,6 +2473,8 @@ class SequenceViewer:
         bind_update(self.measurement_line_width, self._on_measurement_style_update)
         bind_update(self.measurement_font_size, self._on_measurement_style_update)
         bind_update(self.measurement_color, self._on_measurement_style_update)
+        bind_update(self.eraser_enabled, self._on_eraser_enabled_update)
+        bind_update(self.recolor_enabled, self._on_recolor_enabled_update)
         bind_update(self.camera_size, self._on_camera_size_update)
         bind_update(self.smpl_opacity, self._on_smpl_opacity_update)
         bind_update(self.smpl_color, self._on_smpl_color_update)
@@ -2427,6 +2494,10 @@ class SequenceViewer:
         bind_click(self.apply_human_filter_dilation, self._apply_human_filter_dilation)
         bind_click(self.reset_human_filter_dilation, self._reset_human_filter_dilation)
         bind_click(self.clear_measurement, self._clear_current_measurement)
+        bind_click(self.undo_erase, self._undo_last_erase)
+        bind_click(self.reset_erases, self._restore_all_erased_points)
+        bind_click(self.recolor_all_pinned, self._recolor_all_pinned)
+        bind_click(self.reset_pinned_recolors, self._restore_pinned_smpl_colors)
 
     def _build_pinned_smpl_gui(self) -> None:
         with add_folder(self.server, "Pinned SMPL Frames", expand_by_default=False):
@@ -2533,6 +2604,9 @@ class SequenceViewer:
 
     def _on_measurement_enabled_update(self, _: Any = None) -> None:
         if bool(self.measurement_enabled.value):
+            if bool(getattr(self.eraser_enabled, "value", False)):
+                self.eraser_enabled.value = False
+                self._set_eraser_pointer_active(False)
             self.play.value = False
             if not self._set_measurement_pointer_active(True):
                 set_text_value(
@@ -2552,6 +2626,131 @@ class SequenceViewer:
                 set_text_value(self.measurement_info, "Off | enable measurement to select points")
             else:
                 set_text_value(self.measurement_info, "Paused | current measurement remains visible")
+
+    def _on_eraser_enabled_update(self, _: Any = None) -> None:
+        if bool(self.eraser_enabled.value):
+            if bool(getattr(self.measurement_enabled, "value", False)):
+                self.measurement_enabled.value = False
+                self._set_measurement_pointer_active(False)
+            self.play.value = False
+            if not self._set_eraser_pointer_active(True):
+                self.eraser_enabled.value = False
+                set_text_value(self.eraser_info, "Unavailable | this Viser version has no scene click API")
+                return
+            set_text_value(
+                self.eraser_info,
+                f"Ready | radius={float(self.eraser_radius.value):.3f}; left-click a visible point cloud",
+            )
+        else:
+            self._set_eraser_pointer_active(False)
+            set_text_value(
+                self.eraser_info,
+                f"Off | {len(self.point_erase_strokes)} erase stroke(s) remain applied",
+            )
+
+    def _set_eraser_pointer_active(self, active: bool) -> bool:
+        api = scene_api(self.server)
+        if active:
+            if self.eraser_pointer_active:
+                return True
+            callback = self._on_scene_eraser_click
+            if hasattr(api, "on_click"):
+                self.eraser_click_callback = api.on_click()(callback)
+                self.eraser_pointer_api_mode = "modern"
+            elif hasattr(api, "on_pointer_event"):
+                self.eraser_click_callback = api.on_pointer_event("click")(callback)
+                self.eraser_pointer_api_mode = "legacy"
+            else:
+                return False
+            self.eraser_pointer_active = True
+            return True
+        if self.eraser_pointer_active:
+            try:
+                if self.eraser_pointer_api_mode == "modern" and hasattr(api, "remove_click_callback"):
+                    api.remove_click_callback(self.eraser_click_callback)
+                elif hasattr(api, "remove_pointer_callback"):
+                    api.remove_pointer_callback()
+            except Exception:
+                pass
+        self.eraser_pointer_active = False
+        self.eraser_pointer_api_mode = "none"
+        self.eraser_click_callback = None
+        return True
+
+    def _on_scene_eraser_click(self, event: Any) -> None:
+        if not bool(getattr(self.eraser_enabled, "value", False)):
+            return
+        clouds = self._visible_measurement_clouds()
+        if not clouds:
+            set_text_value(self.eraser_info, "No visible point cloud | use points or both display mode")
+            return
+        best: tuple[float, int, np.ndarray, int, str] | None = None
+        for frame_index, source, points in clouds:
+            canonical_source = "hsi" if source.startswith("hsi") else source
+            selection = nearest_clicked_point_with_distance(event, points)
+            if selection is None:
+                continue
+            point_index, point, ray_distance = selection
+            if best is None or ray_distance < best[0]:
+                best = (ray_distance, point_index, point, frame_index, canonical_source)
+        if best is None:
+            set_text_value(self.eraser_info, "Selection failed | click in front of the camera")
+            return
+        ray_distance, _, point, frame_index, source = best
+        radius_world = max(0.0, float(self.eraser_radius.value))
+        if ray_distance > radius_world:
+            set_text_value(
+                self.eraser_info,
+                f"No point within eraser radius | nearest={ray_distance:.4f}, radius={radius_world:.4f}",
+            )
+            return
+        scale = self.hsi_visual_scale_value if source == "hsi" else 1.0
+        source_center = np.asarray(point, dtype=np.float32) / np.float32(scale)
+        source_radius = radius_world / max(float(scale), 1e-8)
+        frame = self.scene["frames"][int(frame_index)]
+        before = self._display_point_count(frame, source)
+        stroke = {
+            "frame_index": int(frame_index),
+            "frame_id": str(frame["frame_id"]),
+            "source": str(source),
+            "center_source_xyz": source_center.astype(np.float32),
+            "radius_source": float(source_radius),
+        }
+        self.point_erase_strokes.append(stroke)
+        after = self._display_point_count(frame, source)
+        stroke["removed_points"] = max(0, int(before - after))
+        self._rebuild_environment_point_handle(int(frame_index), source)
+        set_text_value(
+            self.eraser_info,
+            (
+                f"Erased {stroke['removed_points']} point(s) from {source} frame {int(frame_index) + 1} | "
+                f"{len(self.point_erase_strokes)} stroke(s); Undo/Restore available"
+            ),
+        )
+
+    def _display_point_count(self, frame: dict[str, Any], source: str) -> int:
+        if source == "raw":
+            return int(self._raw_display_points(frame).shape[0])
+        return int(self._scaled_hsi_points(frame, include_humans=self.hsi_calibration_active).shape[0])
+
+    def _undo_last_erase(self, _: Any = None) -> None:
+        if not self.point_erase_strokes:
+            set_text_value(self.eraser_info, "Nothing to undo")
+            return
+        stroke = self.point_erase_strokes.pop()
+        self._rebuild_environment_point_handle(int(stroke["frame_index"]), str(stroke["source"]))
+        set_text_value(
+            self.eraser_info,
+            f"Undid last erase | {len(self.point_erase_strokes)} stroke(s) remain",
+        )
+
+    def _restore_all_erased_points(self, _: Any = None) -> None:
+        if not self.point_erase_strokes:
+            set_text_value(self.eraser_info, "No erased points to restore")
+            return
+        self.point_erase_strokes = []
+        self._rebuild_environment_point_handles()
+        set_text_value(self.eraser_info, "Restored all erased points")
 
     def _set_measurement_pointer_active(self, active: bool) -> bool:
         api = scene_api(self.server)
@@ -2773,11 +2972,95 @@ class SequenceViewer:
             "label_base_position": label_base_position,
             "anchor_position": np.asarray(anchor, dtype=np.float32),
             "offset": np.zeros(3, dtype=np.float32),
-            "color": tuple(int(v) for v in color),
+            "base_color": tuple(int(v) for v in color),
+            "color_override": None,
         }
         self.human_entries.append(entry)
         self.human_entry_by_key[key] = entry
-        bind_click(handle, lambda *_, selected_key=key: self._select_human(selected_key, sync_timestep=True))
+        bind_click(handle, lambda event=None, selected_key=key: self._on_human_mesh_click(selected_key, event))
+
+    def _on_human_mesh_click(self, key: str, _: Any = None) -> None:
+        if self.recolor_mode_enabled:
+            self._recolor_from_right_click(key)
+            return
+        self._select_human(key, sync_timestep=True)
+
+    def _on_recolor_enabled_update(self, _: Any = None) -> None:
+        requested = bool(self.recolor_enabled.value)
+        button = "right" if requested else "left"
+        configured: list[Any] = []
+        for entry in self.human_entries:
+            handle = entry["handle"]
+            if set_scene_node_click_button(handle, button):
+                configured.append(handle)
+                continue
+            for configured_handle in configured:
+                set_scene_node_click_button(configured_handle, "left")
+            self.recolor_mode_enabled = False
+            if requested:
+                self.recolor_enabled.value = False
+                set_text_value(
+                    self.recolor_info,
+                    "Right-click binding unavailable | install viser>=1.1.0; batch buttons still work",
+                )
+            else:
+                set_text_value(self.recolor_info, "Off | left-click mesh selection restored")
+            return
+        self.recolor_mode_enabled = requested
+        if requested:
+            self.play.value = False
+            set_text_value(
+                self.recolor_info,
+                "Ready | right-click a mesh from a pinned frame; left-click selection resumes when disabled",
+            )
+        else:
+            set_text_value(self.recolor_info, "Off | left-click mesh selection restored")
+
+    def _recolor_from_right_click(self, key: str) -> None:
+        entry = self.human_entry_by_key.get(key)
+        if entry is None:
+            return
+        pinned = self._pinned_frame_indices()
+        if int(entry["frame_index"]) not in pinned:
+            set_text_value(
+                self.recolor_info,
+                f"Skipped {key} | frame {int(entry['frame_index'])} is not pinned",
+            )
+            return
+        targets = smpl_recolor_targets(
+            self.human_entries,
+            entry,
+            pinned,
+            str(self.recolor_scope.value),
+        )
+        self._apply_smpl_recolor(targets)
+        self._select_human(key, sync_timestep=False)
+
+    def _apply_smpl_recolor(self, entries: list[dict[str, Any]]) -> None:
+        color = tuple(int(np.clip(value, 0, 255)) for value in self.recolor_color.value)
+        for entry in entries:
+            entry["color_override"] = color
+            set_handle_color(entry["handle"], color)
+        set_text_value(
+            self.recolor_info,
+            f"Applied RGB {color} to {len(entries)} SMPL mesh(es) | scope={self.recolor_scope.value}",
+        )
+
+    def _recolor_all_pinned(self, _: Any = None) -> None:
+        pinned = self._pinned_frame_indices()
+        targets = [entry for entry in self.human_entries if int(entry["frame_index"]) in pinned]
+        if not targets:
+            set_text_value(self.recolor_info, "No pinned SMPL meshes to recolor")
+            return
+        self._apply_smpl_recolor(targets)
+
+    def _restore_pinned_smpl_colors(self, _: Any = None) -> None:
+        pinned = self._pinned_frame_indices()
+        targets = [entry for entry in self.human_entries if int(entry["frame_index"]) in pinned]
+        for entry in targets:
+            entry["color_override"] = None
+            set_handle_color(entry["handle"], entry["base_color"])
+        set_text_value(self.recolor_info, f"Restored {len(targets)} pinned SMPL mesh color(s)")
 
     def _human_dropdown_options(self) -> list[str]:
         return ["none"] + [str(entry["key"]) for entry in self.human_entries]
@@ -2896,28 +3179,47 @@ class SequenceViewer:
 
     def _save_smpl_edit_offsets(self, _: Any = None) -> None:
         rows = []
+        recolors = []
         for entry in self.human_entries:
             offset = np.asarray(entry["offset"], dtype=np.float32)
-            if not bool(np.any(np.abs(offset) > 1e-7)):
-                continue
-            rows.append(
-                {
-                    "key": str(entry["key"]),
-                    "frame_index": int(entry["frame_index"]),
-                    "frame_id": str(entry["frame_id"]),
-                    "kind": str(entry["kind"]),
-                    "track_id": int(entry["track_id"]),
-                    "query_index": int(entry["query_index"]),
-                    "offset_world_xyz": [float(v) for v in offset.tolist()],
-                }
-            )
+            identity = {
+                "key": str(entry["key"]),
+                "frame_index": int(entry["frame_index"]),
+                "frame_id": str(entry["frame_id"]),
+                "kind": str(entry["kind"]),
+                "track_id": int(entry["track_id"]),
+                "query_index": int(entry["query_index"]),
+            }
+            if bool(np.any(np.abs(offset) > 1e-7)):
+                rows.append({**identity, "offset_world_xyz": [float(v) for v in offset.tolist()]})
+            if entry["color_override"] is not None:
+                recolors.append({**identity, "color_rgb": [int(v) for v in entry["color_override"]]})
+        erase_strokes = [
+            {
+                "frame_index": int(stroke["frame_index"]),
+                "frame_id": str(stroke["frame_id"]),
+                "source": str(stroke["source"]),
+                "center_source_xyz": [float(v) for v in np.asarray(stroke["center_source_xyz"]).tolist()],
+                "radius_source": float(stroke["radius_source"]),
+                "removed_points": int(stroke.get("removed_points", 0)),
+            }
+            for stroke in self.point_erase_strokes
+        ]
         payload = {
-            "note": "Viewer-only SMPL translation offsets. Model predictions and saved run_summary geometry are unchanged.",
+            "note": "Viewer-only edits. Model predictions, cache arrays, and saved run_summary geometry are unchanged.",
             "offsets": rows,
+            "recolors": recolors,
+            "point_erase_strokes": erase_strokes,
         }
         self.smpl_edit_output.parent.mkdir(parents=True, exist_ok=True)
         self.smpl_edit_output.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
-        set_text_value(self.smpl_edit_info, f"Saved {len(rows)} SMPL offset(s) to {self.smpl_edit_output}")
+        set_text_value(
+            self.smpl_edit_info,
+            (
+                f"Saved {len(rows)} offset(s), {len(recolors)} recolor(s), and "
+                f"{len(erase_strokes)} erase stroke(s) to {self.smpl_edit_output}"
+            ),
+        )
 
     def _on_gui_update(self, _: Any = None) -> None:
         if self._switching_hsi_calibration:
@@ -3077,20 +3379,11 @@ class SequenceViewer:
             frame_handles["hsi"] = []
             for handle in old_handles:
                 remove_handle(handle)
-            use_filtered = self.filter_human_points_value
-            raw_key = "raw_points" if use_filtered else "raw_points_full"
-            raw_color_key = "raw_colors" if use_filtered else "raw_colors_full"
-            hsi_key = "hsi_points" if use_filtered else "hsi_points_full"
-            hsi_color_key = "hsi_colors" if use_filtered else "hsi_colors_full"
-            raw_points = np.asarray(frame[raw_key], dtype=np.float32)
-            raw_colors = np.asarray(frame[raw_color_key], dtype=np.uint8)
-            hsi_points = np.asarray(frame[hsi_key], dtype=np.float32) * np.float32(self.hsi_visual_scale_value)
-            hsi_colors = np.asarray(frame[hsi_color_key], dtype=np.uint8)
             frame_handles["raw"] = [
                 self._add_environment_point_cloud(
                     f"/frames/{idx:04d}/points_raw_depth",
-                    raw_points,
-                    raw_colors,
+                    self._raw_display_points(frame),
+                    self._raw_display_colors(frame),
                     frame_index=idx,
                     source="raw",
                 )
@@ -3099,12 +3392,42 @@ class SequenceViewer:
                 frame_handles["hsi"] = [
                     self._add_environment_point_cloud(
                         f"/frames/{idx:04d}/points_hsi_depth",
-                        hsi_points,
-                        hsi_colors,
+                        self._scaled_hsi_points(frame),
+                        self._hsi_point_colors(frame),
                         frame_index=idx,
                         source="hsi",
                     )
                 ]
+        self._update_visibility()
+
+    def _rebuild_environment_point_handle(self, frame_index: int, source: str) -> None:
+        idx = int(frame_index)
+        frame = self.scene["frames"][idx]
+        frame_handles = self.handles[idx]
+        key = "raw" if source == "raw" else "hsi"
+        for handle in frame_handles.get(key, []):
+            remove_handle(handle)
+        frame_handles[key] = []
+        if source == "raw":
+            points = self._raw_display_points(frame)
+            colors = self._raw_display_colors(frame)
+            name = f"/frames/{idx:04d}/points_raw_depth"
+        else:
+            if bool(getattr(self.args, "tracking_only", False)):
+                return
+            include_humans = self.hsi_calibration_active and idx == int(self.timestep.value)
+            points = self._scaled_hsi_points(frame, include_humans=include_humans)
+            colors = self._hsi_point_colors(frame, include_humans=include_humans)
+            name = f"/frames/{idx:04d}/points_hsi_depth"
+        frame_handles[key] = [
+            self._add_environment_point_cloud(
+                name,
+                points,
+                colors,
+                frame_index=idx,
+                source=source,
+            )
+        ]
         self._update_visibility()
 
     def _on_hsi_visual_scale_pending(self, _: Any = None) -> None:
@@ -3385,7 +3708,10 @@ class SequenceViewer:
 
     def _on_smpl_color_update(self, _: Any = None) -> None:
         color = tuple(int(np.clip(value, 0, 255)) for value in self.smpl_color.value)
-        self._set_handle_attr(["base_humans", "hsi_humans"], "color", color)
+        for entry in self.human_entries:
+            entry["base_color"] = color
+            if entry["color_override"] is None:
+                set_handle_color(entry["handle"], color)
 
     def _update_visibility(self) -> None:
         current = int(self.timestep.value)
@@ -4265,6 +4591,16 @@ def set_handle_position(handle: Any, position: np.ndarray) -> None:
     position_np = np.asarray(position, dtype=np.float32).reshape(3)
     try:
         handle.position = position_np
+    except Exception:
+        pass
+
+
+def set_handle_color(handle: Any, color: tuple[int, int, int]) -> None:
+    if handle is None:
+        return
+    color_int = tuple(int(np.clip(value, 0, 255)) for value in color)
+    try:
+        handle.color = color_int
     except Exception:
         pass
 
