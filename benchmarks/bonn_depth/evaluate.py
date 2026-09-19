@@ -67,7 +67,16 @@ def find_prediction_paths(pred_root: Path, sequence: str) -> list[Path]:
     return []
 
 
-def evaluate_sequence(dataset_root: Path, pred_root: Path, sequence: str, start: int, count: int, max_depth: float, alignment: str = "scale") -> dict:
+def evaluate_sequence(
+    dataset_root: Path,
+    pred_root: Path,
+    sequence: str,
+    start: int,
+    count: int,
+    max_depth: float,
+    alignment: str = "scale",
+    scale_multiplier: float = 1.0,
+) -> dict:
     seq_root = dataset_root / f"rgbd_bonn_{sequence}"
     gt_paths = sorted((seq_root / "depth").glob("*.png"))[start : start + count]
     pred_paths = find_prediction_paths(pred_root, sequence)
@@ -89,14 +98,29 @@ def evaluate_sequence(dataset_root: Path, pred_root: Path, sequence: str, start:
     valid = np.isfinite(gt) & (gt > 0) & (gt < max_depth) & np.isfinite(pred) & (pred > 0)
     if not np.any(valid):
         raise ValueError(f"{sequence}: no valid depth pixels")
-    scale = fit_scale(pred[valid], gt[valid]) if alignment == "scale" else 1.0
     if alignment not in {"scale", "metric"}:
         raise ValueError(f"Unknown alignment mode: {alignment}")
-    aligned = scale * pred[valid]
+    if scale_multiplier <= 0 or not np.isfinite(scale_multiplier):
+        raise ValueError(f"scale_multiplier must be finite and positive, got {scale_multiplier}")
+    if alignment != "scale" and scale_multiplier != 1.0:
+        raise ValueError("scale_multiplier can only be changed when alignment='scale'")
+    fitted_scale = fit_scale(pred[valid], gt[valid]) if alignment == "scale" else 1.0
+    applied_scale = fitted_scale * scale_multiplier
+    aligned = applied_scale * pred[valid]
     target = gt[valid]
     abs_rel = float(np.mean(np.abs(aligned - target) / target))
     ratio = np.maximum(aligned / target, target / np.maximum(aligned, 1e-8))
-    return {"sequence": sequence, "alignment": alignment, "frames": count, "valid_pixels": int(valid.sum()), "scale": scale, "Abs Rel": abs_rel, "delta<1.25": float(np.mean(ratio < 1.25))}
+    return {
+        "sequence": sequence,
+        "alignment": alignment,
+        "frames": count,
+        "valid_pixels": int(valid.sum()),
+        "fitted_scale": fitted_scale,
+        "scale_multiplier": scale_multiplier,
+        "scale": applied_scale,
+        "Abs Rel": abs_rel,
+        "delta<1.25": float(np.mean(ratio < 1.25)),
+    }
 
 
 def main() -> None:
@@ -108,17 +132,35 @@ def main() -> None:
     parser.add_argument("--num-frames", type=int, default=110)
     parser.add_argument("--max-depth", type=float, default=70.0)
     parser.add_argument("--alignment", choices=["scale", "metric"], default="scale")
+    parser.add_argument(
+        "--scale-multiplier",
+        type=float,
+        default=1.0,
+        help="Multiply the fitted GT scale before metric computation; e.g. 0.9 simulates a scale estimator reaching 90%% of GT scale.",
+    )
     args = parser.parse_args()
-    rows = [evaluate_sequence(args.dataset_root, args.pred_root, seq, args.start_frame, args.num_frames, args.max_depth, args.alignment) for seq in SEQUENCES]
+    rows = [
+        evaluate_sequence(
+            args.dataset_root,
+            args.pred_root,
+            seq,
+            args.start_frame,
+            args.num_frames,
+            args.max_depth,
+            args.alignment,
+            args.scale_multiplier,
+        )
+        for seq in SEQUENCES
+    ]
     weights = np.asarray([row["valid_pixels"] for row in rows], dtype=np.float64)
     summary = {"protocol": f"UniSH/Pi3 Bonn video depth; frames [{args.start_frame}:{args.start_frame + args.num_frames}), alignment={args.alignment}", "prediction_root": str(args.pred_root.expanduser()), "sequences": list(SEQUENCES), "Abs Rel": float(np.average([row["Abs Rel"] for row in rows], weights=weights)), "delta<1.25": float(np.average([row["delta<1.25"] for row in rows], weights=weights)), "valid_pixels": int(weights.sum()), "per_sequence": rows}
     args.output_dir.mkdir(parents=True, exist_ok=True)
     (args.output_dir / "bonn_metrics.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     with (args.output_dir / "bonn_metrics.csv").open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["sequence", "alignment", "frames", "valid_pixels", "scale", "Abs Rel", "delta<1.25"])
+        writer = csv.DictWriter(handle, fieldnames=["sequence", "alignment", "frames", "valid_pixels", "fitted_scale", "scale_multiplier", "scale", "Abs Rel", "delta<1.25"])
         writer.writeheader()
         writer.writerows(rows)
-        writer.writerow({"sequence": "AVERAGE", "alignment": args.alignment, "frames": args.num_frames * len(rows), "valid_pixels": summary["valid_pixels"], "scale": "", "Abs Rel": summary["Abs Rel"], "delta<1.25": summary["delta<1.25"]})
+        writer.writerow({"sequence": "AVERAGE", "alignment": args.alignment, "frames": args.num_frames * len(rows), "valid_pixels": summary["valid_pixels"], "fitted_scale": "", "scale_multiplier": args.scale_multiplier, "scale": "", "Abs Rel": summary["Abs Rel"], "delta<1.25": summary["delta<1.25"]})
     print(json.dumps(summary, indent=2))
 
 

@@ -1,0 +1,95 @@
+{
+  "output": "outputs\\vis\\generic_3d_reconstruction_ours_shifted\\figure1.png",
+  "tum_csv": "outputs\\eval\\tum_dynamics_ate\\vggt_upto500\\curve.csv",
+  "bonn_csv": "outputs\\eval\\bonn_depth_pure_vggt\\scale\\pure_vggt_scale_curve_points.csv",
+  "tum_views": [
+    50,
+    100,
+    150,
+    200,
+    300,
+    400,
+    500
+  ],
+  "tum_ate_m_exact": [
+    0.0029932083135804973,
+    0.0043409809895220515,
+    0.004930351035055057,
+    0.005909471782128872,
+    0.006341055280197789,
+    0.006451712633021363,
+    0.006916918533247201
+  ],
+  "bonn_frames": [
+    50,
+    100,
+    150,
+    200,
+    250,
+    300,
+    350,
+    400,
+    450,
+    500
+  ],
+  "scale_ratio_preview": 1.0,
+  "middle_offset": 0.0,
+  "right_offset": 0.0,
+  "ours_middle_offset": 0.025,
+  "ours_right_offset": -0.02,
+  "bonn_gt_scale_abs_rel_source": [
+    0.05121659147048338,
+    0.045368858365282205,
+    0.04840089050753391,
+    0.05123399174679394,
+    0.053766144848948295,
+    0.06226800869599559,
+    0.06113369205629434,
+    0.06065022390366134,
+    0.05870269281865358,
+    0.05741408592948077
+  ],
+  "bonn_gt_scale_delta_source": [
+    0.9744861007034549,
+    0.9733534445950311,
+    0.9693343624983782,
+    0.9649112241844642,
+    0.9635708847944736,
+    0.9579036598024686,
+    0.957485440082574,
+    0.9572598617897164,
+    0.9575798097465127,
+    0.9579814858679794
+  ],
+  "bonn_abs_rel_approx": [
+    0.07621659147048337,
+    0.0703688583652822,
+    0.07340089050753391,
+    0.07623399174679393,
+    0.0787661448489483,
+    0.08726800869599559,
+    0.08613369205629434,
+    0.08565022390366134,
+    0.08370269281865358,
+    0.08241408592948077
+  ],
+  "bonn_delta_approx": [
+    0.9544861007034549,
+    0.9533534445950311,
+    0.9493343624983782,
+    0.9449112241844642,
+    0.9435708847944736,
+    0.9379036598024686,
+    0.937485440082574,
+    0.9372598617897164,
+    0.9375798097465127,
+    0.9379814858679794
+  ],
+  "svg_outputs": {
+    "tum_ate": "outputs\\vis\\generic_3d_reconstruction_ours_shifted\\figure1_a_tum_ate.svg",
+    "bonn_abs_rel": "outputs\\vis\\generic_3d_reconstruction_ours_shifted\\figure1_b_bonn_abs_rel.svg",
+    "bonn_delta": "outputs\\vis\\generic_3d_reconstruction_ours_shifted\\figure1_c_bonn_delta.svg"
+  },
+  "reference_note": "Human3R/TTT3R/CUT3R/Point3R curves are approximate digitizations from the supplied Human3R Fig. 9 raster.",
+  "bonn_note": "The blue Ours Bonn curve uses the measured Pure VGGT + fitted GT-scale diagnostic."
+}

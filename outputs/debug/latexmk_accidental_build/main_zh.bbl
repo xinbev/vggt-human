@@ -1,0 +1,198 @@
+\begin{thebibliography}{25}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Chen et~al.(2026)Chen, Chen, Xue, Chen, Xiu, and
+  Pons-Moll]{chen2026human3r}
+Yue Chen, Xingyu Chen, Yuxuan Xue, Anpei Chen, Yuliang Xiu, and Gerard
+  Pons-Moll.
+\newblock Human3r: Everyone everywhere all at once.
+\newblock In \emph{International Conference on Learning Representations}, 2026.
+\newblock arXiv:2510.06219.
+
+\bibitem[Kang et~al.(2026)Kang, Zhou, Yang, Wen, Huang, Lai, and
+  Li]{kang2026crowd4d}
+Hongbo Kang, Tianyi Zhou, Qingyang Yang, Hongwei Wen, Jing Huang, Yu-Kun Lai,
+  and Kun Li.
+\newblock Crowd4d: Scene-aware monocular 4d crowd reconstruction.
+\newblock In \emph{Proceedings of the 43rd International Conference on Machine
+  Learning}, volume 306 of \emph{Proceedings of Machine Learning Research},
+  2026.
+
+\bibitem[Keetha et~al.(2025)Keetha, M{\"u}ller, Sch{\"o}nberger, Porzi, Zhang,
+  Fischer, Knapitsch, Zauss, Weber, Antunes, et~al.]{keetha2025mapanything}
+Nikhil Keetha, Norman M{\"u}ller, Johannes Sch{\"o}nberger, Lorenzo Porzi,
+  Yuchen Zhang, Tobias Fischer, Arno Knapitsch, Duncan Zauss, Ethan Weber,
+  Nelson Antunes, et~al.
+\newblock Mapanything: Universal feed-forward metric 3d reconstruction.
+\newblock \emph{arXiv preprint arXiv:2509.13414}, 2025.
+
+\bibitem[Leroy et~al.(2024)Leroy, Cabon, and Revaud]{leroy2024mast3r}
+Vincent Leroy, Yohann Cabon, and J{\'e}r{\^o}me Revaud.
+\newblock Grounding image matching in 3d with mast3r.
+\newblock In \emph{European Conference on Computer Vision}, 2024.
+
+\bibitem[Li et~al.(2026)Li, Li, Zhang, Lu, Zhao, Xue, Liu, Peng, Zhang, Luo,
+  Liu, and Guo]{li2026unish}
+Mengfei Li, Peng Li, Zheng Zhang, Jiahao Lu, Chengfeng Zhao, Wei Xue, Qifeng
+  Liu, Sida Peng, Wenxiao Zhang, Wenhan Luo, Yuan Liu, and Yike Guo.
+\newblock Unish: Unifying scene and human reconstruction in a feed-forward
+  pass.
+\newblock \emph{arXiv preprint arXiv:2601.01222}, 2026.
+
+\bibitem[Liu et~al.(2026)Liu, Lin, Wu, and Zhou]{liu2026josh}
+Zhizheng Liu, Joe Lin, Wayne Wu, and Bolei Zhou.
+\newblock Joint optimization for 4d human-scene reconstruction in the wild.
+\newblock In \emph{International Conference on Learning Representations}, 2026.
+\newblock arXiv:2501.02158.
+
+\bibitem[Loper et~al.(2023)Loper, Mahmood, Romero, Pons-Moll, and
+  Black]{loper2023smpl}
+Matthew Loper, Naureen Mahmood, Javier Romero, Gerard Pons-Moll, and Michael~J.
+  Black.
+\newblock Smpl: A skinned multi-person linear model.
+\newblock In \emph{Seminal Graphics Papers: Pushing the Boundaries, Volume 2},
+  pp.\  851--866. Association for Computing Machinery, 2023.
+
+\bibitem[Pavlakos et~al.(2019)Pavlakos, Choutas, Ghorbani, Bolkart, Osman,
+  Tzionas, and Black]{pavlakos2019smplx}
+Georgios Pavlakos, Vasileios Choutas, Nima Ghorbani, Timo Bolkart, Ahmed A.~A.
+  Osman, Dimitrios Tzionas, and Michael~J. Black.
+\newblock Expressive body capture: 3d hands, face, and body from a single
+  image.
+\newblock In \emph{IEEE/CVF Conference on Computer Vision and Pattern
+  Recognition}, pp.\  10975--10985, 2019.
+
+\bibitem[{Pradyumna YM} et~al.(2026){Pradyumna YM}, Xue, Chen, Kister,
+  S{\'a}r{\'a}ndi, and Pons-Moll]{ym2026graft}
+{Pradyumna YM}, Yuxuan Xue, Yue Chen, Nikita Kister, Istv{\'a}n
+  S{\'a}r{\'a}ndi, and Gerard Pons-Moll.
+\newblock Graft: Geometric refinement and fitting transformer for human scene
+  reconstruction.
+\newblock \emph{arXiv preprint arXiv:2604.19624}, 2026.
+
+\bibitem[Rojas et~al.(2025)Rojas, Armando, Ghanem, Weinzaepfel, Leroy, and
+  Rogez]{rojas2025hamst3r}
+Sara Rojas, Matthieu Armando, Bernard Ghanem, Philippe Weinzaepfel, Vincent
+  Leroy, and Gr{\'e}gory Rogez.
+\newblock Hamst3r: Human-aware multi-view stereo 3d reconstruction.
+\newblock \emph{arXiv preprint arXiv:2508.16433}, 2025.
+
+\bibitem[S{\'a}r{\'a}ndi \& Pons-Moll(2024)S{\'a}r{\'a}ndi and
+  Pons-Moll]{sarandi2024nlf}
+Istv{\'a}n S{\'a}r{\'a}ndi and Gerard Pons-Moll.
+\newblock Neural localizer fields for continuous 3d human pose and shape
+  estimation.
+\newblock In \emph{Advances in Neural Information Processing Systems}, 2024.
+
+\bibitem[Sch{\"o}nberger \& Frahm(2016)Sch{\"o}nberger and
+  Frahm]{schonberger2016colmap}
+Johannes~Lutz Sch{\"o}nberger and Jan-Michael Frahm.
+\newblock Structure-from-motion revisited.
+\newblock In \emph{IEEE Conference on Computer Vision and Pattern Recognition},
+  2016.
+
+\bibitem[Shen et~al.(2024)Shen, Pi, Xia, Cen, Peng, Hu, Bao, Hu, and
+  Zhou]{shen2024gvhmr}
+Zehong Shen, Huaijin Pi, Yan Xia, Zhi Cen, Sida Peng, Zechen Hu, Hujun Bao,
+  Ruizhen Hu, and Xiaowei Zhou.
+\newblock World-grounded human motion recovery via gravity-view coordinates.
+\newblock In \emph{SIGGRAPH Asia Conference Papers}, 2024.
+
+\bibitem[Shin et~al.(2024)Shin, Kim, Halilaj, and Black]{shin2024wham}
+Soyong Shin, Juyong Kim, Eni Halilaj, and Michael~J. Black.
+\newblock Wham: Reconstructing world-grounded humans with accurate 3d motion.
+\newblock In \emph{IEEE/CVF Conference on Computer Vision and Pattern
+  Recognition}, pp.\  2070--2080, 2024.
+
+\bibitem[Song et~al.(2026)Song, Zhang, Yuan, Lin, Tao, Zhang, and
+  Yu]{song2026metrichmsr}
+Chentao Song, He~Zhang, Haolei Yuan, Haozhe Lin, Jianhua Tao, Hongwen Zhang,
+  and Tao Yu.
+\newblock Metrichmsr: Metric human mesh and scene recovery from monocular
+  images.
+\newblock \emph{arXiv preprint arXiv:2506.09919}, 2026.
+
+\bibitem[Sur et~al.(2026)Sur, Tripathi, Athanasiou, Nguyen, Xu, Black, and
+  Yao]{sur2026unicon3r}
+Tanuj Sur, Shashank Tripathi, Nikos Athanasiou, Ha~Linh Nguyen, Kai Xu,
+  Michael~J. Black, and Angela Yao.
+\newblock Unicon3r: Unified contact-aware 4d human-scene reconstruction from
+  monocular video.
+\newblock \emph{arXiv preprint arXiv:2604.19923}, 2026.
+
+\bibitem[Wang et~al.(2025{\natexlab{a}})Wang, Chen, Karaev, Vedaldi, Rupprecht,
+  and Novotny]{wang2025vggt}
+Jianyuan Wang, Minghao Chen, Nikita Karaev, Andrea Vedaldi, Christian
+  Rupprecht, and David Novotny.
+\newblock Vggt: Visual geometry grounded transformer.
+\newblock In \emph{IEEE/CVF Conference on Computer Vision and Pattern
+  Recognition}, 2025{\natexlab{a}}.
+
+\bibitem[Wang et~al.(2026{\natexlab{a}})Wang, Chen, Zhang, Karaev,
+  Sch{\"o}nberger, Labatut, Bojanowski, Novotny, Vedaldi, and
+  Rupprecht]{wang2026vggtomega}
+Jianyuan Wang, Minghao Chen, Shangzhan Zhang, Nikita Karaev, Johannes
+  Sch{\"o}nberger, Patrick Labatut, Piotr Bojanowski, David Novotny, Andrea
+  Vedaldi, and Christian Rupprecht.
+\newblock Vggt-$\omega$.
+\newblock \emph{arXiv preprint arXiv:2605.15195}, 2026{\natexlab{a}}.
+
+\bibitem[Wang et~al.(2025{\natexlab{b}})Wang, Zhang, Holynski, Efros, and
+  Kanazawa]{wang2025cut3r}
+Qianqian Wang, Yifei Zhang, Aleksander Holynski, Alexei~A. Efros, and Angjoo
+  Kanazawa.
+\newblock Continuous 3d perception model with persistent state.
+\newblock \emph{arXiv preprint}, 2025{\natexlab{b}}.
+
+\bibitem[Wang et~al.(2024{\natexlab{a}})Wang, Leroy, Cabon, Chidlovskii, and
+  Revaud]{wang2024dust3r}
+Shuzhe Wang, Vincent Leroy, Yohann Cabon, Boris Chidlovskii, and J{\'e}r{\^o}me
+  Revaud.
+\newblock Dust3r: Geometric 3d vision made easy.
+\newblock In \emph{IEEE/CVF Conference on Computer Vision and Pattern
+  Recognition}, 2024{\natexlab{a}}.
+
+\bibitem[Wang et~al.(2025{\natexlab{c}})Wang, Zhou, Zhu, Chang, Zhou, Li, Chen,
+  Pang, Shen, and He]{wang2025pi3}
+Yifan Wang, Jianjun Zhou, Haoyi Zhu, Wenzheng Chang, Yang Zhou, Zizun Li, Junyi
+  Chen, Jiangmiao Pang, Chunhua Shen, and Tong He.
+\newblock $\pi^3$: Permutation-equivariant visual geometry learning.
+\newblock \emph{arXiv preprint arXiv:2507.13347}, 2025{\natexlab{c}}.
+
+\bibitem[Wang et~al.(2024{\natexlab{b}})Wang, Wang, Liu, and
+  Daniilidis]{wang2024tram}
+Yufu Wang, Ziyun Wang, Lingjie Liu, and Kostas Daniilidis.
+\newblock Tram: Global trajectory and motion of 3d humans from in-the-wild
+  videos.
+\newblock In \emph{European Conference on Computer Vision}, pp.\  467--487,
+  2024{\natexlab{b}}.
+
+\bibitem[Wang et~al.(2026{\natexlab{b}})Wang, Ng, Shin, Khirodkar, Dong, Su,
+  Park, Kitani, Richard, Prada, and Zollh{\"o}fer]{wang2026duomo}
+Yufu Wang, Evonne Ng, Soyong Shin, Rawal Khirodkar, Yuan Dong, Zhaoen Su,
+  Jinhyung Park, Kris Kitani, Alexander Richard, Fabian Prada, and Michael
+  Zollh{\"o}fer.
+\newblock Duomo: Dual motion diffusion for world-space human reconstruction.
+\newblock \emph{arXiv preprint arXiv:2603.03265}, 2026{\natexlab{b}}.
+
+\bibitem[Yuan et~al.(2022)Yuan, Iqbal, Molchanov, Kitani, and
+  Kautz]{yuan2022glamr}
+Ye~Yuan, Umar Iqbal, Pavlo Molchanov, Kris Kitani, and Jan Kautz.
+\newblock Glamr: Global occlusion-aware human mesh recovery with dynamic
+  cameras.
+\newblock In \emph{IEEE/CVF Conference on Computer Vision and Pattern
+  Recognition}, pp.\  11038--11049, 2022.
+
+\bibitem[Zhang et~al.(2024)Zhang, Herrmann, Hur, Jampani, Darrell, Cole, Sun,
+  and Yang]{zhang2024monst3r}
+Junyi Zhang, Charles Herrmann, Junhwa Hur, Varun Jampani, Trevor Darrell,
+  Forrester Cole, Deqing Sun, and Ming-Hsuan Yang.
+\newblock Monst3r: A simple approach for estimating geometry in the presence of
+  motion.
+\newblock \emph{arXiv preprint arXiv:2410.03825}, 2024.
+
+\end{thebibliography}

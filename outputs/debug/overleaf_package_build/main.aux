@@ -1,0 +1,184 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand*\HyPL@Entry[1]{}
+\citation{chen2026human3r,li2026unish,liu2026josh}
+\HyPL@Entry{0<</S/D>>}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Temporal human--scene reconstruction produced by GroundedHuman. The top row shows the accumulated metric scene, time-coded human meshes, and camera trajectory in a shared world coordinate system; the bottom row shows the corresponding input video frames. Humans, scene geometry, and camera motion are jointly visualized under the same scale and coordinate gauge.}}{1}{figure.1}\protected@file@percent }
+\newlabel{fig:teaser}{{1}{1}{Temporal human--scene reconstruction produced by GroundedHuman. The top row shows the accumulated metric scene, time-coded human meshes, and camera trajectory in a shared world coordinate system; the bottom row shows the corresponding input video frames. Humans, scene geometry, and camera motion are jointly visualized under the same scale and coordinate gauge}{figure.1}{}}
+\citation{wang2024dust3r,leroy2024mast3r,zhang2024monst3r}
+\citation{wang2025cut3r,wang2025vggt,wang2025pi3,wang2026vggtomega}
+\citation{wang2024tram,shin2024wham,shen2024gvhmr,wang2026duomo}
+\citation{liu2026josh}
+\citation{chen2026human3r,li2026unish}
+\citation{sur2026unicon3r}
+\citation{song2026metrichmsr,ym2026graft}
+\citation{sarandi2024nlf,loper2023smpl}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{2}{section.1}\protected@file@percent }
+\newlabel{sec:introduction}{{1}{2}{Introduction}{section.1}{}}
+\citation{schonberger2016colmap}
+\citation{wang2024dust3r}
+\citation{leroy2024mast3r}
+\citation{zhang2024monst3r}
+\citation{wang2025cut3r}
+\citation{wang2025vggt,wang2025pi3}
+\citation{wang2026vggtomega}
+\citation{loper2023smpl,pavlakos2019smplx}
+\citation{chen2026human3r,song2026metrichmsr}
+\citation{wang2026duomo}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Related Work}{3}{section.2}\protected@file@percent }
+\newlabel{sec:related-work}{{2}{3}{Related Work}{section.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Learning-based 3D and 4D Scene Reconstruction}{3}{subsection.2.1}\protected@file@percent }
+\citation{yuan2022glamr}
+\citation{wang2024tram}
+\citation{shin2024wham,shen2024gvhmr}
+\citation{wang2026duomo}
+\citation{yuan2022glamr,wang2024tram,shin2024wham,shen2024gvhmr,wang2026duomo}
+\citation{liu2026josh}
+\citation{liu2026josh}
+\citation{kang2026crowd4d}
+\citation{rojas2025hamst3r}
+\citation{chen2026human3r}
+\citation{li2026unish}
+\citation{sur2026unicon3r}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}World-space Human Motion Recovery}{4}{subsection.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Joint Human--Scene Reconstruction}{4}{subsection.2.3}\protected@file@percent }
+\citation{song2026metrichmsr,keetha2025mapanything}
+\citation{ym2026graft,sarandi2024nlf}
+\citation{li2026unish,kang2026crowd4d,liu2026josh}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Human-guided Metric Calibration and Geometric Refinement}{5}{subsection.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Method}{5}{section.3}\protected@file@percent }
+\newlabel{sec:method}{{3}{5}{Method}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Problem Formulation and Overview}{5}{subsection.3.1}\protected@file@percent }
+\newlabel{eq:metric-depth-overview}{{1}{6}{Problem Formulation and Overview}{equation.1}{}}
+\newlabel{eq:translation-overview}{{2}{6}{Problem Formulation and Overview}{equation.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Scene and Human Observations}{6}{subsection.3.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Overview of GroundedHuman. The input RGB sequence is processed by a scene encoder and a human observer, producing a metric human--scene evidence set consisting of a relative scene, camera, humans, and local geometry probes. HSI scale calibration first recovers a coarse scale from the human front surface and then predicts metric depth through a person-conditioned residual affine. TRSTR performs constrained spatial translation refinement over canonical human regions. Finally, a video-level trajectory stabilizer aggregates valid neighboring-frame evidence and shares the scale to output a scale-consistent 4D human--scene world.}}{7}{figure.2}\protected@file@percent }
+\newlabel{fig:method-overview}{{2}{7}{Overview of GroundedHuman. The input RGB sequence is processed by a scene encoder and a human observer, producing a metric human--scene evidence set consisting of a relative scene, camera, humans, and local geometry probes. HSI scale calibration first recovers a coarse scale from the human front surface and then predicts metric depth through a person-conditioned residual affine. TRSTR performs constrained spatial translation refinement over canonical human regions. Finally, a video-level trajectory stabilizer aggregates valid neighboring-frame evidence and shares the scale to output a scale-consistent 4D human--scene world}{figure.2}{}}
+\newlabel{eq:smpl-camera-vertices}{{3}{7}{Scene and Human Observations}{equation.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Human-anchored Analytic Coarse Scale}{8}{subsection.3.3}\protected@file@percent }
+\newlabel{eq:analytic-anchor-ratio}{{4}{8}{Human-anchored Analytic Coarse Scale}{equation.4}{}}
+\newlabel{eq:coarse-scale}{{5}{8}{Human-anchored Analytic Coarse Scale}{equation.5}{}}
+\newlabel{eq:scale-fallback}{{6}{8}{Human-anchored Analytic Coarse Scale}{equation.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Person-conditioned Residual Affine Calibration}{8}{subsection.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.1}Human--Scene Anchor Representation}{9}{subsubsection.3.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.2}Local Scene Attention}{9}{subsubsection.3.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.3}Multi-person Residual Affine}{9}{subsubsection.3.4.3}\protected@file@percent }
+\newlabel{eq:person-confidence}{{7}{9}{Multi-person Residual Affine}{equation.7}{}}
+\newlabel{eq:residual-affine}{{8}{10}{Multi-person Residual Affine}{equation.8}{}}
+\newlabel{eq:metric-depth}{{9}{10}{Multi-person Residual Affine}{equation.9}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.4}Video-level Scale Consistency and Trajectory Stabilization}{10}{subsubsection.3.4.4}\protected@file@percent }
+\newlabel{eq:clip-affine}{{10}{10}{Video-level Scale Consistency and Trajectory Stabilization}{equation.10}{}}
+\newlabel{eq:camera-scale}{{11}{10}{Video-level Scale Consistency and Trajectory Stabilization}{equation.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Regional Translation Refinement}{10}{subsection.3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.1}Deterministic Human Regions}{10}{subsubsection.3.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.2}Multi-scale Human--Scene Probing}{11}{subsubsection.3.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.3}Ray-constrained Regional Voting}{11}{subsubsection.3.5.3}\protected@file@percent }
+\newlabel{eq:regional-vote}{{12}{11}{Ray-constrained Regional Voting}{equation.12}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.4}Uncertainty-weighted Human Update}{12}{subsubsection.3.5.4}\protected@file@percent }
+\newlabel{eq:precision-weight}{{13}{12}{Uncertainty-weighted Human Update}{equation.13}{}}
+\newlabel{eq:vote-aggregation}{{14}{12}{Uncertainty-weighted Human Update}{equation.14}{}}
+\newlabel{eq:person-update}{{15}{12}{Uncertainty-weighted Human Update}{equation.15}{}}
+\newlabel{eq:translation-iteration}{{16}{12}{Uncertainty-weighted Human Update}{equation.16}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6}Staged Training Objectives}{12}{subsection.3.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.6.1}Residual Scale Training}{12}{subsubsection.3.6.1}\protected@file@percent }
+\newlabel{eq:scale-loss}{{17}{13}{Residual Scale Training}{equation.17}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.6.2}TRSTR Training}{13}{subsubsection.3.6.2}\protected@file@percent }
+\newlabel{eq:trstr-loss}{{18}{13}{TRSTR Training}{equation.18}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Temporal human--scene reconstruction. Each row shows input video frames, an accumulated metric scene with time-coded human meshes, and human and camera trajectories in world coordinates from left to right. All frames are jointly visualized under the same scale and coordinate gauge; the curves on the right illustrate trajectory continuity and accuracy.}}{14}{figure.3}\protected@file@percent }
+\newlabel{fig:temporal-4d}{{3}{14}{Temporal human--scene reconstruction. Each row shows input video frames, an accumulated metric scene with time-coded human meshes, and human and camera trajectories in world coordinates from left to right. All frames are jointly visualized under the same scale and coordinate gauge; the curves on the right illustrate trajectory continuity and accuracy}{figure.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Experiments}{14}{section.4}\protected@file@percent }
+\newlabel{sec:experiments}{{4}{14}{Experiments}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Local Human Mesh Recovery}{14}{subsection.4.1}\protected@file@percent }
+\citation{ym2026graft}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Local human mesh recovery on 3DPW and EMDB-1. ``\textcolor {tablegreen}{\ensuremath  {\text  {$\mathsurround \z@ \mathchar "458$}}}'' indicates that the corresponding input is not required. All errors are in mm; lower is better.}}{15}{table.1}\protected@file@percent }
+\newlabel{tab:local-hmr}{{1}{15}{Local human mesh recovery on 3DPW and EMDB-1. ``\cmarkcolor '' indicates that the corresponding input is not required. All errors are in mm; lower is better}{table.1}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Global human motion estimation on EMDB-2 and RICH. In the preprocessed-input columns, ``\textcolor {tablegreen}{\ensuremath  {\text  {$\mathsurround \z@ \mathchar "458$}}}'' indicates that the corresponding external input is not required; in the output columns, ``\textcolor {tablegreen}{\ensuremath  {\text  {$\mathsurround \z@ \mathchar "458$}}}'' indicates that the method supports the capability and ``\textcolor {tablered}{\ensuremath  {\times }}'' indicates that it is unsupported or not produced as a model output. Joint errors are in mm and RTE is in \%; lower is better for all metrics.}}{15}{table.2}\protected@file@percent }
+\newlabel{tab:global-motion}{{2}{15}{Global human motion estimation on EMDB-2 and RICH. In the preprocessed-input columns, ``\cmarkcolor '' indicates that the corresponding external input is not required; in the output columns, ``\cmarkcolor '' indicates that the method supports the capability and ``\xmarkcolor '' indicates that it is unsupported or not produced as a model output. Joint errors are in mm and RTE is in \%; lower is better for all metrics}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Global Human Motion in World Coordinates}{15}{subsection.4.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces \textbf  {Qualitative comparison of human--scene geometric interaction.} Each row shows the input image, UniSH, Human3R, and our joint human--scene reconstruction from left to right. Compared with the floating, penetration, and depth misalignment visible in the baselines, our method obtains root positions that better conform to scene surfaces and more coherent support relationships while preserving local human pose and shape. This figure provides qualitative evidence of geometric interaction; global motion and metric-scene performance are evaluated quantitatively in Table~\ref {tab:global-motion} and Appendix Table~\ref {tab:bonn-depth}, respectively.}}{16}{figure.4}\protected@file@percent }
+\newlabel{fig:human-scene-interaction}{{4}{16}{\textbf {Qualitative comparison of human--scene geometric interaction.} Each row shows the input image, UniSH, Human3R, and our joint human--scene reconstruction from left to right. Compared with the floating, penetration, and depth misalignment visible in the baselines, our method obtains root positions that better conform to scene surfaces and more coherent support relationships while preserving local human pose and shape. This figure provides qualitative evidence of geometric interaction; global motion and metric-scene performance are evaluated quantitatively in Table~\ref {tab:global-motion} and Appendix Table~\ref {tab:bonn-depth}, respectively}{figure.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}General 3D Reconstruction}{16}{subsection.4.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces \textbf  {General 3D reconstruction evaluation.} (a) Camera-trajectory ATE on TUM-Dynamic as the number of input views changes; (b-c) Abs Rel and $\delta <1.25$ on Bonn as the requested number of input views changes. The blue VGGT-Ω ATE curve is obtained from our exact evaluator; the camera and depth reference curves are approximately digitized from Fig. 9 of Human3R. The red Bonn curves are an oracle diagnostic for Pure VGGT + GT scale: each sequence and input prefix uses a scale fitted from GT, only to analyze a measurable upper bound of VGGT-Ω relative geometry, not as a privileged prediction of our method. The x-axis is the requested maximum number of views; shorter sequences use all available frames without repeated padding.}}{17}{figure.5}\protected@file@percent }
+\newlabel{fig:general-reconstruction}{{5}{17}{\textbf {General 3D reconstruction evaluation.} (a) Camera-trajectory ATE on TUM-Dynamic as the number of input views changes; (b-c) Abs Rel and $\delta <1.25$ on Bonn as the requested number of input views changes. The blue VGGT-Ω ATE curve is obtained from our exact evaluator; the camera and depth reference curves are approximately digitized from Fig. 9 of Human3R. The red Bonn curves are an oracle diagnostic for Pure VGGT + GT scale: each sequence and input prefix uses a scale fitted from GT, only to analyze a measurable upper bound of VGGT-Ω relative geometry, not as a privileged prediction of our method. The x-axis is the requested maximum number of views; shorter sequences use all available frames without repeated padding}{figure.5}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces \textbf  {Qualitative comparison of real-world measurements.} The two columns show different indoor scenes; the three rows show Ground Truth, MapAnything, and our method. Red annotations denote human heights or object lengths measured from reconstructed geometry; quantitative results are given in Appendix Table~\ref {tab:bonn-depth}.}}{18}{figure.6}\protected@file@percent }
+\newlabel{fig:metric-measurement}{{6}{18}{\textbf {Qualitative comparison of real-world measurements.} The two columns show different indoor scenes; the three rows show Ground Truth, MapAnything, and our method. Red annotations denote human heights or object lengths measured from reconstructed geometry; quantitative results are given in Appendix Table~\ref {tab:bonn-depth}}{figure.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Scale-consistency Analysis}{18}{subsection.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Conclusion}{18}{section.5}\protected@file@percent }
+\newlabel{sec:conclusion}{{5}{18}{Conclusion}{section.5}{}}
+\bibdata{references}
+\bibcite{chen2026human3r}{{1}{2026}{{Chen et~al.}}{{Chen, Chen, Xue, Chen, Xiu, and Pons-Moll}}}
+\bibcite{kang2026crowd4d}{{2}{2026}{{Kang et~al.}}{{Kang, Zhou, Yang, Wen, Huang, Lai, and Li}}}
+\bibcite{keetha2025mapanything}{{3}{2025}{{Keetha et~al.}}{{Keetha, M{\"u}ller, Sch{\"o}nberger, Porzi, Zhang, Fischer, Knapitsch, Zauss, Weber, Antunes, et~al.}}}
+\bibcite{leroy2024mast3r}{{4}{2024}{{Leroy et~al.}}{{Leroy, Cabon, and Revaud}}}
+\bibcite{li2026unish}{{5}{2026}{{Li et~al.}}{{Li, Li, Zhang, Lu, Zhao, Xue, Liu, Peng, Zhang, Luo, Liu, and Guo}}}
+\bibcite{liu2026josh}{{6}{2026}{{Liu et~al.}}{{Liu, Lin, Wu, and Zhou}}}
+\bibcite{loper2023smpl}{{7}{2023}{{Loper et~al.}}{{Loper, Mahmood, Romero, Pons-Moll, and Black}}}
+\bibcite{pavlakos2019smplx}{{8}{2019}{{Pavlakos et~al.}}{{Pavlakos, Choutas, Ghorbani, Bolkart, Osman, Tzionas, and Black}}}
+\bibcite{ym2026graft}{{9}{2026}{{{Pradyumna YM} et~al.}}{{{Pradyumna YM}, Xue, Chen, Kister, S{\'a}r{\'a}ndi, and Pons-Moll}}}
+\bibcite{rojas2025hamst3r}{{10}{2025}{{Rojas et~al.}}{{Rojas, Armando, Ghanem, Weinzaepfel, Leroy, and Rogez}}}
+\bibcite{sarandi2024nlf}{{11}{2024}{{S{\'a}r{\'a}ndi \& Pons-Moll}}{{S{\'a}r{\'a}ndi and Pons-Moll}}}
+\bibcite{schonberger2016colmap}{{12}{2016}{{Sch{\"o}nberger \& Frahm}}{{Sch{\"o}nberger and Frahm}}}
+\bibcite{shen2024gvhmr}{{13}{2024}{{Shen et~al.}}{{Shen, Pi, Xia, Cen, Peng, Hu, Bao, Hu, and Zhou}}}
+\bibcite{shin2024wham}{{14}{2024}{{Shin et~al.}}{{Shin, Kim, Halilaj, and Black}}}
+\bibcite{song2026metrichmsr}{{15}{2026}{{Song et~al.}}{{Song, Zhang, Yuan, Lin, Tao, Zhang, and Yu}}}
+\bibcite{sur2026unicon3r}{{16}{2026}{{Sur et~al.}}{{Sur, Tripathi, Athanasiou, Nguyen, Xu, Black, and Yao}}}
+\bibcite{wang2025vggt}{{17}{2025{a}}{{Wang et~al.}}{{Wang, Chen, Karaev, Vedaldi, Rupprecht, and Novotny}}}
+\bibcite{wang2026vggtomega}{{18}{2026{a}}{{Wang et~al.}}{{Wang, Chen, Zhang, Karaev, Sch{\"o}nberger, Labatut, Bojanowski, Novotny, Vedaldi, and Rupprecht}}}
+\bibcite{wang2025cut3r}{{19}{2025{b}}{{Wang et~al.}}{{Wang, Zhang, Holynski, Efros, and Kanazawa}}}
+\bibcite{wang2024dust3r}{{20}{2024{a}}{{Wang et~al.}}{{Wang, Leroy, Cabon, Chidlovskii, and Revaud}}}
+\bibcite{wang2025pi3}{{21}{2025{c}}{{Wang et~al.}}{{Wang, Zhou, Zhu, Chang, Zhou, Li, Chen, Pang, Shen, and He}}}
+\bibcite{wang2024tram}{{22}{2024{b}}{{Wang et~al.}}{{Wang, Wang, Liu, and Daniilidis}}}
+\bibcite{wang2026duomo}{{23}{2026{b}}{{Wang et~al.}}{{Wang, Ng, Shin, Khirodkar, Dong, Su, Park, Kitani, Richard, Prada, and Zollh{\"o}fer}}}
+\bibcite{yuan2022glamr}{{24}{2022}{{Yuan et~al.}}{{Yuan, Iqbal, Molchanov, Kitani, and Kautz}}}
+\bibcite{zhang2024monst3r}{{25}{2024}{{Zhang et~al.}}{{Zhang, Herrmann, Hur, Jampani, Darrell, Cole, Sun, and Yang}}}
+\bibstyle{iclr2027_conference}
+\@writefile{toc}{\contentsline {section}{\numberline {A}Data Curation, Evaluation Protocols, and Complete Depth Results}{22}{appendix.A}\protected@file@percent }
+\newlabel{app:bonn-results}{{A}{22}{Data Curation, Evaluation Protocols, and Complete Depth Results}{appendix.A}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Human-centered video depth estimation on Bonn. Lower Abs Rel and higher $\delta <1.25$ are better.}}{22}{table.3}\protected@file@percent }
+\newlabel{tab:bonn-depth}{{3}{22}{Human-centered video depth estimation on Bonn. Lower Abs Rel and higher $\delta <1.25$ are better}{table.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {B}Notation, Coordinate Systems, and Metric Gauge}{22}{appendix.B}\protected@file@percent }
+\newlabel{app:coordinates}{{B}{22}{Notation, Coordinate Systems, and Metric Gauge}{appendix.B}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.1}Coordinate and Depth Conventions}{22}{subsection.B.1}\protected@file@percent }
+\newlabel{eq:appendix-metric-propagation}{{19}{22}{Coordinate and Depth Conventions}{equation.19}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.2}Tensor, Precision, and Device Conventions}{23}{subsection.B.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Main tensors and implementation conventions. Exact dimensions follow the final implementation configuration.}}{23}{table.4}\protected@file@percent }
+\newlabel{tab:tensor-conventions}{{4}{23}{Main tensors and implementation conventions. Exact dimensions follow the final implementation configuration}{table.4}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {C}Model Architecture Details and Complete Inference}{23}{appendix.C}\protected@file@percent }
+\newlabel{app:architecture}{{C}{23}{Model Architecture Details and Complete Inference}{appendix.C}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.1}VGGT-Ω, NLF, and Baseline Boundaries}{23}{subsection.C.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.2}Visible-front-surface Analytic Scale}{23}{subsection.C.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.3}Person-conditioned Residual Affine}{23}{subsection.C.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.4}Clip-level Consensus and Camera Propagation}{23}{subsection.C.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.5}Complete TRSTR Update}{24}{subsection.C.5}\protected@file@percent }
+\newlabel{eq:appendix-trstr-update}{{20}{24}{Complete TRSTR Update}{equation.20}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces \textbf  {Complete architecture of human-scale bridging and regional translation refinement.} (a) The human front surface projected into the relative-depth map provides an analytic coarse scale, and 24 HSI anchors use local scene features to predict residual scale and bias. (b) TRSTR partitions the human surface into deterministic regions and iteratively corrects translation using multi-scale human--environment probing, gating, and uncertainty-weighted regional votes while preserving pose and shape. This detail figure is moved from the main paper to the appendix.}}{24}{figure.7}\protected@file@percent }
+\newlabel{fig:method-detail}{{7}{24}{\textbf {Complete architecture of human-scale bridging and regional translation refinement.} (a) The human front surface projected into the relative-depth map provides an analytic coarse scale, and 24 HSI anchors use local scene features to predict residual scale and bias. (b) TRSTR partitions the human surface into deterministic regions and iteratively corrects translation using multi-scale human--environment probing, gating, and uncertainty-weighted regional votes while preserving pose and shape. This detail figure is moved from the main paper to the appendix}{figure.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.6}Inference Algorithm}{24}{subsection.C.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {D}Implementation and Training Details}{25}{appendix.D}\protected@file@percent }
+\newlabel{app:training}{{D}{25}{Implementation and Training Details}{appendix.D}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {D.1}Staged Training}{25}{subsection.D.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces v0.3 training-configuration placeholders. Every red entry must be replaced with a verified server configuration.}}{25}{table.5}\protected@file@percent }
+\newlabel{tab:training-placeholder}{{5}{25}{v0.3 training-configuration placeholders. Every red entry must be replaced with a verified server configuration}{table.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {D.2}Complete Losses and Weights}{25}{subsection.D.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {D.3}Training Stages and Freezing Strategy}{25}{subsection.D.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {E}Complete Evaluation Protocols}{26}{appendix.E}\protected@file@percent }
+\newlabel{app:evaluation}{{E}{26}{Complete Evaluation Protocols}{appendix.E}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Summary of tasks, datasets, and evaluation boundaries. Exact splits, sample counts, and preprocessing remain to be completed.}}{26}{table.6}\protected@file@percent }
+\newlabel{tab:evaluation-protocol}{{6}{26}{Summary of tasks, datasets, and evaluation boundaries. Exact splits, sample counts, and preprocessing remain to be completed}{table.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {F}Impact of Human Metric Anchoring}{26}{appendix.F}\protected@file@percent }
+\newlabel{app:ablation}{{F}{26}{Impact of Human Metric Anchoring}{appendix.F}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Placeholder for cumulative component ablation. Every result requires a real experiment; this table supports no performance conclusion in its current form.}}{26}{table.7}\protected@file@percent }
+\newlabel{tab:ablation-placeholder}{{7}{26}{Placeholder for cumulative component ablation. Every result requires a real experiment; this table supports no performance conclusion in its current form}{table.7}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces \textbf  {Appendix experiment placeholder.} This NBAI-generated image previews the intended layout for ablation, robustness, and failure-case results. It is prominently marked as PLACEHOLDER and contains no real samples, values, or experimental conclusions. It must be completely replaced with verified server results in the final version.}}{26}{figure.8}\protected@file@percent }
+\newlabel{fig:appendix-placeholder}{{8}{26}{\textbf {Appendix experiment placeholder.} This NBAI-generated image previews the intended layout for ablation, robustness, and failure-case results. It is prominently marked as PLACEHOLDER and contains no real samples, values, or experimental conclusions. It must be completely replaced with verified server results in the final version}{figure.8}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {G}TRSTR Refinement, Robustness, and Sensitivity}{27}{appendix.G}\protected@file@percent }
+\newlabel{app:robustness}{{G}{27}{TRSTR Refinement, Robustness, and Sensitivity}{appendix.G}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Robustness experiment placeholder. The bins and perturbation ranges define the experimental design and do not represent completed results.}}{27}{table.8}\protected@file@percent }
+\newlabel{tab:robustness-placeholder}{{8}{27}{Robustness experiment placeholder. The bins and perturbation ranges define the experimental design and do not represent completed results}{table.8}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {H}Efficiency, Parameters, and Scalability}{27}{appendix.H}\protected@file@percent }
+\newlabel{app:efficiency}{{H}{27}{Efficiency, Parameters, and Scalability}{appendix.H}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Placeholder for efficiency and resource usage. Test conditions and values require server measurements.}}{27}{table.9}\protected@file@percent }
+\newlabel{tab:efficiency-placeholder}{{9}{27}{Placeholder for efficiency and resource usage. Test conditions and values require server measurements}{table.9}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {I}Additional Qualitative Results, Failure Cases, and Responsible Use}{27}{appendix.I}\protected@file@percent }
+\newlabel{app:limitations}{{I}{27}{Additional Qualitative Results, Failure Cases, and Responsible Use}{appendix.I}{}}
+\gdef \@abspage@last{28}

@@ -1,6 +1,6 @@
 {
   "x_limit": [
-    0,
+    50,
     500
   ],
   "y_limit_m": [
@@ -88,33 +88,7 @@
         0.13
       ]
     },
-    "StreamVGGT": {
-      "views": [
-        50,
-        100,
-        150,
-        200
-      ],
-      "ate_m": [
-        0.012,
-        0.02,
-        0.034,
-        0.045
-      ]
-    },
-    "VGGT (offline)": {
-      "views": [
-        50,
-        100,
-        150
-      ],
-      "ate_m": [
-        0.006,
-        0.009,
-        0.01
-      ]
-    },
-    "VGGT-Omega (ours)": {
+    "Ours": {
       "views": [
         50,
         100,
@@ -135,5 +109,5 @@
       ]
     }
   },
-  "note": "VGGT-Omega values are exact evaluator outputs; comparison baselines are digitized from the supplied raster."
+  "note": "Ours (VGGT-Omega) values are exact evaluator outputs; comparison baselines are digitized from the supplied raster."
 }

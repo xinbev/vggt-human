@@ -57,6 +57,12 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, default=Path("outputs/eval/bonn_depth_curve"))
     parser.add_argument("--max-depth", type=float, default=70.0)
     parser.add_argument("--alignment", choices=["metric", "scale"], default="metric")
+    parser.add_argument(
+        "--scale-multiplier",
+        type=float,
+        default=1.0,
+        help="Multiply each fitted GT scale before computing metrics. Use 0.9 for the 90%%-of-GT-scale diagnostic.",
+    )
     args = parser.parse_args()
 
     rows: list[dict[str, object]] = []
@@ -83,6 +89,7 @@ def main() -> None:
                 count=actual_count,
                 max_depth=args.max_depth,
                 alignment=args.alignment,
+                scale_multiplier=args.scale_multiplier,
             )
             item["requested_frames"] = length
             item["actual_frames"] = actual_count
@@ -119,6 +126,9 @@ def main() -> None:
                     "Abs Rel": item["Abs Rel"],
                     "delta<1.25": item["delta<1.25"],
                     "valid_pixels": item["valid_pixels"],
+                    "fitted_scale": item["fitted_scale"],
+                    "scale_multiplier": item["scale_multiplier"],
+                    "applied_scale": item["scale"],
                 }
             )
 
@@ -133,6 +143,7 @@ def main() -> None:
         ),
         "stage": args.stage_name,
         "alignment": args.alignment,
+        "scale_multiplier": args.scale_multiplier,
         "prediction_root": str(args.prediction_root),
         "sequences": list(SEQUENCES),
         "points": points,
@@ -146,7 +157,7 @@ def main() -> None:
         writer.writeheader()
         writer.writerows({key: value for key, value in point.items() if key != "per_sequence"} for point in points)
     with (args.output_dir / f"{output_stem}_per_sequence.csv").open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["stage", "requested_frames", "actual_frames", "sequence", "Abs Rel", "delta<1.25", "valid_pixels"])
+        writer = csv.DictWriter(handle, fieldnames=["stage", "requested_frames", "actual_frames", "sequence", "Abs Rel", "delta<1.25", "valid_pixels", "fitted_scale", "scale_multiplier", "applied_scale"])
         writer.writeheader()
         writer.writerows(rows)
     print(json.dumps(report, indent=2))

@@ -41,3 +41,5 @@ outputs/eval/tum_dynamics_predictions/
 outputs/vis/stage2_emdb_p4_36_long_walk_coarse_residual_v3/
 *smpl_faces.npy
 *.err
+outputs/debug/paper*
+outputs/vis/paper*

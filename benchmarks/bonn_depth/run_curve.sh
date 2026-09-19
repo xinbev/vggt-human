@@ -10,6 +10,7 @@ OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/outputs/eval/bonn_depth_curve}"
 START_FRAME="${START_FRAME:-30}"
 ALLOW_SHORT="${ALLOW_SHORT:-true}"
 ALIGNMENT="${ALIGNMENT:-metric}"
+SCALE_MULTIPLIER="${SCALE_MULTIPLIER:-1.0}"
 
 EXTRA_ARGS=()
 if [[ "${ALLOW_SHORT}" == "true" ]]; then
@@ -23,5 +24,6 @@ python "${REPO_ROOT}/benchmarks/bonn_depth/evaluate_curve.py" \
   --prefix-lengths ${PREFIX_LENGTHS} \
   --start-frame "${START_FRAME}" \
   --alignment "${ALIGNMENT}" \
+  --scale-multiplier "${SCALE_MULTIPLIER}" \
   "${EXTRA_ARGS[@]}" \
   --output-dir "${OUTPUT_DIR}"

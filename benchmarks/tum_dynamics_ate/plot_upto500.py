@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Redraw the supplied ATE comparison with x limited to 500 views."""
+"""Redraw the supplied ATE comparison over 50–500 views."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from PIL import Image, ImageDraw, ImageFont
 OUTPUT = Path("outputs/vis/tum_dynamics_ate_curve/vggt_omega_ate_upto500_redrawn.png")
 
 # Baseline values are digitized from the supplied comparison raster.  The
-# VGGT-Omega values are the exact evaluator output supplied by the user.
+# Ours values are the exact VGGT-Omega evaluator output supplied by the user.
 SERIES = {
     "Human3R": {
         "x": [50, 100, 150, 200, 300, 400, 500],
@@ -35,17 +35,7 @@ SERIES = {
         "y": [0.022, 0.043, 0.077, 0.080, 0.110, 0.149, 0.130],
         "color": (149, 186, 198), "marker": "pentagon",
     },
-    "StreamVGGT": {
-        "x": [50, 100, 150, 200],
-        "y": [0.012, 0.020, 0.034, 0.045],
-        "color": (202, 233, 187), "marker": "diamond",
-    },
-    "VGGT (offline)": {
-        "x": [50, 100, 150],
-        "y": [0.006, 0.009, 0.010],
-        "color": (150, 150, 150), "marker": "square", "dash": True,
-    },
-    "VGGT-Omega (ours)": {
+    "Ours": {
         "x": [50, 100, 150, 200, 300, 400, 500],
         "y": [
             0.0029932083135804973,
@@ -118,9 +108,10 @@ def main() -> None:
     image = Image.new("RGB", (width, height), "white")
     draw = ImageDraw.Draw(image, "RGBA")
     left, right, top, bottom = 150*scale, 1340*scale, 95*scale, 820*scale
+    x_min, x_max = 50, 500
 
     def xy(x, y):
-        return left + x/500*(right-left), bottom - y/0.2*(bottom-top)
+        return left + (x-x_min)/(x_max-x_min)*(right-left), bottom - y/0.2*(bottom-top)
 
     grid = (222, 222, 222, 255)
     axis = (35, 35, 35, 255)
@@ -130,12 +121,12 @@ def main() -> None:
     legend_font = get_font(23*scale)
 
     for y_value in [index*0.025 for index in range(9)]:
-        _, py = xy(0, y_value)
+        _, py = xy(x_min, y_value)
         draw.line((left, py, right, py), fill=grid, width=2)
         label = f"{y_value:.3f}"
         box = draw.textbbox((0, 0), label, font=tick_font)
         draw.text((left-17*scale-(box[2]-box[0]), py-(box[3]-box[1])/2), label, font=tick_font, fill=axis)
-    for x_value in range(0, 501, 100):
+    for x_value in [50, 100, 200, 300, 400, 500]:
         px, _ = xy(x_value, 0)
         draw.line((px, top, px, bottom), fill=grid, width=2)
         label = str(x_value)
@@ -153,14 +144,6 @@ def main() -> None:
         for point in points:
             draw_marker(draw, point, spec["marker"], spec["color"]+(255,), 7*scale)
 
-    # OOM markers copied from the supplied raster protocol.
-    for x_value, y_value, color in [(200, 0.052, (164, 211, 139)), (150, 0.014, (140, 140, 140))]:
-        px, py = xy(x_value, y_value)
-        r = 11*scale
-        draw.line((px-r, py-r, px+r, py+r), fill=color+(255,), width=5*scale)
-        draw.line((px-r, py+r, px+r, py-r), fill=color+(255,), width=5*scale)
-        draw.text((px+13*scale, py-18*scale), "OOM", font=get_font(24*scale, bold=True), fill=color+(255,))
-
     title = "Absolute Trajectory Error (ATE) ↓"
     title_box = draw.textbbox((0, 0), title, font=title_font)
     draw.text(((width-(title_box[2]-title_box[0]))/2, 25*scale), title, font=title_font, fill=axis)
@@ -175,15 +158,14 @@ def main() -> None:
     image.paste(y_label, (25*scale, int((height-y_label.height)/2)), y_label)
     draw = ImageDraw.Draw(image, "RGBA")
 
-    # Compact two-column legend.
+    # One-column legend.
     legend_left, legend_top = 175*scale, 115*scale
-    legend_width, legend_height = 690*scale, 205*scale
+    legend_width, legend_height = 265*scale, 240*scale
     draw.rounded_rectangle((legend_left, legend_top, legend_left+legend_width, legend_top+legend_height), radius=7*scale, fill=(255,255,255,238), outline=(190,190,190,255), width=2)
     entries = list(SERIES.items())
     for index, (name, spec) in enumerate(entries):
-        column, row = index // 4, index % 4
-        x0 = legend_left + (20+column*340)*scale
-        y0 = legend_top + (27+row*45)*scale
+        x0 = legend_left + 20*scale
+        y0 = legend_top + (27+index*45)*scale
         draw.line((x0, y0, x0+48*scale, y0), fill=spec["color"]+(255,), width=int(spec.get("width",3)*scale))
         draw_marker(draw, (x0+24*scale, y0), spec["marker"], spec["color"]+(255,), 6*scale)
         draw.text((x0+62*scale, y0-14*scale), name, font=legend_font, fill=axis)
@@ -192,9 +174,9 @@ def main() -> None:
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     final.save(OUTPUT)
     metadata = {
-        "x_limit": [0, 500], "y_limit_m": [0, 0.2],
+        "x_limit": [x_min, x_max], "y_limit_m": [0, 0.2],
         "series": {name: {"views": spec["x"], "ate_m": spec["y"]} for name, spec in SERIES.items()},
-        "note": "VGGT-Omega values are exact evaluator outputs; comparison baselines are digitized from the supplied raster.",
+        "note": "Ours (VGGT-Omega) values are exact evaluator outputs; comparison baselines are digitized from the supplied raster.",
     }
     OUTPUT.with_suffix(".json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
     print(OUTPUT.resolve())
@@ -202,4 +184,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

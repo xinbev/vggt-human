@@ -1,0 +1,139 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand*\HyPL@Entry[1]{}
+\citation{chen2026human3r,li2026unish,liu2026josh}
+\citation{wang2024dust3r,leroy2024mast3r,zhang2024monst3r}
+\citation{wang2025cut3r,wang2025vggt,wang2025pi3,wang2026vggtomega}
+\citation{wang2024tram,shin2024wham,shen2024gvhmr,wang2026duomo}
+\HyPL@Entry{0<</S/D>>}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces 核心观察示意。通用场景模型能够从单目视频恢复结构一致的相对场景和相机轨迹，但其全局尺度仍可能未定。具有规范物理尺寸的 SMPL 人体为视频提供内生度量参照，使相对深度、相机平移和人体世界轨迹能够进入同一尺度一致坐标。该图为概念示意，不表示定量实验结果。}}{1}{figure.1}\protected@file@percent }
+\newlabel{fig:teaser}{{1}{1}{核心观察示意。通用场景模型能够从单目视频恢复结构一致的相对场景和相机轨迹，但其全局尺度仍可能未定。具有规范物理尺寸的 SMPL 人体为视频提供内生度量参照，使相对深度、相机平移和人体世界轨迹能够进入同一尺度一致坐标。该图为概念示意，不表示定量实验结果。}{figure.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {1}引言}{1}{section.1}\protected@file@percent }
+\newlabel{sec:introduction}{{1}{1}{引言}{section.1}{}}
+\citation{liu2026josh}
+\citation{chen2026human3r,li2026unish}
+\citation{sur2026unicon3r}
+\citation{song2026metrichmsr,ym2026graft}
+\citation{sarandi2024nlf,loper2023smpl}
+\citation{schonberger2016colmap}
+\citation{wang2024dust3r}
+\citation{leroy2024mast3r}
+\citation{zhang2024monst3r}
+\citation{wang2025cut3r}
+\citation{wang2025vggt,wang2025pi3}
+\citation{wang2026vggtomega}
+\citation{loper2023smpl,pavlakos2019smplx}
+\citation{chen2026human3r,song2026metrichmsr}
+\citation{wang2026duomo}
+\citation{yuan2022glamr}
+\citation{wang2024tram}
+\citation{shin2024wham,shen2024gvhmr}
+\citation{wang2026duomo}
+\citation{yuan2022glamr,wang2024tram,shin2024wham,shen2024gvhmr,wang2026duomo}
+\citation{liu2026josh}
+\citation{liu2026josh}
+\citation{kang2026crowd4d}
+\@writefile{toc}{\contentsline {section}{\numberline {2}相关工作}{3}{section.2}\protected@file@percent }
+\newlabel{sec:related-work}{{2}{3}{相关工作}{section.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}学习式三维与四维场景重建}{3}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}世界坐标人体运动恢复}{3}{subsection.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}联合人体-场景重建}{3}{subsection.2.3}\protected@file@percent }
+\citation{rojas2025hamst3r}
+\citation{chen2026human3r}
+\citation{li2026unish}
+\citation{sur2026unicon3r}
+\citation{song2026metrichmsr,keetha2025mapanything}
+\citation{ym2026graft,sarandi2024nlf}
+\citation{li2026unish,kang2026crowd4d,liu2026josh}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}人体引导的米制校准与几何精校}{4}{subsection.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}方法}{4}{section.3}\protected@file@percent }
+\newlabel{sec:method}{{3}{4}{方法}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}问题定义与整体框架}{4}{subsection.3.1}\protected@file@percent }
+\newlabel{eq:metric-depth-overview}{{1}{5}{问题定义与整体框架}{equation.1}{}}
+\newlabel{eq:translation-overview}{{2}{5}{问题定义与整体框架}{equation.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}场景与人体观测}{5}{subsection.3.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces GroundedHuman 的整体架构。输入 RGB 序列同时进入场景编码器和人体观测器，形成相对场景、相机、人体以及局部几何探针组成的 metric human--scene evidence。HSI scale calibration 先利用人体前表面恢复粗尺度，再以人物条件残差仿射得到米制深度；TRSTR 在规范人体区域上进行受约束的空间平移精校；最后，视频级轨迹稳定步骤聚合邻帧有效证据并共享尺度，输出尺度一致的 4D 人体--场景世界。}}{6}{figure.2}\protected@file@percent }
+\newlabel{fig:method-overview}{{2}{6}{GroundedHuman 的整体架构。输入 RGB 序列同时进入场景编码器和人体观测器，形成相对场景、相机、人体以及局部几何探针组成的 metric human--scene evidence。HSI scale calibration 先利用人体前表面恢复粗尺度，再以人物条件残差仿射得到米制深度；TRSTR 在规范人体区域上进行受约束的空间平移精校；最后，视频级轨迹稳定步骤聚合邻帧有效证据并共享尺度，输出尺度一致的 4D 人体--场景世界。}{figure.2}{}}
+\newlabel{eq:smpl-camera-vertices}{{3}{6}{场景与人体观测}{equation.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}人体锚定的解析粗尺度}{6}{subsection.3.3}\protected@file@percent }
+\newlabel{eq:analytic-anchor-ratio}{{4}{7}{人体锚定的解析粗尺度}{equation.4}{}}
+\newlabel{eq:coarse-scale}{{5}{7}{人体锚定的解析粗尺度}{equation.5}{}}
+\newlabel{eq:scale-fallback}{{6}{7}{人体锚定的解析粗尺度}{equation.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}人物条件的残差仿射校准}{7}{subsection.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.1}人体--场景锚点表示}{7}{subsubsection.3.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.2}局部场景注意力}{8}{subsubsection.3.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.3}多人体残差仿射}{8}{subsubsection.3.4.3}\protected@file@percent }
+\newlabel{eq:person-confidence}{{7}{8}{多人体残差仿射}{equation.7}{}}
+\newlabel{eq:residual-affine}{{8}{8}{多人体残差仿射}{equation.8}{}}
+\newlabel{eq:metric-depth}{{9}{8}{多人体残差仿射}{equation.9}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.4}视频级尺度一致性与轨迹稳定}{8}{subsubsection.3.4.4}\protected@file@percent }
+\newlabel{eq:clip-affine}{{10}{8}{视频级尺度一致性与轨迹稳定}{equation.10}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces 人体尺度桥接与区域平移精校。（a）投影到相对深度图的人体前表面首先给出解析粗尺度，24 个 HSI anchors 随后利用局部场景特征预测 residual scale 与 bias。（b）TRSTR 将人体表面划分为确定性区域，通过多尺度人物--环境探测、门控和不确定性加权的区域投票，迭代修正人体平移；姿态和形状保持不变。}}{9}{figure.3}\protected@file@percent }
+\newlabel{fig:method-detail}{{3}{9}{人体尺度桥接与区域平移精校。（a）投影到相对深度图的人体前表面首先给出解析粗尺度，24 个 HSI anchors 随后利用局部场景特征预测 residual scale 与 bias。（b）TRSTR 将人体表面划分为确定性区域，通过多尺度人物--环境探测、门控和不确定性加权的区域投票，迭代修正人体平移；姿态和形状保持不变。}{figure.3}{}}
+\newlabel{eq:camera-scale}{{11}{9}{视频级尺度一致性与轨迹稳定}{equation.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}区域化平移精校}{9}{subsection.3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.1}确定性人体区域}{9}{subsubsection.3.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.2}多尺度人物--场景探测}{10}{subsubsection.3.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.3}射线约束的区域投票}{10}{subsubsection.3.5.3}\protected@file@percent }
+\newlabel{eq:regional-vote}{{12}{10}{射线约束的区域投票}{equation.12}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.4}不确定性加权的人体更新}{10}{subsubsection.3.5.4}\protected@file@percent }
+\newlabel{eq:precision-weight}{{13}{10}{不确定性加权的人体更新}{equation.13}{}}
+\newlabel{eq:vote-aggregation}{{14}{10}{不确定性加权的人体更新}{equation.14}{}}
+\newlabel{eq:person-update}{{15}{11}{不确定性加权的人体更新}{equation.15}{}}
+\newlabel{eq:translation-iteration}{{16}{11}{不确定性加权的人体更新}{equation.16}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6}分阶段训练目标}{11}{subsection.3.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.6.1}残差尺度训练}{11}{subsubsection.3.6.1}\protected@file@percent }
+\newlabel{eq:scale-loss}{{17}{11}{残差尺度训练}{equation.17}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.6.2}TRSTR 训练}{11}{subsubsection.3.6.2}\protected@file@percent }
+\newlabel{eq:trstr-loss}{{18}{12}{TRSTR 训练}{equation.18}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}实验}{12}{section.4}\protected@file@percent }
+\newlabel{sec:experiments}{{4}{12}{实验}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}局部人体网格恢复}{12}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}世界坐标全局人体运动}{12}{subsection.4.2}\protected@file@percent }
+\citation{ym2026graft}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces 时序人体--场景重建结果。每行从左到右依次为输入视频帧、累积的米制场景与按时间编码的人体网格，以及世界坐标中的人体、相机轨迹。所有帧在同一尺度和坐标规范下联合可视化；右侧曲线用于展示轨迹连续性与准确性。}}{13}{figure.4}\protected@file@percent }
+\newlabel{fig:temporal-4d}{{4}{13}{时序人体--场景重建结果。每行从左到右依次为输入视频帧、累积的米制场景与按时间编码的人体网格，以及世界坐标中的人体、相机轨迹。所有帧在同一尺度和坐标规范下联合可视化；右侧曲线用于展示轨迹连续性与准确性。}{figure.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces 3DPW 和 EMDB-1 上的局部人体网格恢复。``\textcolor {tablegreen}{\ensuremath {\text  {$\mathsurround \z@ \mathchar "458$}}}'' 表示不需要对应输入；所有误差单位为 mm，越低越好。}}{13}{table.1}\protected@file@percent }
+\newlabel{tab:local-hmr}{{1}{13}{3DPW 和 EMDB-1 上的局部人体网格恢复。``\cmarkcolor '' 表示不需要对应输入；所有误差单位为 mm，越低越好。}{table.1}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces EMDB-2 和 RICH 上的全局人体运动估计。预处理输入部分的 ``\textcolor {tablegreen}{\ensuremath {\text  {$\mathsurround \z@ \mathchar "458$}}}'' 表示不需要相应外部输入；输出部分的 ``\textcolor {tablegreen}{\ensuremath {\text  {$\mathsurround \z@ \mathchar "458$}}}'' 表示方法支持该能力，``\textcolor {tablered}{\ensuremath {\times }}'' 表示不支持或未作为模型输出。关节误差单位为 mm，RTE 单位为 \%，均为越低越好。}}{14}{table.2}\protected@file@percent }
+\newlabel{tab:global-motion}{{2}{14}{EMDB-2 和 RICH 上的全局人体运动估计。预处理输入部分的 ``\cmarkcolor '' 表示不需要相应外部输入；输出部分的 ``\cmarkcolor '' 表示方法支持该能力，``\xmarkcolor '' 表示不支持或未作为模型输出。关节误差单位为 mm，RTE 单位为 \%，均为越低越好。}{table.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces \textbf  {人体--场景几何交互的定性比较。} 每行从左到右依次为输入图像、UniSH、Human3R 和本文方法的联合人体--场景重建。相较于基线中可见的悬浮、穿透或深度错位，本文方法在保持局部人体姿态和形状的同时，获得了更贴合场景表面的根部位置与更连贯的支撑关系。该图提供几何交互的定性证据；全局运动和度量场景性能分别由表~\ref {tab:global-motion} 与表~\ref {tab:bonn-depth} 定量评估。}}{14}{figure.5}\protected@file@percent }
+\newlabel{fig:human-scene-interaction}{{5}{14}{\textbf {人体--场景几何交互的定性比较。} 每行从左到右依次为输入图像、UniSH、Human3R 和本文方法的联合人体--场景重建。相较于基线中可见的悬浮、穿透或深度错位，本文方法在保持局部人体姿态和形状的同时，获得了更贴合场景表面的根部位置与更连贯的支撑关系。该图提供几何交互的定性证据；全局运动和度量场景性能分别由表~\ref {tab:global-motion} 与表~\ref {tab:bonn-depth} 定量评估。}{figure.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}通用三维重建}{14}{subsection.4.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces \textbf  {通用三维重建评测。} (a) TUM-Dynamic 上随输入视图数量变化的相机轨迹 ATE；(b-c) Bonn 上随请求输入视图数量变化的 Abs Rel 和 $\delta <1.25$。蓝色 VGGT-Ω ATE 曲线来自本文评测器的精确输出；相机与深度参考曲线由 Human3R 图 9 近似数字化得到。Bonn 红色曲线为 Pure VGGT + GT scale 的 oracle diagnostic：每个序列和输入前缀使用一个由 GT 拟合的尺度，仅用于分析 VGGT-Ω 相对几何的可度量上界，不属于本文方法的无特权预测结果。横轴表示请求的最大视图数；较短序列使用其全部可用帧，不重复补帧。}}{15}{figure.6}\protected@file@percent }
+\newlabel{fig:general-reconstruction}{{6}{15}{\textbf {通用三维重建评测。} (a) TUM-Dynamic 上随输入视图数量变化的相机轨迹 ATE；(b-c) Bonn 上随请求输入视图数量变化的 Abs Rel 和 $\delta <1.25$。蓝色 VGGT-Ω ATE 曲线来自本文评测器的精确输出；相机与深度参考曲线由 Human3R 图 9 近似数字化得到。Bonn 红色曲线为 Pure VGGT + GT scale 的 oracle diagnostic：每个序列和输入前缀使用一个由 GT 拟合的尺度，仅用于分析 VGGT-Ω 相对几何的可度量上界，不属于本文方法的无特权预测结果。横轴表示请求的最大视图数；较短序列使用其全部可用帧，不重复补帧。}{figure.6}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Bonn 上的人体中心视频深度估计。 Abs Rel 越低越好，$\delta <1.25$ 越高越好。}}{15}{table.3}\protected@file@percent }
+\newlabel{tab:bonn-depth}{{3}{15}{Bonn 上的人体中心视频深度估计。 Abs Rel 越低越好，$\delta <1.25$ 越高越好。}{table.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}尺度一致性分析}{15}{subsection.4.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces \textbf  {现实尺寸测量的定性对比。} 两列分别对应包含人体与典型室内物体的场景，三行依次展示 Ground Truth、MapAnything 和本文方法；红色标注表示由对应几何测得的人体高度或物体长度。GroundedHuman 借助人体的规范物理尺寸，将人体与桌面、隔断和墙体等环境几何置于同一可解释的米制坐标中，所得尺寸整体更接近真实参照。该图用于展示度量关系的可解释性，数值性能仍以 Bonn 深度指标为准。}}{16}{figure.7}\protected@file@percent }
+\newlabel{fig:metric-measurement}{{7}{16}{\textbf {现实尺寸测量的定性对比。} 两列分别对应包含人体与典型室内物体的场景，三行依次展示 Ground Truth、MapAnything 和本文方法；红色标注表示由对应几何测得的人体高度或物体长度。GroundedHuman 借助人体的规范物理尺寸，将人体与桌面、隔断和墙体等环境几何置于同一可解释的米制坐标中，所得尺寸整体更接近真实参照。该图用于展示度量关系的可解释性，数值性能仍以 Bonn 深度指标为准。}{figure.7}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}结论}{16}{section.5}\protected@file@percent }
+\newlabel{sec:conclusion}{{5}{16}{结论}{section.5}{}}
+\bibdata{references}
+\bibcite{chen2026human3r}{{1}{2026}{{Chen et~al.}}{{Chen, Chen, Xue, Chen, Xiu, and Pons-Moll}}}
+\bibcite{kang2026crowd4d}{{2}{2026}{{Kang et~al.}}{{Kang, Zhou, Yang, Wen, Huang, Lai, and Li}}}
+\bibcite{keetha2025mapanything}{{3}{2025}{{Keetha et~al.}}{{Keetha, M{\"u}ller, Sch{\"o}nberger, Porzi, Zhang, Fischer, Knapitsch, Zauss, Weber, Antunes, et~al.}}}
+\bibcite{leroy2024mast3r}{{4}{2024}{{Leroy et~al.}}{{Leroy, Cabon, and Revaud}}}
+\bibcite{li2026unish}{{5}{2026}{{Li et~al.}}{{Li, Li, Zhang, Lu, Zhao, Xue, Liu, Peng, Zhang, Luo, Liu, and Guo}}}
+\bibcite{liu2026josh}{{6}{2026}{{Liu et~al.}}{{Liu, Lin, Wu, and Zhou}}}
+\bibcite{loper2023smpl}{{7}{2023}{{Loper et~al.}}{{Loper, Mahmood, Romero, Pons-Moll, and Black}}}
+\bibcite{pavlakos2019smplx}{{8}{2019}{{Pavlakos et~al.}}{{Pavlakos, Choutas, Ghorbani, Bolkart, Osman, Tzionas, and Black}}}
+\bibcite{ym2026graft}{{9}{2026}{{{Pradyumna YM} et~al.}}{{{Pradyumna YM}, Xue, Chen, Kister, S{\'a}r{\'a}ndi, and Pons-Moll}}}
+\bibcite{rojas2025hamst3r}{{10}{2025}{{Rojas et~al.}}{{Rojas, Armando, Ghanem, Weinzaepfel, Leroy, and Rogez}}}
+\bibcite{sarandi2024nlf}{{11}{2024}{{S{\'a}r{\'a}ndi \& Pons-Moll}}{{S{\'a}r{\'a}ndi and Pons-Moll}}}
+\bibcite{schonberger2016colmap}{{12}{2016}{{Sch{\"o}nberger \& Frahm}}{{Sch{\"o}nberger and Frahm}}}
+\bibcite{shen2024gvhmr}{{13}{2024}{{Shen et~al.}}{{Shen, Pi, Xia, Cen, Peng, Hu, Bao, Hu, and Zhou}}}
+\bibcite{shin2024wham}{{14}{2024}{{Shin et~al.}}{{Shin, Kim, Halilaj, and Black}}}
+\bibcite{song2026metrichmsr}{{15}{2026}{{Song et~al.}}{{Song, Zhang, Yuan, Lin, Tao, Zhang, and Yu}}}
+\bibcite{sur2026unicon3r}{{16}{2026}{{Sur et~al.}}{{Sur, Tripathi, Athanasiou, Nguyen, Xu, Black, and Yao}}}
+\bibcite{wang2025vggt}{{17}{2025{a}}{{Wang et~al.}}{{Wang, Chen, Karaev, Vedaldi, Rupprecht, and Novotny}}}
+\bibcite{wang2026vggtomega}{{18}{2026{a}}{{Wang et~al.}}{{Wang, Chen, Zhang, Karaev, Sch{\"o}nberger, Labatut, Bojanowski, Novotny, Vedaldi, and Rupprecht}}}
+\bibcite{wang2025cut3r}{{19}{2025{b}}{{Wang et~al.}}{{Wang, Zhang, Holynski, Efros, and Kanazawa}}}
+\bibcite{wang2024dust3r}{{20}{2024{a}}{{Wang et~al.}}{{Wang, Leroy, Cabon, Chidlovskii, and Revaud}}}
+\bibcite{wang2025pi3}{{21}{2025{c}}{{Wang et~al.}}{{Wang, Zhou, Zhu, Chang, Zhou, Li, Chen, Pang, Shen, and He}}}
+\bibcite{wang2024tram}{{22}{2024{b}}{{Wang et~al.}}{{Wang, Wang, Liu, and Daniilidis}}}
+\bibcite{wang2026duomo}{{23}{2026{b}}{{Wang et~al.}}{{Wang, Ng, Shin, Khirodkar, Dong, Su, Park, Kitani, Richard, Prada, and Zollh{\"o}fer}}}
+\bibcite{yuan2022glamr}{{24}{2022}{{Yuan et~al.}}{{Yuan, Iqbal, Molchanov, Kitani, and Kautz}}}
+\bibcite{zhang2024monst3r}{{25}{2024}{{Zhang et~al.}}{{Zhang, Herrmann, Hur, Jampani, Darrell, Cole, Sun, and Yang}}}
+\bibstyle{iclr2027_conference}
+\gdef \@abspage@last{18}
