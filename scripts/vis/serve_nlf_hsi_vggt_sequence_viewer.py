@@ -2146,6 +2146,7 @@ class SequenceViewer:
                 }
                 if "base_vertices" in person:
                     handle = add_mesh(self.server, f"/frames/{idx:04d}/human_base_t{track_id}_q{query_idx}", person["base_vertices"], person["faces"], color, self.smpl_opacity_value)
+                    set_handle_scale(handle, 1.0)
                     frame_handles["base_humans"].append(handle)
                     person_handles["base_humans"].append(handle)
                     self._register_human_entry(
@@ -2162,6 +2163,7 @@ class SequenceViewer:
                     )
                 if "hsi_vertices" in person:
                     handle = add_mesh(self.server, f"/frames/{idx:04d}/human_hsi_t{track_id}_q{query_idx}", person["hsi_vertices"], person["faces"], color, self.smpl_opacity_value)
+                    set_handle_scale(handle, self.hsi_visual_scale_value)
                     frame_handles["hsi_humans"].append(handle)
                     person_handles["hsi_humans"].append(handle)
                     self._register_human_entry(
@@ -2179,8 +2181,11 @@ class SequenceViewer:
                 label_vertices = person.get("hsi_vertices", person.get("base_vertices"))
                 if label_vertices is not None:
                     vertices = np.asarray(label_vertices, dtype=np.float32)
-                    label_position = vertices[int(np.argmin(vertices[:, 1]))].copy()
-                    label_position[1] -= 0.12
+                    label_base_position = vertices[int(np.argmin(vertices[:, 1]))].copy()
+                    label_base_position[1] -= 0.12
+                    label_position = label_base_position.copy()
+                    if "hsi_vertices" in person:
+                        label_position *= np.float32(self.hsi_visual_scale_value)
                     quality = person.get("track_quality")
                     label_text = f"ID {track_id}" if quality is None else f"ID {track_id}  {float(quality):.2f}"
                     label_handle = add_label(self.server, f"/frames/{idx:04d}/track_label_t{track_id}_q{query_idx}", label_text, label_position)
@@ -2190,7 +2195,7 @@ class SequenceViewer:
                         entry = self.human_entry_by_key.get(human_entry_key(idx, kind, track_id, query_idx))
                         if entry is not None:
                             entry["label_handle"] = label_handle
-                            entry["label_base_position"] = label_position.astype(np.float32, copy=False)
+                            entry["label_base_position"] = label_base_position.astype(np.float32, copy=False)
                 frame_handles["people"].append(person_handles)
             frame_handles["cameras_raw"].append(add_camera(self.server, self.transforms, f"/frames/{idx:04d}/camera_raw_vggt", frame["raw_camera"], self.camera_scale_value, (255, 255, 255)))
             if not tracking_only:
@@ -2264,6 +2269,41 @@ class SequenceViewer:
             dtype=np.float32,
         )
         return trajectory * np.float32(self.hsi_visual_scale_value)
+
+    def _human_visual_scale(self, entry: dict[str, Any]) -> float:
+        """Return the world scale used by the mesh represented by a human entry."""
+        return self.hsi_visual_scale_value if str(entry.get("kind")) == "hsi" else 1.0
+
+    def _human_display_anchor(self, entry: dict[str, Any]) -> np.ndarray:
+        return np.asarray(entry["anchor_position"], dtype=np.float32) * np.float32(self._human_visual_scale(entry))
+
+    def _human_display_offset(self, entry: dict[str, Any]) -> np.ndarray:
+        return np.asarray(entry["offset"], dtype=np.float32) * np.float32(self._human_visual_scale(entry))
+
+    def _sync_hsi_human_visual_scale(self) -> None:
+        """Keep HSI SMPL meshes, labels, and edit handles in the scaled HSI world."""
+        for frame_handles in self.handles:
+            for person_handles in frame_handles.get("people", []):
+                for handle in person_handles.get("hsi_humans", []):
+                    set_handle_scale(handle, self.hsi_visual_scale_value)
+        for entry in self.human_entries:
+            if str(entry.get("kind")) != "hsi":
+                continue
+            label_handle = entry.get("label_handle")
+            label_base = entry.get("label_base_position")
+            if label_handle is not None and label_base is not None:
+                set_handle_position(
+                    label_handle,
+                    (np.asarray(label_base, dtype=np.float32) + np.asarray(entry["offset"], dtype=np.float32))
+                    * np.float32(self.hsi_visual_scale_value),
+                )
+            set_handle_position(entry.get("handle"), self._human_display_offset(entry))
+        selected = self.human_entry_by_key.get(self.selected_human_key)
+        if selected is not None and self.transform_controls is not None:
+            set_handle_position(
+                self.transform_controls,
+                self._human_display_anchor(selected) + self._human_display_offset(selected),
+            )
 
     def _build_gui(self) -> None:
         self.frame_info = add_text(self.server, "Frame Info", "")
@@ -3537,7 +3577,10 @@ class SequenceViewer:
                 )
                 if self.transform_controls is not None:
                     set_handle_visible(self.transform_controls, True)
-                    set_handle_position(self.transform_controls, np.asarray(entry["anchor_position"], dtype=np.float32) + offset)
+                    set_handle_position(
+                        self.transform_controls,
+                        self._human_display_anchor(entry) + self._human_display_offset(entry),
+                    )
             self.smpl_edit_dx.value = float(offset[0])
             self.smpl_edit_dy.value = float(offset[1])
             self.smpl_edit_dz.value = float(offset[2])
@@ -3567,7 +3610,9 @@ class SequenceViewer:
         position = get_handle_position(self.transform_controls)
         if position is None:
             return
-        offset = np.asarray(position, dtype=np.float32) - np.asarray(entry["anchor_position"], dtype=np.float32)
+        display_delta = np.asarray(position, dtype=np.float32) - self._human_display_anchor(entry)
+        visual_scale = max(float(self._human_visual_scale(entry)), 1e-8)
+        offset = display_delta / np.float32(visual_scale)
         self._syncing_smpl_controls = True
         try:
             self.smpl_edit_dx.value = float(offset[0])
@@ -3589,16 +3634,20 @@ class SequenceViewer:
             ]
         for entry in entries:
             entry["offset"] = offset_np.copy()
-            set_handle_position(entry["handle"], offset_np)
+            set_handle_position(entry["handle"], self._human_display_offset(entry))
             label_handle = entry.get("label_handle")
             label_base = entry.get("label_base_position")
             if label_handle is not None and label_base is not None:
-                set_handle_position(label_handle, np.asarray(label_base, dtype=np.float32) + offset_np)
+                set_handle_position(
+                    label_handle,
+                    (np.asarray(label_base, dtype=np.float32) + offset_np)
+                    * np.float32(self._human_visual_scale(entry)),
+                )
 
     def _sync_transform_controls_to_entry(self, entry: dict[str, Any]) -> None:
         if self.transform_controls is None:
             return
-        position = np.asarray(entry["anchor_position"], dtype=np.float32) + np.asarray(entry["offset"], dtype=np.float32)
+        position = self._human_display_anchor(entry) + self._human_display_offset(entry)
         set_handle_position(self.transform_controls, position)
 
     def _reset_selected_smpl_offset(self, _: Any = None) -> None:
@@ -4041,6 +4090,7 @@ class SequenceViewer:
         scaled_camera = self._scaled_hsi_camera(frame)
         for handle in frame_handles.get("cameras_hsi", []):
             set_handle_position(handle, scaled_camera["position"])
+        self._sync_hsi_human_visual_scale()
 
     def _rebuild_hsi_visual_geometry(self) -> None:
         if bool(getattr(self.args, "tracking_only", False)):
@@ -4063,6 +4113,8 @@ class SequenceViewer:
             scaled_camera = self._scaled_hsi_camera(frame)
             for handle in frame_handles.get("cameras_hsi", []):
                 set_handle_position(handle, scaled_camera["position"])
+
+        self._sync_hsi_human_visual_scale()
 
         for handle in self.global_handles.get("camera_trajectory_hsi", []):
             remove_handle(handle)
