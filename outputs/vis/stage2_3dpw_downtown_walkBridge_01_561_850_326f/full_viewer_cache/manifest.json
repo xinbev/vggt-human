@@ -1,0 +1,2707 @@
+{
+  "format": "vggt_omega_full_sequence_viewer_cache_v1",
+  "num_frames": 290,
+  "scene_metadata_file": "scene_metadata.pkl",
+  "smpl_faces_file": "smpl_faces.npy",
+  "camera_parameters": {
+    "per_frame": [
+      "intrinsic",
+      "raw_extrinsic",
+      "hsi_extrinsic",
+      "raw_camera",
+      "hsi_camera",
+      "camera"
+    ],
+    "scene": [
+      "camera_trajectory",
+      "camera_trajectory_raw",
+      "camera_trajectory_hsi"
+    ],
+    "storage": "frame pickle and scene_metadata.pkl"
+  },
+  "viewer_args": {
+    "frames_dir": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/",
+    "query_source": "nlf_detector",
+    "preprocessed_root": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/bedlam_boxes",
+    "bedlam_root": "/home/zhw/xyb_space/bedlam/processed_bedlam",
+    "stage2_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full",
+    "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt",
+    "path_config": "/home/zhw/lab_users/xyb/home/projects/vggt-human/configs/path.yaml",
+    "train_config": "/home/zhw/lab_users/xyb/home/projects/vggt-human/configs/train_smpl_hsi_nlf_stage2_human_scene_align.yaml",
+    "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_3dpw_downtown_walkBridge_01_561_850_326f",
+    "viewer_cache_output": "",
+    "full_viewer_cache_output": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_3dpw_downtown_walkBridge_01_561_850_326f/full_viewer_cache",
+    "device": "cuda",
+    "port": 8080,
+    "image_size": 0,
+    "start_index": 561,
+    "end_index": 850,
+    "inference_frames": 0,
+    "frame_stride": 1,
+    "frame_sampling": "uniform",
+    "max_frames": 0,
+    "max_humans": 8,
+    "nlf_detector_threshold": 0.3,
+    "conf_threshold": 0.05,
+    "tracking_overlay": "base_smpl",
+    "track_max_age": 90,
+    "track_min_quality": 0.25,
+    "track_max_center_distance": 0.25,
+    "track_max_transl_distance": 1.5,
+    "track_max_beta_l1": 0.3,
+    "depth_point_stride": 2,
+    "max_scene_depth": 80.0,
+    "viewer_mode": "Hybrid",
+    "environment_display": "points",
+    "hsi_visual_scale": 1.0,
+    "human_mask_dilation_px": 12,
+    "filter_human_points": true,
+    "env_mesh_depth_edge_rtol": 0.15,
+    "env_mesh_color_groups": 216,
+    "env_mesh_color_mode": "point_overlay",
+    "env_mesh_overlay_point_size_scale": 0.75,
+    "smpl_edit_output": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_3dpw_downtown_walkBridge_01_561_850_326f/smpl_edit_offsets.json",
+    "show_track_ids": true,
+    "display_people": 0,
+    "smpl_display_frames": 0,
+    "point_size": 0.006,
+    "camera_frustum_scale": 0.2,
+    "alignment_vertex_stride": 16,
+    "smpl_model_dir": "",
+    "baseline_checkpoint": "",
+    "hsi_overlay_checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt",
+    "scene_scale_prealign": "smpl_median",
+    "coarse_scale_min": 0.1,
+    "coarse_scale_max": 10.0,
+    "coarse_conf_threshold": null,
+    "coarse_max_people": 0,
+    "coarse_anchor_stride": 8,
+    "coarse_min_anchor_pixels": 32,
+    "coarse_fallback": "sequence_median",
+    "trstr_frame_chunk": 0,
+    "cascade_effective_affine_mode": "clip_median",
+    "smoke_only": false,
+    "override": [
+      "model.hsi_align_feature_version=legacy_scale_bias_v0",
+      "model.smpl_use_aggregator_queries=false",
+      "model.hsi_scene_affine_mode=per_frame"
+    ],
+    "selected_source_indices": [
+      561,
+      562,
+      563,
+      564,
+      565,
+      566,
+      567,
+      568,
+      569,
+      570,
+      571,
+      572,
+      573,
+      574,
+      575,
+      576,
+      577,
+      578,
+      579,
+      580,
+      581,
+      582,
+      583,
+      584,
+      585,
+      586,
+      587,
+      588,
+      589,
+      590,
+      591,
+      592,
+      593,
+      594,
+      595,
+      596,
+      597,
+      598,
+      599,
+      600,
+      601,
+      602,
+      603,
+      604,
+      605,
+      606,
+      607,
+      608,
+      609,
+      610,
+      611,
+      612,
+      613,
+      614,
+      615,
+      616,
+      617,
+      618,
+      619,
+      620,
+      621,
+      622,
+      623,
+      624,
+      625,
+      626,
+      627,
+      628,
+      629,
+      630,
+      631,
+      632,
+      633,
+      634,
+      635,
+      636,
+      637,
+      638,
+      639,
+      640,
+      641,
+      642,
+      643,
+      644,
+      645,
+      646,
+      647,
+      648,
+      649,
+      650,
+      651,
+      652,
+      653,
+      654,
+      655,
+      656,
+      657,
+      658,
+      659,
+      660,
+      661,
+      662,
+      663,
+      664,
+      665,
+      666,
+      667,
+      668,
+      669,
+      670,
+      671,
+      672,
+      673,
+      674,
+      675,
+      676,
+      677,
+      678,
+      679,
+      680,
+      681,
+      682,
+      683,
+      684,
+      685,
+      686,
+      687,
+      688,
+      689,
+      690,
+      691,
+      692,
+      693,
+      694,
+      695,
+      696,
+      697,
+      698,
+      699,
+      700,
+      701,
+      702,
+      703,
+      704,
+      705,
+      706,
+      707,
+      708,
+      709,
+      710,
+      711,
+      712,
+      713,
+      714,
+      715,
+      716,
+      717,
+      718,
+      719,
+      720,
+      721,
+      722,
+      723,
+      724,
+      725,
+      726,
+      727,
+      728,
+      729,
+      730,
+      731,
+      732,
+      733,
+      734,
+      735,
+      736,
+      737,
+      738,
+      739,
+      740,
+      741,
+      742,
+      743,
+      744,
+      745,
+      746,
+      747,
+      748,
+      749,
+      750,
+      751,
+      752,
+      753,
+      754,
+      755,
+      756,
+      757,
+      758,
+      759,
+      760,
+      761,
+      762,
+      763,
+      764,
+      765,
+      766,
+      767,
+      768,
+      769,
+      770,
+      771,
+      772,
+      773,
+      774,
+      775,
+      776,
+      777,
+      778,
+      779,
+      780,
+      781,
+      782,
+      783,
+      784,
+      785,
+      786,
+      787,
+      788,
+      789,
+      790,
+      791,
+      792,
+      793,
+      794,
+      795,
+      796,
+      797,
+      798,
+      799,
+      800,
+      801,
+      802,
+      803,
+      804,
+      805,
+      806,
+      807,
+      808,
+      809,
+      810,
+      811,
+      812,
+      813,
+      814,
+      815,
+      816,
+      817,
+      818,
+      819,
+      820,
+      821,
+      822,
+      823,
+      824,
+      825,
+      826,
+      827,
+      828,
+      829,
+      830,
+      831,
+      832,
+      833,
+      834,
+      835,
+      836,
+      837,
+      838,
+      839,
+      840,
+      841,
+      842,
+      843,
+      844,
+      845,
+      846,
+      847,
+      848,
+      849,
+      850
+    ],
+    "hsi_scene_affine_mode": "per_frame",
+    "hsi_scene_affine_ema_alpha": 0.25
+  },
+  "frames": [
+    {
+      "position": 0,
+      "frame_index": 0,
+      "source_frame_index": 561,
+      "frame_id": "image_00561",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00561.jpg",
+      "file": "frame_0000.pkl"
+    },
+    {
+      "position": 1,
+      "frame_index": 1,
+      "source_frame_index": 562,
+      "frame_id": "image_00562",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00562.jpg",
+      "file": "frame_0001.pkl"
+    },
+    {
+      "position": 2,
+      "frame_index": 2,
+      "source_frame_index": 563,
+      "frame_id": "image_00563",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00563.jpg",
+      "file": "frame_0002.pkl"
+    },
+    {
+      "position": 3,
+      "frame_index": 3,
+      "source_frame_index": 564,
+      "frame_id": "image_00564",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00564.jpg",
+      "file": "frame_0003.pkl"
+    },
+    {
+      "position": 4,
+      "frame_index": 4,
+      "source_frame_index": 565,
+      "frame_id": "image_00565",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00565.jpg",
+      "file": "frame_0004.pkl"
+    },
+    {
+      "position": 5,
+      "frame_index": 5,
+      "source_frame_index": 566,
+      "frame_id": "image_00566",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00566.jpg",
+      "file": "frame_0005.pkl"
+    },
+    {
+      "position": 6,
+      "frame_index": 6,
+      "source_frame_index": 567,
+      "frame_id": "image_00567",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00567.jpg",
+      "file": "frame_0006.pkl"
+    },
+    {
+      "position": 7,
+      "frame_index": 7,
+      "source_frame_index": 568,
+      "frame_id": "image_00568",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00568.jpg",
+      "file": "frame_0007.pkl"
+    },
+    {
+      "position": 8,
+      "frame_index": 8,
+      "source_frame_index": 569,
+      "frame_id": "image_00569",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00569.jpg",
+      "file": "frame_0008.pkl"
+    },
+    {
+      "position": 9,
+      "frame_index": 9,
+      "source_frame_index": 570,
+      "frame_id": "image_00570",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00570.jpg",
+      "file": "frame_0009.pkl"
+    },
+    {
+      "position": 10,
+      "frame_index": 10,
+      "source_frame_index": 571,
+      "frame_id": "image_00571",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00571.jpg",
+      "file": "frame_0010.pkl"
+    },
+    {
+      "position": 11,
+      "frame_index": 11,
+      "source_frame_index": 572,
+      "frame_id": "image_00572",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00572.jpg",
+      "file": "frame_0011.pkl"
+    },
+    {
+      "position": 12,
+      "frame_index": 12,
+      "source_frame_index": 573,
+      "frame_id": "image_00573",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00573.jpg",
+      "file": "frame_0012.pkl"
+    },
+    {
+      "position": 13,
+      "frame_index": 13,
+      "source_frame_index": 574,
+      "frame_id": "image_00574",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00574.jpg",
+      "file": "frame_0013.pkl"
+    },
+    {
+      "position": 14,
+      "frame_index": 14,
+      "source_frame_index": 575,
+      "frame_id": "image_00575",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00575.jpg",
+      "file": "frame_0014.pkl"
+    },
+    {
+      "position": 15,
+      "frame_index": 15,
+      "source_frame_index": 576,
+      "frame_id": "image_00576",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00576.jpg",
+      "file": "frame_0015.pkl"
+    },
+    {
+      "position": 16,
+      "frame_index": 16,
+      "source_frame_index": 577,
+      "frame_id": "image_00577",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00577.jpg",
+      "file": "frame_0016.pkl"
+    },
+    {
+      "position": 17,
+      "frame_index": 17,
+      "source_frame_index": 578,
+      "frame_id": "image_00578",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00578.jpg",
+      "file": "frame_0017.pkl"
+    },
+    {
+      "position": 18,
+      "frame_index": 18,
+      "source_frame_index": 579,
+      "frame_id": "image_00579",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00579.jpg",
+      "file": "frame_0018.pkl"
+    },
+    {
+      "position": 19,
+      "frame_index": 19,
+      "source_frame_index": 580,
+      "frame_id": "image_00580",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00580.jpg",
+      "file": "frame_0019.pkl"
+    },
+    {
+      "position": 20,
+      "frame_index": 20,
+      "source_frame_index": 581,
+      "frame_id": "image_00581",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00581.jpg",
+      "file": "frame_0020.pkl"
+    },
+    {
+      "position": 21,
+      "frame_index": 21,
+      "source_frame_index": 582,
+      "frame_id": "image_00582",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00582.jpg",
+      "file": "frame_0021.pkl"
+    },
+    {
+      "position": 22,
+      "frame_index": 22,
+      "source_frame_index": 583,
+      "frame_id": "image_00583",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00583.jpg",
+      "file": "frame_0022.pkl"
+    },
+    {
+      "position": 23,
+      "frame_index": 23,
+      "source_frame_index": 584,
+      "frame_id": "image_00584",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00584.jpg",
+      "file": "frame_0023.pkl"
+    },
+    {
+      "position": 24,
+      "frame_index": 24,
+      "source_frame_index": 585,
+      "frame_id": "image_00585",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00585.jpg",
+      "file": "frame_0024.pkl"
+    },
+    {
+      "position": 25,
+      "frame_index": 25,
+      "source_frame_index": 586,
+      "frame_id": "image_00586",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00586.jpg",
+      "file": "frame_0025.pkl"
+    },
+    {
+      "position": 26,
+      "frame_index": 26,
+      "source_frame_index": 587,
+      "frame_id": "image_00587",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00587.jpg",
+      "file": "frame_0026.pkl"
+    },
+    {
+      "position": 27,
+      "frame_index": 27,
+      "source_frame_index": 588,
+      "frame_id": "image_00588",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00588.jpg",
+      "file": "frame_0027.pkl"
+    },
+    {
+      "position": 28,
+      "frame_index": 28,
+      "source_frame_index": 589,
+      "frame_id": "image_00589",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00589.jpg",
+      "file": "frame_0028.pkl"
+    },
+    {
+      "position": 29,
+      "frame_index": 29,
+      "source_frame_index": 590,
+      "frame_id": "image_00590",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00590.jpg",
+      "file": "frame_0029.pkl"
+    },
+    {
+      "position": 30,
+      "frame_index": 30,
+      "source_frame_index": 591,
+      "frame_id": "image_00591",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00591.jpg",
+      "file": "frame_0030.pkl"
+    },
+    {
+      "position": 31,
+      "frame_index": 31,
+      "source_frame_index": 592,
+      "frame_id": "image_00592",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00592.jpg",
+      "file": "frame_0031.pkl"
+    },
+    {
+      "position": 32,
+      "frame_index": 32,
+      "source_frame_index": 593,
+      "frame_id": "image_00593",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00593.jpg",
+      "file": "frame_0032.pkl"
+    },
+    {
+      "position": 33,
+      "frame_index": 33,
+      "source_frame_index": 594,
+      "frame_id": "image_00594",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00594.jpg",
+      "file": "frame_0033.pkl"
+    },
+    {
+      "position": 34,
+      "frame_index": 34,
+      "source_frame_index": 595,
+      "frame_id": "image_00595",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00595.jpg",
+      "file": "frame_0034.pkl"
+    },
+    {
+      "position": 35,
+      "frame_index": 35,
+      "source_frame_index": 596,
+      "frame_id": "image_00596",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00596.jpg",
+      "file": "frame_0035.pkl"
+    },
+    {
+      "position": 36,
+      "frame_index": 36,
+      "source_frame_index": 597,
+      "frame_id": "image_00597",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00597.jpg",
+      "file": "frame_0036.pkl"
+    },
+    {
+      "position": 37,
+      "frame_index": 37,
+      "source_frame_index": 598,
+      "frame_id": "image_00598",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00598.jpg",
+      "file": "frame_0037.pkl"
+    },
+    {
+      "position": 38,
+      "frame_index": 38,
+      "source_frame_index": 599,
+      "frame_id": "image_00599",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00599.jpg",
+      "file": "frame_0038.pkl"
+    },
+    {
+      "position": 39,
+      "frame_index": 39,
+      "source_frame_index": 600,
+      "frame_id": "image_00600",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00600.jpg",
+      "file": "frame_0039.pkl"
+    },
+    {
+      "position": 40,
+      "frame_index": 40,
+      "source_frame_index": 601,
+      "frame_id": "image_00601",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00601.jpg",
+      "file": "frame_0040.pkl"
+    },
+    {
+      "position": 41,
+      "frame_index": 41,
+      "source_frame_index": 602,
+      "frame_id": "image_00602",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00602.jpg",
+      "file": "frame_0041.pkl"
+    },
+    {
+      "position": 42,
+      "frame_index": 42,
+      "source_frame_index": 603,
+      "frame_id": "image_00603",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00603.jpg",
+      "file": "frame_0042.pkl"
+    },
+    {
+      "position": 43,
+      "frame_index": 43,
+      "source_frame_index": 604,
+      "frame_id": "image_00604",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00604.jpg",
+      "file": "frame_0043.pkl"
+    },
+    {
+      "position": 44,
+      "frame_index": 44,
+      "source_frame_index": 605,
+      "frame_id": "image_00605",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00605.jpg",
+      "file": "frame_0044.pkl"
+    },
+    {
+      "position": 45,
+      "frame_index": 45,
+      "source_frame_index": 606,
+      "frame_id": "image_00606",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00606.jpg",
+      "file": "frame_0045.pkl"
+    },
+    {
+      "position": 46,
+      "frame_index": 46,
+      "source_frame_index": 607,
+      "frame_id": "image_00607",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00607.jpg",
+      "file": "frame_0046.pkl"
+    },
+    {
+      "position": 47,
+      "frame_index": 47,
+      "source_frame_index": 608,
+      "frame_id": "image_00608",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00608.jpg",
+      "file": "frame_0047.pkl"
+    },
+    {
+      "position": 48,
+      "frame_index": 48,
+      "source_frame_index": 609,
+      "frame_id": "image_00609",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00609.jpg",
+      "file": "frame_0048.pkl"
+    },
+    {
+      "position": 49,
+      "frame_index": 49,
+      "source_frame_index": 610,
+      "frame_id": "image_00610",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00610.jpg",
+      "file": "frame_0049.pkl"
+    },
+    {
+      "position": 50,
+      "frame_index": 50,
+      "source_frame_index": 611,
+      "frame_id": "image_00611",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00611.jpg",
+      "file": "frame_0050.pkl"
+    },
+    {
+      "position": 51,
+      "frame_index": 51,
+      "source_frame_index": 612,
+      "frame_id": "image_00612",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00612.jpg",
+      "file": "frame_0051.pkl"
+    },
+    {
+      "position": 52,
+      "frame_index": 52,
+      "source_frame_index": 613,
+      "frame_id": "image_00613",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00613.jpg",
+      "file": "frame_0052.pkl"
+    },
+    {
+      "position": 53,
+      "frame_index": 53,
+      "source_frame_index": 614,
+      "frame_id": "image_00614",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00614.jpg",
+      "file": "frame_0053.pkl"
+    },
+    {
+      "position": 54,
+      "frame_index": 54,
+      "source_frame_index": 615,
+      "frame_id": "image_00615",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00615.jpg",
+      "file": "frame_0054.pkl"
+    },
+    {
+      "position": 55,
+      "frame_index": 55,
+      "source_frame_index": 616,
+      "frame_id": "image_00616",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00616.jpg",
+      "file": "frame_0055.pkl"
+    },
+    {
+      "position": 56,
+      "frame_index": 56,
+      "source_frame_index": 617,
+      "frame_id": "image_00617",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00617.jpg",
+      "file": "frame_0056.pkl"
+    },
+    {
+      "position": 57,
+      "frame_index": 57,
+      "source_frame_index": 618,
+      "frame_id": "image_00618",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00618.jpg",
+      "file": "frame_0057.pkl"
+    },
+    {
+      "position": 58,
+      "frame_index": 58,
+      "source_frame_index": 619,
+      "frame_id": "image_00619",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00619.jpg",
+      "file": "frame_0058.pkl"
+    },
+    {
+      "position": 59,
+      "frame_index": 59,
+      "source_frame_index": 620,
+      "frame_id": "image_00620",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00620.jpg",
+      "file": "frame_0059.pkl"
+    },
+    {
+      "position": 60,
+      "frame_index": 60,
+      "source_frame_index": 621,
+      "frame_id": "image_00621",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00621.jpg",
+      "file": "frame_0060.pkl"
+    },
+    {
+      "position": 61,
+      "frame_index": 61,
+      "source_frame_index": 622,
+      "frame_id": "image_00622",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00622.jpg",
+      "file": "frame_0061.pkl"
+    },
+    {
+      "position": 62,
+      "frame_index": 62,
+      "source_frame_index": 623,
+      "frame_id": "image_00623",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00623.jpg",
+      "file": "frame_0062.pkl"
+    },
+    {
+      "position": 63,
+      "frame_index": 63,
+      "source_frame_index": 624,
+      "frame_id": "image_00624",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00624.jpg",
+      "file": "frame_0063.pkl"
+    },
+    {
+      "position": 64,
+      "frame_index": 64,
+      "source_frame_index": 625,
+      "frame_id": "image_00625",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00625.jpg",
+      "file": "frame_0064.pkl"
+    },
+    {
+      "position": 65,
+      "frame_index": 65,
+      "source_frame_index": 626,
+      "frame_id": "image_00626",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00626.jpg",
+      "file": "frame_0065.pkl"
+    },
+    {
+      "position": 66,
+      "frame_index": 66,
+      "source_frame_index": 627,
+      "frame_id": "image_00627",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00627.jpg",
+      "file": "frame_0066.pkl"
+    },
+    {
+      "position": 67,
+      "frame_index": 67,
+      "source_frame_index": 628,
+      "frame_id": "image_00628",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00628.jpg",
+      "file": "frame_0067.pkl"
+    },
+    {
+      "position": 68,
+      "frame_index": 68,
+      "source_frame_index": 629,
+      "frame_id": "image_00629",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00629.jpg",
+      "file": "frame_0068.pkl"
+    },
+    {
+      "position": 69,
+      "frame_index": 69,
+      "source_frame_index": 630,
+      "frame_id": "image_00630",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00630.jpg",
+      "file": "frame_0069.pkl"
+    },
+    {
+      "position": 70,
+      "frame_index": 70,
+      "source_frame_index": 631,
+      "frame_id": "image_00631",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00631.jpg",
+      "file": "frame_0070.pkl"
+    },
+    {
+      "position": 71,
+      "frame_index": 71,
+      "source_frame_index": 632,
+      "frame_id": "image_00632",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00632.jpg",
+      "file": "frame_0071.pkl"
+    },
+    {
+      "position": 72,
+      "frame_index": 72,
+      "source_frame_index": 633,
+      "frame_id": "image_00633",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00633.jpg",
+      "file": "frame_0072.pkl"
+    },
+    {
+      "position": 73,
+      "frame_index": 73,
+      "source_frame_index": 634,
+      "frame_id": "image_00634",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00634.jpg",
+      "file": "frame_0073.pkl"
+    },
+    {
+      "position": 74,
+      "frame_index": 74,
+      "source_frame_index": 635,
+      "frame_id": "image_00635",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00635.jpg",
+      "file": "frame_0074.pkl"
+    },
+    {
+      "position": 75,
+      "frame_index": 75,
+      "source_frame_index": 636,
+      "frame_id": "image_00636",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00636.jpg",
+      "file": "frame_0075.pkl"
+    },
+    {
+      "position": 76,
+      "frame_index": 76,
+      "source_frame_index": 637,
+      "frame_id": "image_00637",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00637.jpg",
+      "file": "frame_0076.pkl"
+    },
+    {
+      "position": 77,
+      "frame_index": 77,
+      "source_frame_index": 638,
+      "frame_id": "image_00638",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00638.jpg",
+      "file": "frame_0077.pkl"
+    },
+    {
+      "position": 78,
+      "frame_index": 78,
+      "source_frame_index": 639,
+      "frame_id": "image_00639",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00639.jpg",
+      "file": "frame_0078.pkl"
+    },
+    {
+      "position": 79,
+      "frame_index": 79,
+      "source_frame_index": 640,
+      "frame_id": "image_00640",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00640.jpg",
+      "file": "frame_0079.pkl"
+    },
+    {
+      "position": 80,
+      "frame_index": 80,
+      "source_frame_index": 641,
+      "frame_id": "image_00641",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00641.jpg",
+      "file": "frame_0080.pkl"
+    },
+    {
+      "position": 81,
+      "frame_index": 81,
+      "source_frame_index": 642,
+      "frame_id": "image_00642",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00642.jpg",
+      "file": "frame_0081.pkl"
+    },
+    {
+      "position": 82,
+      "frame_index": 82,
+      "source_frame_index": 643,
+      "frame_id": "image_00643",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00643.jpg",
+      "file": "frame_0082.pkl"
+    },
+    {
+      "position": 83,
+      "frame_index": 83,
+      "source_frame_index": 644,
+      "frame_id": "image_00644",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00644.jpg",
+      "file": "frame_0083.pkl"
+    },
+    {
+      "position": 84,
+      "frame_index": 84,
+      "source_frame_index": 645,
+      "frame_id": "image_00645",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00645.jpg",
+      "file": "frame_0084.pkl"
+    },
+    {
+      "position": 85,
+      "frame_index": 85,
+      "source_frame_index": 646,
+      "frame_id": "image_00646",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00646.jpg",
+      "file": "frame_0085.pkl"
+    },
+    {
+      "position": 86,
+      "frame_index": 86,
+      "source_frame_index": 647,
+      "frame_id": "image_00647",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00647.jpg",
+      "file": "frame_0086.pkl"
+    },
+    {
+      "position": 87,
+      "frame_index": 87,
+      "source_frame_index": 648,
+      "frame_id": "image_00648",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00648.jpg",
+      "file": "frame_0087.pkl"
+    },
+    {
+      "position": 88,
+      "frame_index": 88,
+      "source_frame_index": 649,
+      "frame_id": "image_00649",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00649.jpg",
+      "file": "frame_0088.pkl"
+    },
+    {
+      "position": 89,
+      "frame_index": 89,
+      "source_frame_index": 650,
+      "frame_id": "image_00650",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00650.jpg",
+      "file": "frame_0089.pkl"
+    },
+    {
+      "position": 90,
+      "frame_index": 90,
+      "source_frame_index": 651,
+      "frame_id": "image_00651",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00651.jpg",
+      "file": "frame_0090.pkl"
+    },
+    {
+      "position": 91,
+      "frame_index": 91,
+      "source_frame_index": 652,
+      "frame_id": "image_00652",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00652.jpg",
+      "file": "frame_0091.pkl"
+    },
+    {
+      "position": 92,
+      "frame_index": 92,
+      "source_frame_index": 653,
+      "frame_id": "image_00653",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00653.jpg",
+      "file": "frame_0092.pkl"
+    },
+    {
+      "position": 93,
+      "frame_index": 93,
+      "source_frame_index": 654,
+      "frame_id": "image_00654",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00654.jpg",
+      "file": "frame_0093.pkl"
+    },
+    {
+      "position": 94,
+      "frame_index": 94,
+      "source_frame_index": 655,
+      "frame_id": "image_00655",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00655.jpg",
+      "file": "frame_0094.pkl"
+    },
+    {
+      "position": 95,
+      "frame_index": 95,
+      "source_frame_index": 656,
+      "frame_id": "image_00656",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00656.jpg",
+      "file": "frame_0095.pkl"
+    },
+    {
+      "position": 96,
+      "frame_index": 96,
+      "source_frame_index": 657,
+      "frame_id": "image_00657",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00657.jpg",
+      "file": "frame_0096.pkl"
+    },
+    {
+      "position": 97,
+      "frame_index": 97,
+      "source_frame_index": 658,
+      "frame_id": "image_00658",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00658.jpg",
+      "file": "frame_0097.pkl"
+    },
+    {
+      "position": 98,
+      "frame_index": 98,
+      "source_frame_index": 659,
+      "frame_id": "image_00659",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00659.jpg",
+      "file": "frame_0098.pkl"
+    },
+    {
+      "position": 99,
+      "frame_index": 99,
+      "source_frame_index": 660,
+      "frame_id": "image_00660",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00660.jpg",
+      "file": "frame_0099.pkl"
+    },
+    {
+      "position": 100,
+      "frame_index": 100,
+      "source_frame_index": 661,
+      "frame_id": "image_00661",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00661.jpg",
+      "file": "frame_0100.pkl"
+    },
+    {
+      "position": 101,
+      "frame_index": 101,
+      "source_frame_index": 662,
+      "frame_id": "image_00662",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00662.jpg",
+      "file": "frame_0101.pkl"
+    },
+    {
+      "position": 102,
+      "frame_index": 102,
+      "source_frame_index": 663,
+      "frame_id": "image_00663",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00663.jpg",
+      "file": "frame_0102.pkl"
+    },
+    {
+      "position": 103,
+      "frame_index": 103,
+      "source_frame_index": 664,
+      "frame_id": "image_00664",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00664.jpg",
+      "file": "frame_0103.pkl"
+    },
+    {
+      "position": 104,
+      "frame_index": 104,
+      "source_frame_index": 665,
+      "frame_id": "image_00665",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00665.jpg",
+      "file": "frame_0104.pkl"
+    },
+    {
+      "position": 105,
+      "frame_index": 105,
+      "source_frame_index": 666,
+      "frame_id": "image_00666",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00666.jpg",
+      "file": "frame_0105.pkl"
+    },
+    {
+      "position": 106,
+      "frame_index": 106,
+      "source_frame_index": 667,
+      "frame_id": "image_00667",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00667.jpg",
+      "file": "frame_0106.pkl"
+    },
+    {
+      "position": 107,
+      "frame_index": 107,
+      "source_frame_index": 668,
+      "frame_id": "image_00668",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00668.jpg",
+      "file": "frame_0107.pkl"
+    },
+    {
+      "position": 108,
+      "frame_index": 108,
+      "source_frame_index": 669,
+      "frame_id": "image_00669",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00669.jpg",
+      "file": "frame_0108.pkl"
+    },
+    {
+      "position": 109,
+      "frame_index": 109,
+      "source_frame_index": 670,
+      "frame_id": "image_00670",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00670.jpg",
+      "file": "frame_0109.pkl"
+    },
+    {
+      "position": 110,
+      "frame_index": 110,
+      "source_frame_index": 671,
+      "frame_id": "image_00671",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00671.jpg",
+      "file": "frame_0110.pkl"
+    },
+    {
+      "position": 111,
+      "frame_index": 111,
+      "source_frame_index": 672,
+      "frame_id": "image_00672",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00672.jpg",
+      "file": "frame_0111.pkl"
+    },
+    {
+      "position": 112,
+      "frame_index": 112,
+      "source_frame_index": 673,
+      "frame_id": "image_00673",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00673.jpg",
+      "file": "frame_0112.pkl"
+    },
+    {
+      "position": 113,
+      "frame_index": 113,
+      "source_frame_index": 674,
+      "frame_id": "image_00674",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00674.jpg",
+      "file": "frame_0113.pkl"
+    },
+    {
+      "position": 114,
+      "frame_index": 114,
+      "source_frame_index": 675,
+      "frame_id": "image_00675",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00675.jpg",
+      "file": "frame_0114.pkl"
+    },
+    {
+      "position": 115,
+      "frame_index": 115,
+      "source_frame_index": 676,
+      "frame_id": "image_00676",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00676.jpg",
+      "file": "frame_0115.pkl"
+    },
+    {
+      "position": 116,
+      "frame_index": 116,
+      "source_frame_index": 677,
+      "frame_id": "image_00677",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00677.jpg",
+      "file": "frame_0116.pkl"
+    },
+    {
+      "position": 117,
+      "frame_index": 117,
+      "source_frame_index": 678,
+      "frame_id": "image_00678",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00678.jpg",
+      "file": "frame_0117.pkl"
+    },
+    {
+      "position": 118,
+      "frame_index": 118,
+      "source_frame_index": 679,
+      "frame_id": "image_00679",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00679.jpg",
+      "file": "frame_0118.pkl"
+    },
+    {
+      "position": 119,
+      "frame_index": 119,
+      "source_frame_index": 680,
+      "frame_id": "image_00680",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00680.jpg",
+      "file": "frame_0119.pkl"
+    },
+    {
+      "position": 120,
+      "frame_index": 120,
+      "source_frame_index": 681,
+      "frame_id": "image_00681",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00681.jpg",
+      "file": "frame_0120.pkl"
+    },
+    {
+      "position": 121,
+      "frame_index": 121,
+      "source_frame_index": 682,
+      "frame_id": "image_00682",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00682.jpg",
+      "file": "frame_0121.pkl"
+    },
+    {
+      "position": 122,
+      "frame_index": 122,
+      "source_frame_index": 683,
+      "frame_id": "image_00683",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00683.jpg",
+      "file": "frame_0122.pkl"
+    },
+    {
+      "position": 123,
+      "frame_index": 123,
+      "source_frame_index": 684,
+      "frame_id": "image_00684",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00684.jpg",
+      "file": "frame_0123.pkl"
+    },
+    {
+      "position": 124,
+      "frame_index": 124,
+      "source_frame_index": 685,
+      "frame_id": "image_00685",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00685.jpg",
+      "file": "frame_0124.pkl"
+    },
+    {
+      "position": 125,
+      "frame_index": 125,
+      "source_frame_index": 686,
+      "frame_id": "image_00686",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00686.jpg",
+      "file": "frame_0125.pkl"
+    },
+    {
+      "position": 126,
+      "frame_index": 126,
+      "source_frame_index": 687,
+      "frame_id": "image_00687",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00687.jpg",
+      "file": "frame_0126.pkl"
+    },
+    {
+      "position": 127,
+      "frame_index": 127,
+      "source_frame_index": 688,
+      "frame_id": "image_00688",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00688.jpg",
+      "file": "frame_0127.pkl"
+    },
+    {
+      "position": 128,
+      "frame_index": 128,
+      "source_frame_index": 689,
+      "frame_id": "image_00689",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00689.jpg",
+      "file": "frame_0128.pkl"
+    },
+    {
+      "position": 129,
+      "frame_index": 129,
+      "source_frame_index": 690,
+      "frame_id": "image_00690",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00690.jpg",
+      "file": "frame_0129.pkl"
+    },
+    {
+      "position": 130,
+      "frame_index": 130,
+      "source_frame_index": 691,
+      "frame_id": "image_00691",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00691.jpg",
+      "file": "frame_0130.pkl"
+    },
+    {
+      "position": 131,
+      "frame_index": 131,
+      "source_frame_index": 692,
+      "frame_id": "image_00692",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00692.jpg",
+      "file": "frame_0131.pkl"
+    },
+    {
+      "position": 132,
+      "frame_index": 132,
+      "source_frame_index": 693,
+      "frame_id": "image_00693",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00693.jpg",
+      "file": "frame_0132.pkl"
+    },
+    {
+      "position": 133,
+      "frame_index": 133,
+      "source_frame_index": 694,
+      "frame_id": "image_00694",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00694.jpg",
+      "file": "frame_0133.pkl"
+    },
+    {
+      "position": 134,
+      "frame_index": 134,
+      "source_frame_index": 695,
+      "frame_id": "image_00695",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00695.jpg",
+      "file": "frame_0134.pkl"
+    },
+    {
+      "position": 135,
+      "frame_index": 135,
+      "source_frame_index": 696,
+      "frame_id": "image_00696",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00696.jpg",
+      "file": "frame_0135.pkl"
+    },
+    {
+      "position": 136,
+      "frame_index": 136,
+      "source_frame_index": 697,
+      "frame_id": "image_00697",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00697.jpg",
+      "file": "frame_0136.pkl"
+    },
+    {
+      "position": 137,
+      "frame_index": 137,
+      "source_frame_index": 698,
+      "frame_id": "image_00698",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00698.jpg",
+      "file": "frame_0137.pkl"
+    },
+    {
+      "position": 138,
+      "frame_index": 138,
+      "source_frame_index": 699,
+      "frame_id": "image_00699",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00699.jpg",
+      "file": "frame_0138.pkl"
+    },
+    {
+      "position": 139,
+      "frame_index": 139,
+      "source_frame_index": 700,
+      "frame_id": "image_00700",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00700.jpg",
+      "file": "frame_0139.pkl"
+    },
+    {
+      "position": 140,
+      "frame_index": 140,
+      "source_frame_index": 701,
+      "frame_id": "image_00701",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00701.jpg",
+      "file": "frame_0140.pkl"
+    },
+    {
+      "position": 141,
+      "frame_index": 141,
+      "source_frame_index": 702,
+      "frame_id": "image_00702",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00702.jpg",
+      "file": "frame_0141.pkl"
+    },
+    {
+      "position": 142,
+      "frame_index": 142,
+      "source_frame_index": 703,
+      "frame_id": "image_00703",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00703.jpg",
+      "file": "frame_0142.pkl"
+    },
+    {
+      "position": 143,
+      "frame_index": 143,
+      "source_frame_index": 704,
+      "frame_id": "image_00704",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00704.jpg",
+      "file": "frame_0143.pkl"
+    },
+    {
+      "position": 144,
+      "frame_index": 144,
+      "source_frame_index": 705,
+      "frame_id": "image_00705",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00705.jpg",
+      "file": "frame_0144.pkl"
+    },
+    {
+      "position": 145,
+      "frame_index": 145,
+      "source_frame_index": 706,
+      "frame_id": "image_00706",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00706.jpg",
+      "file": "frame_0145.pkl"
+    },
+    {
+      "position": 146,
+      "frame_index": 146,
+      "source_frame_index": 707,
+      "frame_id": "image_00707",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00707.jpg",
+      "file": "frame_0146.pkl"
+    },
+    {
+      "position": 147,
+      "frame_index": 147,
+      "source_frame_index": 708,
+      "frame_id": "image_00708",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00708.jpg",
+      "file": "frame_0147.pkl"
+    },
+    {
+      "position": 148,
+      "frame_index": 148,
+      "source_frame_index": 709,
+      "frame_id": "image_00709",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00709.jpg",
+      "file": "frame_0148.pkl"
+    },
+    {
+      "position": 149,
+      "frame_index": 149,
+      "source_frame_index": 710,
+      "frame_id": "image_00710",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00710.jpg",
+      "file": "frame_0149.pkl"
+    },
+    {
+      "position": 150,
+      "frame_index": 150,
+      "source_frame_index": 711,
+      "frame_id": "image_00711",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00711.jpg",
+      "file": "frame_0150.pkl"
+    },
+    {
+      "position": 151,
+      "frame_index": 151,
+      "source_frame_index": 712,
+      "frame_id": "image_00712",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00712.jpg",
+      "file": "frame_0151.pkl"
+    },
+    {
+      "position": 152,
+      "frame_index": 152,
+      "source_frame_index": 713,
+      "frame_id": "image_00713",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00713.jpg",
+      "file": "frame_0152.pkl"
+    },
+    {
+      "position": 153,
+      "frame_index": 153,
+      "source_frame_index": 714,
+      "frame_id": "image_00714",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00714.jpg",
+      "file": "frame_0153.pkl"
+    },
+    {
+      "position": 154,
+      "frame_index": 154,
+      "source_frame_index": 715,
+      "frame_id": "image_00715",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00715.jpg",
+      "file": "frame_0154.pkl"
+    },
+    {
+      "position": 155,
+      "frame_index": 155,
+      "source_frame_index": 716,
+      "frame_id": "image_00716",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00716.jpg",
+      "file": "frame_0155.pkl"
+    },
+    {
+      "position": 156,
+      "frame_index": 156,
+      "source_frame_index": 717,
+      "frame_id": "image_00717",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00717.jpg",
+      "file": "frame_0156.pkl"
+    },
+    {
+      "position": 157,
+      "frame_index": 157,
+      "source_frame_index": 718,
+      "frame_id": "image_00718",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00718.jpg",
+      "file": "frame_0157.pkl"
+    },
+    {
+      "position": 158,
+      "frame_index": 158,
+      "source_frame_index": 719,
+      "frame_id": "image_00719",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00719.jpg",
+      "file": "frame_0158.pkl"
+    },
+    {
+      "position": 159,
+      "frame_index": 159,
+      "source_frame_index": 720,
+      "frame_id": "image_00720",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00720.jpg",
+      "file": "frame_0159.pkl"
+    },
+    {
+      "position": 160,
+      "frame_index": 160,
+      "source_frame_index": 721,
+      "frame_id": "image_00721",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00721.jpg",
+      "file": "frame_0160.pkl"
+    },
+    {
+      "position": 161,
+      "frame_index": 161,
+      "source_frame_index": 722,
+      "frame_id": "image_00722",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00722.jpg",
+      "file": "frame_0161.pkl"
+    },
+    {
+      "position": 162,
+      "frame_index": 162,
+      "source_frame_index": 723,
+      "frame_id": "image_00723",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00723.jpg",
+      "file": "frame_0162.pkl"
+    },
+    {
+      "position": 163,
+      "frame_index": 163,
+      "source_frame_index": 724,
+      "frame_id": "image_00724",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00724.jpg",
+      "file": "frame_0163.pkl"
+    },
+    {
+      "position": 164,
+      "frame_index": 164,
+      "source_frame_index": 725,
+      "frame_id": "image_00725",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00725.jpg",
+      "file": "frame_0164.pkl"
+    },
+    {
+      "position": 165,
+      "frame_index": 165,
+      "source_frame_index": 726,
+      "frame_id": "image_00726",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00726.jpg",
+      "file": "frame_0165.pkl"
+    },
+    {
+      "position": 166,
+      "frame_index": 166,
+      "source_frame_index": 727,
+      "frame_id": "image_00727",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00727.jpg",
+      "file": "frame_0166.pkl"
+    },
+    {
+      "position": 167,
+      "frame_index": 167,
+      "source_frame_index": 728,
+      "frame_id": "image_00728",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00728.jpg",
+      "file": "frame_0167.pkl"
+    },
+    {
+      "position": 168,
+      "frame_index": 168,
+      "source_frame_index": 729,
+      "frame_id": "image_00729",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00729.jpg",
+      "file": "frame_0168.pkl"
+    },
+    {
+      "position": 169,
+      "frame_index": 169,
+      "source_frame_index": 730,
+      "frame_id": "image_00730",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00730.jpg",
+      "file": "frame_0169.pkl"
+    },
+    {
+      "position": 170,
+      "frame_index": 170,
+      "source_frame_index": 731,
+      "frame_id": "image_00731",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00731.jpg",
+      "file": "frame_0170.pkl"
+    },
+    {
+      "position": 171,
+      "frame_index": 171,
+      "source_frame_index": 732,
+      "frame_id": "image_00732",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00732.jpg",
+      "file": "frame_0171.pkl"
+    },
+    {
+      "position": 172,
+      "frame_index": 172,
+      "source_frame_index": 733,
+      "frame_id": "image_00733",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00733.jpg",
+      "file": "frame_0172.pkl"
+    },
+    {
+      "position": 173,
+      "frame_index": 173,
+      "source_frame_index": 734,
+      "frame_id": "image_00734",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00734.jpg",
+      "file": "frame_0173.pkl"
+    },
+    {
+      "position": 174,
+      "frame_index": 174,
+      "source_frame_index": 735,
+      "frame_id": "image_00735",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00735.jpg",
+      "file": "frame_0174.pkl"
+    },
+    {
+      "position": 175,
+      "frame_index": 175,
+      "source_frame_index": 736,
+      "frame_id": "image_00736",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00736.jpg",
+      "file": "frame_0175.pkl"
+    },
+    {
+      "position": 176,
+      "frame_index": 176,
+      "source_frame_index": 737,
+      "frame_id": "image_00737",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00737.jpg",
+      "file": "frame_0176.pkl"
+    },
+    {
+      "position": 177,
+      "frame_index": 177,
+      "source_frame_index": 738,
+      "frame_id": "image_00738",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00738.jpg",
+      "file": "frame_0177.pkl"
+    },
+    {
+      "position": 178,
+      "frame_index": 178,
+      "source_frame_index": 739,
+      "frame_id": "image_00739",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00739.jpg",
+      "file": "frame_0178.pkl"
+    },
+    {
+      "position": 179,
+      "frame_index": 179,
+      "source_frame_index": 740,
+      "frame_id": "image_00740",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00740.jpg",
+      "file": "frame_0179.pkl"
+    },
+    {
+      "position": 180,
+      "frame_index": 180,
+      "source_frame_index": 741,
+      "frame_id": "image_00741",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00741.jpg",
+      "file": "frame_0180.pkl"
+    },
+    {
+      "position": 181,
+      "frame_index": 181,
+      "source_frame_index": 742,
+      "frame_id": "image_00742",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00742.jpg",
+      "file": "frame_0181.pkl"
+    },
+    {
+      "position": 182,
+      "frame_index": 182,
+      "source_frame_index": 743,
+      "frame_id": "image_00743",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00743.jpg",
+      "file": "frame_0182.pkl"
+    },
+    {
+      "position": 183,
+      "frame_index": 183,
+      "source_frame_index": 744,
+      "frame_id": "image_00744",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00744.jpg",
+      "file": "frame_0183.pkl"
+    },
+    {
+      "position": 184,
+      "frame_index": 184,
+      "source_frame_index": 745,
+      "frame_id": "image_00745",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00745.jpg",
+      "file": "frame_0184.pkl"
+    },
+    {
+      "position": 185,
+      "frame_index": 185,
+      "source_frame_index": 746,
+      "frame_id": "image_00746",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00746.jpg",
+      "file": "frame_0185.pkl"
+    },
+    {
+      "position": 186,
+      "frame_index": 186,
+      "source_frame_index": 747,
+      "frame_id": "image_00747",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00747.jpg",
+      "file": "frame_0186.pkl"
+    },
+    {
+      "position": 187,
+      "frame_index": 187,
+      "source_frame_index": 748,
+      "frame_id": "image_00748",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00748.jpg",
+      "file": "frame_0187.pkl"
+    },
+    {
+      "position": 188,
+      "frame_index": 188,
+      "source_frame_index": 749,
+      "frame_id": "image_00749",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00749.jpg",
+      "file": "frame_0188.pkl"
+    },
+    {
+      "position": 189,
+      "frame_index": 189,
+      "source_frame_index": 750,
+      "frame_id": "image_00750",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00750.jpg",
+      "file": "frame_0189.pkl"
+    },
+    {
+      "position": 190,
+      "frame_index": 190,
+      "source_frame_index": 751,
+      "frame_id": "image_00751",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00751.jpg",
+      "file": "frame_0190.pkl"
+    },
+    {
+      "position": 191,
+      "frame_index": 191,
+      "source_frame_index": 752,
+      "frame_id": "image_00752",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00752.jpg",
+      "file": "frame_0191.pkl"
+    },
+    {
+      "position": 192,
+      "frame_index": 192,
+      "source_frame_index": 753,
+      "frame_id": "image_00753",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00753.jpg",
+      "file": "frame_0192.pkl"
+    },
+    {
+      "position": 193,
+      "frame_index": 193,
+      "source_frame_index": 754,
+      "frame_id": "image_00754",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00754.jpg",
+      "file": "frame_0193.pkl"
+    },
+    {
+      "position": 194,
+      "frame_index": 194,
+      "source_frame_index": 755,
+      "frame_id": "image_00755",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00755.jpg",
+      "file": "frame_0194.pkl"
+    },
+    {
+      "position": 195,
+      "frame_index": 195,
+      "source_frame_index": 756,
+      "frame_id": "image_00756",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00756.jpg",
+      "file": "frame_0195.pkl"
+    },
+    {
+      "position": 196,
+      "frame_index": 196,
+      "source_frame_index": 757,
+      "frame_id": "image_00757",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00757.jpg",
+      "file": "frame_0196.pkl"
+    },
+    {
+      "position": 197,
+      "frame_index": 197,
+      "source_frame_index": 758,
+      "frame_id": "image_00758",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00758.jpg",
+      "file": "frame_0197.pkl"
+    },
+    {
+      "position": 198,
+      "frame_index": 198,
+      "source_frame_index": 759,
+      "frame_id": "image_00759",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00759.jpg",
+      "file": "frame_0198.pkl"
+    },
+    {
+      "position": 199,
+      "frame_index": 199,
+      "source_frame_index": 760,
+      "frame_id": "image_00760",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00760.jpg",
+      "file": "frame_0199.pkl"
+    },
+    {
+      "position": 200,
+      "frame_index": 200,
+      "source_frame_index": 761,
+      "frame_id": "image_00761",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00761.jpg",
+      "file": "frame_0200.pkl"
+    },
+    {
+      "position": 201,
+      "frame_index": 201,
+      "source_frame_index": 762,
+      "frame_id": "image_00762",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00762.jpg",
+      "file": "frame_0201.pkl"
+    },
+    {
+      "position": 202,
+      "frame_index": 202,
+      "source_frame_index": 763,
+      "frame_id": "image_00763",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00763.jpg",
+      "file": "frame_0202.pkl"
+    },
+    {
+      "position": 203,
+      "frame_index": 203,
+      "source_frame_index": 764,
+      "frame_id": "image_00764",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00764.jpg",
+      "file": "frame_0203.pkl"
+    },
+    {
+      "position": 204,
+      "frame_index": 204,
+      "source_frame_index": 765,
+      "frame_id": "image_00765",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00765.jpg",
+      "file": "frame_0204.pkl"
+    },
+    {
+      "position": 205,
+      "frame_index": 205,
+      "source_frame_index": 766,
+      "frame_id": "image_00766",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00766.jpg",
+      "file": "frame_0205.pkl"
+    },
+    {
+      "position": 206,
+      "frame_index": 206,
+      "source_frame_index": 767,
+      "frame_id": "image_00767",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00767.jpg",
+      "file": "frame_0206.pkl"
+    },
+    {
+      "position": 207,
+      "frame_index": 207,
+      "source_frame_index": 768,
+      "frame_id": "image_00768",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00768.jpg",
+      "file": "frame_0207.pkl"
+    },
+    {
+      "position": 208,
+      "frame_index": 208,
+      "source_frame_index": 769,
+      "frame_id": "image_00769",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00769.jpg",
+      "file": "frame_0208.pkl"
+    },
+    {
+      "position": 209,
+      "frame_index": 209,
+      "source_frame_index": 770,
+      "frame_id": "image_00770",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00770.jpg",
+      "file": "frame_0209.pkl"
+    },
+    {
+      "position": 210,
+      "frame_index": 210,
+      "source_frame_index": 771,
+      "frame_id": "image_00771",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00771.jpg",
+      "file": "frame_0210.pkl"
+    },
+    {
+      "position": 211,
+      "frame_index": 211,
+      "source_frame_index": 772,
+      "frame_id": "image_00772",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00772.jpg",
+      "file": "frame_0211.pkl"
+    },
+    {
+      "position": 212,
+      "frame_index": 212,
+      "source_frame_index": 773,
+      "frame_id": "image_00773",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00773.jpg",
+      "file": "frame_0212.pkl"
+    },
+    {
+      "position": 213,
+      "frame_index": 213,
+      "source_frame_index": 774,
+      "frame_id": "image_00774",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00774.jpg",
+      "file": "frame_0213.pkl"
+    },
+    {
+      "position": 214,
+      "frame_index": 214,
+      "source_frame_index": 775,
+      "frame_id": "image_00775",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00775.jpg",
+      "file": "frame_0214.pkl"
+    },
+    {
+      "position": 215,
+      "frame_index": 215,
+      "source_frame_index": 776,
+      "frame_id": "image_00776",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00776.jpg",
+      "file": "frame_0215.pkl"
+    },
+    {
+      "position": 216,
+      "frame_index": 216,
+      "source_frame_index": 777,
+      "frame_id": "image_00777",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00777.jpg",
+      "file": "frame_0216.pkl"
+    },
+    {
+      "position": 217,
+      "frame_index": 217,
+      "source_frame_index": 778,
+      "frame_id": "image_00778",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00778.jpg",
+      "file": "frame_0217.pkl"
+    },
+    {
+      "position": 218,
+      "frame_index": 218,
+      "source_frame_index": 779,
+      "frame_id": "image_00779",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00779.jpg",
+      "file": "frame_0218.pkl"
+    },
+    {
+      "position": 219,
+      "frame_index": 219,
+      "source_frame_index": 780,
+      "frame_id": "image_00780",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00780.jpg",
+      "file": "frame_0219.pkl"
+    },
+    {
+      "position": 220,
+      "frame_index": 220,
+      "source_frame_index": 781,
+      "frame_id": "image_00781",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00781.jpg",
+      "file": "frame_0220.pkl"
+    },
+    {
+      "position": 221,
+      "frame_index": 221,
+      "source_frame_index": 782,
+      "frame_id": "image_00782",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00782.jpg",
+      "file": "frame_0221.pkl"
+    },
+    {
+      "position": 222,
+      "frame_index": 222,
+      "source_frame_index": 783,
+      "frame_id": "image_00783",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00783.jpg",
+      "file": "frame_0222.pkl"
+    },
+    {
+      "position": 223,
+      "frame_index": 223,
+      "source_frame_index": 784,
+      "frame_id": "image_00784",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00784.jpg",
+      "file": "frame_0223.pkl"
+    },
+    {
+      "position": 224,
+      "frame_index": 224,
+      "source_frame_index": 785,
+      "frame_id": "image_00785",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00785.jpg",
+      "file": "frame_0224.pkl"
+    },
+    {
+      "position": 225,
+      "frame_index": 225,
+      "source_frame_index": 786,
+      "frame_id": "image_00786",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00786.jpg",
+      "file": "frame_0225.pkl"
+    },
+    {
+      "position": 226,
+      "frame_index": 226,
+      "source_frame_index": 787,
+      "frame_id": "image_00787",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00787.jpg",
+      "file": "frame_0226.pkl"
+    },
+    {
+      "position": 227,
+      "frame_index": 227,
+      "source_frame_index": 788,
+      "frame_id": "image_00788",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00788.jpg",
+      "file": "frame_0227.pkl"
+    },
+    {
+      "position": 228,
+      "frame_index": 228,
+      "source_frame_index": 789,
+      "frame_id": "image_00789",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00789.jpg",
+      "file": "frame_0228.pkl"
+    },
+    {
+      "position": 229,
+      "frame_index": 229,
+      "source_frame_index": 790,
+      "frame_id": "image_00790",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00790.jpg",
+      "file": "frame_0229.pkl"
+    },
+    {
+      "position": 230,
+      "frame_index": 230,
+      "source_frame_index": 791,
+      "frame_id": "image_00791",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00791.jpg",
+      "file": "frame_0230.pkl"
+    },
+    {
+      "position": 231,
+      "frame_index": 231,
+      "source_frame_index": 792,
+      "frame_id": "image_00792",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00792.jpg",
+      "file": "frame_0231.pkl"
+    },
+    {
+      "position": 232,
+      "frame_index": 232,
+      "source_frame_index": 793,
+      "frame_id": "image_00793",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00793.jpg",
+      "file": "frame_0232.pkl"
+    },
+    {
+      "position": 233,
+      "frame_index": 233,
+      "source_frame_index": 794,
+      "frame_id": "image_00794",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00794.jpg",
+      "file": "frame_0233.pkl"
+    },
+    {
+      "position": 234,
+      "frame_index": 234,
+      "source_frame_index": 795,
+      "frame_id": "image_00795",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00795.jpg",
+      "file": "frame_0234.pkl"
+    },
+    {
+      "position": 235,
+      "frame_index": 235,
+      "source_frame_index": 796,
+      "frame_id": "image_00796",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00796.jpg",
+      "file": "frame_0235.pkl"
+    },
+    {
+      "position": 236,
+      "frame_index": 236,
+      "source_frame_index": 797,
+      "frame_id": "image_00797",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00797.jpg",
+      "file": "frame_0236.pkl"
+    },
+    {
+      "position": 237,
+      "frame_index": 237,
+      "source_frame_index": 798,
+      "frame_id": "image_00798",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00798.jpg",
+      "file": "frame_0237.pkl"
+    },
+    {
+      "position": 238,
+      "frame_index": 238,
+      "source_frame_index": 799,
+      "frame_id": "image_00799",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00799.jpg",
+      "file": "frame_0238.pkl"
+    },
+    {
+      "position": 239,
+      "frame_index": 239,
+      "source_frame_index": 800,
+      "frame_id": "image_00800",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00800.jpg",
+      "file": "frame_0239.pkl"
+    },
+    {
+      "position": 240,
+      "frame_index": 240,
+      "source_frame_index": 801,
+      "frame_id": "image_00801",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00801.jpg",
+      "file": "frame_0240.pkl"
+    },
+    {
+      "position": 241,
+      "frame_index": 241,
+      "source_frame_index": 802,
+      "frame_id": "image_00802",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00802.jpg",
+      "file": "frame_0241.pkl"
+    },
+    {
+      "position": 242,
+      "frame_index": 242,
+      "source_frame_index": 803,
+      "frame_id": "image_00803",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00803.jpg",
+      "file": "frame_0242.pkl"
+    },
+    {
+      "position": 243,
+      "frame_index": 243,
+      "source_frame_index": 804,
+      "frame_id": "image_00804",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00804.jpg",
+      "file": "frame_0243.pkl"
+    },
+    {
+      "position": 244,
+      "frame_index": 244,
+      "source_frame_index": 805,
+      "frame_id": "image_00805",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00805.jpg",
+      "file": "frame_0244.pkl"
+    },
+    {
+      "position": 245,
+      "frame_index": 245,
+      "source_frame_index": 806,
+      "frame_id": "image_00806",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00806.jpg",
+      "file": "frame_0245.pkl"
+    },
+    {
+      "position": 246,
+      "frame_index": 246,
+      "source_frame_index": 807,
+      "frame_id": "image_00807",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00807.jpg",
+      "file": "frame_0246.pkl"
+    },
+    {
+      "position": 247,
+      "frame_index": 247,
+      "source_frame_index": 808,
+      "frame_id": "image_00808",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00808.jpg",
+      "file": "frame_0247.pkl"
+    },
+    {
+      "position": 248,
+      "frame_index": 248,
+      "source_frame_index": 809,
+      "frame_id": "image_00809",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00809.jpg",
+      "file": "frame_0248.pkl"
+    },
+    {
+      "position": 249,
+      "frame_index": 249,
+      "source_frame_index": 810,
+      "frame_id": "image_00810",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00810.jpg",
+      "file": "frame_0249.pkl"
+    },
+    {
+      "position": 250,
+      "frame_index": 250,
+      "source_frame_index": 811,
+      "frame_id": "image_00811",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00811.jpg",
+      "file": "frame_0250.pkl"
+    },
+    {
+      "position": 251,
+      "frame_index": 251,
+      "source_frame_index": 812,
+      "frame_id": "image_00812",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00812.jpg",
+      "file": "frame_0251.pkl"
+    },
+    {
+      "position": 252,
+      "frame_index": 252,
+      "source_frame_index": 813,
+      "frame_id": "image_00813",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00813.jpg",
+      "file": "frame_0252.pkl"
+    },
+    {
+      "position": 253,
+      "frame_index": 253,
+      "source_frame_index": 814,
+      "frame_id": "image_00814",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00814.jpg",
+      "file": "frame_0253.pkl"
+    },
+    {
+      "position": 254,
+      "frame_index": 254,
+      "source_frame_index": 815,
+      "frame_id": "image_00815",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00815.jpg",
+      "file": "frame_0254.pkl"
+    },
+    {
+      "position": 255,
+      "frame_index": 255,
+      "source_frame_index": 816,
+      "frame_id": "image_00816",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00816.jpg",
+      "file": "frame_0255.pkl"
+    },
+    {
+      "position": 256,
+      "frame_index": 256,
+      "source_frame_index": 817,
+      "frame_id": "image_00817",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00817.jpg",
+      "file": "frame_0256.pkl"
+    },
+    {
+      "position": 257,
+      "frame_index": 257,
+      "source_frame_index": 818,
+      "frame_id": "image_00818",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00818.jpg",
+      "file": "frame_0257.pkl"
+    },
+    {
+      "position": 258,
+      "frame_index": 258,
+      "source_frame_index": 819,
+      "frame_id": "image_00819",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00819.jpg",
+      "file": "frame_0258.pkl"
+    },
+    {
+      "position": 259,
+      "frame_index": 259,
+      "source_frame_index": 820,
+      "frame_id": "image_00820",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00820.jpg",
+      "file": "frame_0259.pkl"
+    },
+    {
+      "position": 260,
+      "frame_index": 260,
+      "source_frame_index": 821,
+      "frame_id": "image_00821",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00821.jpg",
+      "file": "frame_0260.pkl"
+    },
+    {
+      "position": 261,
+      "frame_index": 261,
+      "source_frame_index": 822,
+      "frame_id": "image_00822",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00822.jpg",
+      "file": "frame_0261.pkl"
+    },
+    {
+      "position": 262,
+      "frame_index": 262,
+      "source_frame_index": 823,
+      "frame_id": "image_00823",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00823.jpg",
+      "file": "frame_0262.pkl"
+    },
+    {
+      "position": 263,
+      "frame_index": 263,
+      "source_frame_index": 824,
+      "frame_id": "image_00824",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00824.jpg",
+      "file": "frame_0263.pkl"
+    },
+    {
+      "position": 264,
+      "frame_index": 264,
+      "source_frame_index": 825,
+      "frame_id": "image_00825",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00825.jpg",
+      "file": "frame_0264.pkl"
+    },
+    {
+      "position": 265,
+      "frame_index": 265,
+      "source_frame_index": 826,
+      "frame_id": "image_00826",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00826.jpg",
+      "file": "frame_0265.pkl"
+    },
+    {
+      "position": 266,
+      "frame_index": 266,
+      "source_frame_index": 827,
+      "frame_id": "image_00827",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00827.jpg",
+      "file": "frame_0266.pkl"
+    },
+    {
+      "position": 267,
+      "frame_index": 267,
+      "source_frame_index": 828,
+      "frame_id": "image_00828",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00828.jpg",
+      "file": "frame_0267.pkl"
+    },
+    {
+      "position": 268,
+      "frame_index": 268,
+      "source_frame_index": 829,
+      "frame_id": "image_00829",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00829.jpg",
+      "file": "frame_0268.pkl"
+    },
+    {
+      "position": 269,
+      "frame_index": 269,
+      "source_frame_index": 830,
+      "frame_id": "image_00830",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00830.jpg",
+      "file": "frame_0269.pkl"
+    },
+    {
+      "position": 270,
+      "frame_index": 270,
+      "source_frame_index": 831,
+      "frame_id": "image_00831",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00831.jpg",
+      "file": "frame_0270.pkl"
+    },
+    {
+      "position": 271,
+      "frame_index": 271,
+      "source_frame_index": 832,
+      "frame_id": "image_00832",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00832.jpg",
+      "file": "frame_0271.pkl"
+    },
+    {
+      "position": 272,
+      "frame_index": 272,
+      "source_frame_index": 833,
+      "frame_id": "image_00833",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00833.jpg",
+      "file": "frame_0272.pkl"
+    },
+    {
+      "position": 273,
+      "frame_index": 273,
+      "source_frame_index": 834,
+      "frame_id": "image_00834",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00834.jpg",
+      "file": "frame_0273.pkl"
+    },
+    {
+      "position": 274,
+      "frame_index": 274,
+      "source_frame_index": 835,
+      "frame_id": "image_00835",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00835.jpg",
+      "file": "frame_0274.pkl"
+    },
+    {
+      "position": 275,
+      "frame_index": 275,
+      "source_frame_index": 836,
+      "frame_id": "image_00836",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00836.jpg",
+      "file": "frame_0275.pkl"
+    },
+    {
+      "position": 276,
+      "frame_index": 276,
+      "source_frame_index": 837,
+      "frame_id": "image_00837",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00837.jpg",
+      "file": "frame_0276.pkl"
+    },
+    {
+      "position": 277,
+      "frame_index": 277,
+      "source_frame_index": 838,
+      "frame_id": "image_00838",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00838.jpg",
+      "file": "frame_0277.pkl"
+    },
+    {
+      "position": 278,
+      "frame_index": 278,
+      "source_frame_index": 839,
+      "frame_id": "image_00839",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00839.jpg",
+      "file": "frame_0278.pkl"
+    },
+    {
+      "position": 279,
+      "frame_index": 279,
+      "source_frame_index": 840,
+      "frame_id": "image_00840",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00840.jpg",
+      "file": "frame_0279.pkl"
+    },
+    {
+      "position": 280,
+      "frame_index": 280,
+      "source_frame_index": 841,
+      "frame_id": "image_00841",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00841.jpg",
+      "file": "frame_0280.pkl"
+    },
+    {
+      "position": 281,
+      "frame_index": 281,
+      "source_frame_index": 842,
+      "frame_id": "image_00842",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00842.jpg",
+      "file": "frame_0281.pkl"
+    },
+    {
+      "position": 282,
+      "frame_index": 282,
+      "source_frame_index": 843,
+      "frame_id": "image_00843",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00843.jpg",
+      "file": "frame_0282.pkl"
+    },
+    {
+      "position": 283,
+      "frame_index": 283,
+      "source_frame_index": 844,
+      "frame_id": "image_00844",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00844.jpg",
+      "file": "frame_0283.pkl"
+    },
+    {
+      "position": 284,
+      "frame_index": 284,
+      "source_frame_index": 845,
+      "frame_id": "image_00845",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00845.jpg",
+      "file": "frame_0284.pkl"
+    },
+    {
+      "position": 285,
+      "frame_index": 285,
+      "source_frame_index": 846,
+      "frame_id": "image_00846",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00846.jpg",
+      "file": "frame_0285.pkl"
+    },
+    {
+      "position": 286,
+      "frame_index": 286,
+      "source_frame_index": 847,
+      "frame_id": "image_00847",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00847.jpg",
+      "file": "frame_0286.pkl"
+    },
+    {
+      "position": 287,
+      "frame_index": 287,
+      "source_frame_index": 848,
+      "frame_id": "image_00848",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00848.jpg",
+      "file": "frame_0287.pkl"
+    },
+    {
+      "position": 288,
+      "frame_index": 288,
+      "source_frame_index": 849,
+      "frame_id": "image_00849",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00849.jpg",
+      "file": "frame_0288.pkl"
+    },
+    {
+      "position": 289,
+      "frame_index": 289,
+      "source_frame_index": 850,
+      "frame_id": "image_00850",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_walkBridge_01/image_00850.jpg",
+      "file": "frame_0289.pkl"
+    }
+  ],
+  "note": "Trusted local pickle cache containing the complete SequenceViewer scene."
+}

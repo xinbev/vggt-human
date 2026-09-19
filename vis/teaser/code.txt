@@ -1,0 +1,31 @@
+cd /home/zhw/lab_users/xyb/home/projects/vggt-human
+
+CACHE_DIRS=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_3dpw_downtown_walkBridge_01_200_525_326f/full_viewer_cache:/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_3dpw_downtown_walkBridge_01_1000_1371_326f/full_viewer_cache \
+CACHE_NAMES=a:b \
+PORT=8080 \
+VIEWER_MODE=Hybrid \
+SMPL_DISPLAY_FRAMES=50 \
+SHOW_CAMERAS=false \
+SHOW_TRAJECTORIES=true \
+bash scripts/vis/serve_multi_sequence_viewer_cache.sh
+
+
+cd /home/zhw/lab_users/xyb/home/projects/vggt-human
+
+CACHE_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_3dpw_downtown_walkBridge_01_561_850_326f/full_viewer_cache \
+SMPL_EDIT_OUTPUT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_3dpw_downtown_walkBridge_01_561_850_326f/smpl_edit_offsets.json \
+POINT_SIZE=0.006 \
+HUMAN_MASK_DILATION_PX=12 \
+FILTER_HUMAN_POINTS=true \
+PORT=8081 \
+bash scripts/vis/serve_full_sequence_viewer_cache.sh
+
+
+
+
+CACHE_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_3dpw_downtown_walkBridge_01_200_525_326f/full_viewer_cache \
+SMPL_EDIT_OUTPUT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_3dpw_downtown_walkBridge_01_200_525_326f/smpl_edit_offsets.json \
+POINT_SIZE=0.006 \
+FILTER_HUMAN_POINTS=true \
+PORT=8082 \
+bash scripts/vis/serve_full_sequence_viewer_cache.sh

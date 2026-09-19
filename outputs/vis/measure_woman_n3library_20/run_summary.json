@@ -1,6 +1,48 @@
 {
   "frames_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/measure_woman_n3library_20/input",
   "num_frames": 1,
+  "frame_selection": {
+    "mode": "legacy",
+    "source_frame_count": 1,
+    "start_index": 0,
+    "end_index_inclusive": -1,
+    "inference_frames_requested": null,
+    "legacy_frame_stride": 1,
+    "legacy_frame_sampling": "head",
+    "legacy_max_frames": 1,
+    "selected_frame_count": 1,
+    "selected_source_indices": [
+      0
+    ],
+    "selected_files": [
+      "woman_n3library_20.jpg"
+    ]
+  },
+  "legacy_long_sequence_limit": 500,
+  "nlf_detection": {
+    "available": true,
+    "detector_threshold": 0.3,
+    "downstream_conf_threshold": 0.05,
+    "detected_counts_by_frame": [
+      1
+    ],
+    "accepted_counts_by_frame": [
+      1
+    ],
+    "empty_detected_frame_indices": [],
+    "empty_detected_frame_ids": [],
+    "empty_accepted_frame_indices": [],
+    "empty_accepted_frame_ids": [],
+    "empty_detected_ratio": 0.0,
+    "empty_accepted_ratio": 0.0
+  },
+  "base_smpl_consistency": {},
+  "coarse_person_selection": {
+    "confidence_threshold": 0.05,
+    "max_people_per_frame": 0
+  },
+  "smpl_display_frames_initial": 0,
+  "display_people_initial": 0,
   "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt",
   "query_source": "nlf_detector",
   "tracking_overlay": "base_smpl",
@@ -29,16 +71,16 @@
     688
   ],
   "point_counts_hsi": [
-    58765
+    58755
   ],
   "point_counts_hsi_full": [
     66048
   ],
   "human_points_removed_hsi": [
-    7283
+    7293
   ],
   "human_mask_pixels_hsi": [
-    29216
+    29247
   ],
   "human_point_removal": {
     "method": "projected_smpl_triangle_silhouette_dilated_unconditional",
@@ -49,17 +91,31 @@
     1
   ],
   "hsi_scene_scale": [
-    6.254759311676025
+    6.252615928649902
   ],
   "hsi_scene_depth_bias": [
     0.0
   ],
   "hsi_frame_scene_scale": [
-    6.254759311676025
+    6.252615928649902
   ],
   "hsi_frame_scene_depth_bias": [
     0.0
   ],
+  "hsi_coarse_scene_scale": [
+    null
+  ],
+  "hsi_residual_scene_scale": [
+    null
+  ],
+  "hsi_residual_scene_depth_bias": [
+    null
+  ],
+  "hsi_coarse_scale_records": [],
+  "trstr": {
+    "active": false
+  },
+  "scene_scale_prealign": "none",
   "hsi_scene_affine_mode": "clip_median",
   "hsi_scene_affine_ema_alpha": 0.25,
   "hsi_visual_scale_initial": 1.0,
@@ -68,9 +124,9 @@
       "num_cameras": 1,
       "positions_world": [
         [
-          -5.418109140009619e-06,
-          8.479014650220051e-05,
-          -0.00029532567714340985
+          1.6225338185904548e-05,
+          9.176736057270318e-05,
+          -0.00030044553568586707
         ]
       ],
       "step_distances": [],
@@ -88,9 +144,9 @@
       "num_cameras": 1,
       "positions_world": [
         [
-          -3.388896948308684e-05,
-          0.0005303419311530888,
-          -0.0018471908988431096
+          0.00010145080159418285,
+          0.0005737859755754471,
+          -0.001878570532426238
         ]
       ],
       "step_distances": [],
@@ -110,26 +166,26 @@
     "base_raw": {
       "people": 1,
       "valid_points": 428,
-      "median_abs_m_mean": 1.757450819015503,
-      "median_abs_m_median": 1.757450819015503,
-      "median_signed_m_mean": 1.757450819015503,
-      "median_signed_m_median": 1.757450819015503
+      "median_abs_m_mean": 1.7495781183242798,
+      "median_abs_m_median": 1.7495781183242798,
+      "median_signed_m_mean": 1.7495781183242798,
+      "median_signed_m_median": 1.7495781183242798
     },
     "base_hsi": {
       "people": 1,
       "valid_points": 428,
-      "median_abs_m_mean": 1.3382759094238281,
-      "median_abs_m_median": 1.3382759094238281,
-      "median_signed_m_mean": -1.3387155532836914,
-      "median_signed_m_median": -1.3387155532836914
+      "median_abs_m_mean": 1.3554801940917969,
+      "median_abs_m_median": 1.3554801940917969,
+      "median_signed_m_mean": -1.3565120697021484,
+      "median_signed_m_median": -1.3565120697021484
     },
     "hsi_hsi": {
       "people": 1,
       "valid_points": 428,
-      "median_abs_m_mean": 1.3265595436096191,
-      "median_abs_m_median": 1.3265595436096191,
-      "median_signed_m_mean": -1.3272995948791504,
-      "median_signed_m_median": -1.3272995948791504
+      "median_abs_m_mean": 1.3446345329284668,
+      "median_abs_m_median": 1.3446345329284668,
+      "median_signed_m_mean": -1.3449392318725586,
+      "median_signed_m_median": -1.3449392318725586
     }
   },
   "depth_alignment_by_frame": [
@@ -137,10 +193,10 @@
       "base_raw": [
         {
           "valid_points": 428,
-          "median_signed_m": 1.757450819015503,
-          "median_abs_m": 1.757450819015503,
-          "mean_abs_m": 1.7488874197006226,
-          "p90_abs_m": 1.8960808515548706,
+          "median_signed_m": 1.7495781183242798,
+          "median_abs_m": 1.7495781183242798,
+          "mean_abs_m": 1.74041748046875,
+          "p90_abs_m": 1.88742995262146,
           "query_index": 0,
           "confidence": 0.9365234375
         }
@@ -148,10 +204,10 @@
       "base_hsi": [
         {
           "valid_points": 428,
-          "median_signed_m": -1.3387155532836914,
-          "median_abs_m": 1.3382759094238281,
-          "mean_abs_m": 1.479231834411621,
-          "p90_abs_m": 1.7321100234985352,
+          "median_signed_m": -1.3565120697021484,
+          "median_abs_m": 1.3554801940917969,
+          "mean_abs_m": 1.4973238706588745,
+          "p90_abs_m": 1.7320464849472046,
           "query_index": 0,
           "confidence": 0.9365234375
         }
@@ -159,15 +215,95 @@
       "hsi_hsi": [
         {
           "valid_points": 428,
-          "median_signed_m": -1.3272995948791504,
-          "median_abs_m": 1.3265595436096191,
-          "mean_abs_m": 1.482904314994812,
-          "p90_abs_m": 1.7625247240066528,
+          "median_signed_m": -1.3449392318725586,
+          "median_abs_m": 1.3446345329284668,
+          "mean_abs_m": 1.5034160614013672,
+          "p90_abs_m": 1.7783094644546509,
           "query_index": 0,
           "confidence": 0.9365234375
         }
       ]
     }
   ],
-  "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/measure_woman_n3library_20"
+  "timings": {
+    "select_frames": {
+      "seconds": 0.0001288279891014099,
+      "ms_per_frame": 0.1288279891014099,
+      "fps": 7762.288358105373
+    },
+    "load_config": {
+      "seconds": 0.02010290394537151,
+      "ms_per_frame": 20.10290394537151,
+      "fps": 49.74405701372512
+    },
+    "load_images_and_priors": {
+      "seconds": 0.36257728817872703,
+      "ms_per_frame": 362.57728817872703,
+      "fps": 2.758032652908654
+    },
+    "load_models": {
+      "seconds": 14.983763101045042,
+      "ms_per_frame": 14983.763101045042,
+      "fps": 0.066738908861303
+    },
+    "transfer_images_to_device": {
+      "seconds": 0.0011536120437085629,
+      "ms_per_frame": 1.1536120437085629,
+      "fps": 866.8425450771647
+    },
+    "model_forward": {
+      "seconds": 12.437692616833374,
+      "ms_per_frame": 12437.692616833374,
+      "fps": 0.08040076490124735
+    },
+    "posthoc_tracking_overlay": {
+      "seconds": 0.0017257858999073505,
+      "ms_per_frame": 1.7257858999073505,
+      "fps": 579.4461526506187
+    },
+    "scene_camera_and_depth": {
+      "seconds": 0.0007139658555388451,
+      "ms_per_frame": 0.7139658555388451,
+      "fps": 1400.6272040072265
+    },
+    "decode_people_smpl": {
+      "seconds": 0.0040041550528258085,
+      "ms_per_frame": 4.0041550528258085,
+      "fps": 249.7405786757136
+    },
+    "depth_alignment": {
+      "seconds": 0.007866594940423965,
+      "ms_per_frame": 7.8665949404239655,
+      "fps": 127.11980311345555
+    },
+    "build_frame_point_clouds": {
+      "seconds": 0.5918028980959207,
+      "ms_per_frame": 591.8028980959207,
+      "fps": 1.6897517792113244
+    },
+    "build_scene_data": {
+      "seconds": 0.6046204769518226,
+      "ms_per_frame": 604.6204769518226,
+      "fps": 1.6539300902302752
+    },
+    "validate_and_summarize": {
+      "seconds": 0.00017062993720173836,
+      "ms_per_frame": 0.17062993720173836,
+      "fps": 5860.636277546565
+    },
+    "export_full_viewer_cache": {
+      "seconds": 0.006965541979297996,
+      "ms_per_frame": 6.965541979297996,
+      "fps": 143.56384657102913
+    },
+    "total_before_viewer": {
+      "seconds": 28.50663771899417,
+      "ms_per_frame": 28506.63771899417,
+      "fps": 0.03507954918631786
+    }
+  },
+  "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/measure_woman_n3library_20",
+  "hsi_overlay_checkpoint": null,
+  "viewer_cache_manifest": null,
+  "full_viewer_cache_manifest": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/measure_woman_n3library_20/full_viewer_cache/manifest.json"
 }

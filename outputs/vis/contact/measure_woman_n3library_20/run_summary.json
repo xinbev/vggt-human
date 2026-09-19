@@ -1,9 +1,9 @@
 {
-  "frames_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/measure_woman_BasementSittingBooth_1112/input",
+  "frames_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/measure_woman_n3library_20/input",
   "num_frames": 1,
   "frame_selection": {
     "mode": "legacy",
-    "source_frame_count": 1,
+    "source_frame_count": 2,
     "start_index": 0,
     "end_index_inclusive": -1,
     "inference_frames_requested": null,
@@ -15,7 +15,7 @@
       0
     ],
     "selected_files": [
-      "woman_BasementSittingBooth_1112.jpg"
+      "tmp.jpg"
     ]
   },
   "legacy_long_sequence_limit": 500,
@@ -56,7 +56,7 @@
         0
       ]
     ],
-    "mean_track_quality": 0.89990234375
+    "mean_track_quality": 0.939453125
   },
   "tracking_geometry_unchanged": true,
   "image_shape": [
@@ -71,16 +71,16 @@
     688
   ],
   "point_counts_hsi": [
-    62650
+    60956
   ],
   "point_counts_hsi_full": [
     66048
   ],
   "human_points_removed_hsi": [
-    3398
+    5092
   ],
   "human_mask_pixels_hsi": [
-    13606
+    20347
   ],
   "human_point_removal": {
     "method": "projected_smpl_triangle_silhouette_dilated_unconditional",
@@ -91,13 +91,13 @@
     1
   ],
   "hsi_scene_scale": [
-    5.185828685760498
+    8.18150806427002
   ],
   "hsi_scene_depth_bias": [
     0.0
   ],
   "hsi_frame_scene_scale": [
-    5.185828685760498
+    8.18150806427002
   ],
   "hsi_frame_scene_depth_bias": [
     0.0
@@ -124,9 +124,9 @@
       "num_cameras": 1,
       "positions_world": [
         [
-          -8.15542516647838e-05,
-          0.00018999776511918753,
-          -0.00020350885461084545
+          -4.5495347876567394e-05,
+          8.39861313579604e-05,
+          -0.000168031663633883
         ]
       ],
       "step_distances": [],
@@ -144,9 +144,9 @@
       "num_cameras": 1,
       "positions_world": [
         [
-          -0.0004229263577144593,
-          0.000985295744612813,
-          -0.0010553620522841811
+          -0.00037222052924335003,
+          0.0006871332298032939,
+          -0.0013747522607445717
         ]
       ],
       "step_distances": [],
@@ -166,26 +166,26 @@
     "base_raw": {
       "people": 1,
       "valid_points": 431,
-      "median_abs_m_mean": 1.8743011951446533,
-      "median_abs_m_median": 1.8743011951446533,
-      "median_signed_m_mean": 1.8743011951446533,
-      "median_signed_m_median": 1.8743011951446533
+      "median_abs_m_mean": 2.3990821838378906,
+      "median_abs_m_median": 2.3990821838378906,
+      "median_signed_m_mean": 2.3990821838378906,
+      "median_signed_m_median": 2.3990821838378906
     },
     "base_hsi": {
       "people": 1,
       "valid_points": 431,
-      "median_abs_m_mean": 1.9831113815307617,
-      "median_abs_m_median": 1.9831113815307617,
-      "median_signed_m_mean": -1.9831113815307617,
-      "median_signed_m_median": -1.9831113815307617
+      "median_abs_m_mean": 1.8589317798614502,
+      "median_abs_m_median": 1.8589317798614502,
+      "median_signed_m_mean": -1.8589317798614502,
+      "median_signed_m_median": -1.8589317798614502
     },
     "hsi_hsi": {
       "people": 1,
       "valid_points": 431,
-      "median_abs_m_mean": 1.9687132835388184,
-      "median_abs_m_median": 1.9687132835388184,
-      "median_signed_m_mean": -1.9687132835388184,
-      "median_signed_m_median": -1.9687132835388184
+      "median_abs_m_mean": 1.8378057479858398,
+      "median_abs_m_median": 1.8378057479858398,
+      "median_signed_m_mean": -1.8378057479858398,
+      "median_signed_m_median": -1.8378057479858398
     }
   },
   "depth_alignment_by_frame": [
@@ -193,117 +193,117 @@
       "base_raw": [
         {
           "valid_points": 431,
-          "median_signed_m": 1.8743011951446533,
-          "median_abs_m": 1.8743011951446533,
-          "mean_abs_m": 1.8987846374511719,
-          "p90_abs_m": 2.1105432510375977,
+          "median_signed_m": 2.3990821838378906,
+          "median_abs_m": 2.3990821838378906,
+          "mean_abs_m": 2.3238909244537354,
+          "p90_abs_m": 2.669511318206787,
           "query_index": 0,
-          "confidence": 0.89990234375
+          "confidence": 0.939453125
         }
       ],
       "base_hsi": [
         {
           "valid_points": 431,
-          "median_signed_m": -1.9831113815307617,
-          "median_abs_m": 1.9831113815307617,
-          "mean_abs_m": 1.907307505607605,
-          "p90_abs_m": 2.2105205059051514,
+          "median_signed_m": -1.8589317798614502,
+          "median_abs_m": 1.8589317798614502,
+          "mean_abs_m": 2.5195627212524414,
+          "p90_abs_m": 4.639593601226807,
           "query_index": 0,
-          "confidence": 0.89990234375
+          "confidence": 0.939453125
         }
       ],
       "hsi_hsi": [
         {
           "valid_points": 431,
-          "median_signed_m": -1.9687132835388184,
-          "median_abs_m": 1.9687132835388184,
-          "mean_abs_m": 1.8899073600769043,
-          "p90_abs_m": 2.183950901031494,
+          "median_signed_m": -1.8378057479858398,
+          "median_abs_m": 1.8378057479858398,
+          "mean_abs_m": 2.3913047313690186,
+          "p90_abs_m": 4.114537239074707,
           "query_index": 0,
-          "confidence": 0.89990234375
+          "confidence": 0.939453125
         }
       ]
     }
   ],
   "timings": {
     "select_frames": {
-      "seconds": 0.00013061100617051125,
-      "ms_per_frame": 0.13061100617051125,
-      "fps": 7656.32261261743
+      "seconds": 0.00014920486137270927,
+      "ms_per_frame": 0.14920486137270927,
+      "fps": 6702.194491518811
     },
     "load_config": {
-      "seconds": 0.02057913807220757,
-      "ms_per_frame": 20.57913807220757,
-      "fps": 48.59290007634065
+      "seconds": 0.020168122835457325,
+      "ms_per_frame": 20.168122835457325,
+      "fps": 49.583196619663205
     },
     "load_images_and_priors": {
-      "seconds": 0.3358804010786116,
-      "ms_per_frame": 335.8804010786116,
-      "fps": 2.97725022593966
+      "seconds": 0.3850701409392059,
+      "ms_per_frame": 385.0701409392059,
+      "fps": 2.5969294777334553
     },
     "load_models": {
-      "seconds": 14.734156054910272,
-      "ms_per_frame": 14734.156054910272,
-      "fps": 0.06786951327739889
+      "seconds": 15.599028161959723,
+      "ms_per_frame": 15599.028161959723,
+      "fps": 0.06410655776868403
     },
     "transfer_images_to_device": {
-      "seconds": 0.001158331986516714,
-      "ms_per_frame": 1.158331986516714,
-      "fps": 863.3103563056709
+      "seconds": 0.0013216109946370125,
+      "ms_per_frame": 1.3216109946370125,
+      "fps": 756.6523009099628
     },
     "model_forward": {
-      "seconds": 12.186186760198325,
-      "ms_per_frame": 12186.186760198325,
-      "fps": 0.08206012427662199
+      "seconds": 12.824077817145735,
+      "ms_per_frame": 12824.077817145735,
+      "fps": 0.07797831658998548
     },
     "posthoc_tracking_overlay": {
-      "seconds": 0.0015361430123448372,
-      "ms_per_frame": 1.5361430123448372,
-      "fps": 650.9810557765422
+      "seconds": 0.0018153449054807425,
+      "ms_per_frame": 1.8153449054807425,
+      "fps": 550.8595071828394
     },
     "scene_camera_and_depth": {
-      "seconds": 0.0007236259989440441,
-      "ms_per_frame": 0.7236259989440441,
-      "fps": 1381.929341205618
+      "seconds": 0.0007664859294891357,
+      "ms_per_frame": 0.7664859294891357,
+      "fps": 1304.6553909561026
     },
     "decode_people_smpl": {
-      "seconds": 0.004022764973342419,
-      "ms_per_frame": 4.022764973342419,
-      "fps": 248.5852409043733
+      "seconds": 0.004227593075484037,
+      "ms_per_frame": 4.227593075484037,
+      "fps": 236.54121438485544
     },
     "depth_alignment": {
-      "seconds": 0.007894406095147133,
-      "ms_per_frame": 7.894406095147133,
-      "fps": 126.67197354019098
+      "seconds": 0.008001435082405806,
+      "ms_per_frame": 8.001435082405806,
+      "fps": 124.97758085907363
     },
     "build_frame_point_clouds": {
-      "seconds": 0.5862908018752933,
-      "ms_per_frame": 586.2908018752933,
-      "fps": 1.7056382204896072
+      "seconds": 0.5902041140943766,
+      "ms_per_frame": 590.2041140943766,
+      "fps": 1.6943290907662074
     },
     "build_scene_data": {
-      "seconds": 0.5991233598906547,
-      "ms_per_frame": 599.1233598906547,
-      "fps": 1.6691053411479546
+      "seconds": 0.6034383259247988,
+      "ms_per_frame": 603.4383259247988,
+      "fps": 1.6571701813394948
     },
     "validate_and_summarize": {
-      "seconds": 0.00016461987979710102,
-      "ms_per_frame": 0.16461987979710102,
-      "fps": 6074.600474939784
+      "seconds": 0.00018182001076638699,
+      "ms_per_frame": 0.18182001076638699,
+      "fps": 5499.944674873321
     },
     "export_full_viewer_cache": {
-      "seconds": 0.00669834902510047,
-      "ms_per_frame": 6.69834902510047,
-      "fps": 149.29051864164407
+      "seconds": 0.008224972058087587,
+      "ms_per_frame": 8.224972058087587,
+      "fps": 121.58096014644856
     },
     "total_before_viewer": {
-      "seconds": 27.973482050932944,
-      "ms_per_frame": 27973.482050932944,
-      "fps": 0.035748141692880486
+      "seconds": 29.531627617077902,
+      "ms_per_frame": 29531.627617077902,
+      "fps": 0.03386200086790029
     }
   },
-  "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/measure_woman_BasementSittingBooth_1112",
+  "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/contact/measure_woman_n3library_20",
   "hsi_overlay_checkpoint": null,
   "viewer_cache_manifest": null,
-  "full_viewer_cache_manifest": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/measure_woman_BasementSittingBooth_1112/full_viewer_cache/manifest.json"
+  "full_viewer_cache_manifest": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/contact/measure_woman_n3library_20/full_viewer_cache/manifest.json"
 }

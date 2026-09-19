@@ -1,0 +1,5047 @@
+{
+  "format": "vggt_omega_full_sequence_viewer_cache_v1",
+  "num_frames": 550,
+  "scene_metadata_file": "scene_metadata.pkl",
+  "smpl_faces_file": "smpl_faces.npy",
+  "camera_parameters": {
+    "per_frame": [
+      "intrinsic",
+      "raw_extrinsic",
+      "hsi_extrinsic",
+      "raw_camera",
+      "hsi_camera",
+      "camera"
+    ],
+    "scene": [
+      "camera_trajectory",
+      "camera_trajectory_raw",
+      "camera_trajectory_hsi"
+    ],
+    "storage": "frame pickle and scene_metadata.pkl"
+  },
+  "viewer_args": {
+    "frames_dir": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/",
+    "query_source": "nlf_detector",
+    "preprocessed_root": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/bedlam_boxes",
+    "bedlam_root": "/home/zhw/xyb_space/bedlam/processed_bedlam",
+    "stage2_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full",
+    "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt",
+    "path_config": "/home/zhw/lab_users/xyb/home/projects/vggt-human/configs/path.yaml",
+    "train_config": "/home/zhw/lab_users/xyb/home/projects/vggt-human/configs/train_smpl_hsi_nlf_stage2_human_scene_align.yaml",
+    "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_3dpw_downtown_windowShopping_00_950_1850_18px",
+    "viewer_cache_output": "",
+    "full_viewer_cache_output": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_3dpw_downtown_windowShopping_00_950_1850_18px/full_viewer_cache",
+    "device": "cuda",
+    "port": 8090,
+    "image_size": 0,
+    "start_index": 950,
+    "end_index": 1850,
+    "inference_frames": 550,
+    "frame_stride": 1,
+    "frame_sampling": "uniform",
+    "max_frames": 0,
+    "max_humans": 8,
+    "nlf_detector_threshold": 0.3,
+    "conf_threshold": 0.05,
+    "tracking_overlay": "base_smpl",
+    "track_max_age": 90,
+    "track_min_quality": 0.25,
+    "track_max_center_distance": 0.25,
+    "track_max_transl_distance": 1.5,
+    "track_max_beta_l1": 0.3,
+    "depth_point_stride": 2,
+    "max_scene_depth": 80.0,
+    "viewer_mode": "Hybrid",
+    "environment_display": "points",
+    "hsi_visual_scale": 1.0,
+    "human_mask_dilation_px": 18,
+    "filter_human_points": true,
+    "env_mesh_depth_edge_rtol": 0.15,
+    "env_mesh_color_groups": 216,
+    "env_mesh_color_mode": "point_overlay",
+    "env_mesh_overlay_point_size_scale": 0.75,
+    "smpl_edit_output": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_3dpw_downtown_windowShopping_00_950_1850_18px/smpl_edit_offsets.json",
+    "show_track_ids": true,
+    "display_people": 0,
+    "smpl_display_frames": 0,
+    "point_size": 0.006,
+    "camera_frustum_scale": 0.2,
+    "alignment_vertex_stride": 16,
+    "smpl_model_dir": "",
+    "baseline_checkpoint": "",
+    "hsi_overlay_checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt",
+    "scene_scale_prealign": "smpl_median",
+    "coarse_scale_min": 0.1,
+    "coarse_scale_max": 10.0,
+    "coarse_conf_threshold": null,
+    "coarse_max_people": 0,
+    "coarse_anchor_stride": 8,
+    "coarse_min_anchor_pixels": 32,
+    "coarse_fallback": "sequence_median",
+    "trstr_frame_chunk": 0,
+    "cascade_effective_affine_mode": "clip_median",
+    "smoke_only": false,
+    "override": [
+      "model.hsi_align_feature_version=legacy_scale_bias_v0",
+      "model.smpl_use_aggregator_queries=false",
+      "model.hsi_scene_affine_mode=per_frame"
+    ],
+    "selected_source_indices": [
+      950,
+      951,
+      953,
+      954,
+      956,
+      958,
+      959,
+      961,
+      963,
+      964,
+      966,
+      968,
+      969,
+      971,
+      972,
+      974,
+      976,
+      977,
+      979,
+      981,
+      982,
+      984,
+      986,
+      987,
+      989,
+      990,
+      992,
+      994,
+      995,
+      997,
+      999,
+      1000,
+      1002,
+      1004,
+      1005,
+      1007,
+      1009,
+      1010,
+      1012,
+      1013,
+      1015,
+      1017,
+      1018,
+      1020,
+      1022,
+      1023,
+      1025,
+      1027,
+      1028,
+      1030,
+      1031,
+      1033,
+      1035,
+      1036,
+      1038,
+      1040,
+      1041,
+      1043,
+      1045,
+      1046,
+      1048,
+      1050,
+      1051,
+      1053,
+      1054,
+      1056,
+      1058,
+      1059,
+      1061,
+      1063,
+      1064,
+      1066,
+      1068,
+      1069,
+      1071,
+      1072,
+      1074,
+      1076,
+      1077,
+      1079,
+      1081,
+      1082,
+      1084,
+      1086,
+      1087,
+      1089,
+      1090,
+      1092,
+      1094,
+      1095,
+      1097,
+      1099,
+      1100,
+      1102,
+      1104,
+      1105,
+      1107,
+      1109,
+      1110,
+      1112,
+      1113,
+      1115,
+      1117,
+      1118,
+      1120,
+      1122,
+      1123,
+      1125,
+      1127,
+      1128,
+      1130,
+      1131,
+      1133,
+      1135,
+      1136,
+      1138,
+      1140,
+      1141,
+      1143,
+      1145,
+      1146,
+      1148,
+      1150,
+      1151,
+      1153,
+      1154,
+      1156,
+      1158,
+      1159,
+      1161,
+      1163,
+      1164,
+      1166,
+      1168,
+      1169,
+      1171,
+      1172,
+      1174,
+      1176,
+      1177,
+      1179,
+      1181,
+      1182,
+      1184,
+      1186,
+      1187,
+      1189,
+      1190,
+      1192,
+      1194,
+      1195,
+      1197,
+      1199,
+      1200,
+      1202,
+      1204,
+      1205,
+      1207,
+      1209,
+      1210,
+      1212,
+      1213,
+      1215,
+      1217,
+      1218,
+      1220,
+      1222,
+      1223,
+      1225,
+      1227,
+      1228,
+      1230,
+      1231,
+      1233,
+      1235,
+      1236,
+      1238,
+      1240,
+      1241,
+      1243,
+      1245,
+      1246,
+      1248,
+      1250,
+      1251,
+      1253,
+      1254,
+      1256,
+      1258,
+      1259,
+      1261,
+      1263,
+      1264,
+      1266,
+      1268,
+      1269,
+      1271,
+      1272,
+      1274,
+      1276,
+      1277,
+      1279,
+      1281,
+      1282,
+      1284,
+      1286,
+      1287,
+      1289,
+      1290,
+      1292,
+      1294,
+      1295,
+      1297,
+      1299,
+      1300,
+      1302,
+      1304,
+      1305,
+      1307,
+      1309,
+      1310,
+      1312,
+      1313,
+      1315,
+      1317,
+      1318,
+      1320,
+      1322,
+      1323,
+      1325,
+      1327,
+      1328,
+      1330,
+      1331,
+      1333,
+      1335,
+      1336,
+      1338,
+      1340,
+      1341,
+      1343,
+      1345,
+      1346,
+      1348,
+      1350,
+      1351,
+      1353,
+      1354,
+      1356,
+      1358,
+      1359,
+      1361,
+      1363,
+      1364,
+      1366,
+      1368,
+      1369,
+      1371,
+      1372,
+      1374,
+      1376,
+      1377,
+      1379,
+      1381,
+      1382,
+      1384,
+      1386,
+      1387,
+      1389,
+      1390,
+      1392,
+      1394,
+      1395,
+      1397,
+      1399,
+      1400,
+      1402,
+      1404,
+      1405,
+      1407,
+      1409,
+      1410,
+      1412,
+      1413,
+      1415,
+      1417,
+      1418,
+      1420,
+      1422,
+      1423,
+      1425,
+      1427,
+      1428,
+      1430,
+      1431,
+      1433,
+      1435,
+      1436,
+      1438,
+      1440,
+      1441,
+      1443,
+      1445,
+      1446,
+      1448,
+      1450,
+      1451,
+      1453,
+      1454,
+      1456,
+      1458,
+      1459,
+      1461,
+      1463,
+      1464,
+      1466,
+      1468,
+      1469,
+      1471,
+      1472,
+      1474,
+      1476,
+      1477,
+      1479,
+      1481,
+      1482,
+      1484,
+      1486,
+      1487,
+      1489,
+      1490,
+      1492,
+      1494,
+      1495,
+      1497,
+      1499,
+      1500,
+      1502,
+      1504,
+      1505,
+      1507,
+      1509,
+      1510,
+      1512,
+      1513,
+      1515,
+      1517,
+      1518,
+      1520,
+      1522,
+      1523,
+      1525,
+      1527,
+      1528,
+      1530,
+      1531,
+      1533,
+      1535,
+      1536,
+      1538,
+      1540,
+      1541,
+      1543,
+      1545,
+      1546,
+      1548,
+      1550,
+      1551,
+      1553,
+      1554,
+      1556,
+      1558,
+      1559,
+      1561,
+      1563,
+      1564,
+      1566,
+      1568,
+      1569,
+      1571,
+      1572,
+      1574,
+      1576,
+      1577,
+      1579,
+      1581,
+      1582,
+      1584,
+      1586,
+      1587,
+      1589,
+      1590,
+      1592,
+      1594,
+      1595,
+      1597,
+      1599,
+      1600,
+      1602,
+      1604,
+      1605,
+      1607,
+      1609,
+      1610,
+      1612,
+      1613,
+      1615,
+      1617,
+      1618,
+      1620,
+      1622,
+      1623,
+      1625,
+      1627,
+      1628,
+      1630,
+      1631,
+      1633,
+      1635,
+      1636,
+      1638,
+      1640,
+      1641,
+      1643,
+      1645,
+      1646,
+      1648,
+      1650,
+      1651,
+      1653,
+      1654,
+      1656,
+      1658,
+      1659,
+      1661,
+      1663,
+      1664,
+      1666,
+      1668,
+      1669,
+      1671,
+      1672,
+      1674,
+      1676,
+      1677,
+      1679,
+      1681,
+      1682,
+      1684,
+      1686,
+      1687,
+      1689,
+      1690,
+      1692,
+      1694,
+      1695,
+      1697,
+      1699,
+      1700,
+      1702,
+      1704,
+      1705,
+      1707,
+      1709,
+      1710,
+      1712,
+      1713,
+      1715,
+      1717,
+      1718,
+      1720,
+      1722,
+      1723,
+      1725,
+      1727,
+      1728,
+      1730,
+      1731,
+      1733,
+      1735,
+      1736,
+      1738,
+      1740,
+      1741,
+      1743,
+      1745,
+      1746,
+      1748,
+      1750,
+      1751,
+      1753,
+      1754,
+      1756,
+      1758,
+      1759,
+      1761,
+      1763,
+      1764,
+      1766,
+      1768,
+      1769,
+      1771,
+      1772,
+      1774,
+      1776,
+      1777,
+      1779,
+      1781,
+      1782,
+      1784,
+      1786,
+      1787,
+      1789,
+      1790,
+      1792,
+      1794,
+      1795,
+      1797,
+      1799,
+      1800,
+      1802,
+      1804,
+      1805,
+      1807,
+      1809,
+      1810,
+      1812,
+      1813,
+      1815,
+      1817,
+      1818,
+      1820,
+      1822,
+      1823,
+      1825,
+      1827,
+      1828,
+      1830,
+      1831,
+      1833,
+      1835,
+      1836,
+      1838,
+      1840,
+      1841,
+      1843,
+      1845,
+      1846,
+      1848,
+      1850
+    ],
+    "hsi_scene_affine_mode": "per_frame",
+    "hsi_scene_affine_ema_alpha": 0.25
+  },
+  "frames": [
+    {
+      "position": 0,
+      "frame_index": 0,
+      "source_frame_index": 950,
+      "frame_id": "image_00950",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00950.jpg",
+      "file": "frame_0000.pkl"
+    },
+    {
+      "position": 1,
+      "frame_index": 1,
+      "source_frame_index": 951,
+      "frame_id": "image_00951",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00951.jpg",
+      "file": "frame_0001.pkl"
+    },
+    {
+      "position": 2,
+      "frame_index": 2,
+      "source_frame_index": 953,
+      "frame_id": "image_00953",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00953.jpg",
+      "file": "frame_0002.pkl"
+    },
+    {
+      "position": 3,
+      "frame_index": 3,
+      "source_frame_index": 954,
+      "frame_id": "image_00954",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00954.jpg",
+      "file": "frame_0003.pkl"
+    },
+    {
+      "position": 4,
+      "frame_index": 4,
+      "source_frame_index": 956,
+      "frame_id": "image_00956",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00956.jpg",
+      "file": "frame_0004.pkl"
+    },
+    {
+      "position": 5,
+      "frame_index": 5,
+      "source_frame_index": 958,
+      "frame_id": "image_00958",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00958.jpg",
+      "file": "frame_0005.pkl"
+    },
+    {
+      "position": 6,
+      "frame_index": 6,
+      "source_frame_index": 959,
+      "frame_id": "image_00959",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00959.jpg",
+      "file": "frame_0006.pkl"
+    },
+    {
+      "position": 7,
+      "frame_index": 7,
+      "source_frame_index": 961,
+      "frame_id": "image_00961",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00961.jpg",
+      "file": "frame_0007.pkl"
+    },
+    {
+      "position": 8,
+      "frame_index": 8,
+      "source_frame_index": 963,
+      "frame_id": "image_00963",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00963.jpg",
+      "file": "frame_0008.pkl"
+    },
+    {
+      "position": 9,
+      "frame_index": 9,
+      "source_frame_index": 964,
+      "frame_id": "image_00964",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00964.jpg",
+      "file": "frame_0009.pkl"
+    },
+    {
+      "position": 10,
+      "frame_index": 10,
+      "source_frame_index": 966,
+      "frame_id": "image_00966",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00966.jpg",
+      "file": "frame_0010.pkl"
+    },
+    {
+      "position": 11,
+      "frame_index": 11,
+      "source_frame_index": 968,
+      "frame_id": "image_00968",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00968.jpg",
+      "file": "frame_0011.pkl"
+    },
+    {
+      "position": 12,
+      "frame_index": 12,
+      "source_frame_index": 969,
+      "frame_id": "image_00969",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00969.jpg",
+      "file": "frame_0012.pkl"
+    },
+    {
+      "position": 13,
+      "frame_index": 13,
+      "source_frame_index": 971,
+      "frame_id": "image_00971",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00971.jpg",
+      "file": "frame_0013.pkl"
+    },
+    {
+      "position": 14,
+      "frame_index": 14,
+      "source_frame_index": 972,
+      "frame_id": "image_00972",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00972.jpg",
+      "file": "frame_0014.pkl"
+    },
+    {
+      "position": 15,
+      "frame_index": 15,
+      "source_frame_index": 974,
+      "frame_id": "image_00974",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00974.jpg",
+      "file": "frame_0015.pkl"
+    },
+    {
+      "position": 16,
+      "frame_index": 16,
+      "source_frame_index": 976,
+      "frame_id": "image_00976",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00976.jpg",
+      "file": "frame_0016.pkl"
+    },
+    {
+      "position": 17,
+      "frame_index": 17,
+      "source_frame_index": 977,
+      "frame_id": "image_00977",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00977.jpg",
+      "file": "frame_0017.pkl"
+    },
+    {
+      "position": 18,
+      "frame_index": 18,
+      "source_frame_index": 979,
+      "frame_id": "image_00979",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00979.jpg",
+      "file": "frame_0018.pkl"
+    },
+    {
+      "position": 19,
+      "frame_index": 19,
+      "source_frame_index": 981,
+      "frame_id": "image_00981",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00981.jpg",
+      "file": "frame_0019.pkl"
+    },
+    {
+      "position": 20,
+      "frame_index": 20,
+      "source_frame_index": 982,
+      "frame_id": "image_00982",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00982.jpg",
+      "file": "frame_0020.pkl"
+    },
+    {
+      "position": 21,
+      "frame_index": 21,
+      "source_frame_index": 984,
+      "frame_id": "image_00984",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00984.jpg",
+      "file": "frame_0021.pkl"
+    },
+    {
+      "position": 22,
+      "frame_index": 22,
+      "source_frame_index": 986,
+      "frame_id": "image_00986",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00986.jpg",
+      "file": "frame_0022.pkl"
+    },
+    {
+      "position": 23,
+      "frame_index": 23,
+      "source_frame_index": 987,
+      "frame_id": "image_00987",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00987.jpg",
+      "file": "frame_0023.pkl"
+    },
+    {
+      "position": 24,
+      "frame_index": 24,
+      "source_frame_index": 989,
+      "frame_id": "image_00989",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00989.jpg",
+      "file": "frame_0024.pkl"
+    },
+    {
+      "position": 25,
+      "frame_index": 25,
+      "source_frame_index": 990,
+      "frame_id": "image_00990",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00990.jpg",
+      "file": "frame_0025.pkl"
+    },
+    {
+      "position": 26,
+      "frame_index": 26,
+      "source_frame_index": 992,
+      "frame_id": "image_00992",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00992.jpg",
+      "file": "frame_0026.pkl"
+    },
+    {
+      "position": 27,
+      "frame_index": 27,
+      "source_frame_index": 994,
+      "frame_id": "image_00994",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00994.jpg",
+      "file": "frame_0027.pkl"
+    },
+    {
+      "position": 28,
+      "frame_index": 28,
+      "source_frame_index": 995,
+      "frame_id": "image_00995",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00995.jpg",
+      "file": "frame_0028.pkl"
+    },
+    {
+      "position": 29,
+      "frame_index": 29,
+      "source_frame_index": 997,
+      "frame_id": "image_00997",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00997.jpg",
+      "file": "frame_0029.pkl"
+    },
+    {
+      "position": 30,
+      "frame_index": 30,
+      "source_frame_index": 999,
+      "frame_id": "image_00999",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_00999.jpg",
+      "file": "frame_0030.pkl"
+    },
+    {
+      "position": 31,
+      "frame_index": 31,
+      "source_frame_index": 1000,
+      "frame_id": "image_01000",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01000.jpg",
+      "file": "frame_0031.pkl"
+    },
+    {
+      "position": 32,
+      "frame_index": 32,
+      "source_frame_index": 1002,
+      "frame_id": "image_01002",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01002.jpg",
+      "file": "frame_0032.pkl"
+    },
+    {
+      "position": 33,
+      "frame_index": 33,
+      "source_frame_index": 1004,
+      "frame_id": "image_01004",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01004.jpg",
+      "file": "frame_0033.pkl"
+    },
+    {
+      "position": 34,
+      "frame_index": 34,
+      "source_frame_index": 1005,
+      "frame_id": "image_01005",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01005.jpg",
+      "file": "frame_0034.pkl"
+    },
+    {
+      "position": 35,
+      "frame_index": 35,
+      "source_frame_index": 1007,
+      "frame_id": "image_01007",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01007.jpg",
+      "file": "frame_0035.pkl"
+    },
+    {
+      "position": 36,
+      "frame_index": 36,
+      "source_frame_index": 1009,
+      "frame_id": "image_01009",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01009.jpg",
+      "file": "frame_0036.pkl"
+    },
+    {
+      "position": 37,
+      "frame_index": 37,
+      "source_frame_index": 1010,
+      "frame_id": "image_01010",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01010.jpg",
+      "file": "frame_0037.pkl"
+    },
+    {
+      "position": 38,
+      "frame_index": 38,
+      "source_frame_index": 1012,
+      "frame_id": "image_01012",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01012.jpg",
+      "file": "frame_0038.pkl"
+    },
+    {
+      "position": 39,
+      "frame_index": 39,
+      "source_frame_index": 1013,
+      "frame_id": "image_01013",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01013.jpg",
+      "file": "frame_0039.pkl"
+    },
+    {
+      "position": 40,
+      "frame_index": 40,
+      "source_frame_index": 1015,
+      "frame_id": "image_01015",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01015.jpg",
+      "file": "frame_0040.pkl"
+    },
+    {
+      "position": 41,
+      "frame_index": 41,
+      "source_frame_index": 1017,
+      "frame_id": "image_01017",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01017.jpg",
+      "file": "frame_0041.pkl"
+    },
+    {
+      "position": 42,
+      "frame_index": 42,
+      "source_frame_index": 1018,
+      "frame_id": "image_01018",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01018.jpg",
+      "file": "frame_0042.pkl"
+    },
+    {
+      "position": 43,
+      "frame_index": 43,
+      "source_frame_index": 1020,
+      "frame_id": "image_01020",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01020.jpg",
+      "file": "frame_0043.pkl"
+    },
+    {
+      "position": 44,
+      "frame_index": 44,
+      "source_frame_index": 1022,
+      "frame_id": "image_01022",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01022.jpg",
+      "file": "frame_0044.pkl"
+    },
+    {
+      "position": 45,
+      "frame_index": 45,
+      "source_frame_index": 1023,
+      "frame_id": "image_01023",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01023.jpg",
+      "file": "frame_0045.pkl"
+    },
+    {
+      "position": 46,
+      "frame_index": 46,
+      "source_frame_index": 1025,
+      "frame_id": "image_01025",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01025.jpg",
+      "file": "frame_0046.pkl"
+    },
+    {
+      "position": 47,
+      "frame_index": 47,
+      "source_frame_index": 1027,
+      "frame_id": "image_01027",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01027.jpg",
+      "file": "frame_0047.pkl"
+    },
+    {
+      "position": 48,
+      "frame_index": 48,
+      "source_frame_index": 1028,
+      "frame_id": "image_01028",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01028.jpg",
+      "file": "frame_0048.pkl"
+    },
+    {
+      "position": 49,
+      "frame_index": 49,
+      "source_frame_index": 1030,
+      "frame_id": "image_01030",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01030.jpg",
+      "file": "frame_0049.pkl"
+    },
+    {
+      "position": 50,
+      "frame_index": 50,
+      "source_frame_index": 1031,
+      "frame_id": "image_01031",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01031.jpg",
+      "file": "frame_0050.pkl"
+    },
+    {
+      "position": 51,
+      "frame_index": 51,
+      "source_frame_index": 1033,
+      "frame_id": "image_01033",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01033.jpg",
+      "file": "frame_0051.pkl"
+    },
+    {
+      "position": 52,
+      "frame_index": 52,
+      "source_frame_index": 1035,
+      "frame_id": "image_01035",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01035.jpg",
+      "file": "frame_0052.pkl"
+    },
+    {
+      "position": 53,
+      "frame_index": 53,
+      "source_frame_index": 1036,
+      "frame_id": "image_01036",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01036.jpg",
+      "file": "frame_0053.pkl"
+    },
+    {
+      "position": 54,
+      "frame_index": 54,
+      "source_frame_index": 1038,
+      "frame_id": "image_01038",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01038.jpg",
+      "file": "frame_0054.pkl"
+    },
+    {
+      "position": 55,
+      "frame_index": 55,
+      "source_frame_index": 1040,
+      "frame_id": "image_01040",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01040.jpg",
+      "file": "frame_0055.pkl"
+    },
+    {
+      "position": 56,
+      "frame_index": 56,
+      "source_frame_index": 1041,
+      "frame_id": "image_01041",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01041.jpg",
+      "file": "frame_0056.pkl"
+    },
+    {
+      "position": 57,
+      "frame_index": 57,
+      "source_frame_index": 1043,
+      "frame_id": "image_01043",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01043.jpg",
+      "file": "frame_0057.pkl"
+    },
+    {
+      "position": 58,
+      "frame_index": 58,
+      "source_frame_index": 1045,
+      "frame_id": "image_01045",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01045.jpg",
+      "file": "frame_0058.pkl"
+    },
+    {
+      "position": 59,
+      "frame_index": 59,
+      "source_frame_index": 1046,
+      "frame_id": "image_01046",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01046.jpg",
+      "file": "frame_0059.pkl"
+    },
+    {
+      "position": 60,
+      "frame_index": 60,
+      "source_frame_index": 1048,
+      "frame_id": "image_01048",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01048.jpg",
+      "file": "frame_0060.pkl"
+    },
+    {
+      "position": 61,
+      "frame_index": 61,
+      "source_frame_index": 1050,
+      "frame_id": "image_01050",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01050.jpg",
+      "file": "frame_0061.pkl"
+    },
+    {
+      "position": 62,
+      "frame_index": 62,
+      "source_frame_index": 1051,
+      "frame_id": "image_01051",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01051.jpg",
+      "file": "frame_0062.pkl"
+    },
+    {
+      "position": 63,
+      "frame_index": 63,
+      "source_frame_index": 1053,
+      "frame_id": "image_01053",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01053.jpg",
+      "file": "frame_0063.pkl"
+    },
+    {
+      "position": 64,
+      "frame_index": 64,
+      "source_frame_index": 1054,
+      "frame_id": "image_01054",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01054.jpg",
+      "file": "frame_0064.pkl"
+    },
+    {
+      "position": 65,
+      "frame_index": 65,
+      "source_frame_index": 1056,
+      "frame_id": "image_01056",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01056.jpg",
+      "file": "frame_0065.pkl"
+    },
+    {
+      "position": 66,
+      "frame_index": 66,
+      "source_frame_index": 1058,
+      "frame_id": "image_01058",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01058.jpg",
+      "file": "frame_0066.pkl"
+    },
+    {
+      "position": 67,
+      "frame_index": 67,
+      "source_frame_index": 1059,
+      "frame_id": "image_01059",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01059.jpg",
+      "file": "frame_0067.pkl"
+    },
+    {
+      "position": 68,
+      "frame_index": 68,
+      "source_frame_index": 1061,
+      "frame_id": "image_01061",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01061.jpg",
+      "file": "frame_0068.pkl"
+    },
+    {
+      "position": 69,
+      "frame_index": 69,
+      "source_frame_index": 1063,
+      "frame_id": "image_01063",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01063.jpg",
+      "file": "frame_0069.pkl"
+    },
+    {
+      "position": 70,
+      "frame_index": 70,
+      "source_frame_index": 1064,
+      "frame_id": "image_01064",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01064.jpg",
+      "file": "frame_0070.pkl"
+    },
+    {
+      "position": 71,
+      "frame_index": 71,
+      "source_frame_index": 1066,
+      "frame_id": "image_01066",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01066.jpg",
+      "file": "frame_0071.pkl"
+    },
+    {
+      "position": 72,
+      "frame_index": 72,
+      "source_frame_index": 1068,
+      "frame_id": "image_01068",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01068.jpg",
+      "file": "frame_0072.pkl"
+    },
+    {
+      "position": 73,
+      "frame_index": 73,
+      "source_frame_index": 1069,
+      "frame_id": "image_01069",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01069.jpg",
+      "file": "frame_0073.pkl"
+    },
+    {
+      "position": 74,
+      "frame_index": 74,
+      "source_frame_index": 1071,
+      "frame_id": "image_01071",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01071.jpg",
+      "file": "frame_0074.pkl"
+    },
+    {
+      "position": 75,
+      "frame_index": 75,
+      "source_frame_index": 1072,
+      "frame_id": "image_01072",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01072.jpg",
+      "file": "frame_0075.pkl"
+    },
+    {
+      "position": 76,
+      "frame_index": 76,
+      "source_frame_index": 1074,
+      "frame_id": "image_01074",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01074.jpg",
+      "file": "frame_0076.pkl"
+    },
+    {
+      "position": 77,
+      "frame_index": 77,
+      "source_frame_index": 1076,
+      "frame_id": "image_01076",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01076.jpg",
+      "file": "frame_0077.pkl"
+    },
+    {
+      "position": 78,
+      "frame_index": 78,
+      "source_frame_index": 1077,
+      "frame_id": "image_01077",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01077.jpg",
+      "file": "frame_0078.pkl"
+    },
+    {
+      "position": 79,
+      "frame_index": 79,
+      "source_frame_index": 1079,
+      "frame_id": "image_01079",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01079.jpg",
+      "file": "frame_0079.pkl"
+    },
+    {
+      "position": 80,
+      "frame_index": 80,
+      "source_frame_index": 1081,
+      "frame_id": "image_01081",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01081.jpg",
+      "file": "frame_0080.pkl"
+    },
+    {
+      "position": 81,
+      "frame_index": 81,
+      "source_frame_index": 1082,
+      "frame_id": "image_01082",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01082.jpg",
+      "file": "frame_0081.pkl"
+    },
+    {
+      "position": 82,
+      "frame_index": 82,
+      "source_frame_index": 1084,
+      "frame_id": "image_01084",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01084.jpg",
+      "file": "frame_0082.pkl"
+    },
+    {
+      "position": 83,
+      "frame_index": 83,
+      "source_frame_index": 1086,
+      "frame_id": "image_01086",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01086.jpg",
+      "file": "frame_0083.pkl"
+    },
+    {
+      "position": 84,
+      "frame_index": 84,
+      "source_frame_index": 1087,
+      "frame_id": "image_01087",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01087.jpg",
+      "file": "frame_0084.pkl"
+    },
+    {
+      "position": 85,
+      "frame_index": 85,
+      "source_frame_index": 1089,
+      "frame_id": "image_01089",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01089.jpg",
+      "file": "frame_0085.pkl"
+    },
+    {
+      "position": 86,
+      "frame_index": 86,
+      "source_frame_index": 1090,
+      "frame_id": "image_01090",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01090.jpg",
+      "file": "frame_0086.pkl"
+    },
+    {
+      "position": 87,
+      "frame_index": 87,
+      "source_frame_index": 1092,
+      "frame_id": "image_01092",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01092.jpg",
+      "file": "frame_0087.pkl"
+    },
+    {
+      "position": 88,
+      "frame_index": 88,
+      "source_frame_index": 1094,
+      "frame_id": "image_01094",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01094.jpg",
+      "file": "frame_0088.pkl"
+    },
+    {
+      "position": 89,
+      "frame_index": 89,
+      "source_frame_index": 1095,
+      "frame_id": "image_01095",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01095.jpg",
+      "file": "frame_0089.pkl"
+    },
+    {
+      "position": 90,
+      "frame_index": 90,
+      "source_frame_index": 1097,
+      "frame_id": "image_01097",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01097.jpg",
+      "file": "frame_0090.pkl"
+    },
+    {
+      "position": 91,
+      "frame_index": 91,
+      "source_frame_index": 1099,
+      "frame_id": "image_01099",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01099.jpg",
+      "file": "frame_0091.pkl"
+    },
+    {
+      "position": 92,
+      "frame_index": 92,
+      "source_frame_index": 1100,
+      "frame_id": "image_01100",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01100.jpg",
+      "file": "frame_0092.pkl"
+    },
+    {
+      "position": 93,
+      "frame_index": 93,
+      "source_frame_index": 1102,
+      "frame_id": "image_01102",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01102.jpg",
+      "file": "frame_0093.pkl"
+    },
+    {
+      "position": 94,
+      "frame_index": 94,
+      "source_frame_index": 1104,
+      "frame_id": "image_01104",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01104.jpg",
+      "file": "frame_0094.pkl"
+    },
+    {
+      "position": 95,
+      "frame_index": 95,
+      "source_frame_index": 1105,
+      "frame_id": "image_01105",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01105.jpg",
+      "file": "frame_0095.pkl"
+    },
+    {
+      "position": 96,
+      "frame_index": 96,
+      "source_frame_index": 1107,
+      "frame_id": "image_01107",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01107.jpg",
+      "file": "frame_0096.pkl"
+    },
+    {
+      "position": 97,
+      "frame_index": 97,
+      "source_frame_index": 1109,
+      "frame_id": "image_01109",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01109.jpg",
+      "file": "frame_0097.pkl"
+    },
+    {
+      "position": 98,
+      "frame_index": 98,
+      "source_frame_index": 1110,
+      "frame_id": "image_01110",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01110.jpg",
+      "file": "frame_0098.pkl"
+    },
+    {
+      "position": 99,
+      "frame_index": 99,
+      "source_frame_index": 1112,
+      "frame_id": "image_01112",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01112.jpg",
+      "file": "frame_0099.pkl"
+    },
+    {
+      "position": 100,
+      "frame_index": 100,
+      "source_frame_index": 1113,
+      "frame_id": "image_01113",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01113.jpg",
+      "file": "frame_0100.pkl"
+    },
+    {
+      "position": 101,
+      "frame_index": 101,
+      "source_frame_index": 1115,
+      "frame_id": "image_01115",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01115.jpg",
+      "file": "frame_0101.pkl"
+    },
+    {
+      "position": 102,
+      "frame_index": 102,
+      "source_frame_index": 1117,
+      "frame_id": "image_01117",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01117.jpg",
+      "file": "frame_0102.pkl"
+    },
+    {
+      "position": 103,
+      "frame_index": 103,
+      "source_frame_index": 1118,
+      "frame_id": "image_01118",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01118.jpg",
+      "file": "frame_0103.pkl"
+    },
+    {
+      "position": 104,
+      "frame_index": 104,
+      "source_frame_index": 1120,
+      "frame_id": "image_01120",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01120.jpg",
+      "file": "frame_0104.pkl"
+    },
+    {
+      "position": 105,
+      "frame_index": 105,
+      "source_frame_index": 1122,
+      "frame_id": "image_01122",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01122.jpg",
+      "file": "frame_0105.pkl"
+    },
+    {
+      "position": 106,
+      "frame_index": 106,
+      "source_frame_index": 1123,
+      "frame_id": "image_01123",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01123.jpg",
+      "file": "frame_0106.pkl"
+    },
+    {
+      "position": 107,
+      "frame_index": 107,
+      "source_frame_index": 1125,
+      "frame_id": "image_01125",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01125.jpg",
+      "file": "frame_0107.pkl"
+    },
+    {
+      "position": 108,
+      "frame_index": 108,
+      "source_frame_index": 1127,
+      "frame_id": "image_01127",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01127.jpg",
+      "file": "frame_0108.pkl"
+    },
+    {
+      "position": 109,
+      "frame_index": 109,
+      "source_frame_index": 1128,
+      "frame_id": "image_01128",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01128.jpg",
+      "file": "frame_0109.pkl"
+    },
+    {
+      "position": 110,
+      "frame_index": 110,
+      "source_frame_index": 1130,
+      "frame_id": "image_01130",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01130.jpg",
+      "file": "frame_0110.pkl"
+    },
+    {
+      "position": 111,
+      "frame_index": 111,
+      "source_frame_index": 1131,
+      "frame_id": "image_01131",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01131.jpg",
+      "file": "frame_0111.pkl"
+    },
+    {
+      "position": 112,
+      "frame_index": 112,
+      "source_frame_index": 1133,
+      "frame_id": "image_01133",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01133.jpg",
+      "file": "frame_0112.pkl"
+    },
+    {
+      "position": 113,
+      "frame_index": 113,
+      "source_frame_index": 1135,
+      "frame_id": "image_01135",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01135.jpg",
+      "file": "frame_0113.pkl"
+    },
+    {
+      "position": 114,
+      "frame_index": 114,
+      "source_frame_index": 1136,
+      "frame_id": "image_01136",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01136.jpg",
+      "file": "frame_0114.pkl"
+    },
+    {
+      "position": 115,
+      "frame_index": 115,
+      "source_frame_index": 1138,
+      "frame_id": "image_01138",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01138.jpg",
+      "file": "frame_0115.pkl"
+    },
+    {
+      "position": 116,
+      "frame_index": 116,
+      "source_frame_index": 1140,
+      "frame_id": "image_01140",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01140.jpg",
+      "file": "frame_0116.pkl"
+    },
+    {
+      "position": 117,
+      "frame_index": 117,
+      "source_frame_index": 1141,
+      "frame_id": "image_01141",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01141.jpg",
+      "file": "frame_0117.pkl"
+    },
+    {
+      "position": 118,
+      "frame_index": 118,
+      "source_frame_index": 1143,
+      "frame_id": "image_01143",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01143.jpg",
+      "file": "frame_0118.pkl"
+    },
+    {
+      "position": 119,
+      "frame_index": 119,
+      "source_frame_index": 1145,
+      "frame_id": "image_01145",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01145.jpg",
+      "file": "frame_0119.pkl"
+    },
+    {
+      "position": 120,
+      "frame_index": 120,
+      "source_frame_index": 1146,
+      "frame_id": "image_01146",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01146.jpg",
+      "file": "frame_0120.pkl"
+    },
+    {
+      "position": 121,
+      "frame_index": 121,
+      "source_frame_index": 1148,
+      "frame_id": "image_01148",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01148.jpg",
+      "file": "frame_0121.pkl"
+    },
+    {
+      "position": 122,
+      "frame_index": 122,
+      "source_frame_index": 1150,
+      "frame_id": "image_01150",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01150.jpg",
+      "file": "frame_0122.pkl"
+    },
+    {
+      "position": 123,
+      "frame_index": 123,
+      "source_frame_index": 1151,
+      "frame_id": "image_01151",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01151.jpg",
+      "file": "frame_0123.pkl"
+    },
+    {
+      "position": 124,
+      "frame_index": 124,
+      "source_frame_index": 1153,
+      "frame_id": "image_01153",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01153.jpg",
+      "file": "frame_0124.pkl"
+    },
+    {
+      "position": 125,
+      "frame_index": 125,
+      "source_frame_index": 1154,
+      "frame_id": "image_01154",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01154.jpg",
+      "file": "frame_0125.pkl"
+    },
+    {
+      "position": 126,
+      "frame_index": 126,
+      "source_frame_index": 1156,
+      "frame_id": "image_01156",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01156.jpg",
+      "file": "frame_0126.pkl"
+    },
+    {
+      "position": 127,
+      "frame_index": 127,
+      "source_frame_index": 1158,
+      "frame_id": "image_01158",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01158.jpg",
+      "file": "frame_0127.pkl"
+    },
+    {
+      "position": 128,
+      "frame_index": 128,
+      "source_frame_index": 1159,
+      "frame_id": "image_01159",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01159.jpg",
+      "file": "frame_0128.pkl"
+    },
+    {
+      "position": 129,
+      "frame_index": 129,
+      "source_frame_index": 1161,
+      "frame_id": "image_01161",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01161.jpg",
+      "file": "frame_0129.pkl"
+    },
+    {
+      "position": 130,
+      "frame_index": 130,
+      "source_frame_index": 1163,
+      "frame_id": "image_01163",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01163.jpg",
+      "file": "frame_0130.pkl"
+    },
+    {
+      "position": 131,
+      "frame_index": 131,
+      "source_frame_index": 1164,
+      "frame_id": "image_01164",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01164.jpg",
+      "file": "frame_0131.pkl"
+    },
+    {
+      "position": 132,
+      "frame_index": 132,
+      "source_frame_index": 1166,
+      "frame_id": "image_01166",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01166.jpg",
+      "file": "frame_0132.pkl"
+    },
+    {
+      "position": 133,
+      "frame_index": 133,
+      "source_frame_index": 1168,
+      "frame_id": "image_01168",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01168.jpg",
+      "file": "frame_0133.pkl"
+    },
+    {
+      "position": 134,
+      "frame_index": 134,
+      "source_frame_index": 1169,
+      "frame_id": "image_01169",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01169.jpg",
+      "file": "frame_0134.pkl"
+    },
+    {
+      "position": 135,
+      "frame_index": 135,
+      "source_frame_index": 1171,
+      "frame_id": "image_01171",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01171.jpg",
+      "file": "frame_0135.pkl"
+    },
+    {
+      "position": 136,
+      "frame_index": 136,
+      "source_frame_index": 1172,
+      "frame_id": "image_01172",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01172.jpg",
+      "file": "frame_0136.pkl"
+    },
+    {
+      "position": 137,
+      "frame_index": 137,
+      "source_frame_index": 1174,
+      "frame_id": "image_01174",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01174.jpg",
+      "file": "frame_0137.pkl"
+    },
+    {
+      "position": 138,
+      "frame_index": 138,
+      "source_frame_index": 1176,
+      "frame_id": "image_01176",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01176.jpg",
+      "file": "frame_0138.pkl"
+    },
+    {
+      "position": 139,
+      "frame_index": 139,
+      "source_frame_index": 1177,
+      "frame_id": "image_01177",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01177.jpg",
+      "file": "frame_0139.pkl"
+    },
+    {
+      "position": 140,
+      "frame_index": 140,
+      "source_frame_index": 1179,
+      "frame_id": "image_01179",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01179.jpg",
+      "file": "frame_0140.pkl"
+    },
+    {
+      "position": 141,
+      "frame_index": 141,
+      "source_frame_index": 1181,
+      "frame_id": "image_01181",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01181.jpg",
+      "file": "frame_0141.pkl"
+    },
+    {
+      "position": 142,
+      "frame_index": 142,
+      "source_frame_index": 1182,
+      "frame_id": "image_01182",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01182.jpg",
+      "file": "frame_0142.pkl"
+    },
+    {
+      "position": 143,
+      "frame_index": 143,
+      "source_frame_index": 1184,
+      "frame_id": "image_01184",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01184.jpg",
+      "file": "frame_0143.pkl"
+    },
+    {
+      "position": 144,
+      "frame_index": 144,
+      "source_frame_index": 1186,
+      "frame_id": "image_01186",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01186.jpg",
+      "file": "frame_0144.pkl"
+    },
+    {
+      "position": 145,
+      "frame_index": 145,
+      "source_frame_index": 1187,
+      "frame_id": "image_01187",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01187.jpg",
+      "file": "frame_0145.pkl"
+    },
+    {
+      "position": 146,
+      "frame_index": 146,
+      "source_frame_index": 1189,
+      "frame_id": "image_01189",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01189.jpg",
+      "file": "frame_0146.pkl"
+    },
+    {
+      "position": 147,
+      "frame_index": 147,
+      "source_frame_index": 1190,
+      "frame_id": "image_01190",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01190.jpg",
+      "file": "frame_0147.pkl"
+    },
+    {
+      "position": 148,
+      "frame_index": 148,
+      "source_frame_index": 1192,
+      "frame_id": "image_01192",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01192.jpg",
+      "file": "frame_0148.pkl"
+    },
+    {
+      "position": 149,
+      "frame_index": 149,
+      "source_frame_index": 1194,
+      "frame_id": "image_01194",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01194.jpg",
+      "file": "frame_0149.pkl"
+    },
+    {
+      "position": 150,
+      "frame_index": 150,
+      "source_frame_index": 1195,
+      "frame_id": "image_01195",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01195.jpg",
+      "file": "frame_0150.pkl"
+    },
+    {
+      "position": 151,
+      "frame_index": 151,
+      "source_frame_index": 1197,
+      "frame_id": "image_01197",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01197.jpg",
+      "file": "frame_0151.pkl"
+    },
+    {
+      "position": 152,
+      "frame_index": 152,
+      "source_frame_index": 1199,
+      "frame_id": "image_01199",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01199.jpg",
+      "file": "frame_0152.pkl"
+    },
+    {
+      "position": 153,
+      "frame_index": 153,
+      "source_frame_index": 1200,
+      "frame_id": "image_01200",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01200.jpg",
+      "file": "frame_0153.pkl"
+    },
+    {
+      "position": 154,
+      "frame_index": 154,
+      "source_frame_index": 1202,
+      "frame_id": "image_01202",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01202.jpg",
+      "file": "frame_0154.pkl"
+    },
+    {
+      "position": 155,
+      "frame_index": 155,
+      "source_frame_index": 1204,
+      "frame_id": "image_01204",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01204.jpg",
+      "file": "frame_0155.pkl"
+    },
+    {
+      "position": 156,
+      "frame_index": 156,
+      "source_frame_index": 1205,
+      "frame_id": "image_01205",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01205.jpg",
+      "file": "frame_0156.pkl"
+    },
+    {
+      "position": 157,
+      "frame_index": 157,
+      "source_frame_index": 1207,
+      "frame_id": "image_01207",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01207.jpg",
+      "file": "frame_0157.pkl"
+    },
+    {
+      "position": 158,
+      "frame_index": 158,
+      "source_frame_index": 1209,
+      "frame_id": "image_01209",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01209.jpg",
+      "file": "frame_0158.pkl"
+    },
+    {
+      "position": 159,
+      "frame_index": 159,
+      "source_frame_index": 1210,
+      "frame_id": "image_01210",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01210.jpg",
+      "file": "frame_0159.pkl"
+    },
+    {
+      "position": 160,
+      "frame_index": 160,
+      "source_frame_index": 1212,
+      "frame_id": "image_01212",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01212.jpg",
+      "file": "frame_0160.pkl"
+    },
+    {
+      "position": 161,
+      "frame_index": 161,
+      "source_frame_index": 1213,
+      "frame_id": "image_01213",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01213.jpg",
+      "file": "frame_0161.pkl"
+    },
+    {
+      "position": 162,
+      "frame_index": 162,
+      "source_frame_index": 1215,
+      "frame_id": "image_01215",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01215.jpg",
+      "file": "frame_0162.pkl"
+    },
+    {
+      "position": 163,
+      "frame_index": 163,
+      "source_frame_index": 1217,
+      "frame_id": "image_01217",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01217.jpg",
+      "file": "frame_0163.pkl"
+    },
+    {
+      "position": 164,
+      "frame_index": 164,
+      "source_frame_index": 1218,
+      "frame_id": "image_01218",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01218.jpg",
+      "file": "frame_0164.pkl"
+    },
+    {
+      "position": 165,
+      "frame_index": 165,
+      "source_frame_index": 1220,
+      "frame_id": "image_01220",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01220.jpg",
+      "file": "frame_0165.pkl"
+    },
+    {
+      "position": 166,
+      "frame_index": 166,
+      "source_frame_index": 1222,
+      "frame_id": "image_01222",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01222.jpg",
+      "file": "frame_0166.pkl"
+    },
+    {
+      "position": 167,
+      "frame_index": 167,
+      "source_frame_index": 1223,
+      "frame_id": "image_01223",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01223.jpg",
+      "file": "frame_0167.pkl"
+    },
+    {
+      "position": 168,
+      "frame_index": 168,
+      "source_frame_index": 1225,
+      "frame_id": "image_01225",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01225.jpg",
+      "file": "frame_0168.pkl"
+    },
+    {
+      "position": 169,
+      "frame_index": 169,
+      "source_frame_index": 1227,
+      "frame_id": "image_01227",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01227.jpg",
+      "file": "frame_0169.pkl"
+    },
+    {
+      "position": 170,
+      "frame_index": 170,
+      "source_frame_index": 1228,
+      "frame_id": "image_01228",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01228.jpg",
+      "file": "frame_0170.pkl"
+    },
+    {
+      "position": 171,
+      "frame_index": 171,
+      "source_frame_index": 1230,
+      "frame_id": "image_01230",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01230.jpg",
+      "file": "frame_0171.pkl"
+    },
+    {
+      "position": 172,
+      "frame_index": 172,
+      "source_frame_index": 1231,
+      "frame_id": "image_01231",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01231.jpg",
+      "file": "frame_0172.pkl"
+    },
+    {
+      "position": 173,
+      "frame_index": 173,
+      "source_frame_index": 1233,
+      "frame_id": "image_01233",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01233.jpg",
+      "file": "frame_0173.pkl"
+    },
+    {
+      "position": 174,
+      "frame_index": 174,
+      "source_frame_index": 1235,
+      "frame_id": "image_01235",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01235.jpg",
+      "file": "frame_0174.pkl"
+    },
+    {
+      "position": 175,
+      "frame_index": 175,
+      "source_frame_index": 1236,
+      "frame_id": "image_01236",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01236.jpg",
+      "file": "frame_0175.pkl"
+    },
+    {
+      "position": 176,
+      "frame_index": 176,
+      "source_frame_index": 1238,
+      "frame_id": "image_01238",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01238.jpg",
+      "file": "frame_0176.pkl"
+    },
+    {
+      "position": 177,
+      "frame_index": 177,
+      "source_frame_index": 1240,
+      "frame_id": "image_01240",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01240.jpg",
+      "file": "frame_0177.pkl"
+    },
+    {
+      "position": 178,
+      "frame_index": 178,
+      "source_frame_index": 1241,
+      "frame_id": "image_01241",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01241.jpg",
+      "file": "frame_0178.pkl"
+    },
+    {
+      "position": 179,
+      "frame_index": 179,
+      "source_frame_index": 1243,
+      "frame_id": "image_01243",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01243.jpg",
+      "file": "frame_0179.pkl"
+    },
+    {
+      "position": 180,
+      "frame_index": 180,
+      "source_frame_index": 1245,
+      "frame_id": "image_01245",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01245.jpg",
+      "file": "frame_0180.pkl"
+    },
+    {
+      "position": 181,
+      "frame_index": 181,
+      "source_frame_index": 1246,
+      "frame_id": "image_01246",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01246.jpg",
+      "file": "frame_0181.pkl"
+    },
+    {
+      "position": 182,
+      "frame_index": 182,
+      "source_frame_index": 1248,
+      "frame_id": "image_01248",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01248.jpg",
+      "file": "frame_0182.pkl"
+    },
+    {
+      "position": 183,
+      "frame_index": 183,
+      "source_frame_index": 1250,
+      "frame_id": "image_01250",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01250.jpg",
+      "file": "frame_0183.pkl"
+    },
+    {
+      "position": 184,
+      "frame_index": 184,
+      "source_frame_index": 1251,
+      "frame_id": "image_01251",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01251.jpg",
+      "file": "frame_0184.pkl"
+    },
+    {
+      "position": 185,
+      "frame_index": 185,
+      "source_frame_index": 1253,
+      "frame_id": "image_01253",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01253.jpg",
+      "file": "frame_0185.pkl"
+    },
+    {
+      "position": 186,
+      "frame_index": 186,
+      "source_frame_index": 1254,
+      "frame_id": "image_01254",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01254.jpg",
+      "file": "frame_0186.pkl"
+    },
+    {
+      "position": 187,
+      "frame_index": 187,
+      "source_frame_index": 1256,
+      "frame_id": "image_01256",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01256.jpg",
+      "file": "frame_0187.pkl"
+    },
+    {
+      "position": 188,
+      "frame_index": 188,
+      "source_frame_index": 1258,
+      "frame_id": "image_01258",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01258.jpg",
+      "file": "frame_0188.pkl"
+    },
+    {
+      "position": 189,
+      "frame_index": 189,
+      "source_frame_index": 1259,
+      "frame_id": "image_01259",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01259.jpg",
+      "file": "frame_0189.pkl"
+    },
+    {
+      "position": 190,
+      "frame_index": 190,
+      "source_frame_index": 1261,
+      "frame_id": "image_01261",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01261.jpg",
+      "file": "frame_0190.pkl"
+    },
+    {
+      "position": 191,
+      "frame_index": 191,
+      "source_frame_index": 1263,
+      "frame_id": "image_01263",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01263.jpg",
+      "file": "frame_0191.pkl"
+    },
+    {
+      "position": 192,
+      "frame_index": 192,
+      "source_frame_index": 1264,
+      "frame_id": "image_01264",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01264.jpg",
+      "file": "frame_0192.pkl"
+    },
+    {
+      "position": 193,
+      "frame_index": 193,
+      "source_frame_index": 1266,
+      "frame_id": "image_01266",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01266.jpg",
+      "file": "frame_0193.pkl"
+    },
+    {
+      "position": 194,
+      "frame_index": 194,
+      "source_frame_index": 1268,
+      "frame_id": "image_01268",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01268.jpg",
+      "file": "frame_0194.pkl"
+    },
+    {
+      "position": 195,
+      "frame_index": 195,
+      "source_frame_index": 1269,
+      "frame_id": "image_01269",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01269.jpg",
+      "file": "frame_0195.pkl"
+    },
+    {
+      "position": 196,
+      "frame_index": 196,
+      "source_frame_index": 1271,
+      "frame_id": "image_01271",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01271.jpg",
+      "file": "frame_0196.pkl"
+    },
+    {
+      "position": 197,
+      "frame_index": 197,
+      "source_frame_index": 1272,
+      "frame_id": "image_01272",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01272.jpg",
+      "file": "frame_0197.pkl"
+    },
+    {
+      "position": 198,
+      "frame_index": 198,
+      "source_frame_index": 1274,
+      "frame_id": "image_01274",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01274.jpg",
+      "file": "frame_0198.pkl"
+    },
+    {
+      "position": 199,
+      "frame_index": 199,
+      "source_frame_index": 1276,
+      "frame_id": "image_01276",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01276.jpg",
+      "file": "frame_0199.pkl"
+    },
+    {
+      "position": 200,
+      "frame_index": 200,
+      "source_frame_index": 1277,
+      "frame_id": "image_01277",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01277.jpg",
+      "file": "frame_0200.pkl"
+    },
+    {
+      "position": 201,
+      "frame_index": 201,
+      "source_frame_index": 1279,
+      "frame_id": "image_01279",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01279.jpg",
+      "file": "frame_0201.pkl"
+    },
+    {
+      "position": 202,
+      "frame_index": 202,
+      "source_frame_index": 1281,
+      "frame_id": "image_01281",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01281.jpg",
+      "file": "frame_0202.pkl"
+    },
+    {
+      "position": 203,
+      "frame_index": 203,
+      "source_frame_index": 1282,
+      "frame_id": "image_01282",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01282.jpg",
+      "file": "frame_0203.pkl"
+    },
+    {
+      "position": 204,
+      "frame_index": 204,
+      "source_frame_index": 1284,
+      "frame_id": "image_01284",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01284.jpg",
+      "file": "frame_0204.pkl"
+    },
+    {
+      "position": 205,
+      "frame_index": 205,
+      "source_frame_index": 1286,
+      "frame_id": "image_01286",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01286.jpg",
+      "file": "frame_0205.pkl"
+    },
+    {
+      "position": 206,
+      "frame_index": 206,
+      "source_frame_index": 1287,
+      "frame_id": "image_01287",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01287.jpg",
+      "file": "frame_0206.pkl"
+    },
+    {
+      "position": 207,
+      "frame_index": 207,
+      "source_frame_index": 1289,
+      "frame_id": "image_01289",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01289.jpg",
+      "file": "frame_0207.pkl"
+    },
+    {
+      "position": 208,
+      "frame_index": 208,
+      "source_frame_index": 1290,
+      "frame_id": "image_01290",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01290.jpg",
+      "file": "frame_0208.pkl"
+    },
+    {
+      "position": 209,
+      "frame_index": 209,
+      "source_frame_index": 1292,
+      "frame_id": "image_01292",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01292.jpg",
+      "file": "frame_0209.pkl"
+    },
+    {
+      "position": 210,
+      "frame_index": 210,
+      "source_frame_index": 1294,
+      "frame_id": "image_01294",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01294.jpg",
+      "file": "frame_0210.pkl"
+    },
+    {
+      "position": 211,
+      "frame_index": 211,
+      "source_frame_index": 1295,
+      "frame_id": "image_01295",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01295.jpg",
+      "file": "frame_0211.pkl"
+    },
+    {
+      "position": 212,
+      "frame_index": 212,
+      "source_frame_index": 1297,
+      "frame_id": "image_01297",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01297.jpg",
+      "file": "frame_0212.pkl"
+    },
+    {
+      "position": 213,
+      "frame_index": 213,
+      "source_frame_index": 1299,
+      "frame_id": "image_01299",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01299.jpg",
+      "file": "frame_0213.pkl"
+    },
+    {
+      "position": 214,
+      "frame_index": 214,
+      "source_frame_index": 1300,
+      "frame_id": "image_01300",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01300.jpg",
+      "file": "frame_0214.pkl"
+    },
+    {
+      "position": 215,
+      "frame_index": 215,
+      "source_frame_index": 1302,
+      "frame_id": "image_01302",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01302.jpg",
+      "file": "frame_0215.pkl"
+    },
+    {
+      "position": 216,
+      "frame_index": 216,
+      "source_frame_index": 1304,
+      "frame_id": "image_01304",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01304.jpg",
+      "file": "frame_0216.pkl"
+    },
+    {
+      "position": 217,
+      "frame_index": 217,
+      "source_frame_index": 1305,
+      "frame_id": "image_01305",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01305.jpg",
+      "file": "frame_0217.pkl"
+    },
+    {
+      "position": 218,
+      "frame_index": 218,
+      "source_frame_index": 1307,
+      "frame_id": "image_01307",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01307.jpg",
+      "file": "frame_0218.pkl"
+    },
+    {
+      "position": 219,
+      "frame_index": 219,
+      "source_frame_index": 1309,
+      "frame_id": "image_01309",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01309.jpg",
+      "file": "frame_0219.pkl"
+    },
+    {
+      "position": 220,
+      "frame_index": 220,
+      "source_frame_index": 1310,
+      "frame_id": "image_01310",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01310.jpg",
+      "file": "frame_0220.pkl"
+    },
+    {
+      "position": 221,
+      "frame_index": 221,
+      "source_frame_index": 1312,
+      "frame_id": "image_01312",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01312.jpg",
+      "file": "frame_0221.pkl"
+    },
+    {
+      "position": 222,
+      "frame_index": 222,
+      "source_frame_index": 1313,
+      "frame_id": "image_01313",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01313.jpg",
+      "file": "frame_0222.pkl"
+    },
+    {
+      "position": 223,
+      "frame_index": 223,
+      "source_frame_index": 1315,
+      "frame_id": "image_01315",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01315.jpg",
+      "file": "frame_0223.pkl"
+    },
+    {
+      "position": 224,
+      "frame_index": 224,
+      "source_frame_index": 1317,
+      "frame_id": "image_01317",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01317.jpg",
+      "file": "frame_0224.pkl"
+    },
+    {
+      "position": 225,
+      "frame_index": 225,
+      "source_frame_index": 1318,
+      "frame_id": "image_01318",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01318.jpg",
+      "file": "frame_0225.pkl"
+    },
+    {
+      "position": 226,
+      "frame_index": 226,
+      "source_frame_index": 1320,
+      "frame_id": "image_01320",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01320.jpg",
+      "file": "frame_0226.pkl"
+    },
+    {
+      "position": 227,
+      "frame_index": 227,
+      "source_frame_index": 1322,
+      "frame_id": "image_01322",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01322.jpg",
+      "file": "frame_0227.pkl"
+    },
+    {
+      "position": 228,
+      "frame_index": 228,
+      "source_frame_index": 1323,
+      "frame_id": "image_01323",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01323.jpg",
+      "file": "frame_0228.pkl"
+    },
+    {
+      "position": 229,
+      "frame_index": 229,
+      "source_frame_index": 1325,
+      "frame_id": "image_01325",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01325.jpg",
+      "file": "frame_0229.pkl"
+    },
+    {
+      "position": 230,
+      "frame_index": 230,
+      "source_frame_index": 1327,
+      "frame_id": "image_01327",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01327.jpg",
+      "file": "frame_0230.pkl"
+    },
+    {
+      "position": 231,
+      "frame_index": 231,
+      "source_frame_index": 1328,
+      "frame_id": "image_01328",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01328.jpg",
+      "file": "frame_0231.pkl"
+    },
+    {
+      "position": 232,
+      "frame_index": 232,
+      "source_frame_index": 1330,
+      "frame_id": "image_01330",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01330.jpg",
+      "file": "frame_0232.pkl"
+    },
+    {
+      "position": 233,
+      "frame_index": 233,
+      "source_frame_index": 1331,
+      "frame_id": "image_01331",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01331.jpg",
+      "file": "frame_0233.pkl"
+    },
+    {
+      "position": 234,
+      "frame_index": 234,
+      "source_frame_index": 1333,
+      "frame_id": "image_01333",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01333.jpg",
+      "file": "frame_0234.pkl"
+    },
+    {
+      "position": 235,
+      "frame_index": 235,
+      "source_frame_index": 1335,
+      "frame_id": "image_01335",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01335.jpg",
+      "file": "frame_0235.pkl"
+    },
+    {
+      "position": 236,
+      "frame_index": 236,
+      "source_frame_index": 1336,
+      "frame_id": "image_01336",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01336.jpg",
+      "file": "frame_0236.pkl"
+    },
+    {
+      "position": 237,
+      "frame_index": 237,
+      "source_frame_index": 1338,
+      "frame_id": "image_01338",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01338.jpg",
+      "file": "frame_0237.pkl"
+    },
+    {
+      "position": 238,
+      "frame_index": 238,
+      "source_frame_index": 1340,
+      "frame_id": "image_01340",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01340.jpg",
+      "file": "frame_0238.pkl"
+    },
+    {
+      "position": 239,
+      "frame_index": 239,
+      "source_frame_index": 1341,
+      "frame_id": "image_01341",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01341.jpg",
+      "file": "frame_0239.pkl"
+    },
+    {
+      "position": 240,
+      "frame_index": 240,
+      "source_frame_index": 1343,
+      "frame_id": "image_01343",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01343.jpg",
+      "file": "frame_0240.pkl"
+    },
+    {
+      "position": 241,
+      "frame_index": 241,
+      "source_frame_index": 1345,
+      "frame_id": "image_01345",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01345.jpg",
+      "file": "frame_0241.pkl"
+    },
+    {
+      "position": 242,
+      "frame_index": 242,
+      "source_frame_index": 1346,
+      "frame_id": "image_01346",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01346.jpg",
+      "file": "frame_0242.pkl"
+    },
+    {
+      "position": 243,
+      "frame_index": 243,
+      "source_frame_index": 1348,
+      "frame_id": "image_01348",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01348.jpg",
+      "file": "frame_0243.pkl"
+    },
+    {
+      "position": 244,
+      "frame_index": 244,
+      "source_frame_index": 1350,
+      "frame_id": "image_01350",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01350.jpg",
+      "file": "frame_0244.pkl"
+    },
+    {
+      "position": 245,
+      "frame_index": 245,
+      "source_frame_index": 1351,
+      "frame_id": "image_01351",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01351.jpg",
+      "file": "frame_0245.pkl"
+    },
+    {
+      "position": 246,
+      "frame_index": 246,
+      "source_frame_index": 1353,
+      "frame_id": "image_01353",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01353.jpg",
+      "file": "frame_0246.pkl"
+    },
+    {
+      "position": 247,
+      "frame_index": 247,
+      "source_frame_index": 1354,
+      "frame_id": "image_01354",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01354.jpg",
+      "file": "frame_0247.pkl"
+    },
+    {
+      "position": 248,
+      "frame_index": 248,
+      "source_frame_index": 1356,
+      "frame_id": "image_01356",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01356.jpg",
+      "file": "frame_0248.pkl"
+    },
+    {
+      "position": 249,
+      "frame_index": 249,
+      "source_frame_index": 1358,
+      "frame_id": "image_01358",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01358.jpg",
+      "file": "frame_0249.pkl"
+    },
+    {
+      "position": 250,
+      "frame_index": 250,
+      "source_frame_index": 1359,
+      "frame_id": "image_01359",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01359.jpg",
+      "file": "frame_0250.pkl"
+    },
+    {
+      "position": 251,
+      "frame_index": 251,
+      "source_frame_index": 1361,
+      "frame_id": "image_01361",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01361.jpg",
+      "file": "frame_0251.pkl"
+    },
+    {
+      "position": 252,
+      "frame_index": 252,
+      "source_frame_index": 1363,
+      "frame_id": "image_01363",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01363.jpg",
+      "file": "frame_0252.pkl"
+    },
+    {
+      "position": 253,
+      "frame_index": 253,
+      "source_frame_index": 1364,
+      "frame_id": "image_01364",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01364.jpg",
+      "file": "frame_0253.pkl"
+    },
+    {
+      "position": 254,
+      "frame_index": 254,
+      "source_frame_index": 1366,
+      "frame_id": "image_01366",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01366.jpg",
+      "file": "frame_0254.pkl"
+    },
+    {
+      "position": 255,
+      "frame_index": 255,
+      "source_frame_index": 1368,
+      "frame_id": "image_01368",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01368.jpg",
+      "file": "frame_0255.pkl"
+    },
+    {
+      "position": 256,
+      "frame_index": 256,
+      "source_frame_index": 1369,
+      "frame_id": "image_01369",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01369.jpg",
+      "file": "frame_0256.pkl"
+    },
+    {
+      "position": 257,
+      "frame_index": 257,
+      "source_frame_index": 1371,
+      "frame_id": "image_01371",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01371.jpg",
+      "file": "frame_0257.pkl"
+    },
+    {
+      "position": 258,
+      "frame_index": 258,
+      "source_frame_index": 1372,
+      "frame_id": "image_01372",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01372.jpg",
+      "file": "frame_0258.pkl"
+    },
+    {
+      "position": 259,
+      "frame_index": 259,
+      "source_frame_index": 1374,
+      "frame_id": "image_01374",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01374.jpg",
+      "file": "frame_0259.pkl"
+    },
+    {
+      "position": 260,
+      "frame_index": 260,
+      "source_frame_index": 1376,
+      "frame_id": "image_01376",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01376.jpg",
+      "file": "frame_0260.pkl"
+    },
+    {
+      "position": 261,
+      "frame_index": 261,
+      "source_frame_index": 1377,
+      "frame_id": "image_01377",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01377.jpg",
+      "file": "frame_0261.pkl"
+    },
+    {
+      "position": 262,
+      "frame_index": 262,
+      "source_frame_index": 1379,
+      "frame_id": "image_01379",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01379.jpg",
+      "file": "frame_0262.pkl"
+    },
+    {
+      "position": 263,
+      "frame_index": 263,
+      "source_frame_index": 1381,
+      "frame_id": "image_01381",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01381.jpg",
+      "file": "frame_0263.pkl"
+    },
+    {
+      "position": 264,
+      "frame_index": 264,
+      "source_frame_index": 1382,
+      "frame_id": "image_01382",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01382.jpg",
+      "file": "frame_0264.pkl"
+    },
+    {
+      "position": 265,
+      "frame_index": 265,
+      "source_frame_index": 1384,
+      "frame_id": "image_01384",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01384.jpg",
+      "file": "frame_0265.pkl"
+    },
+    {
+      "position": 266,
+      "frame_index": 266,
+      "source_frame_index": 1386,
+      "frame_id": "image_01386",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01386.jpg",
+      "file": "frame_0266.pkl"
+    },
+    {
+      "position": 267,
+      "frame_index": 267,
+      "source_frame_index": 1387,
+      "frame_id": "image_01387",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01387.jpg",
+      "file": "frame_0267.pkl"
+    },
+    {
+      "position": 268,
+      "frame_index": 268,
+      "source_frame_index": 1389,
+      "frame_id": "image_01389",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01389.jpg",
+      "file": "frame_0268.pkl"
+    },
+    {
+      "position": 269,
+      "frame_index": 269,
+      "source_frame_index": 1390,
+      "frame_id": "image_01390",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01390.jpg",
+      "file": "frame_0269.pkl"
+    },
+    {
+      "position": 270,
+      "frame_index": 270,
+      "source_frame_index": 1392,
+      "frame_id": "image_01392",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01392.jpg",
+      "file": "frame_0270.pkl"
+    },
+    {
+      "position": 271,
+      "frame_index": 271,
+      "source_frame_index": 1394,
+      "frame_id": "image_01394",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01394.jpg",
+      "file": "frame_0271.pkl"
+    },
+    {
+      "position": 272,
+      "frame_index": 272,
+      "source_frame_index": 1395,
+      "frame_id": "image_01395",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01395.jpg",
+      "file": "frame_0272.pkl"
+    },
+    {
+      "position": 273,
+      "frame_index": 273,
+      "source_frame_index": 1397,
+      "frame_id": "image_01397",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01397.jpg",
+      "file": "frame_0273.pkl"
+    },
+    {
+      "position": 274,
+      "frame_index": 274,
+      "source_frame_index": 1399,
+      "frame_id": "image_01399",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01399.jpg",
+      "file": "frame_0274.pkl"
+    },
+    {
+      "position": 275,
+      "frame_index": 275,
+      "source_frame_index": 1400,
+      "frame_id": "image_01400",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01400.jpg",
+      "file": "frame_0275.pkl"
+    },
+    {
+      "position": 276,
+      "frame_index": 276,
+      "source_frame_index": 1402,
+      "frame_id": "image_01402",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01402.jpg",
+      "file": "frame_0276.pkl"
+    },
+    {
+      "position": 277,
+      "frame_index": 277,
+      "source_frame_index": 1404,
+      "frame_id": "image_01404",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01404.jpg",
+      "file": "frame_0277.pkl"
+    },
+    {
+      "position": 278,
+      "frame_index": 278,
+      "source_frame_index": 1405,
+      "frame_id": "image_01405",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01405.jpg",
+      "file": "frame_0278.pkl"
+    },
+    {
+      "position": 279,
+      "frame_index": 279,
+      "source_frame_index": 1407,
+      "frame_id": "image_01407",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01407.jpg",
+      "file": "frame_0279.pkl"
+    },
+    {
+      "position": 280,
+      "frame_index": 280,
+      "source_frame_index": 1409,
+      "frame_id": "image_01409",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01409.jpg",
+      "file": "frame_0280.pkl"
+    },
+    {
+      "position": 281,
+      "frame_index": 281,
+      "source_frame_index": 1410,
+      "frame_id": "image_01410",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01410.jpg",
+      "file": "frame_0281.pkl"
+    },
+    {
+      "position": 282,
+      "frame_index": 282,
+      "source_frame_index": 1412,
+      "frame_id": "image_01412",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01412.jpg",
+      "file": "frame_0282.pkl"
+    },
+    {
+      "position": 283,
+      "frame_index": 283,
+      "source_frame_index": 1413,
+      "frame_id": "image_01413",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01413.jpg",
+      "file": "frame_0283.pkl"
+    },
+    {
+      "position": 284,
+      "frame_index": 284,
+      "source_frame_index": 1415,
+      "frame_id": "image_01415",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01415.jpg",
+      "file": "frame_0284.pkl"
+    },
+    {
+      "position": 285,
+      "frame_index": 285,
+      "source_frame_index": 1417,
+      "frame_id": "image_01417",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01417.jpg",
+      "file": "frame_0285.pkl"
+    },
+    {
+      "position": 286,
+      "frame_index": 286,
+      "source_frame_index": 1418,
+      "frame_id": "image_01418",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01418.jpg",
+      "file": "frame_0286.pkl"
+    },
+    {
+      "position": 287,
+      "frame_index": 287,
+      "source_frame_index": 1420,
+      "frame_id": "image_01420",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01420.jpg",
+      "file": "frame_0287.pkl"
+    },
+    {
+      "position": 288,
+      "frame_index": 288,
+      "source_frame_index": 1422,
+      "frame_id": "image_01422",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01422.jpg",
+      "file": "frame_0288.pkl"
+    },
+    {
+      "position": 289,
+      "frame_index": 289,
+      "source_frame_index": 1423,
+      "frame_id": "image_01423",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01423.jpg",
+      "file": "frame_0289.pkl"
+    },
+    {
+      "position": 290,
+      "frame_index": 290,
+      "source_frame_index": 1425,
+      "frame_id": "image_01425",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01425.jpg",
+      "file": "frame_0290.pkl"
+    },
+    {
+      "position": 291,
+      "frame_index": 291,
+      "source_frame_index": 1427,
+      "frame_id": "image_01427",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01427.jpg",
+      "file": "frame_0291.pkl"
+    },
+    {
+      "position": 292,
+      "frame_index": 292,
+      "source_frame_index": 1428,
+      "frame_id": "image_01428",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01428.jpg",
+      "file": "frame_0292.pkl"
+    },
+    {
+      "position": 293,
+      "frame_index": 293,
+      "source_frame_index": 1430,
+      "frame_id": "image_01430",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01430.jpg",
+      "file": "frame_0293.pkl"
+    },
+    {
+      "position": 294,
+      "frame_index": 294,
+      "source_frame_index": 1431,
+      "frame_id": "image_01431",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01431.jpg",
+      "file": "frame_0294.pkl"
+    },
+    {
+      "position": 295,
+      "frame_index": 295,
+      "source_frame_index": 1433,
+      "frame_id": "image_01433",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01433.jpg",
+      "file": "frame_0295.pkl"
+    },
+    {
+      "position": 296,
+      "frame_index": 296,
+      "source_frame_index": 1435,
+      "frame_id": "image_01435",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01435.jpg",
+      "file": "frame_0296.pkl"
+    },
+    {
+      "position": 297,
+      "frame_index": 297,
+      "source_frame_index": 1436,
+      "frame_id": "image_01436",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01436.jpg",
+      "file": "frame_0297.pkl"
+    },
+    {
+      "position": 298,
+      "frame_index": 298,
+      "source_frame_index": 1438,
+      "frame_id": "image_01438",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01438.jpg",
+      "file": "frame_0298.pkl"
+    },
+    {
+      "position": 299,
+      "frame_index": 299,
+      "source_frame_index": 1440,
+      "frame_id": "image_01440",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01440.jpg",
+      "file": "frame_0299.pkl"
+    },
+    {
+      "position": 300,
+      "frame_index": 300,
+      "source_frame_index": 1441,
+      "frame_id": "image_01441",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01441.jpg",
+      "file": "frame_0300.pkl"
+    },
+    {
+      "position": 301,
+      "frame_index": 301,
+      "source_frame_index": 1443,
+      "frame_id": "image_01443",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01443.jpg",
+      "file": "frame_0301.pkl"
+    },
+    {
+      "position": 302,
+      "frame_index": 302,
+      "source_frame_index": 1445,
+      "frame_id": "image_01445",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01445.jpg",
+      "file": "frame_0302.pkl"
+    },
+    {
+      "position": 303,
+      "frame_index": 303,
+      "source_frame_index": 1446,
+      "frame_id": "image_01446",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01446.jpg",
+      "file": "frame_0303.pkl"
+    },
+    {
+      "position": 304,
+      "frame_index": 304,
+      "source_frame_index": 1448,
+      "frame_id": "image_01448",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01448.jpg",
+      "file": "frame_0304.pkl"
+    },
+    {
+      "position": 305,
+      "frame_index": 305,
+      "source_frame_index": 1450,
+      "frame_id": "image_01450",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01450.jpg",
+      "file": "frame_0305.pkl"
+    },
+    {
+      "position": 306,
+      "frame_index": 306,
+      "source_frame_index": 1451,
+      "frame_id": "image_01451",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01451.jpg",
+      "file": "frame_0306.pkl"
+    },
+    {
+      "position": 307,
+      "frame_index": 307,
+      "source_frame_index": 1453,
+      "frame_id": "image_01453",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01453.jpg",
+      "file": "frame_0307.pkl"
+    },
+    {
+      "position": 308,
+      "frame_index": 308,
+      "source_frame_index": 1454,
+      "frame_id": "image_01454",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01454.jpg",
+      "file": "frame_0308.pkl"
+    },
+    {
+      "position": 309,
+      "frame_index": 309,
+      "source_frame_index": 1456,
+      "frame_id": "image_01456",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01456.jpg",
+      "file": "frame_0309.pkl"
+    },
+    {
+      "position": 310,
+      "frame_index": 310,
+      "source_frame_index": 1458,
+      "frame_id": "image_01458",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01458.jpg",
+      "file": "frame_0310.pkl"
+    },
+    {
+      "position": 311,
+      "frame_index": 311,
+      "source_frame_index": 1459,
+      "frame_id": "image_01459",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01459.jpg",
+      "file": "frame_0311.pkl"
+    },
+    {
+      "position": 312,
+      "frame_index": 312,
+      "source_frame_index": 1461,
+      "frame_id": "image_01461",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01461.jpg",
+      "file": "frame_0312.pkl"
+    },
+    {
+      "position": 313,
+      "frame_index": 313,
+      "source_frame_index": 1463,
+      "frame_id": "image_01463",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01463.jpg",
+      "file": "frame_0313.pkl"
+    },
+    {
+      "position": 314,
+      "frame_index": 314,
+      "source_frame_index": 1464,
+      "frame_id": "image_01464",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01464.jpg",
+      "file": "frame_0314.pkl"
+    },
+    {
+      "position": 315,
+      "frame_index": 315,
+      "source_frame_index": 1466,
+      "frame_id": "image_01466",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01466.jpg",
+      "file": "frame_0315.pkl"
+    },
+    {
+      "position": 316,
+      "frame_index": 316,
+      "source_frame_index": 1468,
+      "frame_id": "image_01468",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01468.jpg",
+      "file": "frame_0316.pkl"
+    },
+    {
+      "position": 317,
+      "frame_index": 317,
+      "source_frame_index": 1469,
+      "frame_id": "image_01469",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01469.jpg",
+      "file": "frame_0317.pkl"
+    },
+    {
+      "position": 318,
+      "frame_index": 318,
+      "source_frame_index": 1471,
+      "frame_id": "image_01471",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01471.jpg",
+      "file": "frame_0318.pkl"
+    },
+    {
+      "position": 319,
+      "frame_index": 319,
+      "source_frame_index": 1472,
+      "frame_id": "image_01472",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01472.jpg",
+      "file": "frame_0319.pkl"
+    },
+    {
+      "position": 320,
+      "frame_index": 320,
+      "source_frame_index": 1474,
+      "frame_id": "image_01474",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01474.jpg",
+      "file": "frame_0320.pkl"
+    },
+    {
+      "position": 321,
+      "frame_index": 321,
+      "source_frame_index": 1476,
+      "frame_id": "image_01476",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01476.jpg",
+      "file": "frame_0321.pkl"
+    },
+    {
+      "position": 322,
+      "frame_index": 322,
+      "source_frame_index": 1477,
+      "frame_id": "image_01477",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01477.jpg",
+      "file": "frame_0322.pkl"
+    },
+    {
+      "position": 323,
+      "frame_index": 323,
+      "source_frame_index": 1479,
+      "frame_id": "image_01479",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01479.jpg",
+      "file": "frame_0323.pkl"
+    },
+    {
+      "position": 324,
+      "frame_index": 324,
+      "source_frame_index": 1481,
+      "frame_id": "image_01481",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01481.jpg",
+      "file": "frame_0324.pkl"
+    },
+    {
+      "position": 325,
+      "frame_index": 325,
+      "source_frame_index": 1482,
+      "frame_id": "image_01482",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01482.jpg",
+      "file": "frame_0325.pkl"
+    },
+    {
+      "position": 326,
+      "frame_index": 326,
+      "source_frame_index": 1484,
+      "frame_id": "image_01484",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01484.jpg",
+      "file": "frame_0326.pkl"
+    },
+    {
+      "position": 327,
+      "frame_index": 327,
+      "source_frame_index": 1486,
+      "frame_id": "image_01486",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01486.jpg",
+      "file": "frame_0327.pkl"
+    },
+    {
+      "position": 328,
+      "frame_index": 328,
+      "source_frame_index": 1487,
+      "frame_id": "image_01487",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01487.jpg",
+      "file": "frame_0328.pkl"
+    },
+    {
+      "position": 329,
+      "frame_index": 329,
+      "source_frame_index": 1489,
+      "frame_id": "image_01489",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01489.jpg",
+      "file": "frame_0329.pkl"
+    },
+    {
+      "position": 330,
+      "frame_index": 330,
+      "source_frame_index": 1490,
+      "frame_id": "image_01490",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01490.jpg",
+      "file": "frame_0330.pkl"
+    },
+    {
+      "position": 331,
+      "frame_index": 331,
+      "source_frame_index": 1492,
+      "frame_id": "image_01492",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01492.jpg",
+      "file": "frame_0331.pkl"
+    },
+    {
+      "position": 332,
+      "frame_index": 332,
+      "source_frame_index": 1494,
+      "frame_id": "image_01494",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01494.jpg",
+      "file": "frame_0332.pkl"
+    },
+    {
+      "position": 333,
+      "frame_index": 333,
+      "source_frame_index": 1495,
+      "frame_id": "image_01495",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01495.jpg",
+      "file": "frame_0333.pkl"
+    },
+    {
+      "position": 334,
+      "frame_index": 334,
+      "source_frame_index": 1497,
+      "frame_id": "image_01497",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01497.jpg",
+      "file": "frame_0334.pkl"
+    },
+    {
+      "position": 335,
+      "frame_index": 335,
+      "source_frame_index": 1499,
+      "frame_id": "image_01499",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01499.jpg",
+      "file": "frame_0335.pkl"
+    },
+    {
+      "position": 336,
+      "frame_index": 336,
+      "source_frame_index": 1500,
+      "frame_id": "image_01500",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01500.jpg",
+      "file": "frame_0336.pkl"
+    },
+    {
+      "position": 337,
+      "frame_index": 337,
+      "source_frame_index": 1502,
+      "frame_id": "image_01502",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01502.jpg",
+      "file": "frame_0337.pkl"
+    },
+    {
+      "position": 338,
+      "frame_index": 338,
+      "source_frame_index": 1504,
+      "frame_id": "image_01504",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01504.jpg",
+      "file": "frame_0338.pkl"
+    },
+    {
+      "position": 339,
+      "frame_index": 339,
+      "source_frame_index": 1505,
+      "frame_id": "image_01505",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01505.jpg",
+      "file": "frame_0339.pkl"
+    },
+    {
+      "position": 340,
+      "frame_index": 340,
+      "source_frame_index": 1507,
+      "frame_id": "image_01507",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01507.jpg",
+      "file": "frame_0340.pkl"
+    },
+    {
+      "position": 341,
+      "frame_index": 341,
+      "source_frame_index": 1509,
+      "frame_id": "image_01509",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01509.jpg",
+      "file": "frame_0341.pkl"
+    },
+    {
+      "position": 342,
+      "frame_index": 342,
+      "source_frame_index": 1510,
+      "frame_id": "image_01510",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01510.jpg",
+      "file": "frame_0342.pkl"
+    },
+    {
+      "position": 343,
+      "frame_index": 343,
+      "source_frame_index": 1512,
+      "frame_id": "image_01512",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01512.jpg",
+      "file": "frame_0343.pkl"
+    },
+    {
+      "position": 344,
+      "frame_index": 344,
+      "source_frame_index": 1513,
+      "frame_id": "image_01513",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01513.jpg",
+      "file": "frame_0344.pkl"
+    },
+    {
+      "position": 345,
+      "frame_index": 345,
+      "source_frame_index": 1515,
+      "frame_id": "image_01515",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01515.jpg",
+      "file": "frame_0345.pkl"
+    },
+    {
+      "position": 346,
+      "frame_index": 346,
+      "source_frame_index": 1517,
+      "frame_id": "image_01517",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01517.jpg",
+      "file": "frame_0346.pkl"
+    },
+    {
+      "position": 347,
+      "frame_index": 347,
+      "source_frame_index": 1518,
+      "frame_id": "image_01518",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01518.jpg",
+      "file": "frame_0347.pkl"
+    },
+    {
+      "position": 348,
+      "frame_index": 348,
+      "source_frame_index": 1520,
+      "frame_id": "image_01520",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01520.jpg",
+      "file": "frame_0348.pkl"
+    },
+    {
+      "position": 349,
+      "frame_index": 349,
+      "source_frame_index": 1522,
+      "frame_id": "image_01522",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01522.jpg",
+      "file": "frame_0349.pkl"
+    },
+    {
+      "position": 350,
+      "frame_index": 350,
+      "source_frame_index": 1523,
+      "frame_id": "image_01523",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01523.jpg",
+      "file": "frame_0350.pkl"
+    },
+    {
+      "position": 351,
+      "frame_index": 351,
+      "source_frame_index": 1525,
+      "frame_id": "image_01525",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01525.jpg",
+      "file": "frame_0351.pkl"
+    },
+    {
+      "position": 352,
+      "frame_index": 352,
+      "source_frame_index": 1527,
+      "frame_id": "image_01527",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01527.jpg",
+      "file": "frame_0352.pkl"
+    },
+    {
+      "position": 353,
+      "frame_index": 353,
+      "source_frame_index": 1528,
+      "frame_id": "image_01528",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01528.jpg",
+      "file": "frame_0353.pkl"
+    },
+    {
+      "position": 354,
+      "frame_index": 354,
+      "source_frame_index": 1530,
+      "frame_id": "image_01530",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01530.jpg",
+      "file": "frame_0354.pkl"
+    },
+    {
+      "position": 355,
+      "frame_index": 355,
+      "source_frame_index": 1531,
+      "frame_id": "image_01531",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01531.jpg",
+      "file": "frame_0355.pkl"
+    },
+    {
+      "position": 356,
+      "frame_index": 356,
+      "source_frame_index": 1533,
+      "frame_id": "image_01533",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01533.jpg",
+      "file": "frame_0356.pkl"
+    },
+    {
+      "position": 357,
+      "frame_index": 357,
+      "source_frame_index": 1535,
+      "frame_id": "image_01535",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01535.jpg",
+      "file": "frame_0357.pkl"
+    },
+    {
+      "position": 358,
+      "frame_index": 358,
+      "source_frame_index": 1536,
+      "frame_id": "image_01536",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01536.jpg",
+      "file": "frame_0358.pkl"
+    },
+    {
+      "position": 359,
+      "frame_index": 359,
+      "source_frame_index": 1538,
+      "frame_id": "image_01538",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01538.jpg",
+      "file": "frame_0359.pkl"
+    },
+    {
+      "position": 360,
+      "frame_index": 360,
+      "source_frame_index": 1540,
+      "frame_id": "image_01540",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01540.jpg",
+      "file": "frame_0360.pkl"
+    },
+    {
+      "position": 361,
+      "frame_index": 361,
+      "source_frame_index": 1541,
+      "frame_id": "image_01541",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01541.jpg",
+      "file": "frame_0361.pkl"
+    },
+    {
+      "position": 362,
+      "frame_index": 362,
+      "source_frame_index": 1543,
+      "frame_id": "image_01543",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01543.jpg",
+      "file": "frame_0362.pkl"
+    },
+    {
+      "position": 363,
+      "frame_index": 363,
+      "source_frame_index": 1545,
+      "frame_id": "image_01545",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01545.jpg",
+      "file": "frame_0363.pkl"
+    },
+    {
+      "position": 364,
+      "frame_index": 364,
+      "source_frame_index": 1546,
+      "frame_id": "image_01546",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01546.jpg",
+      "file": "frame_0364.pkl"
+    },
+    {
+      "position": 365,
+      "frame_index": 365,
+      "source_frame_index": 1548,
+      "frame_id": "image_01548",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01548.jpg",
+      "file": "frame_0365.pkl"
+    },
+    {
+      "position": 366,
+      "frame_index": 366,
+      "source_frame_index": 1550,
+      "frame_id": "image_01550",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01550.jpg",
+      "file": "frame_0366.pkl"
+    },
+    {
+      "position": 367,
+      "frame_index": 367,
+      "source_frame_index": 1551,
+      "frame_id": "image_01551",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01551.jpg",
+      "file": "frame_0367.pkl"
+    },
+    {
+      "position": 368,
+      "frame_index": 368,
+      "source_frame_index": 1553,
+      "frame_id": "image_01553",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01553.jpg",
+      "file": "frame_0368.pkl"
+    },
+    {
+      "position": 369,
+      "frame_index": 369,
+      "source_frame_index": 1554,
+      "frame_id": "image_01554",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01554.jpg",
+      "file": "frame_0369.pkl"
+    },
+    {
+      "position": 370,
+      "frame_index": 370,
+      "source_frame_index": 1556,
+      "frame_id": "image_01556",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01556.jpg",
+      "file": "frame_0370.pkl"
+    },
+    {
+      "position": 371,
+      "frame_index": 371,
+      "source_frame_index": 1558,
+      "frame_id": "image_01558",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01558.jpg",
+      "file": "frame_0371.pkl"
+    },
+    {
+      "position": 372,
+      "frame_index": 372,
+      "source_frame_index": 1559,
+      "frame_id": "image_01559",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01559.jpg",
+      "file": "frame_0372.pkl"
+    },
+    {
+      "position": 373,
+      "frame_index": 373,
+      "source_frame_index": 1561,
+      "frame_id": "image_01561",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01561.jpg",
+      "file": "frame_0373.pkl"
+    },
+    {
+      "position": 374,
+      "frame_index": 374,
+      "source_frame_index": 1563,
+      "frame_id": "image_01563",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01563.jpg",
+      "file": "frame_0374.pkl"
+    },
+    {
+      "position": 375,
+      "frame_index": 375,
+      "source_frame_index": 1564,
+      "frame_id": "image_01564",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01564.jpg",
+      "file": "frame_0375.pkl"
+    },
+    {
+      "position": 376,
+      "frame_index": 376,
+      "source_frame_index": 1566,
+      "frame_id": "image_01566",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01566.jpg",
+      "file": "frame_0376.pkl"
+    },
+    {
+      "position": 377,
+      "frame_index": 377,
+      "source_frame_index": 1568,
+      "frame_id": "image_01568",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01568.jpg",
+      "file": "frame_0377.pkl"
+    },
+    {
+      "position": 378,
+      "frame_index": 378,
+      "source_frame_index": 1569,
+      "frame_id": "image_01569",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01569.jpg",
+      "file": "frame_0378.pkl"
+    },
+    {
+      "position": 379,
+      "frame_index": 379,
+      "source_frame_index": 1571,
+      "frame_id": "image_01571",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01571.jpg",
+      "file": "frame_0379.pkl"
+    },
+    {
+      "position": 380,
+      "frame_index": 380,
+      "source_frame_index": 1572,
+      "frame_id": "image_01572",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01572.jpg",
+      "file": "frame_0380.pkl"
+    },
+    {
+      "position": 381,
+      "frame_index": 381,
+      "source_frame_index": 1574,
+      "frame_id": "image_01574",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01574.jpg",
+      "file": "frame_0381.pkl"
+    },
+    {
+      "position": 382,
+      "frame_index": 382,
+      "source_frame_index": 1576,
+      "frame_id": "image_01576",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01576.jpg",
+      "file": "frame_0382.pkl"
+    },
+    {
+      "position": 383,
+      "frame_index": 383,
+      "source_frame_index": 1577,
+      "frame_id": "image_01577",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01577.jpg",
+      "file": "frame_0383.pkl"
+    },
+    {
+      "position": 384,
+      "frame_index": 384,
+      "source_frame_index": 1579,
+      "frame_id": "image_01579",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01579.jpg",
+      "file": "frame_0384.pkl"
+    },
+    {
+      "position": 385,
+      "frame_index": 385,
+      "source_frame_index": 1581,
+      "frame_id": "image_01581",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01581.jpg",
+      "file": "frame_0385.pkl"
+    },
+    {
+      "position": 386,
+      "frame_index": 386,
+      "source_frame_index": 1582,
+      "frame_id": "image_01582",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01582.jpg",
+      "file": "frame_0386.pkl"
+    },
+    {
+      "position": 387,
+      "frame_index": 387,
+      "source_frame_index": 1584,
+      "frame_id": "image_01584",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01584.jpg",
+      "file": "frame_0387.pkl"
+    },
+    {
+      "position": 388,
+      "frame_index": 388,
+      "source_frame_index": 1586,
+      "frame_id": "image_01586",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01586.jpg",
+      "file": "frame_0388.pkl"
+    },
+    {
+      "position": 389,
+      "frame_index": 389,
+      "source_frame_index": 1587,
+      "frame_id": "image_01587",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01587.jpg",
+      "file": "frame_0389.pkl"
+    },
+    {
+      "position": 390,
+      "frame_index": 390,
+      "source_frame_index": 1589,
+      "frame_id": "image_01589",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01589.jpg",
+      "file": "frame_0390.pkl"
+    },
+    {
+      "position": 391,
+      "frame_index": 391,
+      "source_frame_index": 1590,
+      "frame_id": "image_01590",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01590.jpg",
+      "file": "frame_0391.pkl"
+    },
+    {
+      "position": 392,
+      "frame_index": 392,
+      "source_frame_index": 1592,
+      "frame_id": "image_01592",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01592.jpg",
+      "file": "frame_0392.pkl"
+    },
+    {
+      "position": 393,
+      "frame_index": 393,
+      "source_frame_index": 1594,
+      "frame_id": "image_01594",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01594.jpg",
+      "file": "frame_0393.pkl"
+    },
+    {
+      "position": 394,
+      "frame_index": 394,
+      "source_frame_index": 1595,
+      "frame_id": "image_01595",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01595.jpg",
+      "file": "frame_0394.pkl"
+    },
+    {
+      "position": 395,
+      "frame_index": 395,
+      "source_frame_index": 1597,
+      "frame_id": "image_01597",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01597.jpg",
+      "file": "frame_0395.pkl"
+    },
+    {
+      "position": 396,
+      "frame_index": 396,
+      "source_frame_index": 1599,
+      "frame_id": "image_01599",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01599.jpg",
+      "file": "frame_0396.pkl"
+    },
+    {
+      "position": 397,
+      "frame_index": 397,
+      "source_frame_index": 1600,
+      "frame_id": "image_01600",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01600.jpg",
+      "file": "frame_0397.pkl"
+    },
+    {
+      "position": 398,
+      "frame_index": 398,
+      "source_frame_index": 1602,
+      "frame_id": "image_01602",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01602.jpg",
+      "file": "frame_0398.pkl"
+    },
+    {
+      "position": 399,
+      "frame_index": 399,
+      "source_frame_index": 1604,
+      "frame_id": "image_01604",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01604.jpg",
+      "file": "frame_0399.pkl"
+    },
+    {
+      "position": 400,
+      "frame_index": 400,
+      "source_frame_index": 1605,
+      "frame_id": "image_01605",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01605.jpg",
+      "file": "frame_0400.pkl"
+    },
+    {
+      "position": 401,
+      "frame_index": 401,
+      "source_frame_index": 1607,
+      "frame_id": "image_01607",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01607.jpg",
+      "file": "frame_0401.pkl"
+    },
+    {
+      "position": 402,
+      "frame_index": 402,
+      "source_frame_index": 1609,
+      "frame_id": "image_01609",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01609.jpg",
+      "file": "frame_0402.pkl"
+    },
+    {
+      "position": 403,
+      "frame_index": 403,
+      "source_frame_index": 1610,
+      "frame_id": "image_01610",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01610.jpg",
+      "file": "frame_0403.pkl"
+    },
+    {
+      "position": 404,
+      "frame_index": 404,
+      "source_frame_index": 1612,
+      "frame_id": "image_01612",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01612.jpg",
+      "file": "frame_0404.pkl"
+    },
+    {
+      "position": 405,
+      "frame_index": 405,
+      "source_frame_index": 1613,
+      "frame_id": "image_01613",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01613.jpg",
+      "file": "frame_0405.pkl"
+    },
+    {
+      "position": 406,
+      "frame_index": 406,
+      "source_frame_index": 1615,
+      "frame_id": "image_01615",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01615.jpg",
+      "file": "frame_0406.pkl"
+    },
+    {
+      "position": 407,
+      "frame_index": 407,
+      "source_frame_index": 1617,
+      "frame_id": "image_01617",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01617.jpg",
+      "file": "frame_0407.pkl"
+    },
+    {
+      "position": 408,
+      "frame_index": 408,
+      "source_frame_index": 1618,
+      "frame_id": "image_01618",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01618.jpg",
+      "file": "frame_0408.pkl"
+    },
+    {
+      "position": 409,
+      "frame_index": 409,
+      "source_frame_index": 1620,
+      "frame_id": "image_01620",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01620.jpg",
+      "file": "frame_0409.pkl"
+    },
+    {
+      "position": 410,
+      "frame_index": 410,
+      "source_frame_index": 1622,
+      "frame_id": "image_01622",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01622.jpg",
+      "file": "frame_0410.pkl"
+    },
+    {
+      "position": 411,
+      "frame_index": 411,
+      "source_frame_index": 1623,
+      "frame_id": "image_01623",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01623.jpg",
+      "file": "frame_0411.pkl"
+    },
+    {
+      "position": 412,
+      "frame_index": 412,
+      "source_frame_index": 1625,
+      "frame_id": "image_01625",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01625.jpg",
+      "file": "frame_0412.pkl"
+    },
+    {
+      "position": 413,
+      "frame_index": 413,
+      "source_frame_index": 1627,
+      "frame_id": "image_01627",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01627.jpg",
+      "file": "frame_0413.pkl"
+    },
+    {
+      "position": 414,
+      "frame_index": 414,
+      "source_frame_index": 1628,
+      "frame_id": "image_01628",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01628.jpg",
+      "file": "frame_0414.pkl"
+    },
+    {
+      "position": 415,
+      "frame_index": 415,
+      "source_frame_index": 1630,
+      "frame_id": "image_01630",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01630.jpg",
+      "file": "frame_0415.pkl"
+    },
+    {
+      "position": 416,
+      "frame_index": 416,
+      "source_frame_index": 1631,
+      "frame_id": "image_01631",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01631.jpg",
+      "file": "frame_0416.pkl"
+    },
+    {
+      "position": 417,
+      "frame_index": 417,
+      "source_frame_index": 1633,
+      "frame_id": "image_01633",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01633.jpg",
+      "file": "frame_0417.pkl"
+    },
+    {
+      "position": 418,
+      "frame_index": 418,
+      "source_frame_index": 1635,
+      "frame_id": "image_01635",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01635.jpg",
+      "file": "frame_0418.pkl"
+    },
+    {
+      "position": 419,
+      "frame_index": 419,
+      "source_frame_index": 1636,
+      "frame_id": "image_01636",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01636.jpg",
+      "file": "frame_0419.pkl"
+    },
+    {
+      "position": 420,
+      "frame_index": 420,
+      "source_frame_index": 1638,
+      "frame_id": "image_01638",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01638.jpg",
+      "file": "frame_0420.pkl"
+    },
+    {
+      "position": 421,
+      "frame_index": 421,
+      "source_frame_index": 1640,
+      "frame_id": "image_01640",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01640.jpg",
+      "file": "frame_0421.pkl"
+    },
+    {
+      "position": 422,
+      "frame_index": 422,
+      "source_frame_index": 1641,
+      "frame_id": "image_01641",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01641.jpg",
+      "file": "frame_0422.pkl"
+    },
+    {
+      "position": 423,
+      "frame_index": 423,
+      "source_frame_index": 1643,
+      "frame_id": "image_01643",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01643.jpg",
+      "file": "frame_0423.pkl"
+    },
+    {
+      "position": 424,
+      "frame_index": 424,
+      "source_frame_index": 1645,
+      "frame_id": "image_01645",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01645.jpg",
+      "file": "frame_0424.pkl"
+    },
+    {
+      "position": 425,
+      "frame_index": 425,
+      "source_frame_index": 1646,
+      "frame_id": "image_01646",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01646.jpg",
+      "file": "frame_0425.pkl"
+    },
+    {
+      "position": 426,
+      "frame_index": 426,
+      "source_frame_index": 1648,
+      "frame_id": "image_01648",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01648.jpg",
+      "file": "frame_0426.pkl"
+    },
+    {
+      "position": 427,
+      "frame_index": 427,
+      "source_frame_index": 1650,
+      "frame_id": "image_01650",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01650.jpg",
+      "file": "frame_0427.pkl"
+    },
+    {
+      "position": 428,
+      "frame_index": 428,
+      "source_frame_index": 1651,
+      "frame_id": "image_01651",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01651.jpg",
+      "file": "frame_0428.pkl"
+    },
+    {
+      "position": 429,
+      "frame_index": 429,
+      "source_frame_index": 1653,
+      "frame_id": "image_01653",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01653.jpg",
+      "file": "frame_0429.pkl"
+    },
+    {
+      "position": 430,
+      "frame_index": 430,
+      "source_frame_index": 1654,
+      "frame_id": "image_01654",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01654.jpg",
+      "file": "frame_0430.pkl"
+    },
+    {
+      "position": 431,
+      "frame_index": 431,
+      "source_frame_index": 1656,
+      "frame_id": "image_01656",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01656.jpg",
+      "file": "frame_0431.pkl"
+    },
+    {
+      "position": 432,
+      "frame_index": 432,
+      "source_frame_index": 1658,
+      "frame_id": "image_01658",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01658.jpg",
+      "file": "frame_0432.pkl"
+    },
+    {
+      "position": 433,
+      "frame_index": 433,
+      "source_frame_index": 1659,
+      "frame_id": "image_01659",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01659.jpg",
+      "file": "frame_0433.pkl"
+    },
+    {
+      "position": 434,
+      "frame_index": 434,
+      "source_frame_index": 1661,
+      "frame_id": "image_01661",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01661.jpg",
+      "file": "frame_0434.pkl"
+    },
+    {
+      "position": 435,
+      "frame_index": 435,
+      "source_frame_index": 1663,
+      "frame_id": "image_01663",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01663.jpg",
+      "file": "frame_0435.pkl"
+    },
+    {
+      "position": 436,
+      "frame_index": 436,
+      "source_frame_index": 1664,
+      "frame_id": "image_01664",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01664.jpg",
+      "file": "frame_0436.pkl"
+    },
+    {
+      "position": 437,
+      "frame_index": 437,
+      "source_frame_index": 1666,
+      "frame_id": "image_01666",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01666.jpg",
+      "file": "frame_0437.pkl"
+    },
+    {
+      "position": 438,
+      "frame_index": 438,
+      "source_frame_index": 1668,
+      "frame_id": "image_01668",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01668.jpg",
+      "file": "frame_0438.pkl"
+    },
+    {
+      "position": 439,
+      "frame_index": 439,
+      "source_frame_index": 1669,
+      "frame_id": "image_01669",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01669.jpg",
+      "file": "frame_0439.pkl"
+    },
+    {
+      "position": 440,
+      "frame_index": 440,
+      "source_frame_index": 1671,
+      "frame_id": "image_01671",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01671.jpg",
+      "file": "frame_0440.pkl"
+    },
+    {
+      "position": 441,
+      "frame_index": 441,
+      "source_frame_index": 1672,
+      "frame_id": "image_01672",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01672.jpg",
+      "file": "frame_0441.pkl"
+    },
+    {
+      "position": 442,
+      "frame_index": 442,
+      "source_frame_index": 1674,
+      "frame_id": "image_01674",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01674.jpg",
+      "file": "frame_0442.pkl"
+    },
+    {
+      "position": 443,
+      "frame_index": 443,
+      "source_frame_index": 1676,
+      "frame_id": "image_01676",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01676.jpg",
+      "file": "frame_0443.pkl"
+    },
+    {
+      "position": 444,
+      "frame_index": 444,
+      "source_frame_index": 1677,
+      "frame_id": "image_01677",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01677.jpg",
+      "file": "frame_0444.pkl"
+    },
+    {
+      "position": 445,
+      "frame_index": 445,
+      "source_frame_index": 1679,
+      "frame_id": "image_01679",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01679.jpg",
+      "file": "frame_0445.pkl"
+    },
+    {
+      "position": 446,
+      "frame_index": 446,
+      "source_frame_index": 1681,
+      "frame_id": "image_01681",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01681.jpg",
+      "file": "frame_0446.pkl"
+    },
+    {
+      "position": 447,
+      "frame_index": 447,
+      "source_frame_index": 1682,
+      "frame_id": "image_01682",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01682.jpg",
+      "file": "frame_0447.pkl"
+    },
+    {
+      "position": 448,
+      "frame_index": 448,
+      "source_frame_index": 1684,
+      "frame_id": "image_01684",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01684.jpg",
+      "file": "frame_0448.pkl"
+    },
+    {
+      "position": 449,
+      "frame_index": 449,
+      "source_frame_index": 1686,
+      "frame_id": "image_01686",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01686.jpg",
+      "file": "frame_0449.pkl"
+    },
+    {
+      "position": 450,
+      "frame_index": 450,
+      "source_frame_index": 1687,
+      "frame_id": "image_01687",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01687.jpg",
+      "file": "frame_0450.pkl"
+    },
+    {
+      "position": 451,
+      "frame_index": 451,
+      "source_frame_index": 1689,
+      "frame_id": "image_01689",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01689.jpg",
+      "file": "frame_0451.pkl"
+    },
+    {
+      "position": 452,
+      "frame_index": 452,
+      "source_frame_index": 1690,
+      "frame_id": "image_01690",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01690.jpg",
+      "file": "frame_0452.pkl"
+    },
+    {
+      "position": 453,
+      "frame_index": 453,
+      "source_frame_index": 1692,
+      "frame_id": "image_01692",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01692.jpg",
+      "file": "frame_0453.pkl"
+    },
+    {
+      "position": 454,
+      "frame_index": 454,
+      "source_frame_index": 1694,
+      "frame_id": "image_01694",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01694.jpg",
+      "file": "frame_0454.pkl"
+    },
+    {
+      "position": 455,
+      "frame_index": 455,
+      "source_frame_index": 1695,
+      "frame_id": "image_01695",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01695.jpg",
+      "file": "frame_0455.pkl"
+    },
+    {
+      "position": 456,
+      "frame_index": 456,
+      "source_frame_index": 1697,
+      "frame_id": "image_01697",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01697.jpg",
+      "file": "frame_0456.pkl"
+    },
+    {
+      "position": 457,
+      "frame_index": 457,
+      "source_frame_index": 1699,
+      "frame_id": "image_01699",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01699.jpg",
+      "file": "frame_0457.pkl"
+    },
+    {
+      "position": 458,
+      "frame_index": 458,
+      "source_frame_index": 1700,
+      "frame_id": "image_01700",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01700.jpg",
+      "file": "frame_0458.pkl"
+    },
+    {
+      "position": 459,
+      "frame_index": 459,
+      "source_frame_index": 1702,
+      "frame_id": "image_01702",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01702.jpg",
+      "file": "frame_0459.pkl"
+    },
+    {
+      "position": 460,
+      "frame_index": 460,
+      "source_frame_index": 1704,
+      "frame_id": "image_01704",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01704.jpg",
+      "file": "frame_0460.pkl"
+    },
+    {
+      "position": 461,
+      "frame_index": 461,
+      "source_frame_index": 1705,
+      "frame_id": "image_01705",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01705.jpg",
+      "file": "frame_0461.pkl"
+    },
+    {
+      "position": 462,
+      "frame_index": 462,
+      "source_frame_index": 1707,
+      "frame_id": "image_01707",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01707.jpg",
+      "file": "frame_0462.pkl"
+    },
+    {
+      "position": 463,
+      "frame_index": 463,
+      "source_frame_index": 1709,
+      "frame_id": "image_01709",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01709.jpg",
+      "file": "frame_0463.pkl"
+    },
+    {
+      "position": 464,
+      "frame_index": 464,
+      "source_frame_index": 1710,
+      "frame_id": "image_01710",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01710.jpg",
+      "file": "frame_0464.pkl"
+    },
+    {
+      "position": 465,
+      "frame_index": 465,
+      "source_frame_index": 1712,
+      "frame_id": "image_01712",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01712.jpg",
+      "file": "frame_0465.pkl"
+    },
+    {
+      "position": 466,
+      "frame_index": 466,
+      "source_frame_index": 1713,
+      "frame_id": "image_01713",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01713.jpg",
+      "file": "frame_0466.pkl"
+    },
+    {
+      "position": 467,
+      "frame_index": 467,
+      "source_frame_index": 1715,
+      "frame_id": "image_01715",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01715.jpg",
+      "file": "frame_0467.pkl"
+    },
+    {
+      "position": 468,
+      "frame_index": 468,
+      "source_frame_index": 1717,
+      "frame_id": "image_01717",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01717.jpg",
+      "file": "frame_0468.pkl"
+    },
+    {
+      "position": 469,
+      "frame_index": 469,
+      "source_frame_index": 1718,
+      "frame_id": "image_01718",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01718.jpg",
+      "file": "frame_0469.pkl"
+    },
+    {
+      "position": 470,
+      "frame_index": 470,
+      "source_frame_index": 1720,
+      "frame_id": "image_01720",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01720.jpg",
+      "file": "frame_0470.pkl"
+    },
+    {
+      "position": 471,
+      "frame_index": 471,
+      "source_frame_index": 1722,
+      "frame_id": "image_01722",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01722.jpg",
+      "file": "frame_0471.pkl"
+    },
+    {
+      "position": 472,
+      "frame_index": 472,
+      "source_frame_index": 1723,
+      "frame_id": "image_01723",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01723.jpg",
+      "file": "frame_0472.pkl"
+    },
+    {
+      "position": 473,
+      "frame_index": 473,
+      "source_frame_index": 1725,
+      "frame_id": "image_01725",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01725.jpg",
+      "file": "frame_0473.pkl"
+    },
+    {
+      "position": 474,
+      "frame_index": 474,
+      "source_frame_index": 1727,
+      "frame_id": "image_01727",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01727.jpg",
+      "file": "frame_0474.pkl"
+    },
+    {
+      "position": 475,
+      "frame_index": 475,
+      "source_frame_index": 1728,
+      "frame_id": "image_01728",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01728.jpg",
+      "file": "frame_0475.pkl"
+    },
+    {
+      "position": 476,
+      "frame_index": 476,
+      "source_frame_index": 1730,
+      "frame_id": "image_01730",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01730.jpg",
+      "file": "frame_0476.pkl"
+    },
+    {
+      "position": 477,
+      "frame_index": 477,
+      "source_frame_index": 1731,
+      "frame_id": "image_01731",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01731.jpg",
+      "file": "frame_0477.pkl"
+    },
+    {
+      "position": 478,
+      "frame_index": 478,
+      "source_frame_index": 1733,
+      "frame_id": "image_01733",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01733.jpg",
+      "file": "frame_0478.pkl"
+    },
+    {
+      "position": 479,
+      "frame_index": 479,
+      "source_frame_index": 1735,
+      "frame_id": "image_01735",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01735.jpg",
+      "file": "frame_0479.pkl"
+    },
+    {
+      "position": 480,
+      "frame_index": 480,
+      "source_frame_index": 1736,
+      "frame_id": "image_01736",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01736.jpg",
+      "file": "frame_0480.pkl"
+    },
+    {
+      "position": 481,
+      "frame_index": 481,
+      "source_frame_index": 1738,
+      "frame_id": "image_01738",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01738.jpg",
+      "file": "frame_0481.pkl"
+    },
+    {
+      "position": 482,
+      "frame_index": 482,
+      "source_frame_index": 1740,
+      "frame_id": "image_01740",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01740.jpg",
+      "file": "frame_0482.pkl"
+    },
+    {
+      "position": 483,
+      "frame_index": 483,
+      "source_frame_index": 1741,
+      "frame_id": "image_01741",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01741.jpg",
+      "file": "frame_0483.pkl"
+    },
+    {
+      "position": 484,
+      "frame_index": 484,
+      "source_frame_index": 1743,
+      "frame_id": "image_01743",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01743.jpg",
+      "file": "frame_0484.pkl"
+    },
+    {
+      "position": 485,
+      "frame_index": 485,
+      "source_frame_index": 1745,
+      "frame_id": "image_01745",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01745.jpg",
+      "file": "frame_0485.pkl"
+    },
+    {
+      "position": 486,
+      "frame_index": 486,
+      "source_frame_index": 1746,
+      "frame_id": "image_01746",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01746.jpg",
+      "file": "frame_0486.pkl"
+    },
+    {
+      "position": 487,
+      "frame_index": 487,
+      "source_frame_index": 1748,
+      "frame_id": "image_01748",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01748.jpg",
+      "file": "frame_0487.pkl"
+    },
+    {
+      "position": 488,
+      "frame_index": 488,
+      "source_frame_index": 1750,
+      "frame_id": "image_01750",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01750.jpg",
+      "file": "frame_0488.pkl"
+    },
+    {
+      "position": 489,
+      "frame_index": 489,
+      "source_frame_index": 1751,
+      "frame_id": "image_01751",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01751.jpg",
+      "file": "frame_0489.pkl"
+    },
+    {
+      "position": 490,
+      "frame_index": 490,
+      "source_frame_index": 1753,
+      "frame_id": "image_01753",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01753.jpg",
+      "file": "frame_0490.pkl"
+    },
+    {
+      "position": 491,
+      "frame_index": 491,
+      "source_frame_index": 1754,
+      "frame_id": "image_01754",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01754.jpg",
+      "file": "frame_0491.pkl"
+    },
+    {
+      "position": 492,
+      "frame_index": 492,
+      "source_frame_index": 1756,
+      "frame_id": "image_01756",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01756.jpg",
+      "file": "frame_0492.pkl"
+    },
+    {
+      "position": 493,
+      "frame_index": 493,
+      "source_frame_index": 1758,
+      "frame_id": "image_01758",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01758.jpg",
+      "file": "frame_0493.pkl"
+    },
+    {
+      "position": 494,
+      "frame_index": 494,
+      "source_frame_index": 1759,
+      "frame_id": "image_01759",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01759.jpg",
+      "file": "frame_0494.pkl"
+    },
+    {
+      "position": 495,
+      "frame_index": 495,
+      "source_frame_index": 1761,
+      "frame_id": "image_01761",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01761.jpg",
+      "file": "frame_0495.pkl"
+    },
+    {
+      "position": 496,
+      "frame_index": 496,
+      "source_frame_index": 1763,
+      "frame_id": "image_01763",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01763.jpg",
+      "file": "frame_0496.pkl"
+    },
+    {
+      "position": 497,
+      "frame_index": 497,
+      "source_frame_index": 1764,
+      "frame_id": "image_01764",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01764.jpg",
+      "file": "frame_0497.pkl"
+    },
+    {
+      "position": 498,
+      "frame_index": 498,
+      "source_frame_index": 1766,
+      "frame_id": "image_01766",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01766.jpg",
+      "file": "frame_0498.pkl"
+    },
+    {
+      "position": 499,
+      "frame_index": 499,
+      "source_frame_index": 1768,
+      "frame_id": "image_01768",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01768.jpg",
+      "file": "frame_0499.pkl"
+    },
+    {
+      "position": 500,
+      "frame_index": 500,
+      "source_frame_index": 1769,
+      "frame_id": "image_01769",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01769.jpg",
+      "file": "frame_0500.pkl"
+    },
+    {
+      "position": 501,
+      "frame_index": 501,
+      "source_frame_index": 1771,
+      "frame_id": "image_01771",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01771.jpg",
+      "file": "frame_0501.pkl"
+    },
+    {
+      "position": 502,
+      "frame_index": 502,
+      "source_frame_index": 1772,
+      "frame_id": "image_01772",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01772.jpg",
+      "file": "frame_0502.pkl"
+    },
+    {
+      "position": 503,
+      "frame_index": 503,
+      "source_frame_index": 1774,
+      "frame_id": "image_01774",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01774.jpg",
+      "file": "frame_0503.pkl"
+    },
+    {
+      "position": 504,
+      "frame_index": 504,
+      "source_frame_index": 1776,
+      "frame_id": "image_01776",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01776.jpg",
+      "file": "frame_0504.pkl"
+    },
+    {
+      "position": 505,
+      "frame_index": 505,
+      "source_frame_index": 1777,
+      "frame_id": "image_01777",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01777.jpg",
+      "file": "frame_0505.pkl"
+    },
+    {
+      "position": 506,
+      "frame_index": 506,
+      "source_frame_index": 1779,
+      "frame_id": "image_01779",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01779.jpg",
+      "file": "frame_0506.pkl"
+    },
+    {
+      "position": 507,
+      "frame_index": 507,
+      "source_frame_index": 1781,
+      "frame_id": "image_01781",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01781.jpg",
+      "file": "frame_0507.pkl"
+    },
+    {
+      "position": 508,
+      "frame_index": 508,
+      "source_frame_index": 1782,
+      "frame_id": "image_01782",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01782.jpg",
+      "file": "frame_0508.pkl"
+    },
+    {
+      "position": 509,
+      "frame_index": 509,
+      "source_frame_index": 1784,
+      "frame_id": "image_01784",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01784.jpg",
+      "file": "frame_0509.pkl"
+    },
+    {
+      "position": 510,
+      "frame_index": 510,
+      "source_frame_index": 1786,
+      "frame_id": "image_01786",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01786.jpg",
+      "file": "frame_0510.pkl"
+    },
+    {
+      "position": 511,
+      "frame_index": 511,
+      "source_frame_index": 1787,
+      "frame_id": "image_01787",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01787.jpg",
+      "file": "frame_0511.pkl"
+    },
+    {
+      "position": 512,
+      "frame_index": 512,
+      "source_frame_index": 1789,
+      "frame_id": "image_01789",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01789.jpg",
+      "file": "frame_0512.pkl"
+    },
+    {
+      "position": 513,
+      "frame_index": 513,
+      "source_frame_index": 1790,
+      "frame_id": "image_01790",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01790.jpg",
+      "file": "frame_0513.pkl"
+    },
+    {
+      "position": 514,
+      "frame_index": 514,
+      "source_frame_index": 1792,
+      "frame_id": "image_01792",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01792.jpg",
+      "file": "frame_0514.pkl"
+    },
+    {
+      "position": 515,
+      "frame_index": 515,
+      "source_frame_index": 1794,
+      "frame_id": "image_01794",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01794.jpg",
+      "file": "frame_0515.pkl"
+    },
+    {
+      "position": 516,
+      "frame_index": 516,
+      "source_frame_index": 1795,
+      "frame_id": "image_01795",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01795.jpg",
+      "file": "frame_0516.pkl"
+    },
+    {
+      "position": 517,
+      "frame_index": 517,
+      "source_frame_index": 1797,
+      "frame_id": "image_01797",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01797.jpg",
+      "file": "frame_0517.pkl"
+    },
+    {
+      "position": 518,
+      "frame_index": 518,
+      "source_frame_index": 1799,
+      "frame_id": "image_01799",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01799.jpg",
+      "file": "frame_0518.pkl"
+    },
+    {
+      "position": 519,
+      "frame_index": 519,
+      "source_frame_index": 1800,
+      "frame_id": "image_01800",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01800.jpg",
+      "file": "frame_0519.pkl"
+    },
+    {
+      "position": 520,
+      "frame_index": 520,
+      "source_frame_index": 1802,
+      "frame_id": "image_01802",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01802.jpg",
+      "file": "frame_0520.pkl"
+    },
+    {
+      "position": 521,
+      "frame_index": 521,
+      "source_frame_index": 1804,
+      "frame_id": "image_01804",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01804.jpg",
+      "file": "frame_0521.pkl"
+    },
+    {
+      "position": 522,
+      "frame_index": 522,
+      "source_frame_index": 1805,
+      "frame_id": "image_01805",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01805.jpg",
+      "file": "frame_0522.pkl"
+    },
+    {
+      "position": 523,
+      "frame_index": 523,
+      "source_frame_index": 1807,
+      "frame_id": "image_01807",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01807.jpg",
+      "file": "frame_0523.pkl"
+    },
+    {
+      "position": 524,
+      "frame_index": 524,
+      "source_frame_index": 1809,
+      "frame_id": "image_01809",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01809.jpg",
+      "file": "frame_0524.pkl"
+    },
+    {
+      "position": 525,
+      "frame_index": 525,
+      "source_frame_index": 1810,
+      "frame_id": "image_01810",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01810.jpg",
+      "file": "frame_0525.pkl"
+    },
+    {
+      "position": 526,
+      "frame_index": 526,
+      "source_frame_index": 1812,
+      "frame_id": "image_01812",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01812.jpg",
+      "file": "frame_0526.pkl"
+    },
+    {
+      "position": 527,
+      "frame_index": 527,
+      "source_frame_index": 1813,
+      "frame_id": "image_01813",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01813.jpg",
+      "file": "frame_0527.pkl"
+    },
+    {
+      "position": 528,
+      "frame_index": 528,
+      "source_frame_index": 1815,
+      "frame_id": "image_01815",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01815.jpg",
+      "file": "frame_0528.pkl"
+    },
+    {
+      "position": 529,
+      "frame_index": 529,
+      "source_frame_index": 1817,
+      "frame_id": "image_01817",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01817.jpg",
+      "file": "frame_0529.pkl"
+    },
+    {
+      "position": 530,
+      "frame_index": 530,
+      "source_frame_index": 1818,
+      "frame_id": "image_01818",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01818.jpg",
+      "file": "frame_0530.pkl"
+    },
+    {
+      "position": 531,
+      "frame_index": 531,
+      "source_frame_index": 1820,
+      "frame_id": "image_01820",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01820.jpg",
+      "file": "frame_0531.pkl"
+    },
+    {
+      "position": 532,
+      "frame_index": 532,
+      "source_frame_index": 1822,
+      "frame_id": "image_01822",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01822.jpg",
+      "file": "frame_0532.pkl"
+    },
+    {
+      "position": 533,
+      "frame_index": 533,
+      "source_frame_index": 1823,
+      "frame_id": "image_01823",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01823.jpg",
+      "file": "frame_0533.pkl"
+    },
+    {
+      "position": 534,
+      "frame_index": 534,
+      "source_frame_index": 1825,
+      "frame_id": "image_01825",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01825.jpg",
+      "file": "frame_0534.pkl"
+    },
+    {
+      "position": 535,
+      "frame_index": 535,
+      "source_frame_index": 1827,
+      "frame_id": "image_01827",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01827.jpg",
+      "file": "frame_0535.pkl"
+    },
+    {
+      "position": 536,
+      "frame_index": 536,
+      "source_frame_index": 1828,
+      "frame_id": "image_01828",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01828.jpg",
+      "file": "frame_0536.pkl"
+    },
+    {
+      "position": 537,
+      "frame_index": 537,
+      "source_frame_index": 1830,
+      "frame_id": "image_01830",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01830.jpg",
+      "file": "frame_0537.pkl"
+    },
+    {
+      "position": 538,
+      "frame_index": 538,
+      "source_frame_index": 1831,
+      "frame_id": "image_01831",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01831.jpg",
+      "file": "frame_0538.pkl"
+    },
+    {
+      "position": 539,
+      "frame_index": 539,
+      "source_frame_index": 1833,
+      "frame_id": "image_01833",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01833.jpg",
+      "file": "frame_0539.pkl"
+    },
+    {
+      "position": 540,
+      "frame_index": 540,
+      "source_frame_index": 1835,
+      "frame_id": "image_01835",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01835.jpg",
+      "file": "frame_0540.pkl"
+    },
+    {
+      "position": 541,
+      "frame_index": 541,
+      "source_frame_index": 1836,
+      "frame_id": "image_01836",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01836.jpg",
+      "file": "frame_0541.pkl"
+    },
+    {
+      "position": 542,
+      "frame_index": 542,
+      "source_frame_index": 1838,
+      "frame_id": "image_01838",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01838.jpg",
+      "file": "frame_0542.pkl"
+    },
+    {
+      "position": 543,
+      "frame_index": 543,
+      "source_frame_index": 1840,
+      "frame_id": "image_01840",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01840.jpg",
+      "file": "frame_0543.pkl"
+    },
+    {
+      "position": 544,
+      "frame_index": 544,
+      "source_frame_index": 1841,
+      "frame_id": "image_01841",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01841.jpg",
+      "file": "frame_0544.pkl"
+    },
+    {
+      "position": 545,
+      "frame_index": 545,
+      "source_frame_index": 1843,
+      "frame_id": "image_01843",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01843.jpg",
+      "file": "frame_0545.pkl"
+    },
+    {
+      "position": 546,
+      "frame_index": 546,
+      "source_frame_index": 1845,
+      "frame_id": "image_01845",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01845.jpg",
+      "file": "frame_0546.pkl"
+    },
+    {
+      "position": 547,
+      "frame_index": 547,
+      "source_frame_index": 1846,
+      "frame_id": "image_01846",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01846.jpg",
+      "file": "frame_0547.pkl"
+    },
+    {
+      "position": 548,
+      "frame_index": 548,
+      "source_frame_index": 1848,
+      "frame_id": "image_01848",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01848.jpg",
+      "file": "frame_0548.pkl"
+    },
+    {
+      "position": 549,
+      "frame_index": 549,
+      "source_frame_index": 1850,
+      "frame_id": "image_01850",
+      "source_image": "/home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/image_01850.jpg",
+      "file": "frame_0549.pkl"
+    }
+  ],
+  "note": "Trusted local pickle cache containing the complete SequenceViewer scene."
+}
