@@ -43,3 +43,4 @@ outputs/vis/stage2_emdb_p4_36_long_walk_coarse_residual_v3/
 *.err
 outputs/debug/paper*
 outputs/vis/paper*
+outputs/vis/smpl_color_palette/
