@@ -2068,6 +2068,8 @@ class SequenceViewer:
         self.track_color_by_id: dict[int, tuple[int, int, int]] = {}
         self.original_track_color_by_id: dict[int, tuple[int, int, int]] = {}
         self.track_color_handles: dict[int, Any] = {}
+        self.track_visibility_by_id: dict[int, bool] = {}
+        self.track_visibility_handles: dict[int, Any] = {}
         self._syncing_track_color_controls = False
         self.smpl_edit_output = resolve_smpl_edit_output(args)
         self.transform_controls = None
@@ -2622,10 +2624,20 @@ class SequenceViewer:
             self.track_color_info = add_text(
                 self.server,
                 "ID Color Status",
-                "Each row controls the base color for one Track ID.",
+                "Each row: Show ID toggles visibility; the color control sets its base color.",
             )
             set_handle_disabled(self.track_color_info, True)
             for track_id in self._available_track_ids():
+                visibility_handle = add_checkbox(
+                    self.server,
+                    f"Show ID {track_id}",
+                    self.track_visibility_by_id.get(track_id, True),
+                )
+                self.track_visibility_handles[track_id] = visibility_handle
+                bind_update(
+                    visibility_handle,
+                    lambda *_, selected_track_id=track_id: self._on_track_visibility_update(selected_track_id),
+                )
                 handle = add_rgb(
                     self.server,
                     f"ID {track_id}",
@@ -3263,6 +3275,7 @@ class SequenceViewer:
         self.human_entry_by_key[key] = entry
         self.track_color_by_id.setdefault(int(track_id), tuple(int(v) for v in color))
         self.original_track_color_by_id.setdefault(int(track_id), tuple(int(v) for v in color))
+        self.track_visibility_by_id.setdefault(int(track_id), True)
         bind_click(handle, lambda event=None, selected_entry=entry: self._on_human_mesh_click(selected_entry["key"], event))
 
     def _on_human_mesh_click(self, key: str, _: Any = None) -> None:
@@ -3356,6 +3369,16 @@ class SequenceViewer:
             return
         color = tuple(int(np.clip(value, 0, 255)) for value in handle.value)
         self._apply_track_id_color(int(track_id), color)
+
+    def _on_track_visibility_update(self, track_id: int) -> None:
+        handle = self.track_visibility_handles.get(int(track_id))
+        if handle is None:
+            return
+        visible = bool(handle.value)
+        self.track_visibility_by_id[int(track_id)] = visible
+        self._update_visibility()
+        state = "shown" if visible else "hidden"
+        set_text_value(self.track_color_info, f"ID {track_id} = {state}")
 
     def _apply_track_id_color(self, track_id: int, color: tuple[int, int, int]) -> None:
         color_rgb = tuple(int(np.clip(value, 0, 255)) for value in color)
@@ -4294,7 +4317,13 @@ class SequenceViewer:
                 show_base_smpl = bool(self.show_base.value)
                 show_hsi_smpl = bool(self.show_hsi.value)
             for person_rank, person_handles in enumerate(frame_handles["people"]):
-                show_person = show_humans and show_decimated_smpl and person_rank < display_people_limit
+                track_id = int(person_handles["track_id"])
+                show_person = (
+                    show_humans
+                    and show_decimated_smpl
+                    and person_rank < display_people_limit
+                    and self.track_visibility_by_id.get(track_id, True)
+                )
                 set_group_visible(person_handles["base_humans"], show_person and show_base_smpl)
                 set_group_visible(person_handles["hsi_humans"], show_person and show_hsi_smpl)
                 set_group_visible(
