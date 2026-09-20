@@ -86,6 +86,24 @@ if [[ "${status}" -ne 0 ]]; then
   exit "${status}"
 fi
 
+require_archive_magic() {
+  local path="$1"
+  local expected_magic="$2"
+  local actual_magic
+  local magic_bytes=$(( ${#expected_magic} / 2 ))
+  actual_magic="$(head -c "${magic_bytes}" "${path}" | od -An -t x1 | tr -d ' \n')"
+  if [[ "${actual_magic}" != "${expected_magic}" ]]; then
+    echo "error: ${path} is not the expected archive format." >&2
+    echo "The RICH server likely returned an HTML login or permission error page." >&2
+    echo "Check RICH_USERNAME (without a backslash before @), then move this file aside and retry." >&2
+    exit 1
+  fi
+}
+
+require_archive_magic "${DOWNLOAD_DIR}/rich_test_jpg_images.tar.gz" "1f8b"
+require_archive_magic "${DOWNLOAD_DIR}/rich_scan_calibration.zip" "504b0304"
+require_archive_magic "${DOWNLOAD_DIR}/rich_multicam2world.zip" "504b0304"
+
 echo
 echo "Downloaded archives:"
 ls -lh \
