@@ -54,7 +54,7 @@
     "viewer_mode": "Hybrid",
     "environment_display": "points",
     "hsi_visual_scale": 1.0,
-    "human_mask_dilation_px": 12,
+    "human_mask_dilation_px": 20,
     "filter_human_points": true,
     "env_mesh_depth_edge_rtol": 0.15,
     "env_mesh_color_groups": 216,
@@ -80,7 +80,7 @@
     "coarse_fallback": "sequence_median",
     "trstr_frame_chunk": 0,
     "cascade_effective_affine_mode": "clip_median",
-    "smoke_only": false,
+    "smoke_only": true,
     "override": [
       "model.hsi_align_feature_version=legacy_scale_bias_v0",
       "model.smpl_use_aggregator_queries=false",

@@ -1,17 +1,17 @@
-开始评估，作业 ID: 15139
+开始评估，作业 ID: 15589
 当前环境: zhw_env
 分配的 GPU: 0
 ========== Sequence Viser: analytic coarse -> current HSI -> Stage2 align ==========
-Frames            : /home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/
+Frames            : /home/zhw/xyb_space/emdb/P0/07_outdoor_push_ups/images/
 Stage2 checkpoint : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt
 Scale overlay     : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt
-Output            : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_3dpw_downtown_windowShopping_00_950_1850
+Output            : /home/zhw/lab_users/xyb/home/projects/vggt-human/video/P0_07_outdoor_push_ups/outputs
 Viewer cache      : <disabled>
-Full UI cache     : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_3dpw_downtown_windowShopping_00_950_1850/full_viewer_cache
+Full UI cache     : /home/zhw/lab_users/xyb/home/projects/vggt-human/video/P0_07_outdoor_push_ups/outputs/full_viewer_cache
 Port              : 8090
-Frame range       : [950, 1850] inclusive
+Frame range       : [805, 1100] inclusive
 Inference frames  : 0
-Frame sampling    : uniform, max=550, stride=1
+Frame sampling    : uniform, max=0, stride=1
 Accumulated SMPL  : 0 (0 means all)
 Displayed people  : 0 per frame (0 means all)
 Maximum candidates: 8 per frame
@@ -20,22 +20,22 @@ Result conf       : 0.05
 Coarse people     : conf=0.05, max=0
 Scale application : clip_median
 Point size        : 0.006
-Human filter      : true, dilation=12px
+Human filter      : true, dilation=19px
 ========== NLF-HSI VGGT sequence Viser viewer ==========
 Repo        : /home/zhw/lab_users/xyb/home/projects/vggt-human
-Frames      : /home/zhw/xyb_space/3DPW/imageFiles/downtown_windowShopping_00/
+Frames      : /home/zhw/xyb_space/emdb/P0/07_outdoor_push_ups/images/
 Query source: nlf_detector
 BEDLAM      : /home/zhw/xyb_space/bedlam/processed_bedlam
 Sidecars    : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/bedlam_boxes
 Stage2 dir  : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full
 Checkpoint  : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt
-Output      : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_3dpw_downtown_windowShopping_00_950_1850
+Output      : /home/zhw/lab_users/xyb/home/projects/vggt-human/video/P0_07_outdoor_push_ups/outputs
 Viewer cache: <disabled>
-Full UI cache: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_3dpw_downtown_windowShopping_00_950_1850/full_viewer_cache
+Full UI cache: /home/zhw/lab_users/xyb/home/projects/vggt-human/video/P0_07_outdoor_push_ups/outputs/full_viewer_cache
 Port        : 8090
-Max frames  : 550
+Max frames  : 0
 Frame modes : 0=all, N=limit N, -1=uniformly sample at most 500
-Frame range : [950, 1850] inclusive (-1 end means sequence end)
+Frame range : [805, 1100] inclusive (-1 end means sequence end)
 Inference N : 0 (0 means full selected range)
 Frame sample: uniform (after range/stride)
 SMPL frames : 0 (0 means all; GUI adjustable)
@@ -55,14 +55,14 @@ Coarse scale : range=[0.10,10.0] stride=8 min_pixels=32
 Coarse people: conf=0.05 max=0 (0 means all)
 Coarse fallback: sequence_median
 HSI overlay : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt
-Human mask  : projected SMPL triangles + 12px dilation (unconditional removal)
+Human mask  : projected SMPL triangles + 19px dilation (unconditional removal)
 Filter human: true (initial GUI state)
 Point size  : 0.006
-SMPL edits  : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/stage2_3dpw_downtown_windowShopping_00_950_1850/smpl_edit_offsets.json
+SMPL edits  : /home/zhw/lab_users/xyb/home/projects/vggt-human/video/P0_07_outdoor_push_ups/outputs/smpl_edit_offsets.json
 GPU visible : 0
-Smoke only  : false
+Smoke only  : true
 CUDA available: count=1, device0=NVIDIA A800-SXM4-80GB, visible=0
-[frames] source=1948 range=[950,1850] mode=target_uniform requested=0 selected=901 source_indices=[950,1850] | legacy options ignored: stride=1, sampling=uniform, max_frames=550
+[frames] source=1277 range=[805,1100] mode=target_uniform requested=0 selected=296 source_indices=[805,1100] | legacy options ignored: stride=1, sampling=uniform, max_frames=0
 [nlf] detector_threshold=0.3 downstream_conf_threshold=0.05
 [ckpt] loaded VGGT baseline for camera: /home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt
 [ckpt] baseline missing=165 unexpected=0
@@ -70,3 +70,30 @@ CUDA available: count=1, device0=NVIDIA A800-SXM4-80GB, visible=0
 [ckpt] missing=1412 unexpected=0
 [ckpt] overlaid HSI prefixes ('hsi_refinement_head.',): /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt
 [ckpt] overlay tensors=140 missing=1436 unexpected=0
+[base-smpl-consistency] pred_poses=max_abs:0.0189917,equal:False pred_betas=max_abs:0.0489109,equal:False pred_transl_cam=max_abs:0.0044601,equal:False pred_confs=max_abs:0.000241995,equal:False pred_boxes=max_abs:0.000871658,equal:False
+[coarse-hsi] final_depth = raw_vggt_depth * coarse_scale * hsi_residual_scale + hsi_residual_bias
+[coarse-hsi] shared-world application: clip_median of composed effective scale/bias scale=4.24587 bias=-0.00720942
+[coarse-hsi-summary] min/median/max coarse=3.82963/4.2735/5.06003 hsi_residual=0.898952/1.01002/1.33929 effective=4.24587/4.24587/4.24587 bias=-0.00720942/-0.00720942/-0.00720942
+[nlf-summary] detector_threshold=0.3 downstream_threshold=0.05 detected min/mean/max=1/1.230/2 accepted min/mean/max=1/1.230/2 empty_detected=0/296 empty_accepted=0/296
+[human-mask] frames=296 mask_pixels=9479166 points_removed=2370346/19625984 (12.08%) dilation=19px
+[full-viewer-cache] exported 25/296 frames
+[full-viewer-cache] exported 50/296 frames
+[full-viewer-cache] exported 75/296 frames
+[full-viewer-cache] exported 100/296 frames
+[full-viewer-cache] exported 125/296 frames
+[full-viewer-cache] exported 150/296 frames
+[full-viewer-cache] exported 175/296 frames
+[full-viewer-cache] exported 200/296 frames
+[full-viewer-cache] exported 225/296 frames
+[full-viewer-cache] exported 250/296 frames
+[full-viewer-cache] exported 275/296 frames
+[full-viewer-cache] exported 296/296 frames
+[full-viewer-cache] ready: /home/zhw/lab_users/xyb/home/projects/vggt-human/video/P0_07_outdoor_push_ups/outputs/full_viewer_cache/manifest.json
+{
+  "viewer": "http://127.0.0.1:8090",
+  "summary": "/home/zhw/lab_users/xyb/home/projects/vggt-human/video/P0_07_outdoor_push_ups/outputs/run_summary.json",
+  "viewer_cache": null,
+  "full_viewer_cache": "/home/zhw/lab_users/xyb/home/projects/vggt-human/video/P0_07_outdoor_push_ups/outputs/full_viewer_cache/manifest.json"
+}
+[ok] NLF-HSI VGGT sequence viewer smoke passed
+评估完成

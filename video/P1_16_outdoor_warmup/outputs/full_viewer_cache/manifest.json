@@ -1,0 +1,4237 @@
+{
+  "format": "vggt_omega_full_sequence_viewer_cache_v1",
+  "num_frames": 460,
+  "scene_metadata_file": "scene_metadata.pkl",
+  "smpl_faces_file": "smpl_faces.npy",
+  "camera_parameters": {
+    "per_frame": [
+      "intrinsic",
+      "raw_extrinsic",
+      "hsi_extrinsic",
+      "raw_camera",
+      "hsi_camera",
+      "camera"
+    ],
+    "scene": [
+      "camera_trajectory",
+      "camera_trajectory_raw",
+      "camera_trajectory_hsi"
+    ],
+    "storage": "frame pickle and scene_metadata.pkl"
+  },
+  "viewer_args": {
+    "frames_dir": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/",
+    "query_source": "nlf_detector",
+    "preprocessed_root": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/bedlam_boxes",
+    "bedlam_root": "/home/zhw/xyb_space/bedlam/processed_bedlam",
+    "stage2_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full",
+    "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt",
+    "path_config": "/home/zhw/lab_users/xyb/home/projects/vggt-human/configs/path.yaml",
+    "train_config": "/home/zhw/lab_users/xyb/home/projects/vggt-human/configs/train_smpl_hsi_nlf_stage2_human_scene_align.yaml",
+    "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/video/16_outdoor_warmup/outputs",
+    "viewer_cache_output": "",
+    "full_viewer_cache_output": "/home/zhw/lab_users/xyb/home/projects/vggt-human/video/16_outdoor_warmup/outputs/full_viewer_cache",
+    "device": "cuda",
+    "port": 8090,
+    "image_size": 0,
+    "start_index": 36,
+    "end_index": 495,
+    "inference_frames": 0,
+    "frame_stride": 1,
+    "frame_sampling": "uniform",
+    "max_frames": 0,
+    "max_humans": 8,
+    "nlf_detector_threshold": 0.3,
+    "conf_threshold": 0.05,
+    "tracking_overlay": "base_smpl",
+    "track_max_age": 90,
+    "track_min_quality": 0.25,
+    "track_max_center_distance": 0.25,
+    "track_max_transl_distance": 1.5,
+    "track_max_beta_l1": 0.3,
+    "depth_point_stride": 2,
+    "max_scene_depth": 80.0,
+    "viewer_mode": "Hybrid",
+    "environment_display": "points",
+    "hsi_visual_scale": 1.0,
+    "human_mask_dilation_px": 19,
+    "filter_human_points": true,
+    "env_mesh_depth_edge_rtol": 0.15,
+    "env_mesh_color_groups": 216,
+    "env_mesh_color_mode": "point_overlay",
+    "env_mesh_overlay_point_size_scale": 0.75,
+    "smpl_edit_output": "/home/zhw/lab_users/xyb/home/projects/vggt-human/video/16_outdoor_warmup/outputs/smpl_edit_offsets.json",
+    "show_track_ids": true,
+    "display_people": 0,
+    "smpl_display_frames": 0,
+    "point_size": 0.006,
+    "camera_frustum_scale": 0.2,
+    "alignment_vertex_stride": 16,
+    "smpl_model_dir": "",
+    "baseline_checkpoint": "",
+    "hsi_overlay_checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt",
+    "scene_scale_prealign": "smpl_median",
+    "coarse_scale_min": 0.1,
+    "coarse_scale_max": 10.0,
+    "coarse_conf_threshold": null,
+    "coarse_max_people": 0,
+    "coarse_anchor_stride": 8,
+    "coarse_min_anchor_pixels": 32,
+    "coarse_fallback": "sequence_median",
+    "trstr_frame_chunk": 0,
+    "cascade_effective_affine_mode": "clip_median",
+    "smoke_only": true,
+    "override": [
+      "model.hsi_align_feature_version=legacy_scale_bias_v0",
+      "model.smpl_use_aggregator_queries=false",
+      "model.hsi_scene_affine_mode=per_frame"
+    ],
+    "selected_source_indices": [
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125,
+      126,
+      127,
+      128,
+      129,
+      130,
+      131,
+      132,
+      133,
+      134,
+      135,
+      136,
+      137,
+      138,
+      139,
+      140,
+      141,
+      142,
+      143,
+      144,
+      145,
+      146,
+      147,
+      148,
+      149,
+      150,
+      151,
+      152,
+      153,
+      154,
+      155,
+      156,
+      157,
+      158,
+      159,
+      160,
+      161,
+      162,
+      163,
+      164,
+      165,
+      166,
+      167,
+      168,
+      169,
+      170,
+      171,
+      172,
+      173,
+      174,
+      175,
+      176,
+      177,
+      178,
+      179,
+      180,
+      181,
+      182,
+      183,
+      184,
+      185,
+      186,
+      187,
+      188,
+      189,
+      190,
+      191,
+      192,
+      193,
+      194,
+      195,
+      196,
+      197,
+      198,
+      199,
+      200,
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210,
+      211,
+      212,
+      213,
+      214,
+      215,
+      216,
+      217,
+      218,
+      219,
+      220,
+      221,
+      222,
+      223,
+      224,
+      225,
+      226,
+      227,
+      228,
+      229,
+      230,
+      231,
+      232,
+      233,
+      234,
+      235,
+      236,
+      237,
+      238,
+      239,
+      240,
+      241,
+      242,
+      243,
+      244,
+      245,
+      246,
+      247,
+      248,
+      249,
+      250,
+      251,
+      252,
+      253,
+      254,
+      255,
+      256,
+      257,
+      258,
+      259,
+      260,
+      261,
+      262,
+      263,
+      264,
+      265,
+      266,
+      267,
+      268,
+      269,
+      270,
+      271,
+      272,
+      273,
+      274,
+      275,
+      276,
+      277,
+      278,
+      279,
+      280,
+      281,
+      282,
+      283,
+      284,
+      285,
+      286,
+      287,
+      288,
+      289,
+      290,
+      291,
+      292,
+      293,
+      294,
+      295,
+      296,
+      297,
+      298,
+      299,
+      300,
+      301,
+      302,
+      303,
+      304,
+      305,
+      306,
+      307,
+      308,
+      309,
+      310,
+      311,
+      312,
+      313,
+      314,
+      315,
+      316,
+      317,
+      318,
+      319,
+      320,
+      321,
+      322,
+      323,
+      324,
+      325,
+      326,
+      327,
+      328,
+      329,
+      330,
+      331,
+      332,
+      333,
+      334,
+      335,
+      336,
+      337,
+      338,
+      339,
+      340,
+      341,
+      342,
+      343,
+      344,
+      345,
+      346,
+      347,
+      348,
+      349,
+      350,
+      351,
+      352,
+      353,
+      354,
+      355,
+      356,
+      357,
+      358,
+      359,
+      360,
+      361,
+      362,
+      363,
+      364,
+      365,
+      366,
+      367,
+      368,
+      369,
+      370,
+      371,
+      372,
+      373,
+      374,
+      375,
+      376,
+      377,
+      378,
+      379,
+      380,
+      381,
+      382,
+      383,
+      384,
+      385,
+      386,
+      387,
+      388,
+      389,
+      390,
+      391,
+      392,
+      393,
+      394,
+      395,
+      396,
+      397,
+      398,
+      399,
+      400,
+      401,
+      402,
+      403,
+      404,
+      405,
+      406,
+      407,
+      408,
+      409,
+      410,
+      411,
+      412,
+      413,
+      414,
+      415,
+      416,
+      417,
+      418,
+      419,
+      420,
+      421,
+      422,
+      423,
+      424,
+      425,
+      426,
+      427,
+      428,
+      429,
+      430,
+      431,
+      432,
+      433,
+      434,
+      435,
+      436,
+      437,
+      438,
+      439,
+      440,
+      441,
+      442,
+      443,
+      444,
+      445,
+      446,
+      447,
+      448,
+      449,
+      450,
+      451,
+      452,
+      453,
+      454,
+      455,
+      456,
+      457,
+      458,
+      459,
+      460,
+      461,
+      462,
+      463,
+      464,
+      465,
+      466,
+      467,
+      468,
+      469,
+      470,
+      471,
+      472,
+      473,
+      474,
+      475,
+      476,
+      477,
+      478,
+      479,
+      480,
+      481,
+      482,
+      483,
+      484,
+      485,
+      486,
+      487,
+      488,
+      489,
+      490,
+      491,
+      492,
+      493,
+      494,
+      495
+    ],
+    "hsi_scene_affine_mode": "per_frame",
+    "hsi_scene_affine_ema_alpha": 0.25
+  },
+  "frames": [
+    {
+      "position": 0,
+      "frame_index": 0,
+      "source_frame_index": 36,
+      "frame_id": "00036",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00036.jpg",
+      "file": "frame_0000.pkl"
+    },
+    {
+      "position": 1,
+      "frame_index": 1,
+      "source_frame_index": 37,
+      "frame_id": "00037",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00037.jpg",
+      "file": "frame_0001.pkl"
+    },
+    {
+      "position": 2,
+      "frame_index": 2,
+      "source_frame_index": 38,
+      "frame_id": "00038",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00038.jpg",
+      "file": "frame_0002.pkl"
+    },
+    {
+      "position": 3,
+      "frame_index": 3,
+      "source_frame_index": 39,
+      "frame_id": "00039",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00039.jpg",
+      "file": "frame_0003.pkl"
+    },
+    {
+      "position": 4,
+      "frame_index": 4,
+      "source_frame_index": 40,
+      "frame_id": "00040",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00040.jpg",
+      "file": "frame_0004.pkl"
+    },
+    {
+      "position": 5,
+      "frame_index": 5,
+      "source_frame_index": 41,
+      "frame_id": "00041",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00041.jpg",
+      "file": "frame_0005.pkl"
+    },
+    {
+      "position": 6,
+      "frame_index": 6,
+      "source_frame_index": 42,
+      "frame_id": "00042",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00042.jpg",
+      "file": "frame_0006.pkl"
+    },
+    {
+      "position": 7,
+      "frame_index": 7,
+      "source_frame_index": 43,
+      "frame_id": "00043",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00043.jpg",
+      "file": "frame_0007.pkl"
+    },
+    {
+      "position": 8,
+      "frame_index": 8,
+      "source_frame_index": 44,
+      "frame_id": "00044",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00044.jpg",
+      "file": "frame_0008.pkl"
+    },
+    {
+      "position": 9,
+      "frame_index": 9,
+      "source_frame_index": 45,
+      "frame_id": "00045",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00045.jpg",
+      "file": "frame_0009.pkl"
+    },
+    {
+      "position": 10,
+      "frame_index": 10,
+      "source_frame_index": 46,
+      "frame_id": "00046",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00046.jpg",
+      "file": "frame_0010.pkl"
+    },
+    {
+      "position": 11,
+      "frame_index": 11,
+      "source_frame_index": 47,
+      "frame_id": "00047",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00047.jpg",
+      "file": "frame_0011.pkl"
+    },
+    {
+      "position": 12,
+      "frame_index": 12,
+      "source_frame_index": 48,
+      "frame_id": "00048",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00048.jpg",
+      "file": "frame_0012.pkl"
+    },
+    {
+      "position": 13,
+      "frame_index": 13,
+      "source_frame_index": 49,
+      "frame_id": "00049",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00049.jpg",
+      "file": "frame_0013.pkl"
+    },
+    {
+      "position": 14,
+      "frame_index": 14,
+      "source_frame_index": 50,
+      "frame_id": "00050",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00050.jpg",
+      "file": "frame_0014.pkl"
+    },
+    {
+      "position": 15,
+      "frame_index": 15,
+      "source_frame_index": 51,
+      "frame_id": "00051",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00051.jpg",
+      "file": "frame_0015.pkl"
+    },
+    {
+      "position": 16,
+      "frame_index": 16,
+      "source_frame_index": 52,
+      "frame_id": "00052",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00052.jpg",
+      "file": "frame_0016.pkl"
+    },
+    {
+      "position": 17,
+      "frame_index": 17,
+      "source_frame_index": 53,
+      "frame_id": "00053",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00053.jpg",
+      "file": "frame_0017.pkl"
+    },
+    {
+      "position": 18,
+      "frame_index": 18,
+      "source_frame_index": 54,
+      "frame_id": "00054",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00054.jpg",
+      "file": "frame_0018.pkl"
+    },
+    {
+      "position": 19,
+      "frame_index": 19,
+      "source_frame_index": 55,
+      "frame_id": "00055",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00055.jpg",
+      "file": "frame_0019.pkl"
+    },
+    {
+      "position": 20,
+      "frame_index": 20,
+      "source_frame_index": 56,
+      "frame_id": "00056",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00056.jpg",
+      "file": "frame_0020.pkl"
+    },
+    {
+      "position": 21,
+      "frame_index": 21,
+      "source_frame_index": 57,
+      "frame_id": "00057",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00057.jpg",
+      "file": "frame_0021.pkl"
+    },
+    {
+      "position": 22,
+      "frame_index": 22,
+      "source_frame_index": 58,
+      "frame_id": "00058",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00058.jpg",
+      "file": "frame_0022.pkl"
+    },
+    {
+      "position": 23,
+      "frame_index": 23,
+      "source_frame_index": 59,
+      "frame_id": "00059",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00059.jpg",
+      "file": "frame_0023.pkl"
+    },
+    {
+      "position": 24,
+      "frame_index": 24,
+      "source_frame_index": 60,
+      "frame_id": "00060",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00060.jpg",
+      "file": "frame_0024.pkl"
+    },
+    {
+      "position": 25,
+      "frame_index": 25,
+      "source_frame_index": 61,
+      "frame_id": "00061",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00061.jpg",
+      "file": "frame_0025.pkl"
+    },
+    {
+      "position": 26,
+      "frame_index": 26,
+      "source_frame_index": 62,
+      "frame_id": "00062",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00062.jpg",
+      "file": "frame_0026.pkl"
+    },
+    {
+      "position": 27,
+      "frame_index": 27,
+      "source_frame_index": 63,
+      "frame_id": "00063",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00063.jpg",
+      "file": "frame_0027.pkl"
+    },
+    {
+      "position": 28,
+      "frame_index": 28,
+      "source_frame_index": 64,
+      "frame_id": "00064",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00064.jpg",
+      "file": "frame_0028.pkl"
+    },
+    {
+      "position": 29,
+      "frame_index": 29,
+      "source_frame_index": 65,
+      "frame_id": "00065",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00065.jpg",
+      "file": "frame_0029.pkl"
+    },
+    {
+      "position": 30,
+      "frame_index": 30,
+      "source_frame_index": 66,
+      "frame_id": "00066",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00066.jpg",
+      "file": "frame_0030.pkl"
+    },
+    {
+      "position": 31,
+      "frame_index": 31,
+      "source_frame_index": 67,
+      "frame_id": "00067",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00067.jpg",
+      "file": "frame_0031.pkl"
+    },
+    {
+      "position": 32,
+      "frame_index": 32,
+      "source_frame_index": 68,
+      "frame_id": "00068",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00068.jpg",
+      "file": "frame_0032.pkl"
+    },
+    {
+      "position": 33,
+      "frame_index": 33,
+      "source_frame_index": 69,
+      "frame_id": "00069",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00069.jpg",
+      "file": "frame_0033.pkl"
+    },
+    {
+      "position": 34,
+      "frame_index": 34,
+      "source_frame_index": 70,
+      "frame_id": "00070",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00070.jpg",
+      "file": "frame_0034.pkl"
+    },
+    {
+      "position": 35,
+      "frame_index": 35,
+      "source_frame_index": 71,
+      "frame_id": "00071",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00071.jpg",
+      "file": "frame_0035.pkl"
+    },
+    {
+      "position": 36,
+      "frame_index": 36,
+      "source_frame_index": 72,
+      "frame_id": "00072",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00072.jpg",
+      "file": "frame_0036.pkl"
+    },
+    {
+      "position": 37,
+      "frame_index": 37,
+      "source_frame_index": 73,
+      "frame_id": "00073",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00073.jpg",
+      "file": "frame_0037.pkl"
+    },
+    {
+      "position": 38,
+      "frame_index": 38,
+      "source_frame_index": 74,
+      "frame_id": "00074",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00074.jpg",
+      "file": "frame_0038.pkl"
+    },
+    {
+      "position": 39,
+      "frame_index": 39,
+      "source_frame_index": 75,
+      "frame_id": "00075",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00075.jpg",
+      "file": "frame_0039.pkl"
+    },
+    {
+      "position": 40,
+      "frame_index": 40,
+      "source_frame_index": 76,
+      "frame_id": "00076",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00076.jpg",
+      "file": "frame_0040.pkl"
+    },
+    {
+      "position": 41,
+      "frame_index": 41,
+      "source_frame_index": 77,
+      "frame_id": "00077",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00077.jpg",
+      "file": "frame_0041.pkl"
+    },
+    {
+      "position": 42,
+      "frame_index": 42,
+      "source_frame_index": 78,
+      "frame_id": "00078",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00078.jpg",
+      "file": "frame_0042.pkl"
+    },
+    {
+      "position": 43,
+      "frame_index": 43,
+      "source_frame_index": 79,
+      "frame_id": "00079",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00079.jpg",
+      "file": "frame_0043.pkl"
+    },
+    {
+      "position": 44,
+      "frame_index": 44,
+      "source_frame_index": 80,
+      "frame_id": "00080",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00080.jpg",
+      "file": "frame_0044.pkl"
+    },
+    {
+      "position": 45,
+      "frame_index": 45,
+      "source_frame_index": 81,
+      "frame_id": "00081",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00081.jpg",
+      "file": "frame_0045.pkl"
+    },
+    {
+      "position": 46,
+      "frame_index": 46,
+      "source_frame_index": 82,
+      "frame_id": "00082",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00082.jpg",
+      "file": "frame_0046.pkl"
+    },
+    {
+      "position": 47,
+      "frame_index": 47,
+      "source_frame_index": 83,
+      "frame_id": "00083",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00083.jpg",
+      "file": "frame_0047.pkl"
+    },
+    {
+      "position": 48,
+      "frame_index": 48,
+      "source_frame_index": 84,
+      "frame_id": "00084",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00084.jpg",
+      "file": "frame_0048.pkl"
+    },
+    {
+      "position": 49,
+      "frame_index": 49,
+      "source_frame_index": 85,
+      "frame_id": "00085",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00085.jpg",
+      "file": "frame_0049.pkl"
+    },
+    {
+      "position": 50,
+      "frame_index": 50,
+      "source_frame_index": 86,
+      "frame_id": "00086",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00086.jpg",
+      "file": "frame_0050.pkl"
+    },
+    {
+      "position": 51,
+      "frame_index": 51,
+      "source_frame_index": 87,
+      "frame_id": "00087",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00087.jpg",
+      "file": "frame_0051.pkl"
+    },
+    {
+      "position": 52,
+      "frame_index": 52,
+      "source_frame_index": 88,
+      "frame_id": "00088",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00088.jpg",
+      "file": "frame_0052.pkl"
+    },
+    {
+      "position": 53,
+      "frame_index": 53,
+      "source_frame_index": 89,
+      "frame_id": "00089",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00089.jpg",
+      "file": "frame_0053.pkl"
+    },
+    {
+      "position": 54,
+      "frame_index": 54,
+      "source_frame_index": 90,
+      "frame_id": "00090",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00090.jpg",
+      "file": "frame_0054.pkl"
+    },
+    {
+      "position": 55,
+      "frame_index": 55,
+      "source_frame_index": 91,
+      "frame_id": "00091",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00091.jpg",
+      "file": "frame_0055.pkl"
+    },
+    {
+      "position": 56,
+      "frame_index": 56,
+      "source_frame_index": 92,
+      "frame_id": "00092",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00092.jpg",
+      "file": "frame_0056.pkl"
+    },
+    {
+      "position": 57,
+      "frame_index": 57,
+      "source_frame_index": 93,
+      "frame_id": "00093",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00093.jpg",
+      "file": "frame_0057.pkl"
+    },
+    {
+      "position": 58,
+      "frame_index": 58,
+      "source_frame_index": 94,
+      "frame_id": "00094",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00094.jpg",
+      "file": "frame_0058.pkl"
+    },
+    {
+      "position": 59,
+      "frame_index": 59,
+      "source_frame_index": 95,
+      "frame_id": "00095",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00095.jpg",
+      "file": "frame_0059.pkl"
+    },
+    {
+      "position": 60,
+      "frame_index": 60,
+      "source_frame_index": 96,
+      "frame_id": "00096",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00096.jpg",
+      "file": "frame_0060.pkl"
+    },
+    {
+      "position": 61,
+      "frame_index": 61,
+      "source_frame_index": 97,
+      "frame_id": "00097",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00097.jpg",
+      "file": "frame_0061.pkl"
+    },
+    {
+      "position": 62,
+      "frame_index": 62,
+      "source_frame_index": 98,
+      "frame_id": "00098",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00098.jpg",
+      "file": "frame_0062.pkl"
+    },
+    {
+      "position": 63,
+      "frame_index": 63,
+      "source_frame_index": 99,
+      "frame_id": "00099",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00099.jpg",
+      "file": "frame_0063.pkl"
+    },
+    {
+      "position": 64,
+      "frame_index": 64,
+      "source_frame_index": 100,
+      "frame_id": "00100",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00100.jpg",
+      "file": "frame_0064.pkl"
+    },
+    {
+      "position": 65,
+      "frame_index": 65,
+      "source_frame_index": 101,
+      "frame_id": "00101",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00101.jpg",
+      "file": "frame_0065.pkl"
+    },
+    {
+      "position": 66,
+      "frame_index": 66,
+      "source_frame_index": 102,
+      "frame_id": "00102",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00102.jpg",
+      "file": "frame_0066.pkl"
+    },
+    {
+      "position": 67,
+      "frame_index": 67,
+      "source_frame_index": 103,
+      "frame_id": "00103",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00103.jpg",
+      "file": "frame_0067.pkl"
+    },
+    {
+      "position": 68,
+      "frame_index": 68,
+      "source_frame_index": 104,
+      "frame_id": "00104",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00104.jpg",
+      "file": "frame_0068.pkl"
+    },
+    {
+      "position": 69,
+      "frame_index": 69,
+      "source_frame_index": 105,
+      "frame_id": "00105",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00105.jpg",
+      "file": "frame_0069.pkl"
+    },
+    {
+      "position": 70,
+      "frame_index": 70,
+      "source_frame_index": 106,
+      "frame_id": "00106",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00106.jpg",
+      "file": "frame_0070.pkl"
+    },
+    {
+      "position": 71,
+      "frame_index": 71,
+      "source_frame_index": 107,
+      "frame_id": "00107",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00107.jpg",
+      "file": "frame_0071.pkl"
+    },
+    {
+      "position": 72,
+      "frame_index": 72,
+      "source_frame_index": 108,
+      "frame_id": "00108",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00108.jpg",
+      "file": "frame_0072.pkl"
+    },
+    {
+      "position": 73,
+      "frame_index": 73,
+      "source_frame_index": 109,
+      "frame_id": "00109",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00109.jpg",
+      "file": "frame_0073.pkl"
+    },
+    {
+      "position": 74,
+      "frame_index": 74,
+      "source_frame_index": 110,
+      "frame_id": "00110",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00110.jpg",
+      "file": "frame_0074.pkl"
+    },
+    {
+      "position": 75,
+      "frame_index": 75,
+      "source_frame_index": 111,
+      "frame_id": "00111",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00111.jpg",
+      "file": "frame_0075.pkl"
+    },
+    {
+      "position": 76,
+      "frame_index": 76,
+      "source_frame_index": 112,
+      "frame_id": "00112",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00112.jpg",
+      "file": "frame_0076.pkl"
+    },
+    {
+      "position": 77,
+      "frame_index": 77,
+      "source_frame_index": 113,
+      "frame_id": "00113",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00113.jpg",
+      "file": "frame_0077.pkl"
+    },
+    {
+      "position": 78,
+      "frame_index": 78,
+      "source_frame_index": 114,
+      "frame_id": "00114",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00114.jpg",
+      "file": "frame_0078.pkl"
+    },
+    {
+      "position": 79,
+      "frame_index": 79,
+      "source_frame_index": 115,
+      "frame_id": "00115",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00115.jpg",
+      "file": "frame_0079.pkl"
+    },
+    {
+      "position": 80,
+      "frame_index": 80,
+      "source_frame_index": 116,
+      "frame_id": "00116",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00116.jpg",
+      "file": "frame_0080.pkl"
+    },
+    {
+      "position": 81,
+      "frame_index": 81,
+      "source_frame_index": 117,
+      "frame_id": "00117",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00117.jpg",
+      "file": "frame_0081.pkl"
+    },
+    {
+      "position": 82,
+      "frame_index": 82,
+      "source_frame_index": 118,
+      "frame_id": "00118",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00118.jpg",
+      "file": "frame_0082.pkl"
+    },
+    {
+      "position": 83,
+      "frame_index": 83,
+      "source_frame_index": 119,
+      "frame_id": "00119",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00119.jpg",
+      "file": "frame_0083.pkl"
+    },
+    {
+      "position": 84,
+      "frame_index": 84,
+      "source_frame_index": 120,
+      "frame_id": "00120",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00120.jpg",
+      "file": "frame_0084.pkl"
+    },
+    {
+      "position": 85,
+      "frame_index": 85,
+      "source_frame_index": 121,
+      "frame_id": "00121",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00121.jpg",
+      "file": "frame_0085.pkl"
+    },
+    {
+      "position": 86,
+      "frame_index": 86,
+      "source_frame_index": 122,
+      "frame_id": "00122",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00122.jpg",
+      "file": "frame_0086.pkl"
+    },
+    {
+      "position": 87,
+      "frame_index": 87,
+      "source_frame_index": 123,
+      "frame_id": "00123",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00123.jpg",
+      "file": "frame_0087.pkl"
+    },
+    {
+      "position": 88,
+      "frame_index": 88,
+      "source_frame_index": 124,
+      "frame_id": "00124",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00124.jpg",
+      "file": "frame_0088.pkl"
+    },
+    {
+      "position": 89,
+      "frame_index": 89,
+      "source_frame_index": 125,
+      "frame_id": "00125",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00125.jpg",
+      "file": "frame_0089.pkl"
+    },
+    {
+      "position": 90,
+      "frame_index": 90,
+      "source_frame_index": 126,
+      "frame_id": "00126",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00126.jpg",
+      "file": "frame_0090.pkl"
+    },
+    {
+      "position": 91,
+      "frame_index": 91,
+      "source_frame_index": 127,
+      "frame_id": "00127",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00127.jpg",
+      "file": "frame_0091.pkl"
+    },
+    {
+      "position": 92,
+      "frame_index": 92,
+      "source_frame_index": 128,
+      "frame_id": "00128",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00128.jpg",
+      "file": "frame_0092.pkl"
+    },
+    {
+      "position": 93,
+      "frame_index": 93,
+      "source_frame_index": 129,
+      "frame_id": "00129",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00129.jpg",
+      "file": "frame_0093.pkl"
+    },
+    {
+      "position": 94,
+      "frame_index": 94,
+      "source_frame_index": 130,
+      "frame_id": "00130",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00130.jpg",
+      "file": "frame_0094.pkl"
+    },
+    {
+      "position": 95,
+      "frame_index": 95,
+      "source_frame_index": 131,
+      "frame_id": "00131",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00131.jpg",
+      "file": "frame_0095.pkl"
+    },
+    {
+      "position": 96,
+      "frame_index": 96,
+      "source_frame_index": 132,
+      "frame_id": "00132",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00132.jpg",
+      "file": "frame_0096.pkl"
+    },
+    {
+      "position": 97,
+      "frame_index": 97,
+      "source_frame_index": 133,
+      "frame_id": "00133",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00133.jpg",
+      "file": "frame_0097.pkl"
+    },
+    {
+      "position": 98,
+      "frame_index": 98,
+      "source_frame_index": 134,
+      "frame_id": "00134",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00134.jpg",
+      "file": "frame_0098.pkl"
+    },
+    {
+      "position": 99,
+      "frame_index": 99,
+      "source_frame_index": 135,
+      "frame_id": "00135",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00135.jpg",
+      "file": "frame_0099.pkl"
+    },
+    {
+      "position": 100,
+      "frame_index": 100,
+      "source_frame_index": 136,
+      "frame_id": "00136",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00136.jpg",
+      "file": "frame_0100.pkl"
+    },
+    {
+      "position": 101,
+      "frame_index": 101,
+      "source_frame_index": 137,
+      "frame_id": "00137",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00137.jpg",
+      "file": "frame_0101.pkl"
+    },
+    {
+      "position": 102,
+      "frame_index": 102,
+      "source_frame_index": 138,
+      "frame_id": "00138",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00138.jpg",
+      "file": "frame_0102.pkl"
+    },
+    {
+      "position": 103,
+      "frame_index": 103,
+      "source_frame_index": 139,
+      "frame_id": "00139",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00139.jpg",
+      "file": "frame_0103.pkl"
+    },
+    {
+      "position": 104,
+      "frame_index": 104,
+      "source_frame_index": 140,
+      "frame_id": "00140",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00140.jpg",
+      "file": "frame_0104.pkl"
+    },
+    {
+      "position": 105,
+      "frame_index": 105,
+      "source_frame_index": 141,
+      "frame_id": "00141",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00141.jpg",
+      "file": "frame_0105.pkl"
+    },
+    {
+      "position": 106,
+      "frame_index": 106,
+      "source_frame_index": 142,
+      "frame_id": "00142",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00142.jpg",
+      "file": "frame_0106.pkl"
+    },
+    {
+      "position": 107,
+      "frame_index": 107,
+      "source_frame_index": 143,
+      "frame_id": "00143",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00143.jpg",
+      "file": "frame_0107.pkl"
+    },
+    {
+      "position": 108,
+      "frame_index": 108,
+      "source_frame_index": 144,
+      "frame_id": "00144",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00144.jpg",
+      "file": "frame_0108.pkl"
+    },
+    {
+      "position": 109,
+      "frame_index": 109,
+      "source_frame_index": 145,
+      "frame_id": "00145",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00145.jpg",
+      "file": "frame_0109.pkl"
+    },
+    {
+      "position": 110,
+      "frame_index": 110,
+      "source_frame_index": 146,
+      "frame_id": "00146",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00146.jpg",
+      "file": "frame_0110.pkl"
+    },
+    {
+      "position": 111,
+      "frame_index": 111,
+      "source_frame_index": 147,
+      "frame_id": "00147",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00147.jpg",
+      "file": "frame_0111.pkl"
+    },
+    {
+      "position": 112,
+      "frame_index": 112,
+      "source_frame_index": 148,
+      "frame_id": "00148",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00148.jpg",
+      "file": "frame_0112.pkl"
+    },
+    {
+      "position": 113,
+      "frame_index": 113,
+      "source_frame_index": 149,
+      "frame_id": "00149",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00149.jpg",
+      "file": "frame_0113.pkl"
+    },
+    {
+      "position": 114,
+      "frame_index": 114,
+      "source_frame_index": 150,
+      "frame_id": "00150",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00150.jpg",
+      "file": "frame_0114.pkl"
+    },
+    {
+      "position": 115,
+      "frame_index": 115,
+      "source_frame_index": 151,
+      "frame_id": "00151",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00151.jpg",
+      "file": "frame_0115.pkl"
+    },
+    {
+      "position": 116,
+      "frame_index": 116,
+      "source_frame_index": 152,
+      "frame_id": "00152",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00152.jpg",
+      "file": "frame_0116.pkl"
+    },
+    {
+      "position": 117,
+      "frame_index": 117,
+      "source_frame_index": 153,
+      "frame_id": "00153",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00153.jpg",
+      "file": "frame_0117.pkl"
+    },
+    {
+      "position": 118,
+      "frame_index": 118,
+      "source_frame_index": 154,
+      "frame_id": "00154",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00154.jpg",
+      "file": "frame_0118.pkl"
+    },
+    {
+      "position": 119,
+      "frame_index": 119,
+      "source_frame_index": 155,
+      "frame_id": "00155",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00155.jpg",
+      "file": "frame_0119.pkl"
+    },
+    {
+      "position": 120,
+      "frame_index": 120,
+      "source_frame_index": 156,
+      "frame_id": "00156",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00156.jpg",
+      "file": "frame_0120.pkl"
+    },
+    {
+      "position": 121,
+      "frame_index": 121,
+      "source_frame_index": 157,
+      "frame_id": "00157",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00157.jpg",
+      "file": "frame_0121.pkl"
+    },
+    {
+      "position": 122,
+      "frame_index": 122,
+      "source_frame_index": 158,
+      "frame_id": "00158",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00158.jpg",
+      "file": "frame_0122.pkl"
+    },
+    {
+      "position": 123,
+      "frame_index": 123,
+      "source_frame_index": 159,
+      "frame_id": "00159",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00159.jpg",
+      "file": "frame_0123.pkl"
+    },
+    {
+      "position": 124,
+      "frame_index": 124,
+      "source_frame_index": 160,
+      "frame_id": "00160",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00160.jpg",
+      "file": "frame_0124.pkl"
+    },
+    {
+      "position": 125,
+      "frame_index": 125,
+      "source_frame_index": 161,
+      "frame_id": "00161",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00161.jpg",
+      "file": "frame_0125.pkl"
+    },
+    {
+      "position": 126,
+      "frame_index": 126,
+      "source_frame_index": 162,
+      "frame_id": "00162",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00162.jpg",
+      "file": "frame_0126.pkl"
+    },
+    {
+      "position": 127,
+      "frame_index": 127,
+      "source_frame_index": 163,
+      "frame_id": "00163",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00163.jpg",
+      "file": "frame_0127.pkl"
+    },
+    {
+      "position": 128,
+      "frame_index": 128,
+      "source_frame_index": 164,
+      "frame_id": "00164",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00164.jpg",
+      "file": "frame_0128.pkl"
+    },
+    {
+      "position": 129,
+      "frame_index": 129,
+      "source_frame_index": 165,
+      "frame_id": "00165",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00165.jpg",
+      "file": "frame_0129.pkl"
+    },
+    {
+      "position": 130,
+      "frame_index": 130,
+      "source_frame_index": 166,
+      "frame_id": "00166",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00166.jpg",
+      "file": "frame_0130.pkl"
+    },
+    {
+      "position": 131,
+      "frame_index": 131,
+      "source_frame_index": 167,
+      "frame_id": "00167",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00167.jpg",
+      "file": "frame_0131.pkl"
+    },
+    {
+      "position": 132,
+      "frame_index": 132,
+      "source_frame_index": 168,
+      "frame_id": "00168",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00168.jpg",
+      "file": "frame_0132.pkl"
+    },
+    {
+      "position": 133,
+      "frame_index": 133,
+      "source_frame_index": 169,
+      "frame_id": "00169",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00169.jpg",
+      "file": "frame_0133.pkl"
+    },
+    {
+      "position": 134,
+      "frame_index": 134,
+      "source_frame_index": 170,
+      "frame_id": "00170",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00170.jpg",
+      "file": "frame_0134.pkl"
+    },
+    {
+      "position": 135,
+      "frame_index": 135,
+      "source_frame_index": 171,
+      "frame_id": "00171",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00171.jpg",
+      "file": "frame_0135.pkl"
+    },
+    {
+      "position": 136,
+      "frame_index": 136,
+      "source_frame_index": 172,
+      "frame_id": "00172",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00172.jpg",
+      "file": "frame_0136.pkl"
+    },
+    {
+      "position": 137,
+      "frame_index": 137,
+      "source_frame_index": 173,
+      "frame_id": "00173",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00173.jpg",
+      "file": "frame_0137.pkl"
+    },
+    {
+      "position": 138,
+      "frame_index": 138,
+      "source_frame_index": 174,
+      "frame_id": "00174",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00174.jpg",
+      "file": "frame_0138.pkl"
+    },
+    {
+      "position": 139,
+      "frame_index": 139,
+      "source_frame_index": 175,
+      "frame_id": "00175",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00175.jpg",
+      "file": "frame_0139.pkl"
+    },
+    {
+      "position": 140,
+      "frame_index": 140,
+      "source_frame_index": 176,
+      "frame_id": "00176",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00176.jpg",
+      "file": "frame_0140.pkl"
+    },
+    {
+      "position": 141,
+      "frame_index": 141,
+      "source_frame_index": 177,
+      "frame_id": "00177",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00177.jpg",
+      "file": "frame_0141.pkl"
+    },
+    {
+      "position": 142,
+      "frame_index": 142,
+      "source_frame_index": 178,
+      "frame_id": "00178",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00178.jpg",
+      "file": "frame_0142.pkl"
+    },
+    {
+      "position": 143,
+      "frame_index": 143,
+      "source_frame_index": 179,
+      "frame_id": "00179",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00179.jpg",
+      "file": "frame_0143.pkl"
+    },
+    {
+      "position": 144,
+      "frame_index": 144,
+      "source_frame_index": 180,
+      "frame_id": "00180",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00180.jpg",
+      "file": "frame_0144.pkl"
+    },
+    {
+      "position": 145,
+      "frame_index": 145,
+      "source_frame_index": 181,
+      "frame_id": "00181",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00181.jpg",
+      "file": "frame_0145.pkl"
+    },
+    {
+      "position": 146,
+      "frame_index": 146,
+      "source_frame_index": 182,
+      "frame_id": "00182",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00182.jpg",
+      "file": "frame_0146.pkl"
+    },
+    {
+      "position": 147,
+      "frame_index": 147,
+      "source_frame_index": 183,
+      "frame_id": "00183",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00183.jpg",
+      "file": "frame_0147.pkl"
+    },
+    {
+      "position": 148,
+      "frame_index": 148,
+      "source_frame_index": 184,
+      "frame_id": "00184",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00184.jpg",
+      "file": "frame_0148.pkl"
+    },
+    {
+      "position": 149,
+      "frame_index": 149,
+      "source_frame_index": 185,
+      "frame_id": "00185",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00185.jpg",
+      "file": "frame_0149.pkl"
+    },
+    {
+      "position": 150,
+      "frame_index": 150,
+      "source_frame_index": 186,
+      "frame_id": "00186",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00186.jpg",
+      "file": "frame_0150.pkl"
+    },
+    {
+      "position": 151,
+      "frame_index": 151,
+      "source_frame_index": 187,
+      "frame_id": "00187",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00187.jpg",
+      "file": "frame_0151.pkl"
+    },
+    {
+      "position": 152,
+      "frame_index": 152,
+      "source_frame_index": 188,
+      "frame_id": "00188",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00188.jpg",
+      "file": "frame_0152.pkl"
+    },
+    {
+      "position": 153,
+      "frame_index": 153,
+      "source_frame_index": 189,
+      "frame_id": "00189",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00189.jpg",
+      "file": "frame_0153.pkl"
+    },
+    {
+      "position": 154,
+      "frame_index": 154,
+      "source_frame_index": 190,
+      "frame_id": "00190",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00190.jpg",
+      "file": "frame_0154.pkl"
+    },
+    {
+      "position": 155,
+      "frame_index": 155,
+      "source_frame_index": 191,
+      "frame_id": "00191",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00191.jpg",
+      "file": "frame_0155.pkl"
+    },
+    {
+      "position": 156,
+      "frame_index": 156,
+      "source_frame_index": 192,
+      "frame_id": "00192",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00192.jpg",
+      "file": "frame_0156.pkl"
+    },
+    {
+      "position": 157,
+      "frame_index": 157,
+      "source_frame_index": 193,
+      "frame_id": "00193",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00193.jpg",
+      "file": "frame_0157.pkl"
+    },
+    {
+      "position": 158,
+      "frame_index": 158,
+      "source_frame_index": 194,
+      "frame_id": "00194",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00194.jpg",
+      "file": "frame_0158.pkl"
+    },
+    {
+      "position": 159,
+      "frame_index": 159,
+      "source_frame_index": 195,
+      "frame_id": "00195",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00195.jpg",
+      "file": "frame_0159.pkl"
+    },
+    {
+      "position": 160,
+      "frame_index": 160,
+      "source_frame_index": 196,
+      "frame_id": "00196",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00196.jpg",
+      "file": "frame_0160.pkl"
+    },
+    {
+      "position": 161,
+      "frame_index": 161,
+      "source_frame_index": 197,
+      "frame_id": "00197",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00197.jpg",
+      "file": "frame_0161.pkl"
+    },
+    {
+      "position": 162,
+      "frame_index": 162,
+      "source_frame_index": 198,
+      "frame_id": "00198",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00198.jpg",
+      "file": "frame_0162.pkl"
+    },
+    {
+      "position": 163,
+      "frame_index": 163,
+      "source_frame_index": 199,
+      "frame_id": "00199",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00199.jpg",
+      "file": "frame_0163.pkl"
+    },
+    {
+      "position": 164,
+      "frame_index": 164,
+      "source_frame_index": 200,
+      "frame_id": "00200",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00200.jpg",
+      "file": "frame_0164.pkl"
+    },
+    {
+      "position": 165,
+      "frame_index": 165,
+      "source_frame_index": 201,
+      "frame_id": "00201",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00201.jpg",
+      "file": "frame_0165.pkl"
+    },
+    {
+      "position": 166,
+      "frame_index": 166,
+      "source_frame_index": 202,
+      "frame_id": "00202",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00202.jpg",
+      "file": "frame_0166.pkl"
+    },
+    {
+      "position": 167,
+      "frame_index": 167,
+      "source_frame_index": 203,
+      "frame_id": "00203",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00203.jpg",
+      "file": "frame_0167.pkl"
+    },
+    {
+      "position": 168,
+      "frame_index": 168,
+      "source_frame_index": 204,
+      "frame_id": "00204",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00204.jpg",
+      "file": "frame_0168.pkl"
+    },
+    {
+      "position": 169,
+      "frame_index": 169,
+      "source_frame_index": 205,
+      "frame_id": "00205",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00205.jpg",
+      "file": "frame_0169.pkl"
+    },
+    {
+      "position": 170,
+      "frame_index": 170,
+      "source_frame_index": 206,
+      "frame_id": "00206",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00206.jpg",
+      "file": "frame_0170.pkl"
+    },
+    {
+      "position": 171,
+      "frame_index": 171,
+      "source_frame_index": 207,
+      "frame_id": "00207",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00207.jpg",
+      "file": "frame_0171.pkl"
+    },
+    {
+      "position": 172,
+      "frame_index": 172,
+      "source_frame_index": 208,
+      "frame_id": "00208",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00208.jpg",
+      "file": "frame_0172.pkl"
+    },
+    {
+      "position": 173,
+      "frame_index": 173,
+      "source_frame_index": 209,
+      "frame_id": "00209",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00209.jpg",
+      "file": "frame_0173.pkl"
+    },
+    {
+      "position": 174,
+      "frame_index": 174,
+      "source_frame_index": 210,
+      "frame_id": "00210",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00210.jpg",
+      "file": "frame_0174.pkl"
+    },
+    {
+      "position": 175,
+      "frame_index": 175,
+      "source_frame_index": 211,
+      "frame_id": "00211",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00211.jpg",
+      "file": "frame_0175.pkl"
+    },
+    {
+      "position": 176,
+      "frame_index": 176,
+      "source_frame_index": 212,
+      "frame_id": "00212",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00212.jpg",
+      "file": "frame_0176.pkl"
+    },
+    {
+      "position": 177,
+      "frame_index": 177,
+      "source_frame_index": 213,
+      "frame_id": "00213",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00213.jpg",
+      "file": "frame_0177.pkl"
+    },
+    {
+      "position": 178,
+      "frame_index": 178,
+      "source_frame_index": 214,
+      "frame_id": "00214",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00214.jpg",
+      "file": "frame_0178.pkl"
+    },
+    {
+      "position": 179,
+      "frame_index": 179,
+      "source_frame_index": 215,
+      "frame_id": "00215",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00215.jpg",
+      "file": "frame_0179.pkl"
+    },
+    {
+      "position": 180,
+      "frame_index": 180,
+      "source_frame_index": 216,
+      "frame_id": "00216",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00216.jpg",
+      "file": "frame_0180.pkl"
+    },
+    {
+      "position": 181,
+      "frame_index": 181,
+      "source_frame_index": 217,
+      "frame_id": "00217",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00217.jpg",
+      "file": "frame_0181.pkl"
+    },
+    {
+      "position": 182,
+      "frame_index": 182,
+      "source_frame_index": 218,
+      "frame_id": "00218",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00218.jpg",
+      "file": "frame_0182.pkl"
+    },
+    {
+      "position": 183,
+      "frame_index": 183,
+      "source_frame_index": 219,
+      "frame_id": "00219",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00219.jpg",
+      "file": "frame_0183.pkl"
+    },
+    {
+      "position": 184,
+      "frame_index": 184,
+      "source_frame_index": 220,
+      "frame_id": "00220",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00220.jpg",
+      "file": "frame_0184.pkl"
+    },
+    {
+      "position": 185,
+      "frame_index": 185,
+      "source_frame_index": 221,
+      "frame_id": "00221",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00221.jpg",
+      "file": "frame_0185.pkl"
+    },
+    {
+      "position": 186,
+      "frame_index": 186,
+      "source_frame_index": 222,
+      "frame_id": "00222",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00222.jpg",
+      "file": "frame_0186.pkl"
+    },
+    {
+      "position": 187,
+      "frame_index": 187,
+      "source_frame_index": 223,
+      "frame_id": "00223",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00223.jpg",
+      "file": "frame_0187.pkl"
+    },
+    {
+      "position": 188,
+      "frame_index": 188,
+      "source_frame_index": 224,
+      "frame_id": "00224",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00224.jpg",
+      "file": "frame_0188.pkl"
+    },
+    {
+      "position": 189,
+      "frame_index": 189,
+      "source_frame_index": 225,
+      "frame_id": "00225",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00225.jpg",
+      "file": "frame_0189.pkl"
+    },
+    {
+      "position": 190,
+      "frame_index": 190,
+      "source_frame_index": 226,
+      "frame_id": "00226",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00226.jpg",
+      "file": "frame_0190.pkl"
+    },
+    {
+      "position": 191,
+      "frame_index": 191,
+      "source_frame_index": 227,
+      "frame_id": "00227",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00227.jpg",
+      "file": "frame_0191.pkl"
+    },
+    {
+      "position": 192,
+      "frame_index": 192,
+      "source_frame_index": 228,
+      "frame_id": "00228",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00228.jpg",
+      "file": "frame_0192.pkl"
+    },
+    {
+      "position": 193,
+      "frame_index": 193,
+      "source_frame_index": 229,
+      "frame_id": "00229",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00229.jpg",
+      "file": "frame_0193.pkl"
+    },
+    {
+      "position": 194,
+      "frame_index": 194,
+      "source_frame_index": 230,
+      "frame_id": "00230",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00230.jpg",
+      "file": "frame_0194.pkl"
+    },
+    {
+      "position": 195,
+      "frame_index": 195,
+      "source_frame_index": 231,
+      "frame_id": "00231",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00231.jpg",
+      "file": "frame_0195.pkl"
+    },
+    {
+      "position": 196,
+      "frame_index": 196,
+      "source_frame_index": 232,
+      "frame_id": "00232",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00232.jpg",
+      "file": "frame_0196.pkl"
+    },
+    {
+      "position": 197,
+      "frame_index": 197,
+      "source_frame_index": 233,
+      "frame_id": "00233",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00233.jpg",
+      "file": "frame_0197.pkl"
+    },
+    {
+      "position": 198,
+      "frame_index": 198,
+      "source_frame_index": 234,
+      "frame_id": "00234",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00234.jpg",
+      "file": "frame_0198.pkl"
+    },
+    {
+      "position": 199,
+      "frame_index": 199,
+      "source_frame_index": 235,
+      "frame_id": "00235",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00235.jpg",
+      "file": "frame_0199.pkl"
+    },
+    {
+      "position": 200,
+      "frame_index": 200,
+      "source_frame_index": 236,
+      "frame_id": "00236",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00236.jpg",
+      "file": "frame_0200.pkl"
+    },
+    {
+      "position": 201,
+      "frame_index": 201,
+      "source_frame_index": 237,
+      "frame_id": "00237",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00237.jpg",
+      "file": "frame_0201.pkl"
+    },
+    {
+      "position": 202,
+      "frame_index": 202,
+      "source_frame_index": 238,
+      "frame_id": "00238",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00238.jpg",
+      "file": "frame_0202.pkl"
+    },
+    {
+      "position": 203,
+      "frame_index": 203,
+      "source_frame_index": 239,
+      "frame_id": "00239",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00239.jpg",
+      "file": "frame_0203.pkl"
+    },
+    {
+      "position": 204,
+      "frame_index": 204,
+      "source_frame_index": 240,
+      "frame_id": "00240",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00240.jpg",
+      "file": "frame_0204.pkl"
+    },
+    {
+      "position": 205,
+      "frame_index": 205,
+      "source_frame_index": 241,
+      "frame_id": "00241",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00241.jpg",
+      "file": "frame_0205.pkl"
+    },
+    {
+      "position": 206,
+      "frame_index": 206,
+      "source_frame_index": 242,
+      "frame_id": "00242",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00242.jpg",
+      "file": "frame_0206.pkl"
+    },
+    {
+      "position": 207,
+      "frame_index": 207,
+      "source_frame_index": 243,
+      "frame_id": "00243",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00243.jpg",
+      "file": "frame_0207.pkl"
+    },
+    {
+      "position": 208,
+      "frame_index": 208,
+      "source_frame_index": 244,
+      "frame_id": "00244",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00244.jpg",
+      "file": "frame_0208.pkl"
+    },
+    {
+      "position": 209,
+      "frame_index": 209,
+      "source_frame_index": 245,
+      "frame_id": "00245",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00245.jpg",
+      "file": "frame_0209.pkl"
+    },
+    {
+      "position": 210,
+      "frame_index": 210,
+      "source_frame_index": 246,
+      "frame_id": "00246",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00246.jpg",
+      "file": "frame_0210.pkl"
+    },
+    {
+      "position": 211,
+      "frame_index": 211,
+      "source_frame_index": 247,
+      "frame_id": "00247",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00247.jpg",
+      "file": "frame_0211.pkl"
+    },
+    {
+      "position": 212,
+      "frame_index": 212,
+      "source_frame_index": 248,
+      "frame_id": "00248",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00248.jpg",
+      "file": "frame_0212.pkl"
+    },
+    {
+      "position": 213,
+      "frame_index": 213,
+      "source_frame_index": 249,
+      "frame_id": "00249",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00249.jpg",
+      "file": "frame_0213.pkl"
+    },
+    {
+      "position": 214,
+      "frame_index": 214,
+      "source_frame_index": 250,
+      "frame_id": "00250",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00250.jpg",
+      "file": "frame_0214.pkl"
+    },
+    {
+      "position": 215,
+      "frame_index": 215,
+      "source_frame_index": 251,
+      "frame_id": "00251",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00251.jpg",
+      "file": "frame_0215.pkl"
+    },
+    {
+      "position": 216,
+      "frame_index": 216,
+      "source_frame_index": 252,
+      "frame_id": "00252",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00252.jpg",
+      "file": "frame_0216.pkl"
+    },
+    {
+      "position": 217,
+      "frame_index": 217,
+      "source_frame_index": 253,
+      "frame_id": "00253",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00253.jpg",
+      "file": "frame_0217.pkl"
+    },
+    {
+      "position": 218,
+      "frame_index": 218,
+      "source_frame_index": 254,
+      "frame_id": "00254",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00254.jpg",
+      "file": "frame_0218.pkl"
+    },
+    {
+      "position": 219,
+      "frame_index": 219,
+      "source_frame_index": 255,
+      "frame_id": "00255",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00255.jpg",
+      "file": "frame_0219.pkl"
+    },
+    {
+      "position": 220,
+      "frame_index": 220,
+      "source_frame_index": 256,
+      "frame_id": "00256",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00256.jpg",
+      "file": "frame_0220.pkl"
+    },
+    {
+      "position": 221,
+      "frame_index": 221,
+      "source_frame_index": 257,
+      "frame_id": "00257",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00257.jpg",
+      "file": "frame_0221.pkl"
+    },
+    {
+      "position": 222,
+      "frame_index": 222,
+      "source_frame_index": 258,
+      "frame_id": "00258",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00258.jpg",
+      "file": "frame_0222.pkl"
+    },
+    {
+      "position": 223,
+      "frame_index": 223,
+      "source_frame_index": 259,
+      "frame_id": "00259",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00259.jpg",
+      "file": "frame_0223.pkl"
+    },
+    {
+      "position": 224,
+      "frame_index": 224,
+      "source_frame_index": 260,
+      "frame_id": "00260",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00260.jpg",
+      "file": "frame_0224.pkl"
+    },
+    {
+      "position": 225,
+      "frame_index": 225,
+      "source_frame_index": 261,
+      "frame_id": "00261",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00261.jpg",
+      "file": "frame_0225.pkl"
+    },
+    {
+      "position": 226,
+      "frame_index": 226,
+      "source_frame_index": 262,
+      "frame_id": "00262",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00262.jpg",
+      "file": "frame_0226.pkl"
+    },
+    {
+      "position": 227,
+      "frame_index": 227,
+      "source_frame_index": 263,
+      "frame_id": "00263",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00263.jpg",
+      "file": "frame_0227.pkl"
+    },
+    {
+      "position": 228,
+      "frame_index": 228,
+      "source_frame_index": 264,
+      "frame_id": "00264",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00264.jpg",
+      "file": "frame_0228.pkl"
+    },
+    {
+      "position": 229,
+      "frame_index": 229,
+      "source_frame_index": 265,
+      "frame_id": "00265",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00265.jpg",
+      "file": "frame_0229.pkl"
+    },
+    {
+      "position": 230,
+      "frame_index": 230,
+      "source_frame_index": 266,
+      "frame_id": "00266",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00266.jpg",
+      "file": "frame_0230.pkl"
+    },
+    {
+      "position": 231,
+      "frame_index": 231,
+      "source_frame_index": 267,
+      "frame_id": "00267",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00267.jpg",
+      "file": "frame_0231.pkl"
+    },
+    {
+      "position": 232,
+      "frame_index": 232,
+      "source_frame_index": 268,
+      "frame_id": "00268",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00268.jpg",
+      "file": "frame_0232.pkl"
+    },
+    {
+      "position": 233,
+      "frame_index": 233,
+      "source_frame_index": 269,
+      "frame_id": "00269",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00269.jpg",
+      "file": "frame_0233.pkl"
+    },
+    {
+      "position": 234,
+      "frame_index": 234,
+      "source_frame_index": 270,
+      "frame_id": "00270",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00270.jpg",
+      "file": "frame_0234.pkl"
+    },
+    {
+      "position": 235,
+      "frame_index": 235,
+      "source_frame_index": 271,
+      "frame_id": "00271",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00271.jpg",
+      "file": "frame_0235.pkl"
+    },
+    {
+      "position": 236,
+      "frame_index": 236,
+      "source_frame_index": 272,
+      "frame_id": "00272",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00272.jpg",
+      "file": "frame_0236.pkl"
+    },
+    {
+      "position": 237,
+      "frame_index": 237,
+      "source_frame_index": 273,
+      "frame_id": "00273",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00273.jpg",
+      "file": "frame_0237.pkl"
+    },
+    {
+      "position": 238,
+      "frame_index": 238,
+      "source_frame_index": 274,
+      "frame_id": "00274",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00274.jpg",
+      "file": "frame_0238.pkl"
+    },
+    {
+      "position": 239,
+      "frame_index": 239,
+      "source_frame_index": 275,
+      "frame_id": "00275",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00275.jpg",
+      "file": "frame_0239.pkl"
+    },
+    {
+      "position": 240,
+      "frame_index": 240,
+      "source_frame_index": 276,
+      "frame_id": "00276",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00276.jpg",
+      "file": "frame_0240.pkl"
+    },
+    {
+      "position": 241,
+      "frame_index": 241,
+      "source_frame_index": 277,
+      "frame_id": "00277",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00277.jpg",
+      "file": "frame_0241.pkl"
+    },
+    {
+      "position": 242,
+      "frame_index": 242,
+      "source_frame_index": 278,
+      "frame_id": "00278",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00278.jpg",
+      "file": "frame_0242.pkl"
+    },
+    {
+      "position": 243,
+      "frame_index": 243,
+      "source_frame_index": 279,
+      "frame_id": "00279",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00279.jpg",
+      "file": "frame_0243.pkl"
+    },
+    {
+      "position": 244,
+      "frame_index": 244,
+      "source_frame_index": 280,
+      "frame_id": "00280",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00280.jpg",
+      "file": "frame_0244.pkl"
+    },
+    {
+      "position": 245,
+      "frame_index": 245,
+      "source_frame_index": 281,
+      "frame_id": "00281",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00281.jpg",
+      "file": "frame_0245.pkl"
+    },
+    {
+      "position": 246,
+      "frame_index": 246,
+      "source_frame_index": 282,
+      "frame_id": "00282",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00282.jpg",
+      "file": "frame_0246.pkl"
+    },
+    {
+      "position": 247,
+      "frame_index": 247,
+      "source_frame_index": 283,
+      "frame_id": "00283",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00283.jpg",
+      "file": "frame_0247.pkl"
+    },
+    {
+      "position": 248,
+      "frame_index": 248,
+      "source_frame_index": 284,
+      "frame_id": "00284",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00284.jpg",
+      "file": "frame_0248.pkl"
+    },
+    {
+      "position": 249,
+      "frame_index": 249,
+      "source_frame_index": 285,
+      "frame_id": "00285",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00285.jpg",
+      "file": "frame_0249.pkl"
+    },
+    {
+      "position": 250,
+      "frame_index": 250,
+      "source_frame_index": 286,
+      "frame_id": "00286",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00286.jpg",
+      "file": "frame_0250.pkl"
+    },
+    {
+      "position": 251,
+      "frame_index": 251,
+      "source_frame_index": 287,
+      "frame_id": "00287",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00287.jpg",
+      "file": "frame_0251.pkl"
+    },
+    {
+      "position": 252,
+      "frame_index": 252,
+      "source_frame_index": 288,
+      "frame_id": "00288",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00288.jpg",
+      "file": "frame_0252.pkl"
+    },
+    {
+      "position": 253,
+      "frame_index": 253,
+      "source_frame_index": 289,
+      "frame_id": "00289",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00289.jpg",
+      "file": "frame_0253.pkl"
+    },
+    {
+      "position": 254,
+      "frame_index": 254,
+      "source_frame_index": 290,
+      "frame_id": "00290",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00290.jpg",
+      "file": "frame_0254.pkl"
+    },
+    {
+      "position": 255,
+      "frame_index": 255,
+      "source_frame_index": 291,
+      "frame_id": "00291",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00291.jpg",
+      "file": "frame_0255.pkl"
+    },
+    {
+      "position": 256,
+      "frame_index": 256,
+      "source_frame_index": 292,
+      "frame_id": "00292",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00292.jpg",
+      "file": "frame_0256.pkl"
+    },
+    {
+      "position": 257,
+      "frame_index": 257,
+      "source_frame_index": 293,
+      "frame_id": "00293",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00293.jpg",
+      "file": "frame_0257.pkl"
+    },
+    {
+      "position": 258,
+      "frame_index": 258,
+      "source_frame_index": 294,
+      "frame_id": "00294",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00294.jpg",
+      "file": "frame_0258.pkl"
+    },
+    {
+      "position": 259,
+      "frame_index": 259,
+      "source_frame_index": 295,
+      "frame_id": "00295",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00295.jpg",
+      "file": "frame_0259.pkl"
+    },
+    {
+      "position": 260,
+      "frame_index": 260,
+      "source_frame_index": 296,
+      "frame_id": "00296",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00296.jpg",
+      "file": "frame_0260.pkl"
+    },
+    {
+      "position": 261,
+      "frame_index": 261,
+      "source_frame_index": 297,
+      "frame_id": "00297",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00297.jpg",
+      "file": "frame_0261.pkl"
+    },
+    {
+      "position": 262,
+      "frame_index": 262,
+      "source_frame_index": 298,
+      "frame_id": "00298",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00298.jpg",
+      "file": "frame_0262.pkl"
+    },
+    {
+      "position": 263,
+      "frame_index": 263,
+      "source_frame_index": 299,
+      "frame_id": "00299",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00299.jpg",
+      "file": "frame_0263.pkl"
+    },
+    {
+      "position": 264,
+      "frame_index": 264,
+      "source_frame_index": 300,
+      "frame_id": "00300",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00300.jpg",
+      "file": "frame_0264.pkl"
+    },
+    {
+      "position": 265,
+      "frame_index": 265,
+      "source_frame_index": 301,
+      "frame_id": "00301",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00301.jpg",
+      "file": "frame_0265.pkl"
+    },
+    {
+      "position": 266,
+      "frame_index": 266,
+      "source_frame_index": 302,
+      "frame_id": "00302",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00302.jpg",
+      "file": "frame_0266.pkl"
+    },
+    {
+      "position": 267,
+      "frame_index": 267,
+      "source_frame_index": 303,
+      "frame_id": "00303",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00303.jpg",
+      "file": "frame_0267.pkl"
+    },
+    {
+      "position": 268,
+      "frame_index": 268,
+      "source_frame_index": 304,
+      "frame_id": "00304",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00304.jpg",
+      "file": "frame_0268.pkl"
+    },
+    {
+      "position": 269,
+      "frame_index": 269,
+      "source_frame_index": 305,
+      "frame_id": "00305",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00305.jpg",
+      "file": "frame_0269.pkl"
+    },
+    {
+      "position": 270,
+      "frame_index": 270,
+      "source_frame_index": 306,
+      "frame_id": "00306",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00306.jpg",
+      "file": "frame_0270.pkl"
+    },
+    {
+      "position": 271,
+      "frame_index": 271,
+      "source_frame_index": 307,
+      "frame_id": "00307",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00307.jpg",
+      "file": "frame_0271.pkl"
+    },
+    {
+      "position": 272,
+      "frame_index": 272,
+      "source_frame_index": 308,
+      "frame_id": "00308",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00308.jpg",
+      "file": "frame_0272.pkl"
+    },
+    {
+      "position": 273,
+      "frame_index": 273,
+      "source_frame_index": 309,
+      "frame_id": "00309",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00309.jpg",
+      "file": "frame_0273.pkl"
+    },
+    {
+      "position": 274,
+      "frame_index": 274,
+      "source_frame_index": 310,
+      "frame_id": "00310",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00310.jpg",
+      "file": "frame_0274.pkl"
+    },
+    {
+      "position": 275,
+      "frame_index": 275,
+      "source_frame_index": 311,
+      "frame_id": "00311",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00311.jpg",
+      "file": "frame_0275.pkl"
+    },
+    {
+      "position": 276,
+      "frame_index": 276,
+      "source_frame_index": 312,
+      "frame_id": "00312",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00312.jpg",
+      "file": "frame_0276.pkl"
+    },
+    {
+      "position": 277,
+      "frame_index": 277,
+      "source_frame_index": 313,
+      "frame_id": "00313",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00313.jpg",
+      "file": "frame_0277.pkl"
+    },
+    {
+      "position": 278,
+      "frame_index": 278,
+      "source_frame_index": 314,
+      "frame_id": "00314",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00314.jpg",
+      "file": "frame_0278.pkl"
+    },
+    {
+      "position": 279,
+      "frame_index": 279,
+      "source_frame_index": 315,
+      "frame_id": "00315",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00315.jpg",
+      "file": "frame_0279.pkl"
+    },
+    {
+      "position": 280,
+      "frame_index": 280,
+      "source_frame_index": 316,
+      "frame_id": "00316",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00316.jpg",
+      "file": "frame_0280.pkl"
+    },
+    {
+      "position": 281,
+      "frame_index": 281,
+      "source_frame_index": 317,
+      "frame_id": "00317",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00317.jpg",
+      "file": "frame_0281.pkl"
+    },
+    {
+      "position": 282,
+      "frame_index": 282,
+      "source_frame_index": 318,
+      "frame_id": "00318",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00318.jpg",
+      "file": "frame_0282.pkl"
+    },
+    {
+      "position": 283,
+      "frame_index": 283,
+      "source_frame_index": 319,
+      "frame_id": "00319",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00319.jpg",
+      "file": "frame_0283.pkl"
+    },
+    {
+      "position": 284,
+      "frame_index": 284,
+      "source_frame_index": 320,
+      "frame_id": "00320",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00320.jpg",
+      "file": "frame_0284.pkl"
+    },
+    {
+      "position": 285,
+      "frame_index": 285,
+      "source_frame_index": 321,
+      "frame_id": "00321",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00321.jpg",
+      "file": "frame_0285.pkl"
+    },
+    {
+      "position": 286,
+      "frame_index": 286,
+      "source_frame_index": 322,
+      "frame_id": "00322",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00322.jpg",
+      "file": "frame_0286.pkl"
+    },
+    {
+      "position": 287,
+      "frame_index": 287,
+      "source_frame_index": 323,
+      "frame_id": "00323",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00323.jpg",
+      "file": "frame_0287.pkl"
+    },
+    {
+      "position": 288,
+      "frame_index": 288,
+      "source_frame_index": 324,
+      "frame_id": "00324",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00324.jpg",
+      "file": "frame_0288.pkl"
+    },
+    {
+      "position": 289,
+      "frame_index": 289,
+      "source_frame_index": 325,
+      "frame_id": "00325",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00325.jpg",
+      "file": "frame_0289.pkl"
+    },
+    {
+      "position": 290,
+      "frame_index": 290,
+      "source_frame_index": 326,
+      "frame_id": "00326",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00326.jpg",
+      "file": "frame_0290.pkl"
+    },
+    {
+      "position": 291,
+      "frame_index": 291,
+      "source_frame_index": 327,
+      "frame_id": "00327",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00327.jpg",
+      "file": "frame_0291.pkl"
+    },
+    {
+      "position": 292,
+      "frame_index": 292,
+      "source_frame_index": 328,
+      "frame_id": "00328",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00328.jpg",
+      "file": "frame_0292.pkl"
+    },
+    {
+      "position": 293,
+      "frame_index": 293,
+      "source_frame_index": 329,
+      "frame_id": "00329",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00329.jpg",
+      "file": "frame_0293.pkl"
+    },
+    {
+      "position": 294,
+      "frame_index": 294,
+      "source_frame_index": 330,
+      "frame_id": "00330",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00330.jpg",
+      "file": "frame_0294.pkl"
+    },
+    {
+      "position": 295,
+      "frame_index": 295,
+      "source_frame_index": 331,
+      "frame_id": "00331",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00331.jpg",
+      "file": "frame_0295.pkl"
+    },
+    {
+      "position": 296,
+      "frame_index": 296,
+      "source_frame_index": 332,
+      "frame_id": "00332",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00332.jpg",
+      "file": "frame_0296.pkl"
+    },
+    {
+      "position": 297,
+      "frame_index": 297,
+      "source_frame_index": 333,
+      "frame_id": "00333",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00333.jpg",
+      "file": "frame_0297.pkl"
+    },
+    {
+      "position": 298,
+      "frame_index": 298,
+      "source_frame_index": 334,
+      "frame_id": "00334",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00334.jpg",
+      "file": "frame_0298.pkl"
+    },
+    {
+      "position": 299,
+      "frame_index": 299,
+      "source_frame_index": 335,
+      "frame_id": "00335",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00335.jpg",
+      "file": "frame_0299.pkl"
+    },
+    {
+      "position": 300,
+      "frame_index": 300,
+      "source_frame_index": 336,
+      "frame_id": "00336",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00336.jpg",
+      "file": "frame_0300.pkl"
+    },
+    {
+      "position": 301,
+      "frame_index": 301,
+      "source_frame_index": 337,
+      "frame_id": "00337",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00337.jpg",
+      "file": "frame_0301.pkl"
+    },
+    {
+      "position": 302,
+      "frame_index": 302,
+      "source_frame_index": 338,
+      "frame_id": "00338",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00338.jpg",
+      "file": "frame_0302.pkl"
+    },
+    {
+      "position": 303,
+      "frame_index": 303,
+      "source_frame_index": 339,
+      "frame_id": "00339",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00339.jpg",
+      "file": "frame_0303.pkl"
+    },
+    {
+      "position": 304,
+      "frame_index": 304,
+      "source_frame_index": 340,
+      "frame_id": "00340",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00340.jpg",
+      "file": "frame_0304.pkl"
+    },
+    {
+      "position": 305,
+      "frame_index": 305,
+      "source_frame_index": 341,
+      "frame_id": "00341",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00341.jpg",
+      "file": "frame_0305.pkl"
+    },
+    {
+      "position": 306,
+      "frame_index": 306,
+      "source_frame_index": 342,
+      "frame_id": "00342",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00342.jpg",
+      "file": "frame_0306.pkl"
+    },
+    {
+      "position": 307,
+      "frame_index": 307,
+      "source_frame_index": 343,
+      "frame_id": "00343",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00343.jpg",
+      "file": "frame_0307.pkl"
+    },
+    {
+      "position": 308,
+      "frame_index": 308,
+      "source_frame_index": 344,
+      "frame_id": "00344",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00344.jpg",
+      "file": "frame_0308.pkl"
+    },
+    {
+      "position": 309,
+      "frame_index": 309,
+      "source_frame_index": 345,
+      "frame_id": "00345",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00345.jpg",
+      "file": "frame_0309.pkl"
+    },
+    {
+      "position": 310,
+      "frame_index": 310,
+      "source_frame_index": 346,
+      "frame_id": "00346",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00346.jpg",
+      "file": "frame_0310.pkl"
+    },
+    {
+      "position": 311,
+      "frame_index": 311,
+      "source_frame_index": 347,
+      "frame_id": "00347",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00347.jpg",
+      "file": "frame_0311.pkl"
+    },
+    {
+      "position": 312,
+      "frame_index": 312,
+      "source_frame_index": 348,
+      "frame_id": "00348",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00348.jpg",
+      "file": "frame_0312.pkl"
+    },
+    {
+      "position": 313,
+      "frame_index": 313,
+      "source_frame_index": 349,
+      "frame_id": "00349",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00349.jpg",
+      "file": "frame_0313.pkl"
+    },
+    {
+      "position": 314,
+      "frame_index": 314,
+      "source_frame_index": 350,
+      "frame_id": "00350",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00350.jpg",
+      "file": "frame_0314.pkl"
+    },
+    {
+      "position": 315,
+      "frame_index": 315,
+      "source_frame_index": 351,
+      "frame_id": "00351",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00351.jpg",
+      "file": "frame_0315.pkl"
+    },
+    {
+      "position": 316,
+      "frame_index": 316,
+      "source_frame_index": 352,
+      "frame_id": "00352",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00352.jpg",
+      "file": "frame_0316.pkl"
+    },
+    {
+      "position": 317,
+      "frame_index": 317,
+      "source_frame_index": 353,
+      "frame_id": "00353",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00353.jpg",
+      "file": "frame_0317.pkl"
+    },
+    {
+      "position": 318,
+      "frame_index": 318,
+      "source_frame_index": 354,
+      "frame_id": "00354",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00354.jpg",
+      "file": "frame_0318.pkl"
+    },
+    {
+      "position": 319,
+      "frame_index": 319,
+      "source_frame_index": 355,
+      "frame_id": "00355",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00355.jpg",
+      "file": "frame_0319.pkl"
+    },
+    {
+      "position": 320,
+      "frame_index": 320,
+      "source_frame_index": 356,
+      "frame_id": "00356",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00356.jpg",
+      "file": "frame_0320.pkl"
+    },
+    {
+      "position": 321,
+      "frame_index": 321,
+      "source_frame_index": 357,
+      "frame_id": "00357",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00357.jpg",
+      "file": "frame_0321.pkl"
+    },
+    {
+      "position": 322,
+      "frame_index": 322,
+      "source_frame_index": 358,
+      "frame_id": "00358",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00358.jpg",
+      "file": "frame_0322.pkl"
+    },
+    {
+      "position": 323,
+      "frame_index": 323,
+      "source_frame_index": 359,
+      "frame_id": "00359",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00359.jpg",
+      "file": "frame_0323.pkl"
+    },
+    {
+      "position": 324,
+      "frame_index": 324,
+      "source_frame_index": 360,
+      "frame_id": "00360",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00360.jpg",
+      "file": "frame_0324.pkl"
+    },
+    {
+      "position": 325,
+      "frame_index": 325,
+      "source_frame_index": 361,
+      "frame_id": "00361",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00361.jpg",
+      "file": "frame_0325.pkl"
+    },
+    {
+      "position": 326,
+      "frame_index": 326,
+      "source_frame_index": 362,
+      "frame_id": "00362",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00362.jpg",
+      "file": "frame_0326.pkl"
+    },
+    {
+      "position": 327,
+      "frame_index": 327,
+      "source_frame_index": 363,
+      "frame_id": "00363",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00363.jpg",
+      "file": "frame_0327.pkl"
+    },
+    {
+      "position": 328,
+      "frame_index": 328,
+      "source_frame_index": 364,
+      "frame_id": "00364",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00364.jpg",
+      "file": "frame_0328.pkl"
+    },
+    {
+      "position": 329,
+      "frame_index": 329,
+      "source_frame_index": 365,
+      "frame_id": "00365",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00365.jpg",
+      "file": "frame_0329.pkl"
+    },
+    {
+      "position": 330,
+      "frame_index": 330,
+      "source_frame_index": 366,
+      "frame_id": "00366",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00366.jpg",
+      "file": "frame_0330.pkl"
+    },
+    {
+      "position": 331,
+      "frame_index": 331,
+      "source_frame_index": 367,
+      "frame_id": "00367",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00367.jpg",
+      "file": "frame_0331.pkl"
+    },
+    {
+      "position": 332,
+      "frame_index": 332,
+      "source_frame_index": 368,
+      "frame_id": "00368",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00368.jpg",
+      "file": "frame_0332.pkl"
+    },
+    {
+      "position": 333,
+      "frame_index": 333,
+      "source_frame_index": 369,
+      "frame_id": "00369",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00369.jpg",
+      "file": "frame_0333.pkl"
+    },
+    {
+      "position": 334,
+      "frame_index": 334,
+      "source_frame_index": 370,
+      "frame_id": "00370",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00370.jpg",
+      "file": "frame_0334.pkl"
+    },
+    {
+      "position": 335,
+      "frame_index": 335,
+      "source_frame_index": 371,
+      "frame_id": "00371",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00371.jpg",
+      "file": "frame_0335.pkl"
+    },
+    {
+      "position": 336,
+      "frame_index": 336,
+      "source_frame_index": 372,
+      "frame_id": "00372",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00372.jpg",
+      "file": "frame_0336.pkl"
+    },
+    {
+      "position": 337,
+      "frame_index": 337,
+      "source_frame_index": 373,
+      "frame_id": "00373",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00373.jpg",
+      "file": "frame_0337.pkl"
+    },
+    {
+      "position": 338,
+      "frame_index": 338,
+      "source_frame_index": 374,
+      "frame_id": "00374",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00374.jpg",
+      "file": "frame_0338.pkl"
+    },
+    {
+      "position": 339,
+      "frame_index": 339,
+      "source_frame_index": 375,
+      "frame_id": "00375",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00375.jpg",
+      "file": "frame_0339.pkl"
+    },
+    {
+      "position": 340,
+      "frame_index": 340,
+      "source_frame_index": 376,
+      "frame_id": "00376",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00376.jpg",
+      "file": "frame_0340.pkl"
+    },
+    {
+      "position": 341,
+      "frame_index": 341,
+      "source_frame_index": 377,
+      "frame_id": "00377",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00377.jpg",
+      "file": "frame_0341.pkl"
+    },
+    {
+      "position": 342,
+      "frame_index": 342,
+      "source_frame_index": 378,
+      "frame_id": "00378",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00378.jpg",
+      "file": "frame_0342.pkl"
+    },
+    {
+      "position": 343,
+      "frame_index": 343,
+      "source_frame_index": 379,
+      "frame_id": "00379",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00379.jpg",
+      "file": "frame_0343.pkl"
+    },
+    {
+      "position": 344,
+      "frame_index": 344,
+      "source_frame_index": 380,
+      "frame_id": "00380",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00380.jpg",
+      "file": "frame_0344.pkl"
+    },
+    {
+      "position": 345,
+      "frame_index": 345,
+      "source_frame_index": 381,
+      "frame_id": "00381",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00381.jpg",
+      "file": "frame_0345.pkl"
+    },
+    {
+      "position": 346,
+      "frame_index": 346,
+      "source_frame_index": 382,
+      "frame_id": "00382",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00382.jpg",
+      "file": "frame_0346.pkl"
+    },
+    {
+      "position": 347,
+      "frame_index": 347,
+      "source_frame_index": 383,
+      "frame_id": "00383",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00383.jpg",
+      "file": "frame_0347.pkl"
+    },
+    {
+      "position": 348,
+      "frame_index": 348,
+      "source_frame_index": 384,
+      "frame_id": "00384",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00384.jpg",
+      "file": "frame_0348.pkl"
+    },
+    {
+      "position": 349,
+      "frame_index": 349,
+      "source_frame_index": 385,
+      "frame_id": "00385",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00385.jpg",
+      "file": "frame_0349.pkl"
+    },
+    {
+      "position": 350,
+      "frame_index": 350,
+      "source_frame_index": 386,
+      "frame_id": "00386",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00386.jpg",
+      "file": "frame_0350.pkl"
+    },
+    {
+      "position": 351,
+      "frame_index": 351,
+      "source_frame_index": 387,
+      "frame_id": "00387",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00387.jpg",
+      "file": "frame_0351.pkl"
+    },
+    {
+      "position": 352,
+      "frame_index": 352,
+      "source_frame_index": 388,
+      "frame_id": "00388",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00388.jpg",
+      "file": "frame_0352.pkl"
+    },
+    {
+      "position": 353,
+      "frame_index": 353,
+      "source_frame_index": 389,
+      "frame_id": "00389",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00389.jpg",
+      "file": "frame_0353.pkl"
+    },
+    {
+      "position": 354,
+      "frame_index": 354,
+      "source_frame_index": 390,
+      "frame_id": "00390",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00390.jpg",
+      "file": "frame_0354.pkl"
+    },
+    {
+      "position": 355,
+      "frame_index": 355,
+      "source_frame_index": 391,
+      "frame_id": "00391",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00391.jpg",
+      "file": "frame_0355.pkl"
+    },
+    {
+      "position": 356,
+      "frame_index": 356,
+      "source_frame_index": 392,
+      "frame_id": "00392",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00392.jpg",
+      "file": "frame_0356.pkl"
+    },
+    {
+      "position": 357,
+      "frame_index": 357,
+      "source_frame_index": 393,
+      "frame_id": "00393",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00393.jpg",
+      "file": "frame_0357.pkl"
+    },
+    {
+      "position": 358,
+      "frame_index": 358,
+      "source_frame_index": 394,
+      "frame_id": "00394",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00394.jpg",
+      "file": "frame_0358.pkl"
+    },
+    {
+      "position": 359,
+      "frame_index": 359,
+      "source_frame_index": 395,
+      "frame_id": "00395",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00395.jpg",
+      "file": "frame_0359.pkl"
+    },
+    {
+      "position": 360,
+      "frame_index": 360,
+      "source_frame_index": 396,
+      "frame_id": "00396",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00396.jpg",
+      "file": "frame_0360.pkl"
+    },
+    {
+      "position": 361,
+      "frame_index": 361,
+      "source_frame_index": 397,
+      "frame_id": "00397",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00397.jpg",
+      "file": "frame_0361.pkl"
+    },
+    {
+      "position": 362,
+      "frame_index": 362,
+      "source_frame_index": 398,
+      "frame_id": "00398",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00398.jpg",
+      "file": "frame_0362.pkl"
+    },
+    {
+      "position": 363,
+      "frame_index": 363,
+      "source_frame_index": 399,
+      "frame_id": "00399",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00399.jpg",
+      "file": "frame_0363.pkl"
+    },
+    {
+      "position": 364,
+      "frame_index": 364,
+      "source_frame_index": 400,
+      "frame_id": "00400",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00400.jpg",
+      "file": "frame_0364.pkl"
+    },
+    {
+      "position": 365,
+      "frame_index": 365,
+      "source_frame_index": 401,
+      "frame_id": "00401",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00401.jpg",
+      "file": "frame_0365.pkl"
+    },
+    {
+      "position": 366,
+      "frame_index": 366,
+      "source_frame_index": 402,
+      "frame_id": "00402",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00402.jpg",
+      "file": "frame_0366.pkl"
+    },
+    {
+      "position": 367,
+      "frame_index": 367,
+      "source_frame_index": 403,
+      "frame_id": "00403",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00403.jpg",
+      "file": "frame_0367.pkl"
+    },
+    {
+      "position": 368,
+      "frame_index": 368,
+      "source_frame_index": 404,
+      "frame_id": "00404",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00404.jpg",
+      "file": "frame_0368.pkl"
+    },
+    {
+      "position": 369,
+      "frame_index": 369,
+      "source_frame_index": 405,
+      "frame_id": "00405",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00405.jpg",
+      "file": "frame_0369.pkl"
+    },
+    {
+      "position": 370,
+      "frame_index": 370,
+      "source_frame_index": 406,
+      "frame_id": "00406",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00406.jpg",
+      "file": "frame_0370.pkl"
+    },
+    {
+      "position": 371,
+      "frame_index": 371,
+      "source_frame_index": 407,
+      "frame_id": "00407",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00407.jpg",
+      "file": "frame_0371.pkl"
+    },
+    {
+      "position": 372,
+      "frame_index": 372,
+      "source_frame_index": 408,
+      "frame_id": "00408",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00408.jpg",
+      "file": "frame_0372.pkl"
+    },
+    {
+      "position": 373,
+      "frame_index": 373,
+      "source_frame_index": 409,
+      "frame_id": "00409",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00409.jpg",
+      "file": "frame_0373.pkl"
+    },
+    {
+      "position": 374,
+      "frame_index": 374,
+      "source_frame_index": 410,
+      "frame_id": "00410",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00410.jpg",
+      "file": "frame_0374.pkl"
+    },
+    {
+      "position": 375,
+      "frame_index": 375,
+      "source_frame_index": 411,
+      "frame_id": "00411",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00411.jpg",
+      "file": "frame_0375.pkl"
+    },
+    {
+      "position": 376,
+      "frame_index": 376,
+      "source_frame_index": 412,
+      "frame_id": "00412",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00412.jpg",
+      "file": "frame_0376.pkl"
+    },
+    {
+      "position": 377,
+      "frame_index": 377,
+      "source_frame_index": 413,
+      "frame_id": "00413",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00413.jpg",
+      "file": "frame_0377.pkl"
+    },
+    {
+      "position": 378,
+      "frame_index": 378,
+      "source_frame_index": 414,
+      "frame_id": "00414",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00414.jpg",
+      "file": "frame_0378.pkl"
+    },
+    {
+      "position": 379,
+      "frame_index": 379,
+      "source_frame_index": 415,
+      "frame_id": "00415",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00415.jpg",
+      "file": "frame_0379.pkl"
+    },
+    {
+      "position": 380,
+      "frame_index": 380,
+      "source_frame_index": 416,
+      "frame_id": "00416",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00416.jpg",
+      "file": "frame_0380.pkl"
+    },
+    {
+      "position": 381,
+      "frame_index": 381,
+      "source_frame_index": 417,
+      "frame_id": "00417",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00417.jpg",
+      "file": "frame_0381.pkl"
+    },
+    {
+      "position": 382,
+      "frame_index": 382,
+      "source_frame_index": 418,
+      "frame_id": "00418",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00418.jpg",
+      "file": "frame_0382.pkl"
+    },
+    {
+      "position": 383,
+      "frame_index": 383,
+      "source_frame_index": 419,
+      "frame_id": "00419",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00419.jpg",
+      "file": "frame_0383.pkl"
+    },
+    {
+      "position": 384,
+      "frame_index": 384,
+      "source_frame_index": 420,
+      "frame_id": "00420",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00420.jpg",
+      "file": "frame_0384.pkl"
+    },
+    {
+      "position": 385,
+      "frame_index": 385,
+      "source_frame_index": 421,
+      "frame_id": "00421",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00421.jpg",
+      "file": "frame_0385.pkl"
+    },
+    {
+      "position": 386,
+      "frame_index": 386,
+      "source_frame_index": 422,
+      "frame_id": "00422",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00422.jpg",
+      "file": "frame_0386.pkl"
+    },
+    {
+      "position": 387,
+      "frame_index": 387,
+      "source_frame_index": 423,
+      "frame_id": "00423",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00423.jpg",
+      "file": "frame_0387.pkl"
+    },
+    {
+      "position": 388,
+      "frame_index": 388,
+      "source_frame_index": 424,
+      "frame_id": "00424",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00424.jpg",
+      "file": "frame_0388.pkl"
+    },
+    {
+      "position": 389,
+      "frame_index": 389,
+      "source_frame_index": 425,
+      "frame_id": "00425",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00425.jpg",
+      "file": "frame_0389.pkl"
+    },
+    {
+      "position": 390,
+      "frame_index": 390,
+      "source_frame_index": 426,
+      "frame_id": "00426",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00426.jpg",
+      "file": "frame_0390.pkl"
+    },
+    {
+      "position": 391,
+      "frame_index": 391,
+      "source_frame_index": 427,
+      "frame_id": "00427",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00427.jpg",
+      "file": "frame_0391.pkl"
+    },
+    {
+      "position": 392,
+      "frame_index": 392,
+      "source_frame_index": 428,
+      "frame_id": "00428",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00428.jpg",
+      "file": "frame_0392.pkl"
+    },
+    {
+      "position": 393,
+      "frame_index": 393,
+      "source_frame_index": 429,
+      "frame_id": "00429",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00429.jpg",
+      "file": "frame_0393.pkl"
+    },
+    {
+      "position": 394,
+      "frame_index": 394,
+      "source_frame_index": 430,
+      "frame_id": "00430",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00430.jpg",
+      "file": "frame_0394.pkl"
+    },
+    {
+      "position": 395,
+      "frame_index": 395,
+      "source_frame_index": 431,
+      "frame_id": "00431",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00431.jpg",
+      "file": "frame_0395.pkl"
+    },
+    {
+      "position": 396,
+      "frame_index": 396,
+      "source_frame_index": 432,
+      "frame_id": "00432",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00432.jpg",
+      "file": "frame_0396.pkl"
+    },
+    {
+      "position": 397,
+      "frame_index": 397,
+      "source_frame_index": 433,
+      "frame_id": "00433",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00433.jpg",
+      "file": "frame_0397.pkl"
+    },
+    {
+      "position": 398,
+      "frame_index": 398,
+      "source_frame_index": 434,
+      "frame_id": "00434",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00434.jpg",
+      "file": "frame_0398.pkl"
+    },
+    {
+      "position": 399,
+      "frame_index": 399,
+      "source_frame_index": 435,
+      "frame_id": "00435",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00435.jpg",
+      "file": "frame_0399.pkl"
+    },
+    {
+      "position": 400,
+      "frame_index": 400,
+      "source_frame_index": 436,
+      "frame_id": "00436",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00436.jpg",
+      "file": "frame_0400.pkl"
+    },
+    {
+      "position": 401,
+      "frame_index": 401,
+      "source_frame_index": 437,
+      "frame_id": "00437",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00437.jpg",
+      "file": "frame_0401.pkl"
+    },
+    {
+      "position": 402,
+      "frame_index": 402,
+      "source_frame_index": 438,
+      "frame_id": "00438",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00438.jpg",
+      "file": "frame_0402.pkl"
+    },
+    {
+      "position": 403,
+      "frame_index": 403,
+      "source_frame_index": 439,
+      "frame_id": "00439",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00439.jpg",
+      "file": "frame_0403.pkl"
+    },
+    {
+      "position": 404,
+      "frame_index": 404,
+      "source_frame_index": 440,
+      "frame_id": "00440",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00440.jpg",
+      "file": "frame_0404.pkl"
+    },
+    {
+      "position": 405,
+      "frame_index": 405,
+      "source_frame_index": 441,
+      "frame_id": "00441",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00441.jpg",
+      "file": "frame_0405.pkl"
+    },
+    {
+      "position": 406,
+      "frame_index": 406,
+      "source_frame_index": 442,
+      "frame_id": "00442",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00442.jpg",
+      "file": "frame_0406.pkl"
+    },
+    {
+      "position": 407,
+      "frame_index": 407,
+      "source_frame_index": 443,
+      "frame_id": "00443",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00443.jpg",
+      "file": "frame_0407.pkl"
+    },
+    {
+      "position": 408,
+      "frame_index": 408,
+      "source_frame_index": 444,
+      "frame_id": "00444",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00444.jpg",
+      "file": "frame_0408.pkl"
+    },
+    {
+      "position": 409,
+      "frame_index": 409,
+      "source_frame_index": 445,
+      "frame_id": "00445",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00445.jpg",
+      "file": "frame_0409.pkl"
+    },
+    {
+      "position": 410,
+      "frame_index": 410,
+      "source_frame_index": 446,
+      "frame_id": "00446",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00446.jpg",
+      "file": "frame_0410.pkl"
+    },
+    {
+      "position": 411,
+      "frame_index": 411,
+      "source_frame_index": 447,
+      "frame_id": "00447",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00447.jpg",
+      "file": "frame_0411.pkl"
+    },
+    {
+      "position": 412,
+      "frame_index": 412,
+      "source_frame_index": 448,
+      "frame_id": "00448",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00448.jpg",
+      "file": "frame_0412.pkl"
+    },
+    {
+      "position": 413,
+      "frame_index": 413,
+      "source_frame_index": 449,
+      "frame_id": "00449",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00449.jpg",
+      "file": "frame_0413.pkl"
+    },
+    {
+      "position": 414,
+      "frame_index": 414,
+      "source_frame_index": 450,
+      "frame_id": "00450",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00450.jpg",
+      "file": "frame_0414.pkl"
+    },
+    {
+      "position": 415,
+      "frame_index": 415,
+      "source_frame_index": 451,
+      "frame_id": "00451",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00451.jpg",
+      "file": "frame_0415.pkl"
+    },
+    {
+      "position": 416,
+      "frame_index": 416,
+      "source_frame_index": 452,
+      "frame_id": "00452",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00452.jpg",
+      "file": "frame_0416.pkl"
+    },
+    {
+      "position": 417,
+      "frame_index": 417,
+      "source_frame_index": 453,
+      "frame_id": "00453",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00453.jpg",
+      "file": "frame_0417.pkl"
+    },
+    {
+      "position": 418,
+      "frame_index": 418,
+      "source_frame_index": 454,
+      "frame_id": "00454",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00454.jpg",
+      "file": "frame_0418.pkl"
+    },
+    {
+      "position": 419,
+      "frame_index": 419,
+      "source_frame_index": 455,
+      "frame_id": "00455",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00455.jpg",
+      "file": "frame_0419.pkl"
+    },
+    {
+      "position": 420,
+      "frame_index": 420,
+      "source_frame_index": 456,
+      "frame_id": "00456",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00456.jpg",
+      "file": "frame_0420.pkl"
+    },
+    {
+      "position": 421,
+      "frame_index": 421,
+      "source_frame_index": 457,
+      "frame_id": "00457",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00457.jpg",
+      "file": "frame_0421.pkl"
+    },
+    {
+      "position": 422,
+      "frame_index": 422,
+      "source_frame_index": 458,
+      "frame_id": "00458",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00458.jpg",
+      "file": "frame_0422.pkl"
+    },
+    {
+      "position": 423,
+      "frame_index": 423,
+      "source_frame_index": 459,
+      "frame_id": "00459",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00459.jpg",
+      "file": "frame_0423.pkl"
+    },
+    {
+      "position": 424,
+      "frame_index": 424,
+      "source_frame_index": 460,
+      "frame_id": "00460",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00460.jpg",
+      "file": "frame_0424.pkl"
+    },
+    {
+      "position": 425,
+      "frame_index": 425,
+      "source_frame_index": 461,
+      "frame_id": "00461",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00461.jpg",
+      "file": "frame_0425.pkl"
+    },
+    {
+      "position": 426,
+      "frame_index": 426,
+      "source_frame_index": 462,
+      "frame_id": "00462",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00462.jpg",
+      "file": "frame_0426.pkl"
+    },
+    {
+      "position": 427,
+      "frame_index": 427,
+      "source_frame_index": 463,
+      "frame_id": "00463",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00463.jpg",
+      "file": "frame_0427.pkl"
+    },
+    {
+      "position": 428,
+      "frame_index": 428,
+      "source_frame_index": 464,
+      "frame_id": "00464",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00464.jpg",
+      "file": "frame_0428.pkl"
+    },
+    {
+      "position": 429,
+      "frame_index": 429,
+      "source_frame_index": 465,
+      "frame_id": "00465",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00465.jpg",
+      "file": "frame_0429.pkl"
+    },
+    {
+      "position": 430,
+      "frame_index": 430,
+      "source_frame_index": 466,
+      "frame_id": "00466",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00466.jpg",
+      "file": "frame_0430.pkl"
+    },
+    {
+      "position": 431,
+      "frame_index": 431,
+      "source_frame_index": 467,
+      "frame_id": "00467",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00467.jpg",
+      "file": "frame_0431.pkl"
+    },
+    {
+      "position": 432,
+      "frame_index": 432,
+      "source_frame_index": 468,
+      "frame_id": "00468",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00468.jpg",
+      "file": "frame_0432.pkl"
+    },
+    {
+      "position": 433,
+      "frame_index": 433,
+      "source_frame_index": 469,
+      "frame_id": "00469",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00469.jpg",
+      "file": "frame_0433.pkl"
+    },
+    {
+      "position": 434,
+      "frame_index": 434,
+      "source_frame_index": 470,
+      "frame_id": "00470",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00470.jpg",
+      "file": "frame_0434.pkl"
+    },
+    {
+      "position": 435,
+      "frame_index": 435,
+      "source_frame_index": 471,
+      "frame_id": "00471",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00471.jpg",
+      "file": "frame_0435.pkl"
+    },
+    {
+      "position": 436,
+      "frame_index": 436,
+      "source_frame_index": 472,
+      "frame_id": "00472",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00472.jpg",
+      "file": "frame_0436.pkl"
+    },
+    {
+      "position": 437,
+      "frame_index": 437,
+      "source_frame_index": 473,
+      "frame_id": "00473",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00473.jpg",
+      "file": "frame_0437.pkl"
+    },
+    {
+      "position": 438,
+      "frame_index": 438,
+      "source_frame_index": 474,
+      "frame_id": "00474",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00474.jpg",
+      "file": "frame_0438.pkl"
+    },
+    {
+      "position": 439,
+      "frame_index": 439,
+      "source_frame_index": 475,
+      "frame_id": "00475",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00475.jpg",
+      "file": "frame_0439.pkl"
+    },
+    {
+      "position": 440,
+      "frame_index": 440,
+      "source_frame_index": 476,
+      "frame_id": "00476",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00476.jpg",
+      "file": "frame_0440.pkl"
+    },
+    {
+      "position": 441,
+      "frame_index": 441,
+      "source_frame_index": 477,
+      "frame_id": "00477",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00477.jpg",
+      "file": "frame_0441.pkl"
+    },
+    {
+      "position": 442,
+      "frame_index": 442,
+      "source_frame_index": 478,
+      "frame_id": "00478",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00478.jpg",
+      "file": "frame_0442.pkl"
+    },
+    {
+      "position": 443,
+      "frame_index": 443,
+      "source_frame_index": 479,
+      "frame_id": "00479",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00479.jpg",
+      "file": "frame_0443.pkl"
+    },
+    {
+      "position": 444,
+      "frame_index": 444,
+      "source_frame_index": 480,
+      "frame_id": "00480",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00480.jpg",
+      "file": "frame_0444.pkl"
+    },
+    {
+      "position": 445,
+      "frame_index": 445,
+      "source_frame_index": 481,
+      "frame_id": "00481",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00481.jpg",
+      "file": "frame_0445.pkl"
+    },
+    {
+      "position": 446,
+      "frame_index": 446,
+      "source_frame_index": 482,
+      "frame_id": "00482",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00482.jpg",
+      "file": "frame_0446.pkl"
+    },
+    {
+      "position": 447,
+      "frame_index": 447,
+      "source_frame_index": 483,
+      "frame_id": "00483",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00483.jpg",
+      "file": "frame_0447.pkl"
+    },
+    {
+      "position": 448,
+      "frame_index": 448,
+      "source_frame_index": 484,
+      "frame_id": "00484",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00484.jpg",
+      "file": "frame_0448.pkl"
+    },
+    {
+      "position": 449,
+      "frame_index": 449,
+      "source_frame_index": 485,
+      "frame_id": "00485",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00485.jpg",
+      "file": "frame_0449.pkl"
+    },
+    {
+      "position": 450,
+      "frame_index": 450,
+      "source_frame_index": 486,
+      "frame_id": "00486",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00486.jpg",
+      "file": "frame_0450.pkl"
+    },
+    {
+      "position": 451,
+      "frame_index": 451,
+      "source_frame_index": 487,
+      "frame_id": "00487",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00487.jpg",
+      "file": "frame_0451.pkl"
+    },
+    {
+      "position": 452,
+      "frame_index": 452,
+      "source_frame_index": 488,
+      "frame_id": "00488",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00488.jpg",
+      "file": "frame_0452.pkl"
+    },
+    {
+      "position": 453,
+      "frame_index": 453,
+      "source_frame_index": 489,
+      "frame_id": "00489",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00489.jpg",
+      "file": "frame_0453.pkl"
+    },
+    {
+      "position": 454,
+      "frame_index": 454,
+      "source_frame_index": 490,
+      "frame_id": "00490",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00490.jpg",
+      "file": "frame_0454.pkl"
+    },
+    {
+      "position": 455,
+      "frame_index": 455,
+      "source_frame_index": 491,
+      "frame_id": "00491",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00491.jpg",
+      "file": "frame_0455.pkl"
+    },
+    {
+      "position": 456,
+      "frame_index": 456,
+      "source_frame_index": 492,
+      "frame_id": "00492",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00492.jpg",
+      "file": "frame_0456.pkl"
+    },
+    {
+      "position": 457,
+      "frame_index": 457,
+      "source_frame_index": 493,
+      "frame_id": "00493",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00493.jpg",
+      "file": "frame_0457.pkl"
+    },
+    {
+      "position": 458,
+      "frame_index": 458,
+      "source_frame_index": 494,
+      "frame_id": "00494",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00494.jpg",
+      "file": "frame_0458.pkl"
+    },
+    {
+      "position": 459,
+      "frame_index": 459,
+      "source_frame_index": 495,
+      "frame_id": "00495",
+      "source_image": "/home/zhw/xyb_space/emdb/P1/16_outdoor_warmup/images/00495.jpg",
+      "file": "frame_0459.pkl"
+    }
+  ],
+  "note": "Trusted local pickle cache containing the complete SequenceViewer scene."
+}
