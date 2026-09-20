@@ -8,6 +8,7 @@ RICH_ROOT="${RICH_ROOT:-/home/zhw/xyb_space/RICH}"
 DOWNLOAD_DIR="${DOWNLOAD_DIR:-${RICH_ROOT}/official_downloads}"
 CONNECTIONS_PER_FILE="${CONNECTIONS_PER_FILE:-16}"
 SPLITS_PER_FILE="${SPLITS_PER_FILE:-16}"
+RICH_USERNAME="${RICH_USERNAME:-xinbev@126.com}"
 
 TEST_IMAGES_URL="https://download.is.tue.mpg.de/download.php?domain=rich&resume=1&sfile=JPG_images/test.tar.gz"
 SCAN_CALIBRATION_URL="https://download.is.tue.mpg.de/download.php?domain=rich&resume=1&sfile=scan_calibration.zip"
@@ -27,13 +28,11 @@ fi
 mkdir -p "${DOWNLOAD_DIR}"
 
 AUTH_ARGS=()
-if [[ -n "${RICH_USERNAME:-}" ]]; then
-  if [[ -z "${RICH_PASSWORD:-}" ]]; then
-    read -r -s -p "RICH password for ${RICH_USERNAME}: " RICH_PASSWORD
-    echo
-  fi
-  AUTH_ARGS=(--http-user="${RICH_USERNAME}" --http-passwd="${RICH_PASSWORD}")
+if [[ -z "${RICH_PASSWORD:-}" ]]; then
+  read -r -s -p "RICH password for ${RICH_USERNAME}: " RICH_PASSWORD
+  echo
 fi
+AUTH_ARGS=(--http-user="${RICH_USERNAME}" --http-passwd="${RICH_PASSWORD}")
 
 download_file() {
   local url="$1"
