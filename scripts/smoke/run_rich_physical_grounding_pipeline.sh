@@ -4,8 +4,34 @@ set -euo pipefail
 REPO_ROOT="${REPO_ROOT:-/home/zhw/lab_users/xyb/home/projects/vggt-human}"
 RICH_ROOT="${RICH_ROOT:-/home/zhw/xyb_space/RICH/official}"
 RICH_SEQUENCE="${RICH_SEQUENCE:-Gym_010_cooking1}"
-RICH_CAMERA="${RICH_CAMERA:-cam_00}"
-FRAMES_DIR="${FRAMES_DIR:-${RICH_ROOT}/test/${RICH_SEQUENCE}/${RICH_CAMERA}}"
+RICH_CAMERA="${RICH_CAMERA:-}"
+
+if [[ -z "${FRAMES_DIR:-}" ]]; then
+  RICH_SEQUENCE_DIR="${RICH_ROOT}/test/${RICH_SEQUENCE}"
+  [[ -d "${RICH_SEQUENCE_DIR}" ]] || {
+    echo "[ERROR] Missing RICH sequence: ${RICH_SEQUENCE_DIR}" >&2
+    exit 1
+  }
+  if [[ -z "${RICH_CAMERA}" ]]; then
+    shopt -s nullglob
+    camera_dirs=("${RICH_SEQUENCE_DIR}"/cam_*)
+    shopt -u nullglob
+    if [[ "${#camera_dirs[@]}" -eq 0 ]]; then
+      echo "[ERROR] No cam_* directories under: ${RICH_SEQUENCE_DIR}" >&2
+      exit 1
+    fi
+    mapfile -t camera_dirs < <(printf '%s\n' "${camera_dirs[@]}" | sort)
+    FRAMES_DIR="${camera_dirs[0]}"
+    RICH_CAMERA="$(basename "${FRAMES_DIR}")"
+  else
+    FRAMES_DIR="${RICH_SEQUENCE_DIR}/${RICH_CAMERA}"
+  fi
+else
+  FRAMES_DIR="${FRAMES_DIR}"
+  if [[ -z "${RICH_CAMERA}" ]]; then
+    RICH_CAMERA="$(basename "${FRAMES_DIR%/}")"
+  fi
+fi
 
 STAGE2_DIR="${STAGE2_DIR:-${REPO_ROOT}/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full}"
 CHECKPOINT="${CHECKPOINT:-${STAGE2_DIR}/checkpoint_latest.pt}"
