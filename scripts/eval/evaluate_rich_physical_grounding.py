@@ -31,6 +31,11 @@ from vggt_omega.evaluation.rich_physical_grounding import (  # noqa: E402
     configure_reference_cascade_model,
     run_metric_cascade,
 )
+from vggt_omega.evaluation.rich_scale_oracle import (  # noqa: E402
+    CACHE_FORMAT as MANUAL_SCALE_CACHE_FORMAT,
+    build_scale_window_cache,
+    save_scale_window_cache,
+)
 from vggt_omega.models.smpl_layer import SMPLLayer  # noqa: E402
 from vggt_omega.training.config import deep_update, load_yaml_config, require_path  # noqa: E402
 
@@ -92,6 +97,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-support-points", type=int, default=64)
     parser.add_argument("--tolerance-m", type=float, default=0.005)
     parser.add_argument("--target-min-iou", type=float, default=0.30)
+    parser.add_argument(
+        "--manual-scale-cache-dir",
+        type=Path,
+        default=None,
+        help="Optionally cache each inference window for manual/oracle scale experiments.",
+    )
     parser.add_argument("--resume", action="store_true")
     return parser.parse_args()
 
@@ -106,6 +117,13 @@ def main() -> None:
     output_dir = args.output_dir.expanduser().resolve()
     sequence_dir = output_dir / "sequences"
     sequence_dir.mkdir(parents=True, exist_ok=True)
+    manual_cache_dir = (
+        args.manual_scale_cache_dir.expanduser().resolve()
+        if args.manual_scale_cache_dir is not None
+        else None
+    )
+    if manual_cache_dir is not None:
+        (manual_cache_dir / "windows").mkdir(parents=True, exist_ok=True)
 
     path_config = load_yaml_config(args.path_config)
     train_config = load_yaml_config(args.train_config)
@@ -186,6 +204,8 @@ def main() -> None:
         device=device,
     )
     smpl = SMPLLayer(smpl_model_dir).to(device).eval()
+    if manual_cache_dir is not None:
+        np.save(manual_cache_dir / "smpl_faces.npy", np.asarray(smpl.faces, dtype=np.int32), allow_pickle=False)
     run_metadata = {
         "protocol": args.dataset_protocol,
         "official_identity_claim": False,
@@ -213,6 +233,7 @@ def main() -> None:
             "scale_checkpoint": str(args.scale_checkpoint),
             "smpl_model_dir": str(smpl_model_dir),
         },
+        "manual_scale_cache_dir": str(manual_cache_dir) if manual_cache_dir is not None else None,
     }
     write_json(output_dir / "run_config.json", run_metadata)
 
@@ -221,11 +242,17 @@ def main() -> None:
     sequence_results: list[dict[str, Any]] = []
     for sequence_index, record in enumerate(dataset, start=1):
         result_path = sequence_dir / f"{safe_name(record.vid)}.json"
+        positions = dataset.selected_label_positions(record)
+        manual_cache_ready = (
+            manual_cache_dir is None
+            or sequence_manual_cache_complete(manual_cache_dir, record.vid, len(positions), args.window_size)
+        )
         if args.resume and result_path.is_file():
             payload = json.loads(result_path.read_text(encoding="utf-8"))
             if (
                 int(payload.get("evaluation_window_frames", -1)) == args.window_size
                 and payload.get("dataset_protocol") == args.dataset_protocol
+                and manual_cache_ready
             ):
                 sequence_results.append(payload["sequence"])
                 all_frames.extend(payload["frames"])
@@ -238,7 +265,6 @@ def main() -> None:
                 flush=True,
             )
 
-        positions = dataset.selected_label_positions(record)
         print(f"[sequence {sequence_index}/{len(dataset)}] {record.vid} frames={len(positions)}", flush=True)
         frame_rows: list[dict[str, Any]] = []
         window_reports = []
@@ -251,6 +277,35 @@ def main() -> None:
             predictions, cascade_report = run_metric_cascade(
                 model, smpl, images, cascade_config
             )
+            if manual_cache_dir is not None:
+                window_stem = manual_window_stem(record.vid, window_index)
+                cache_path = manual_cache_dir / "windows" / f"{window_stem}.npz"
+                cache_metadata_path = manual_cache_dir / "windows" / f"{window_stem}.json"
+                scale_cache = build_scale_window_cache(
+                    predictions,
+                    smpl,
+                    images,
+                    boxes,
+                    mask,
+                    ground_config,
+                )
+                save_scale_window_cache(cache_path, scale_cache)
+                write_json(
+                    cache_metadata_path,
+                    {
+                        "format": MANUAL_SCALE_CACHE_FORMAT,
+                        "window_id": window_stem,
+                        "cache_file": str(cache_path.relative_to(manual_cache_dir)),
+                        "vid": record.vid,
+                        "recording": record.recording,
+                        "camera": record.camera,
+                        "window_index": window_index,
+                        "sequence_positions": [int(value) for value in batch.label_positions],
+                        "source_frame_ids": [int(value) for value in batch.source_frame_ids],
+                        "image_paths": [str(value) for value in batch.image_paths],
+                        "frame_count": len(batch.label_positions),
+                    },
+                )
             evaluated, ground_report = evaluate_prediction_chunk(predictions, smpl, boxes, mask, ground_config)
             for local_index, row in enumerate(evaluated):
                 row.update(
@@ -351,6 +406,31 @@ def main() -> None:
     write_csv(output_dir / "per_window.csv", all_windows)
     write_csv(output_dir / "per_sequence.csv", sequence_results)
     write_csv(output_dir / "summary.csv", [{"aggregation": "pooled_frames", **pooled}, {"aggregation": "mean_of_sequences", **sequence_mean}])
+    if manual_cache_dir is not None:
+        expected_metadata = [
+            manual_cache_dir / "windows" / f"{manual_window_stem(record.vid, window_index)}.json"
+            for record in dataset
+            for window_index in range(
+                (len(dataset.selected_label_positions(record)) + args.window_size - 1) // args.window_size
+            )
+        ]
+        missing_metadata = [path for path in expected_metadata if not path.is_file()]
+        if missing_metadata:
+            raise RuntimeError(f"Missing manual-scale cache metadata: {missing_metadata[0]}")
+        window_records = [json.loads(path.read_text(encoding="utf-8")) for path in expected_metadata]
+        write_json(
+            manual_cache_dir / "manifest.json",
+            {
+                "format": MANUAL_SCALE_CACHE_FORMAT,
+                "dataset_protocol": args.dataset_protocol,
+                "window_size": args.window_size,
+                "window_count": len(window_records),
+                "ground_config": asdict(ground_config),
+                "smpl_faces_file": "smpl_faces.npy",
+                "windows": window_records,
+            },
+        )
+        print(f"[manual-scale-cache] {manual_cache_dir / 'manifest.json'}", flush=True)
     print("[done] RICH physical-grounding evaluation", flush=True)
     print(json.dumps({"pooled_frames": pooled, "mean_of_sequences": sequence_mean}, indent=2), flush=True)
     print(f"[output] {output_dir}", flush=True)
@@ -364,6 +444,19 @@ def load_manifest(path: Path) -> list[str]:
 
 def safe_name(value: str) -> str:
     return value.replace("/", "__").replace("\\", "__")
+
+
+def manual_window_stem(vid: str, window_index: int) -> str:
+    return f"{safe_name(vid)}__w{int(window_index):04d}"
+
+
+def sequence_manual_cache_complete(cache_dir: Path, vid: str, frame_count: int, window_size: int) -> bool:
+    expected = (int(frame_count) + int(window_size) - 1) // int(window_size)
+    return all(
+        (cache_dir / "windows" / f"{manual_window_stem(vid, index)}.npz").is_file()
+        and (cache_dir / "windows" / f"{manual_window_stem(vid, index)}.json").is_file()
+        for index in range(expected)
+    )
 
 
 def write_json(path: Path, value: Any) -> None:

@@ -20,6 +20,7 @@ MAX_FRAMES_PER_SEQUENCE="${MAX_FRAMES_PER_SEQUENCE:-0}"
 MAX_SEQUENCES="${MAX_SEQUENCES:-0}"
 SEQUENCE_MANIFEST="${SEQUENCE_MANIFEST:-}"
 RESUME="${RESUME-}"
+MANUAL_SCALE_CACHE_DIR="${MANUAL_SCALE_CACHE_DIR:-}"
 
 if [[ "${MODE}" == "smoke" ]]; then
   RICH_SEQUENCE="${RICH_SEQUENCE:-ParkingLot2_017_burpeejump2/cam_10}"
@@ -56,6 +57,9 @@ fi
 if [[ "${RESUME}" == "true" ]]; then
   args+=(--resume)
 fi
+if [[ -n "${MANUAL_SCALE_CACHE_DIR}" ]]; then
+  args+=(--manual-scale-cache-dir "${MANUAL_SCALE_CACHE_DIR}")
+fi
 
 echo "RICH physical-grounding metric evaluation"
 echo "Mode       : ${MODE}"
@@ -68,6 +72,7 @@ echo "Stage2 ckpt: ${CHECKPOINT}"
 echo "Scale ckpt : ${SCALE_CHECKPOINT}"
 echo "NLF slots  : ${MAX_HUMANS} (cam_10 uses highest-confidence detector target)"
 echo "Output     : ${OUTPUT_DIR}"
+echo "Scale cache: ${MANUAL_SCALE_CACHE_DIR:-<disabled>}"
 
 CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" \
 PYTHONPATH="${ROOT_DIR}${PYTHONPATH:+:${PYTHONPATH}}" \

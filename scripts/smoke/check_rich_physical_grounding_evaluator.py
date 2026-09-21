@@ -25,6 +25,12 @@ from vggt_omega.evaluation.rich_physical_grounding import (
     normalized_cxcywh_iou,
     select_local_support_y,
 )
+from vggt_omega.evaluation.rich_scale_oracle import (
+    CACHE_FORMAT,
+    load_scale_window_cache,
+    reconstruct_scale_frame,
+    save_scale_window_cache,
+)
 
 
 def main() -> None:
@@ -128,6 +134,36 @@ def main() -> None:
         assert moving_batch.images.shape[:2] == (2, 3)
         assert moving_batch.images.shape[-2] % 16 == 0
         assert moving_batch.images.shape[-1] % 16 == 0
+
+        scale_cache = {
+            "format": np.asarray(CACHE_FORMAT),
+            "depth": np.full((1, 2, 2), 2.0, dtype=np.float32),
+            "rgb": np.full((1, 2, 2, 3), 127, dtype=np.uint8),
+            "intrinsics": np.asarray([[[2.0, 0.0, 0.5], [0.0, 2.0, 0.5], [0.0, 0.0, 1.0]]], dtype=np.float32),
+            "extrinsics": np.asarray(
+                [[[1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 2.0], [0.0, 0.0, 1.0, 3.0], [0.0, 0.0, 0.0, 1.0]]],
+                dtype=np.float32,
+            ),
+            "vertices_cam": np.asarray([[[0.0, 0.0, 2.0], [0.0, 1.0, 2.0]]], dtype=np.float32),
+            "selection_boxes": np.zeros((1, 4), dtype=np.float32),
+            "selected_valid": np.ones((1,), dtype=np.uint8),
+            "query_indices": np.zeros((1,), dtype=np.int16),
+            "confidences": np.ones((1,), dtype=np.float32),
+            "model_scale": np.ones((1,), dtype=np.float32),
+            "image_hw": np.asarray((2, 2), dtype=np.int32),
+            "scene_point_stride": np.asarray(1, dtype=np.int32),
+        }
+        cache_path = root / "manual_scale_window.npz"
+        save_scale_window_cache(cache_path, scale_cache)
+        restored_cache = load_scale_window_cache(cache_path)
+        base_points, _, base_vertices = reconstruct_scale_frame(
+            restored_cache, 0, 1.0, GroundEstimatorConfig(max_scene_depth_m=0.0), exclude_person=False
+        )
+        scaled_points, _, scaled_vertices = reconstruct_scale_frame(
+            restored_cache, 0, 2.0, GroundEstimatorConfig(max_scene_depth_m=0.0), exclude_person=False
+        )
+        assert torch.allclose(scaled_points, base_points * 2.0)
+        assert torch.allclose(scaled_vertices - base_vertices, torch.tensor([[-1.0, -2.0, -3.0]]).expand_as(base_vertices))
 
     print("RICH physical-grounding evaluator smoke checks passed.")
 
