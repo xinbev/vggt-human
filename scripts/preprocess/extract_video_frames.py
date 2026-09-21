@@ -31,6 +31,7 @@ def main() -> None:
         start_frame=args.start_frame,
         end_frame=args.end_frame,
         stride=args.stride,
+        target_fps=args.target_fps,
         max_frames=args.max_frames,
         frame_id_width=args.frame_id_width,
         jpeg_quality=args.jpeg_quality,
@@ -45,6 +46,7 @@ def main() -> None:
         "start_frame": int(args.start_frame),
         "end_frame": int(args.end_frame),
         "stride": int(args.stride),
+        "target_fps": float(args.target_fps),
         "max_frames": int(args.max_frames),
         "finished_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         **stats,
@@ -62,6 +64,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--start-frame", type=int, default=0)
     parser.add_argument("--end-frame", type=int, default=-1, help="Inclusive end frame; -1 means video end.")
     parser.add_argument("--stride", type=int, default=1, help="Keep every Nth frame.")
+    parser.add_argument(
+        "--target-fps",
+        type=float,
+        default=0.0,
+        help="Output sampling rate in frames per second; 0 keeps the source rate. Overrides --stride when set.",
+    )
     parser.add_argument("--max-frames", type=int, default=0, help="0 means no limit.")
     parser.add_argument("--frame-id-width", type=int, default=6)
     parser.add_argument("--image-ext", choices=("png", "jpg"), default="png")
@@ -74,6 +82,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("--stride must be > 0")
     if args.max_frames < 0:
         parser.error("--max-frames must be >= 0")
+    if args.target_fps < 0:
+        parser.error("--target-fps must be >= 0")
     return args
 
 
@@ -85,6 +95,7 @@ def extract_frames(
     start_frame: int,
     end_frame: int,
     stride: int,
+    target_fps: float,
     max_frames: int,
     frame_id_width: int,
     jpeg_quality: int,
@@ -110,6 +121,10 @@ def extract_frames(
     cap.set(cv2.CAP_PROP_POS_FRAMES, int(start_frame))
     read_index = int(start_frame)
     written = 0
+    sample_interval = 1.0 / float(target_fps) if target_fps > 0 else 0.0
+    next_sample_time = float(start_frame) / fps if target_fps > 0 and fps > 0 else 0.0
+    if target_fps > 0 and fps <= 0:
+        raise RuntimeError(f"Cannot sample at target FPS because source FPS is unavailable: {video_path}")
     try:
         while True:
             if end_frame >= 0 and read_index > end_frame:
@@ -117,7 +132,14 @@ def extract_frames(
             ok, frame = cap.read()
             if not ok:
                 break
-            if (read_index - start_frame) % stride == 0:
+            if target_fps > 0:
+                source_time = float(read_index) / fps
+                should_write = source_time + 1e-9 >= next_sample_time
+                if should_write:
+                    next_sample_time += sample_interval
+            else:
+                should_write = (read_index - start_frame) % stride == 0
+            if should_write:
                 frame_name = f"{written:0{frame_id_width}d}.{image_ext}"
                 output_path = output_dir / frame_name
                 if not cv2.imwrite(str(output_path), frame, write_params):
