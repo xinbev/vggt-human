@@ -9,6 +9,15 @@ import torch
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png"}
 
 
+def resolve_scene_asset_name(sequence_name: str) -> str:
+    scene_name = sequence_name.split("_", 1)[0]
+    if scene_name != "LectureHall":
+        return scene_name
+    if "wipingchairs" in sequence_name or "reparingprojector" in sequence_name:
+        return "LectureHall_chair"
+    return "LectureHall_yoga"
+
+
 def load_torch(path: Path) -> Any:
     try:
         return torch.load(path, map_location="cpu", weights_only=False)
@@ -75,6 +84,7 @@ def main() -> None:
 
         split, sequence_name, camera_name = parts
         scene_name = sequence_name.split("_", 1)[0]
+        scene_asset_name = resolve_scene_asset_name(sequence_name)
         try:
             camera_id = int(camera_name.removeprefix("cam_"))
         except ValueError:
@@ -103,12 +113,17 @@ def main() -> None:
             )
 
         calibration_root = args.official_root / "scan_calibration" / scene_name
-        scan_path = calibration_root / "scan_camcoord.ply"
+        scan_filename = (
+            f"scan_{scene_asset_name.removeprefix('LectureHall_')}_scene_camcoord.ply"
+            if scene_name == "LectureHall"
+            else "scan_camcoord.ply"
+        )
+        scan_path = calibration_root / scan_filename
         camera_xml = calibration_root / "calibration" / f"{camera_id:03d}.xml"
         world_path = (
             args.official_root
             / "multicam2world"
-            / f"{scene_name}_multicam2world.json"
+            / f"{scene_asset_name}_multicam2world.json"
         )
         cam_key = f"{scene_name}_{camera_id}"
 
@@ -127,6 +142,7 @@ def main() -> None:
             {
                 "vid": vid,
                 "scene": scene_name,
+                "scene_asset": scene_asset_name,
                 "camera_id": camera_id,
                 "available_images": len(images),
                 "selected_frames": selected_frames,
@@ -136,12 +152,14 @@ def main() -> None:
             }
         )
 
+    recording_count = len({record["vid"].split("/")[1] for record in records})
     report = {
         "official_root": str(args.official_root),
         "support_root": str(args.support_root),
         "labels_path": str(labels_path),
         "cam_params_path": str(cam_params_path),
         "sequence_count": len(records),
+        "recording_count": recording_count,
         "sequences_with_issues": issue_count,
         "total_selected_frames": total_selected_frames,
         "records": records,
@@ -149,7 +167,8 @@ def main() -> None:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
-    print(f"RICH sequences: {len(records)}")
+    print(f"RICH camera views: {len(records)}")
+    print(f"Unique recordings: {recording_count}")
     print(f"Selected frames: {total_selected_frames}")
     print(f"Sequences with issues: {issue_count}")
     print(f"Report: {args.output}")
