@@ -54,7 +54,8 @@ class RichPhysicalGroundingDataset:
     ``rich_test_labels.pt['frame_id']`` is interpreted as an index into the
     sorted official image list of the corresponding camera directory. This is
     the same contract checked by ``check_rich_physical_grounding_assets.py``.
-    Only the RICH target person is exposed, in query slot zero.
+    The RICH target box is stored in slot zero for deterministic detector-output
+    matching; it is not silently treated as the highest-confidence person.
     """
 
     def __init__(

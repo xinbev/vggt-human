@@ -17,6 +17,8 @@ from vggt_omega.data.rich_physical_grounding import RichPhysicalGroundingDataset
 from vggt_omega.evaluation.rich_physical_grounding import (
     GroundEstimatorConfig,
     compute_physical_metrics,
+    configure_reference_cascade_model,
+    normalized_cxcywh_iou,
     select_local_support_y,
 )
 
@@ -30,6 +32,13 @@ def main() -> None:
     assert abs(metrics["float_cm"] - 1.25) < 1e-8
     assert abs(metrics["penetration_max_cm"] - 1.0) < 1e-8
 
+    ious = normalized_cxcywh_iou(
+        torch.tensor([[0.5, 0.5, 0.4, 0.4], [0.1, 0.1, 0.1, 0.1]]),
+        torch.tensor([0.5, 0.5, 0.4, 0.4]),
+    )
+    assert int(torch.argmax(ious)) == 0
+    assert abs(float(ious[0]) - 1.0) < 1e-6
+
     body = torch.tensor([[-0.1, 0.0, 1.0], [0.1, 1.0, 1.2]], dtype=torch.float32)
     scene = torch.tensor([[0.0, 1.02, 1.1], [0.0, 1.03, 1.15], [2.0, 1.02, 1.1]], dtype=torch.float32)
     support = select_local_support_y(
@@ -42,6 +51,25 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as temporary:
         root = Path(temporary)
+        checkpoint_path = root / "legacy_stage2.pt"
+        torch.save(
+            {
+                "model": {
+                    "hsi_human_scene_align_head.mlp.0.weight": torch.zeros(256, 25),
+                },
+                "config": {"model": {"enable_hsi_human_scene_align": True}},
+            },
+            checkpoint_path,
+        )
+        restored, report = configure_reference_cascade_model(
+            {"model": {"hsi_align_hidden_dim": 256}}, checkpoint_path, max_humans=8
+        )
+        assert restored["model"]["hsi_align_feature_version"] == "legacy_scale_bias_v0"
+        assert restored["model"]["hsi_scene_affine_mode"] == "per_frame"
+        assert restored["model"]["smpl_use_aggregator_queries"] is False
+        assert restored["model"]["num_smpl_queries"] == 8
+        assert report["checkpoint_align_input_dim"] == 25
+
         official = root / "official"
         support_root = root / "support"
         image_dir = official / "test" / "Gym_010_cooking1" / "cam_01"

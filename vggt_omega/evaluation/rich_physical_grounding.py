@@ -25,7 +25,7 @@ class CascadeConfig:
 @dataclass(frozen=True, slots=True)
 class GroundEstimatorConfig:
     up_axis: str = "negative_y"
-    scene_point_stride: int = 4
+    scene_point_stride: int = 2
     max_scene_depth_m: float = 80.0
     bbox_expand_ratio: float = 0.10
     footprint_margin_m: float = 0.35
@@ -33,6 +33,67 @@ class GroundEstimatorConfig:
     ground_quantile: float = 0.90
     min_support_points: int = 64
     tolerance_m: float = 0.005
+    target_min_iou: float = 0.30
+    target_min_confidence: float = 0.05
+
+
+def configure_reference_cascade_model(
+    config: dict[str, Any],
+    checkpoint_path: str | Path,
+    max_humans: int = 8,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Apply the model settings used by the accepted cascade inference script."""
+    checkpoint_path = Path(checkpoint_path)
+    if not checkpoint_path.is_file():
+        raise FileNotFoundError(f"Stage-2 checkpoint not found: {checkpoint_path}")
+    checkpoint = torch.load(checkpoint_path, map_location="cpu")
+    restored = dict(config)
+    model_config = dict(config.get("model", {}))
+    model_config.update(
+        {
+            "enable_camera": True,
+            "enable_depth": True,
+            "enable_smpl": True,
+            "enable_hsi_refine": True,
+            "smpl_provider": "nlf",
+            "num_smpl_queries": int(max_humans),
+            "smpl_use_aggregator_queries": False,
+            "smpl_query_box_prior": False,
+            "smpl_query_patch_pool": False,
+            "nlf_use_detector": True,
+            "nlf_require_boxes": False,
+            "nlf_detector_threshold": 0.30,
+            "hsi_scene_affine_mode": "per_frame",
+            "hsi_align_feature_version": "legacy_scale_bias_v0",
+        }
+    )
+
+    state_dict = _extract_state_dict(checkpoint)
+    align_weight = state_dict.get("hsi_human_scene_align_head.mlp.0.weight")
+    if not isinstance(align_weight, torch.Tensor) or align_weight.ndim != 2:
+        raise RuntimeError(
+            "Stage-2 checkpoint is missing hsi_human_scene_align_head.mlp.0.weight: "
+            f"{checkpoint_path}"
+        )
+    checkpoint_input_dim = int(align_weight.shape[1])
+    if checkpoint_input_dim != 25:
+        raise ValueError(
+            "The checkpoint does not match the accepted downtown_upstairs_00 cascade: "
+            f"expected HSI alignment input_dim=25 for legacy_scale_bias_v0, got {checkpoint_input_dim}."
+        )
+    restored["model"] = model_config
+    report = {
+        "reference": "scripts/vis/serve_stage2_walking_coarse_scale_hsi_cascade.sh",
+        "checkpoint": str(checkpoint_path),
+        "checkpoint_align_input_dim": checkpoint_input_dim,
+        "configured_align_feature_version": "legacy_scale_bias_v0",
+        "hsi_scene_affine_mode": "per_frame",
+        "smpl_use_aggregator_queries": False,
+        "num_smpl_queries": int(max_humans),
+        "target_selection": "NLF detector prediction matched to RICH bbx_xys by IoU",
+    }
+    del checkpoint
+    return restored, report
 
 
 def load_evaluation_weights(
@@ -89,19 +150,10 @@ def run_metric_cascade(
     model: torch.nn.Module,
     smpl: SMPLLayer,
     images: torch.Tensor,
-    query_boxes: torch.Tensor,
-    query_mask: torch.Tensor,
-    track_ids: torch.Tensor,
-    track_mask: torch.Tensor,
     config: CascadeConfig,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Run the metric-depth cascade without importing any visualization code."""
-    kwargs = {
-        "smpl_query_boxes": query_boxes,
-        "smpl_query_boxes_mask": query_mask,
-        "smpl_track_ids": track_ids,
-        "smpl_track_mask": track_mask,
-    }
+    kwargs: dict[str, torch.Tensor] = {}
     disabled_names = (
         "hsi_refinement_head",
         "hsi_trstr_head",
@@ -130,8 +182,7 @@ def run_metric_cascade(
     coarse_scale = raw_depth.new_ones(raw_depth.shape[:2])
     coarse_records: list[dict[str, Any]] = []
     for frame_index in range(raw_depth.shape[1]):
-        valid = query_mask[:, frame_index].bool() & (confidences[:, frame_index] >= config.confidence_threshold)
-        valid_frame = valid[0]
+        valid_frame = confidences[0, frame_index] >= config.confidence_threshold
         if not bool(valid_frame.any()):
             coarse_records.append({"applied": False, "reason": "no_valid_target", "scale": 1.0})
             continue
@@ -225,15 +276,38 @@ def evaluate_prediction_chunk(
     frame_ground_estimates = []
     for frame_index in range(depth.shape[1]):
         is_target_valid = bool(target_mask[0, frame_index, 0])
-        confidence = float(predictions["pred_confs"][0, frame_index, 0, 0].detach().float().cpu())
-        if not is_target_valid or confidence <= 0.0:
+        if not is_target_valid:
             frame_payloads.append(
-                {"valid": False, "invalid_reason": "missing_target", "query_index": 0, "confidence": confidence}
+                {"valid": False, "invalid_reason": "missing_rich_target_box"}
+            )
+            frame_ground_estimates.append(None)
+            continue
+        predicted_boxes = predictions["pred_boxes"][0, frame_index].detach().float()
+        predicted_confidences = predictions["pred_confs"][0, frame_index, :, 0].detach().float()
+        ious = normalized_cxcywh_iou(predicted_boxes, target_boxes[0, frame_index, 0])
+        valid_detections = (
+            torch.isfinite(predicted_boxes).all(dim=-1)
+            & (predicted_boxes[:, 2:] > 0.0).all(dim=-1)
+            & (predicted_confidences >= config.target_min_confidence)
+        )
+        ious = torch.where(valid_detections, ious, ious.new_full(ious.shape, -1.0))
+        query_index = int(torch.argmax(ious).item())
+        target_iou = float(ious[query_index].cpu())
+        confidence = float(predicted_confidences[query_index].cpu())
+        if target_iou < config.target_min_iou:
+            frame_payloads.append(
+                {
+                    "valid": False,
+                    "invalid_reason": "target_iou_below_threshold",
+                    "query_index": query_index,
+                    "target_iou": target_iou,
+                    "confidence": confidence,
+                }
             )
             frame_ground_estimates.append(None)
             continue
         vertices_world = camera_points_to_world(
-            vertices_cam[0, frame_index, 0], extrinsics[0, frame_index]
+            vertices_cam[0, frame_index, query_index], extrinsics[0, frame_index]
         )
         points_world = depth_to_world_points(
             depth[0, frame_index],
@@ -251,7 +325,8 @@ def evaluate_prediction_chunk(
                 {
                     "valid": False,
                     "invalid_reason": "insufficient_local_scene_points",
-                    "query_index": 0,
+                    "query_index": query_index,
+                    "target_iou": target_iou,
                     "confidence": confidence,
                     "body_low_y": body_low_y,
                     "support_points": int(support_y.numel()),
@@ -264,7 +339,8 @@ def evaluate_prediction_chunk(
         frame_payloads.append(
             {
                 "valid": True,
-                "query_index": 0,
+                "query_index": query_index,
+                "target_iou": target_iou,
                 "confidence": confidence,
                 "body_low_y": body_low_y,
                 "frame_ground_y": estimate,
@@ -420,6 +496,21 @@ def project_points(points: torch.Tensor, intrinsics: torch.Tensor) -> torch.Tens
     x = intrinsics[0, 0] * points[:, 0] / z + intrinsics[0, 2]
     y = intrinsics[1, 1] * points[:, 1] / z + intrinsics[1, 2]
     return torch.stack((x, y), dim=-1)
+
+
+def normalized_cxcywh_iou(boxes: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    boxes = boxes.float()
+    target = target.to(boxes).float()
+    boxes_min = boxes[:, :2] - 0.5 * boxes[:, 2:].clamp(min=0.0)
+    boxes_max = boxes[:, :2] + 0.5 * boxes[:, 2:].clamp(min=0.0)
+    target_min = target[:2] - 0.5 * target[2:].clamp(min=0.0)
+    target_max = target[:2] + 0.5 * target[2:].clamp(min=0.0)
+    intersection_min = torch.maximum(boxes_min, target_min)
+    intersection_max = torch.minimum(boxes_max, target_max)
+    intersection = (intersection_max - intersection_min).clamp(min=0.0).prod(dim=-1)
+    boxes_area = (boxes_max - boxes_min).clamp(min=0.0).prod(dim=-1)
+    target_area = (target_max - target_min).clamp(min=0.0).prod()
+    return intersection / (boxes_area + target_area - intersection).clamp(min=1e-8)
 
 
 def camera_points_to_world(points: torch.Tensor, extrinsic_w2c: torch.Tensor) -> torch.Tensor:

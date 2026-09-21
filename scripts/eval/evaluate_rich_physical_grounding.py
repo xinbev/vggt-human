@@ -24,6 +24,7 @@ from vggt_omega.evaluation.rich_physical_grounding import (  # noqa: E402
     compute_physical_metrics,
     evaluate_prediction_chunk,
     load_evaluation_weights,
+    configure_reference_cascade_model,
     run_metric_cascade,
 )
 from vggt_omega.models.smpl_layer import SMPLLayer  # noqa: E402
@@ -59,13 +60,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-frames-per-sequence", type=int, default=0)
     parser.add_argument("--frame-stride", type=int, default=1)
     parser.add_argument("--chunk-size", type=int, default=32)
+    parser.add_argument("--max-humans", type=int, default=8)
     parser.add_argument("--image-resolution", type=int, default=0)
     parser.add_argument("--confidence-threshold", type=float, default=0.05)
     parser.add_argument("--coarse-min-anchor-pixels", type=int, default=32)
     parser.add_argument("--coarse-scale-min", type=float, default=0.10)
     parser.add_argument("--coarse-scale-max", type=float, default=10.0)
     parser.add_argument("--coarse-anchor-stride", type=int, default=8)
-    parser.add_argument("--scene-point-stride", type=int, default=4)
+    parser.add_argument("--scene-point-stride", type=int, default=2)
     parser.add_argument("--max-scene-depth-m", type=float, default=80.0)
     parser.add_argument("--bbox-expand-ratio", type=float, default=0.10)
     parser.add_argument("--footprint-margin-m", type=float, default=0.35)
@@ -73,6 +75,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ground-quantile", type=float, default=0.90)
     parser.add_argument("--min-support-points", type=int, default=64)
     parser.add_argument("--tolerance-m", type=float, default=0.005)
+    parser.add_argument("--target-min-iou", type=float, default=0.30)
     parser.add_argument("--resume", action="store_true")
     return parser.parse_args()
 
@@ -91,13 +94,16 @@ def main() -> None:
     path_config = load_yaml_config(args.path_config)
     train_config = load_yaml_config(args.train_config)
     config = deep_update(path_config, train_config)
+    config, checkpoint_config_report = configure_reference_cascade_model(
+        config, args.checkpoint, max_humans=args.max_humans
+    )
     model_config = config.setdefault("model", {})
-    if bool(model_config.get("nlf_use_detector", False)):
-        raise ValueError("Dedicated RICH evaluation requires model.nlf_use_detector=false")
+    if not bool(model_config.get("nlf_use_detector", False)):
+        raise ValueError("Reference-aligned RICH evaluation requires model.nlf_use_detector=true")
     if str(model_config.get("smpl_provider", "")) != "nlf":
         raise ValueError("Dedicated RICH evaluation requires model.smpl_provider=nlf")
     image_resolution = int(args.image_resolution or config.get("data", {}).get("image_resolution", 512))
-    max_humans = int(model_config.get("num_smpl_queries", config.get("data", {}).get("max_humans", 20)))
+    max_humans = int(model_config["num_smpl_queries"])
     baseline_checkpoint = args.baseline_checkpoint or Path(require_path(config, "checkpoints.vggt_baseline"))
     smpl_model_dir = Path(require_path(config, "assets.smpl_model_dir"))
 
@@ -132,9 +138,17 @@ def main() -> None:
         ground_quantile=args.ground_quantile,
         min_support_points=args.min_support_points,
         tolerance_m=args.tolerance_m,
+        target_min_iou=args.target_min_iou,
+        target_min_confidence=args.confidence_threshold,
     )
 
     print(f"[setup] camera views={len(dataset)} image_resolution={image_resolution} chunk_size={args.chunk_size}", flush=True)
+    print(
+        "[setup] Stage-2 align schema="
+        f"{checkpoint_config_report['configured_align_feature_version']} "
+        f"(input_dim={checkpoint_config_report['checkpoint_align_input_dim']})",
+        flush=True,
+    )
     model = build_model(config).to(device).eval()
     weight_report = load_evaluation_weights(
         model=model,
@@ -147,7 +161,7 @@ def main() -> None:
     run_metadata = {
         "protocol": "UniCon3R Table 3 physical-grounding reproduction hypothesis",
         "official_identity_claim": False,
-        "target_person_selection": "RICH bbx_xys supplied as the sole valid NLF query in slot 0",
+        "target_person_selection": "NLF detector prediction matched to RICH bbx_xys by maximum IoU",
         "ground_source": "model-reconstructed metric depth, not the RICH reference scan",
         "aggregation": ["pooled_frames", "mean_of_camera_view_metrics"],
         "selection_warning": (
@@ -158,6 +172,7 @@ def main() -> None:
         "cascade": asdict(cascade_config),
         "ground_estimator": asdict(ground_config),
         "weights": weight_report,
+        "checkpoint_model_config": checkpoint_config_report,
         "paths": {
             "official_root": str(args.official_root),
             "support_root": str(args.support_root),
@@ -190,10 +205,8 @@ def main() -> None:
             images = batch.images.unsqueeze(0).to(device=device, non_blocking=True)
             boxes = batch.query_boxes.unsqueeze(0).to(device=device, non_blocking=True)
             mask = batch.query_mask.unsqueeze(0).to(device=device, non_blocking=True)
-            track_ids = batch.track_ids.unsqueeze(0).to(device=device, non_blocking=True)
-            track_mask = batch.track_mask.unsqueeze(0).to(device=device, non_blocking=True)
             predictions, cascade_report = run_metric_cascade(
-                model, smpl, images, boxes, mask, track_ids, track_mask, cascade_config
+                model, smpl, images, cascade_config
             )
             evaluated, ground_report = evaluate_prediction_chunk(predictions, smpl, boxes, mask, ground_config)
             for local_index, row in enumerate(evaluated):
@@ -222,7 +235,7 @@ def main() -> None:
                 f"valid={sum(bool(row['valid']) for row in evaluated)}/{len(evaluated)}",
                 flush=True,
             )
-            del predictions, images, boxes, mask, track_ids, track_mask
+            del predictions, images, boxes, mask
             torch.cuda.empty_cache()
 
         valid_clearances = [float(row["clearance_m"]) for row in frame_rows if row.get("valid") and "clearance_m" in row]
@@ -309,4 +322,3 @@ def _csv_value(value: Any) -> Any:
 
 if __name__ == "__main__":
     main()
-

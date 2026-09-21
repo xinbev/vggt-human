@@ -25,9 +25,11 @@ The metric path is intentionally independent of all Viser/viewer modules:
   iteration and writes JSON/CSV results.
 - `scripts/eval/evaluate_rich_physical_grounding.sh` is the server entry point.
 
-The RICH target box is supplied as the only valid NLF query (slot zero). This
-matches the Stage-2 training configuration (`nlf_use_detector: false`) and
-prevents another person in the image from being scored as the target.
+NLF runs in detector mode with eight candidate slots, matching the accepted
+inference script. Each frame's predicted boxes are compared with the RICH
+`bbx_xys` target box; only the maximum-IoU prediction is scored, and frames
+below the configured IoU threshold are marked invalid. This prevents another
+person in the image from being silently scored as the target.
 
 The inference path is:
 
@@ -40,6 +42,15 @@ VGGT + NLF target query
 ```
 
 No function is imported from `scripts/vis/`.
+
+Checkpoint loading and construction settings follow
+`scripts/vis/serve_stage2_walking_coarse_scale_hsi_cascade.sh`: the Stage-2
+checkpoint is loaded over the VGGT baseline, the v3 scale checkpoint overlays
+only `hsi_refinement_head.*`, and the model uses
+`hsi_align_feature_version=legacy_scale_bias_v0`,
+`hsi_scene_affine_mode=per_frame`, `smpl_use_aggregator_queries=false`, and
+eight NLF detector slots. The evaluator then adds target-person selection using
+the RICH box, which the general-purpose visualization script does not perform.
 
 ## References
 
