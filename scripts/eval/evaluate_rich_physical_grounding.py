@@ -59,7 +59,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-sequences", type=int, default=0)
     parser.add_argument("--max-frames-per-sequence", type=int, default=0)
     parser.add_argument("--frame-stride", type=int, default=1)
-    parser.add_argument("--chunk-size", type=int, default=32)
+    parser.add_argument(
+        "--window-size",
+        "--chunk-size",
+        dest="window_size",
+        type=int,
+        default=100,
+        help="Non-overlapping evaluation window length; the final shorter window is retained.",
+    )
     parser.add_argument("--max-humans", type=int, default=8)
     parser.add_argument("--image-resolution", type=int, default=0)
     parser.add_argument("--confidence-threshold", type=float, default=0.05)
@@ -82,8 +89,8 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    if args.chunk_size <= 0:
-        raise ValueError("--chunk-size must be positive")
+    if args.window_size <= 0:
+        raise ValueError("--window-size must be positive")
     if not torch.cuda.is_available():
         raise RuntimeError("RICH model evaluation requires a CUDA GPU")
     device = torch.device("cuda")
@@ -142,7 +149,11 @@ def main() -> None:
         target_min_confidence=args.confidence_threshold,
     )
 
-    print(f"[setup] camera views={len(dataset)} image_resolution={image_resolution} chunk_size={args.chunk_size}", flush=True)
+    print(
+        f"[setup] camera views={len(dataset)} image_resolution={image_resolution} "
+        f"window_size={args.window_size}",
+        flush=True,
+    )
     print(
         "[setup] Stage-2 align schema="
         f"{checkpoint_config_report['configured_align_feature_version']} "
@@ -164,6 +175,8 @@ def main() -> None:
         "target_person_selection": "NLF detector prediction matched to RICH bbx_xys by maximum IoU",
         "ground_source": "model-reconstructed metric depth, not the RICH reference scan",
         "aggregation": ["pooled_frames", "mean_of_camera_view_metrics"],
+        "evaluation_window_frames": args.window_size,
+        "windowing": "non-overlapping within each camera view; final shorter window retained",
         "selection_warning": (
             "UniCon3R's exact 40-sequence moving-camera list is not published in the provided materials. "
             "This run evaluates exactly the camera-view keys listed below."
@@ -185,23 +198,31 @@ def main() -> None:
     write_json(output_dir / "run_config.json", run_metadata)
 
     all_frames: list[dict[str, Any]] = []
+    all_windows: list[dict[str, Any]] = []
     sequence_results: list[dict[str, Any]] = []
     for sequence_index, record in enumerate(dataset, start=1):
         result_path = sequence_dir / f"{safe_name(record.vid)}.json"
         if args.resume and result_path.is_file():
             payload = json.loads(result_path.read_text(encoding="utf-8"))
-            sequence_results.append(payload["sequence"])
-            all_frames.extend(payload["frames"])
-            print(f"[resume {sequence_index}/{len(dataset)}] {record.vid}", flush=True)
-            continue
+            if int(payload.get("evaluation_window_frames", -1)) == args.window_size:
+                sequence_results.append(payload["sequence"])
+                all_frames.extend(payload["frames"])
+                all_windows.extend(payload["windows"])
+                print(f"[resume {sequence_index}/{len(dataset)}] {record.vid}", flush=True)
+                continue
+            print(
+                f"[recompute {sequence_index}/{len(dataset)}] {record.vid}: "
+                "saved result uses a different evaluation window",
+                flush=True,
+            )
 
         positions = dataset.selected_label_positions(record)
         print(f"[sequence {sequence_index}/{len(dataset)}] {record.vid} frames={len(positions)}", flush=True)
         frame_rows: list[dict[str, Any]] = []
-        chunk_reports = []
-        for chunk_index, start in enumerate(range(0, len(positions), args.chunk_size)):
-            chunk_positions = positions[start : start + args.chunk_size]
-            batch = dataset.load_batch(record, chunk_positions)
+        window_reports = []
+        for window_index, start in enumerate(range(0, len(positions), args.window_size)):
+            window_positions = positions[start : start + args.window_size]
+            batch = dataset.load_batch(record, window_positions)
             images = batch.images.unsqueeze(0).to(device=device, non_blocking=True)
             boxes = batch.query_boxes.unsqueeze(0).to(device=device, non_blocking=True)
             mask = batch.query_mask.unsqueeze(0).to(device=device, non_blocking=True)
@@ -215,23 +236,46 @@ def main() -> None:
                         "vid": record.vid,
                         "recording": record.recording,
                         "camera": record.camera,
-                        "chunk_index": chunk_index,
+                        "window_index": window_index,
                         "label_position": int(batch.label_positions[local_index]),
                         "source_frame_id": int(batch.source_frame_ids[local_index]),
                         "image": str(batch.image_paths[local_index]),
                     }
                 )
                 frame_rows.append(row)
-            chunk_reports.append(
+            window_clearances = [
+                float(row["clearance_m"])
+                for row in evaluated
+                if row.get("valid") and "clearance_m" in row
+            ]
+            window_metrics = compute_physical_metrics(
+                window_clearances, tolerance_m=ground_config.tolerance_m
+            )
+            window_summary = {
+                "vid": record.vid,
+                "recording": record.recording,
+                "camera": record.camera,
+                "window_index": window_index,
+                "selected_frames": len(evaluated),
+                "invalid_frames": len(evaluated) - window_metrics["valid_frames"],
+                "label_position_start": int(batch.label_positions[0]),
+                "label_position_end": int(batch.label_positions[-1]),
+                "source_frame_id_start": int(batch.source_frame_ids[0]),
+                "source_frame_id_end": int(batch.source_frame_ids[-1]),
+                **window_metrics,
+            }
+            all_windows.append(window_summary)
+            window_reports.append(
                 {
-                    "chunk_index": chunk_index,
+                    "window_index": window_index,
                     "label_positions": list(batch.label_positions),
+                    "metrics": window_summary,
                     "ground": ground_report,
                     "cascade": cascade_report,
                 }
             )
             print(
-                f"  [chunk {chunk_index + 1}] labels={batch.label_positions[0]}..{batch.label_positions[-1]} "
+                f"  [window {window_index + 1}] labels={batch.label_positions[0]}..{batch.label_positions[-1]} "
                 f"valid={sum(bool(row['valid']) for row in evaluated)}/{len(evaluated)}",
                 flush=True,
             )
@@ -249,6 +293,7 @@ def main() -> None:
             **metrics,
         }
         payload = {
+            "evaluation_window_frames": args.window_size,
             "sequence": sequence_summary,
             "assets": {
                 "scan_path": str(record.scan_path),
@@ -257,7 +302,7 @@ def main() -> None:
                 "reference_assets_used_for_ground": False,
             },
             "frames": frame_rows,
-            "chunks": chunk_reports,
+            "windows": window_reports,
         }
         write_json(result_path, payload)
         sequence_results.append(sequence_summary)
@@ -280,6 +325,7 @@ def main() -> None:
     }
     write_json(output_dir / "summary.json", summary)
     write_csv(output_dir / "per_frame.csv", all_frames)
+    write_csv(output_dir / "per_window.csv", all_windows)
     write_csv(output_dir / "per_sequence.csv", sequence_results)
     write_csv(output_dir / "summary.csv", [{"aggregation": "pooled_frames", **pooled}, {"aggregation": "mean_of_camera_views", **sequence_mean}])
     print("[done] RICH physical-grounding evaluation", flush=True)

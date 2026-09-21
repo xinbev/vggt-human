@@ -218,6 +218,7 @@ CUDA_VISIBLE_DEVICES_VALUE=0 \
 MODE=smoke \
 RICH_SEQUENCE=Gym_010_cooking1/cam_01 \
 SMOKE_FRAMES=4 \
+WINDOW_SIZE=100 \
 bash scripts/eval/evaluate_rich_physical_grounding.sh
 ```
 
@@ -231,6 +232,8 @@ never invents the subset.
 Primary output files are:
 
 - `summary.json` and `summary.csv`: pooled-frame and camera-view-mean metrics.
+- `per_window.csv`: one row per non-overlapping 100-frame evaluation window;
+  the final shorter window of each camera view is retained.
 - `per_sequence.csv`: one row per RICH camera-view key.
 - `per_frame.csv`: signed clearance and validity for every selected label frame.
-- `sequences/*.json`: resumable per-view records with chunk ground diagnostics.
+- `sequences/*.json`: resumable per-view records with 100-frame window ground diagnostics.
