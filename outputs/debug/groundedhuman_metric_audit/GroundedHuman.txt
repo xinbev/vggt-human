@@ -1,0 +1,1400 @@
+      Under review as a conference paper at ICLR 2027
+
+
+
+
+000
+001
+      GROUNDEDHUMAN: HIERARCHICAL SPATIAL GROUNDING
+002   FOR 4D HUMAN–SCENE RECONSTRUCTION
+003
+004
+005       Anonymous authors
+006       Paper under double-blind review
+007
+008
+009
+010
+011
+012
+013
+014
+015
+016
+017
+018
+019
+020   Figure 1: Given a monocular video, GroundedHuman reconstructs dense scene geometry, camera
+021   trajectories, and human meshes in a shared metric coordinate system, calibrating scene scale and
+022   refining human position while preserving local body pose and shape.
+023
+024                                                 ABSTRACT
+025
+026              Reconstructing humans and their surroundings from monocular video requires re-
+027              solving scale ambiguity and recovering their spatial relationships. Even with a
+028
+                 shared scale, errors in human placement can cause floating and penetration arti-
+                 facts. We introduce GroundedHuman, a framework for monocular 4D human–
+029
+                 scene reconstruction that recovers scene geometry, camera trajectories, and hu-
+030
+                 man motion in a shared metric coordinate system. Our approach follows hierar-
+031              chical spatial grounding: human metric priors establish a global reference, and
+032              regional geometry guides human placement within it. We initialize scene scale
+033              from human-surface correspondences and use anchor–scene cross-attention to pre-
+034              dict residual scale and depth corrections. Aggregating evidence across people and
+035              frames yields a common scale for scene depth and camera translation. Within
+036              the calibrated scene, we distinguish self-surface and environmental evidence at
+037              multiple spatial scales around body regions, combining fine geometric detail with
+038              broader context. Reliability-weighted regional predictions then guide iterative up-
+039
+                 dates to human translation while preserving the estimated body pose and shape.
+                 Experiments demonstrate improved world-space human motion and qualitatively
+040
+                 more consistent human–scene contact.
+041
+042
+043   1     INTRODUCTION
+044
+045   Reconstructing humans and their surroundings from monocular video requires recovering how peo-
+046   ple move within a shared physical space. For applications such as augmented reality, embodied
+047   perception, and digital human animation, the placement of a body relative to its environment is as
+048   important as the geometry of either component. Joint human–scene reconstruction therefore seeks
+049   to recover human motion, scene geometry, and camera trajectories in a common world coordinate
+050
+      system, with consistent physical dimensions and spatial relationships (Chen et al., 2026; Li et al.,
+      2026; Liu et al., 2026).
+051
+052   Two challenges arise when bringing these estimates together. Scene reconstruction models recover
+053   geometry and camera motion with uncertain metric scale, whereas parametric human estimators pro-
+      vide metric body estimates based on learned human priors (Wang et al., 2025a; 2026a; Sárándi &
+
+
+                                                         1
+      Under review as a conference paper at ICLR 2027
+
+
+
+
+054
+      Pons-Moll, 2024). A mismatch between these references affects scene dimensions, camera transla-
+055   tion, and world-space human motion. Even at a common scale, errors in human position can leave
+056   feet floating above the ground or bodies intersecting nearby surfaces. Occlusion and incomplete ge-
+057   ometry further obscure the spatial evidence needed to correct these errors. Coherent reconstruction
+058   thus requires both a shared metric reference and accurate human placement within that reference.
+059
+      Recent work has advanced both joint reconstruction and interaction-aware refinement. Human3R
+060
+      jointly recovers humans, scenes, and cameras, while UniSH combines human and scene features
+061   with geometric correspondence supervision for metric reconstruction and human placement (Chen
+062   et al., 2026; Li et al., 2026). UniCon3R uses predicted contact to correct human reconstruction, and
+063   GRAFT learns iterative human-parameter updates from nearby scene geometry (Sur et al., 2026;
+064   Pradyumna YM et al., 2026). These approaches demonstrate the value of connecting human and
+065   scene estimates. A central diﬀiculty in interpreting their geometric relationship, however, is that a
+066   local discrepancy may reflect scene-scale error, human-position error, or an unreliable observation.
+067   Correcting human placement therefore depends on both the metric reference and the local evidence
+068   used to assess alignment.
+069   We address this diﬀiculty through hierarchical spatial grounding: human anchors establish a
+070   global metric reference, and regional human–environment geometry guides the refinement of hu-
+071   man placement within it. This principle underlies GroundedHuman, our framework for monocular
+072   4D human–scene reconstruction. Establishing the metric reference first makes local geometric dis-
+073   crepancies comparable before they are used to correct human position.
+074   Visible human surfaces provide a direct starting point for metric calibration: their estimated depths
+075   can be compared with corresponding scene observations to obtain an initial scale. Such correspon-
+076   dences are imperfect, however, because occlusion, depth errors, and inaccurate human placement
+077   can bias the estimate. We therefore combine this analytic initialization with learned residual cali-
+078   bration that relates body anchors to nearby scene evidence. The initialization establishes the coarse
+079   scale, allowing the learned correction to focus on the remaining discrepancies in their local context.
+080   Observations from different people and frames provide complementary support for a shared scale;
+081
+      aggregating them through temporal consensus reduces reliance on any individual estimate. Applying
+      the recovered scale to both scene depth and camera translation establishes a common metric reference
+082
+      for subsequent placement refinement.
+083
+084   Within this calibrated scene, improving human placement requires interpreting geometry around
+085   the body. A narrow neighborhood reveals fine alignment errors but may provide limited evidence
+086   about surrounding surfaces, while a broader neighborhood supplies context for understanding the
+087
+      body’s relation to the environment. We therefore gather geometry at multiple spatial scales around
+      anatomically corresponding body regions. We also distinguish observations of the person’s own
+088
+      surface from environmental evidence, since agreement with the former and spatial relationships to
+089
+      the latter provide different cues for placement. Combining these cues yields regional corrections
+090   whose contributions depend on their reliability. The resulting iterative updates adjust the position of
+091   the body as a whole, improving human–scene alignment and contact consistency while preserving
+092   its estimated pose and shape.
+093
+      Our contributions are summarized as follows:
+094
+095
+             • We introduce GroundedHuman, a framework for monocular 4D human–scene reconstruc-
+096            tion through hierarchical spatial grounding. It addresses global scale mismatch and local
+097            contact misalignment, recovering humans, scenes, and camera trajectories in a shared met-
+098            ric coordinate system with improved human–scene contact consistency.
+099
+             • We propose Human-Anchored Metric Attention for coarse-to-fine metric calibration. It
+100            combines human-surface scale initialization with anchor–scene cross-attention to estimate
+101            residual scale and depth corrections, using the calibrated scale consistently for scene depth
+102            and camera translation.
+103
+             • We develop Multi-Scale Regional Interaction Attention to improve human placement
+104            and contact consistency. It distinguishes self-surface and environmental evidence across
+105            spatial scales, combining local geometric detail with surrounding context to iteratively refine
+106            human translation through reliability-weighted regional predictions while preserving body
+107            pose and shape.
+
+
+                                                         2
+      Under review as a conference paper at ICLR 2027
+
+
+
+
+108
+      2   RELATED WORK
+109
+110
+      3D Scene Reconstruction Recent visual geometry foundation models have enabled direct predic-
+111   tion of scene geometry and camera motion from RGB observations. DUSt3R estimates pixel-aligned
+112   3D pointmaps, while MASt3R introduces dense feature matching to establish cross-view correspon-
+113   dences (Wang et al., 2024a; Leroy et al., 2024). VGGT jointly predicts camera parameters, depth, and
+114   dense geometry, whereas π 3 achieves reference-free reconstruction through permutation-equivariant
+115   geometric prediction (Wang et al., 2025a;c). Extending reconstruction to dynamic and sequential
+116   observations, MonST3R models geometry in the presence of motion, CUT3R maintains a persistent
+117   state for continuous scene reconstruction, and VGGT-Ω advances feed-forward geometry estimation
+118   for both static and dynamic scenes (Zhang et al., 2024; Wang et al., 2025b; 2026a). Despite these
+119
+      advances, monocular scene reconstruction remains subject to scale ambiguity, while moving people
+      introduce occlusion and depth discontinuities. Consequently, scene geometry and independently re-
+120
+      constructed human bodies may lack a consistent metric scale, leading to inaccurate spatial alignment.
+121
+122
+      Human Reconstruction and Global Motion Human Mesh Recovery (HMR) estimates 3D hu-
+123
+      man pose and shape, commonly using parametric body models such as SMPL and SMPL-X (Loper
+124   et al., 2023; Pavlakos et al., 2019). HMR 2.0 and Multi-HMR recover expressive human meshes from
+125   monocular images, while NLF employs a continuous representation for dense human pose and shape
+126   estimation (Goel et al., 2023; Baradel et al., 2024; Sárándi & Pons-Moll, 2024). However, accurate
+127   local body reconstruction does not guarantee correct global placement. World-grounded HMR meth-
+128   ods further recover human motion in a shared world coordinate frame. GLAMR uses learned motion
+129   priors to recover global trajectories under occlusion, while SLAHMR combines relative camera mo-
+130   tion with human motion priors for global reconstruction (Yuan et al., 2022; Ye et al., 2023). TRAM
+131   leverages metric depth for camera calibration, WHAM combines motion context with contact-aware
+132
+      trajectory refinement, and GVHMR introduces gravity-view coordinates for world-grounded motion
+      recovery (Wang et al., 2024b; Shin et al., 2024; Shen et al., 2024). More recently, DuoMo separates
+133
+      camera-space and world-space motion generation into two diffusion stages (Wang et al., 2026b).
+134
+      Nevertheless, temporally coherent human motion does not ensure accurate placement within the sur-
+135   rounding scene, as global localization errors can persist without suﬀicient constraints from scene
+136   geometry.
+137
+138   Scene-Human Reconstruction Recent human–scene reconstruction methods increasingly exploit
+139   human priors and scene geometry for joint reconstruction. SynCHMR uses human-aware metric
+140   SLAM to recover metric camera poses and scene geometry, followed by scene-aware human motion
+141   refinement (Zhao et al., 2024). MetricHMSR incorporates camera-ray representations for metric
+142   human recovery and uses reconstructed human surfaces as geometric anchors to refine monocular
+143   scene depth (Song et al., 2026). JOSH jointly optimizes camera poses, scene geometry, and hu-
+144
+      man motion through correspondence and contact constraints (Liu et al., 2026). These approaches
+      establish metric consistency through human priors or joint optimization, while recent feed-forward
+145
+      methods integrate human and scene reasoning directly into geometric prediction. HAMSt3R aug-
+146
+      ments multi-view reconstruction with human segmentation and dense body correspondences, while
+147   Human3R incorporates human prompts into a recurrent geometry model to jointly recover scene
+148   structure, camera motion, and global human meshes (Rojas et al., 2025; Chen et al., 2026). UniSH
+149   further combines scene reconstruction and HMR priors with explicit human–scene geometric corre-
+150   spondence for joint metric-scale reconstruction (Li et al., 2026). However, metric-scale reconstruc-
+151   tion and joint geometric prediction do not fully resolve human–scene interpenetration and floating
+152   artifacts, particularly under occlusion and ambiguous depth. To improve physical consistency, Uni-
+153   Con3R feeds predicted human–scene contact back into human reconstruction as a corrective signal
+154   (Sur et al., 2026), while GRAFT employs body-anchored geometric probes and recurrent refinement
+155
+      to correct human meshes according to nearby scene surfaces (Pradyumna YM et al., 2026). Al-
+      though geometric feedback improves human–scene alignment, jointly refining body parameters may
+156
+      introduce unnecessary changes to local articulation when correcting global placement errors. This
+157
+      highlights the challenge of improving human–scene consistency while preserving reliable local body
+158   pose and shape.
+159
+160
+161
+
+
+
+                                                       3
+      Under review as a conference paper at ICLR 2027
+
+
+
+
+162
+      3     METHOD
+163
+164   Given a monocular video I = {It }Tt=1 , GroundedHuman aims to reconstruct scene geometry, cam-
+165   era motion, and all visible humans in a shared metric world coordinate system. For each frame It , we
+                                           t , camera parameters Ct , and human meshes Ht = {Vtq }q=1 ,
+166                                                                                               w Nt
+      recover a metric scene point map Pm                          m
+                                                              w
+167   where Nt denotes the number of visible people and Vtq represents the world-space mesh of per-
+168   son q. The reconstructed humans and scene share a consistent metric scale, allowing their spatial
+169   relationships to be evaluated directly in the same 3D coordinate system.
+170
+      Figure 2 illustrates the overall framework. We first obtain relative scene geometry, camera parame-
+171
+      ters, and initial human meshes from monocular observations. To establish a shared metric coordinate
+172   system, we aggregate human-derived scale cues across frames and calibrate scene depth and camera
+173   translation through human-guided temporal metric calibration (Sec. 3.1). We then exploit regional
+174   human-environment geometry to refine global human placement while preserving local body pose
+175   and shape (Sec. 3.2).
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+      Figure 2: Overview of GroundedHuman. VGGT-Ω and NLF provide relative scene geometry and
+197
+      metric human observations under shared camera intrinsics. Human-Anchored Metric Attention com-
+198   bines surface-based scale initialization, anchor-scene interaction, and temporal consensus to calibrate
+199   scene depth and camera translation. Multi-Scale Regional Interaction Attention uses the calibrated
+200   scene geometry to iteratively refine human root translation through multi-scale regional sampling and
+201   reliability-weighted updates, while preserving body pose and shape. The calibrated camera extrin-
+202   sics transform the refined humans and scene geometry into a shared metric world coordinate system.
+203
+204
+      3.1   HUMAN-ANCHORED METRIC ATTENTION
+205
+206   Surface-Based Scale Initialization. Metric human surfaces provide depth references for calibrat-
+207   ing relative scene geometry. We first estimate a coarse scale analytically, leaving residual errors to
+208   the learned module. Pooling surface correspondences across people reduces reliance on individual
+209   depth samples:
+                                                            [Vctqi ]z
+210
+                                       sct = median r                       .                           (1)
+211                                          (q,i)∈At Dt π(Kt , Vc    tqi )
+212   Here Vctqi is a camera-space body vertex, π denotes perspective projection, and At contains corre-
+213   spondences from confident human observations after front-surface selection and invalid-depth re-
+214   jection. The median limits the influence of isolated mismatches, although human-position errors
+215   can still bias the estimate. We obtain Dtcoarse = sct Dtr ; sampling and fallback details are given in
+      Appendix C.
+
+
+                                                        4
+      Under review as a conference paper at ICLR 2027
+
+
+
+
+216
+      Anchor-Scene Cross Attention. Residual discrepancies at a single body location can reflect scale
+217   error, inaccurate human placement, or unreliable scene depth. We therefore organize evidence using
+218   A = 24 anatomical anchors following GRAFT (Pradyumna YM et al., 2026), providing consistent
+219   body-part references for combining observations across the body.
+220
+      Each anchor at camera-space position atqj projects to ptqj = π(Kt , atqj ). We back-project Dtcoarse
+221
+      and select the nearest valid 3D scene point within a neighborhood of this projection. Its coordinates,
+222
+      normal, anchor-relative offset, distance, and Z-depth residual form gtqj . Computing these attributes
+223   after coarse calibration exposes the remaining geometric discrepancies. The initial token is
+224
+                                       (0)
+225                                  htqj = Eanchor ([xtq ; atqj ; p̄tqj ; gtqj ]) ,                     (2)
+226   where xtq contains body pose, shape, and root translation, p̄tqj is the normalized projection, and
+227   Eanchor is a shared encoder.
+228
+      Geometric attributes describe the current mismatch, while local scene features provide context for
+229
+      interpreting it. Each anchor therefore queries a 3 × 3 neighborhood of scene tokens Stqj sampled
+230                                                      (l)         (l)
+231
+      from the multi-layer VGGT-Ω features Ft . With Htq = {htqj }A      j=1 , we compute
+                                                                  
+232                                      e (l)
+                                         H tq = SelfAttn Htq ,
+                                                               (l)
+233
+                                                                                                   (3)
+234                                     (l+1)
+                                       htqj = CrossAttn h      e(l) , Stqj .
+                                                                 tqj
+235
+236   Self-attention combines evidence across body locations to reduce dependence on individual unreli-
+237   able observations. Cross-attention uses anchor queries and local scene keys and values, preserving
+238   the spatial association between each body part and its surrounding evidence.
+239
+240   Person-Level Calibration and Temporal Consensus. Pooling anchor tokens yields a residual log-
+241
+      scale ∆ℓtq and depth bias ∆btq for each person. Person-level prediction accommodates differing
+      observations, but all people must support a common scene calibration. We therefore average pre-
+242
+      dictions using normalized NLF confidences: log-scale estimates are bounded and exponentiated to
+243
+      obtain ρt , while biases yield bt . To limit framewise fluctuations, we aggregate the composed scales
+244   and biases over time:
+245
+246                                    h                   i
+247                          svid = exp median log(sct ρt ) ,           bvid = median bt .               (4)
+                                               t                                       t
+248
+249   Scene depth and camera translation must share the same scale for consistent world-coordinate recon-
+250
+      struction. We apply
+251
+252                               Dtm = svid Dtr + bvid ,         tm       vid r
+                                                                   cw,t = s tcw,t .                      (5)
+253
+254
+      The bias acts only on depth. Back-projecting Dtm yields metric camera-space scene geometry Pm
+                                                                                                  t ,
+      which serves as the fixed geometric reference for subsequent human placement refinement.
+255
+256
+257
+      3.2   MULTI-SCALE REGIONAL INTERACTION ATTENTION
+258   Multi-Scale Region Sampling. Given the calibrated scene geometry Pm        t , we refine human root
+259   translation while preserving body pose and shape. We partition the SMPL surface into 96 anatomi-
+260   cally corresponding regions, each represented by its centroid and eight sampled vertices. To capture
+261   both local geometric discrepancies and surrounding context, each region gathers scene evidence from
+262   four image-space support domains:
+263                                          S = {W3 , W7 , Wadp , Wann } .                              (6)
+264
+265   Here, W3 and W7 denote fixed 3 × 3 and 7 × 7 windows, respectively; Wadp follows the projected
+266
+      region extent, while Wann denotes an outer annular support providing broader environmental context.
+267   To distinguish human-surface geometry from surrounding environmental evidence, we compare the
+268   calibrated scene depth with instance-aware human depth buffers. The sampled scene points are sep-
+269   arated into self-surface and environment channels, while observations associated with other people
+      are excluded and retained only as interference statistics.
+
+
+                                                           5
+      Under review as a conference paper at ICLR 2027
+
+
+
+
+270
+      For each region r and support domain a ∈ S, let Pr,a denote the sampled scene points within one
+271   observation channel, and Rr denote the current region geometry. We encode their relative geometric
+272   features into a regional token:
+273                                        zr,a = Ereg (Pr,a , Rr ) .                                (7)
+274
+      Here Ereg encodes spatial offsets and depth residuals, followed by masked attention pooling over valid
+275   samples. Each support is encoded separately for the self-surface and environment channels, yielding
+276   eight geometric tokens per region, together with their valid-support ratios. These ratios distinguish
+277   missing observations from small geometric residuals. Further partitioning and sampling details are
+278   provided in Appendix C.
+279
+280   Regional Translation Prediction. The multi-scale geometric tokens are fused with region geom-
+281   etry, valid-support ratios, anatomical embeddings, and interference statistics to obtain a regional
+282   representation hr . A prediction head estimates directional translation coeﬀicients, a regional gate,
+283   and log-variance:
+284                                        (δr , gr , ℓr ) = Head(hr ),                                 (8)
+285   where δr = (δ∥,r , δx,r , δy,r ) contains three bounded translation coeﬀicients, gr is the regional gate,
+286   and ℓr represents the predicted log-variance.
+287   To distinguish depth-direction errors from lateral misalignment, each region predicts a translation in
+288   the viewing-ray and tangent-plane basis:
+289
+290                                    vr = δ∥,r e∥,r + δx,r ex,r + δy,r ey,r .                            (9)
+291   Here e∥,r is the unit viewing ray toward the region, while ex,r and ey,r span its orthogonal tangent
+292   plane. Each region thus proposes a bounded whole-body translation in the common metric camera
+293   coordinate system.
+294
+      To combine regional predictions, we weight each proposal by its learned gate and inverse variance:
+295
+296                                           αr = gr exp(−ℓr ),
+                                                       P
+297
+                                                         r α r vr                                         (10)
+298                                            b
+                                               v=       P         .
+                                                   max( r αr , ε)
+299
+300   Regions without valid geometric support are assigned zero weight. The resulting b
+                                                                                      v combines reliable
+301   regional evidence into a single root translation proposal.
+302
+303   Iterative Translation Refinement. A person-level gate further modulates the aggregated regional
+                                                                                           (k)
+304   proposal to suppress unreliable corrections. The resulting root translation update ∆τtq is applied
+305   as
+                                             (k+1)    (k)        (k)
+306                                        τtq     = τtq + ∆τtq .                                   (11)
+307   We perform two feed-forward refinement steps with shared network parameters, resampling regional
+308   evidence from the updated body geometry after each step. The scene geometry, camera parameters,
+309   body pose, and shape remain fixed.
+310   To learn corrective updates while preserving accurate initial placements, we train the module on
+311   clean and geometrically perturbed inputs using
+312
+313
+                                         Lrefine = λvote Lvote + λtrans Ltrans
+                                                                                                          (12)
+314                                                + λgate Lgate + Laux .
+315   The losses supervise regional translation proposals, refined root translation, and update reliability,
+316   with auxiliary regularization discouraging unnecessary or detrimental corrections. Training details
+317   are provided in Appendix D.
+318
+      Finally, the refined camera-space body Vc,∗
+                                               tq is transformed into the shared metric world coordinate
+319
+      system using the calibrated camera extrinsics:
+320
+                                                  T      c,∗       
+                                         Vwtq = Rcw,t Vtq − tcw,t .
+                                                               m
+321                                                                                                 (13)
+322
+323
+      The same transformation places the calibrated scene geometry in the shared world coordinate system.
+
+
+
+                                                          6
+      Under review as a conference paper at ICLR 2027
+
+
+
+
+324
+      4          EXPERIMENTS
+325
+326
+      We evaluate global human motion on EMDB-2 and RICH, scene depth on Bonn, camera trajectories
+327   on TUM-Dynamic, and local human meshes on 3DPW and EMDB-1. Qualitative comparisons on
+328   PROX-D and outdoor sequences examine human–scene alignment, while measurements on PROX
+329   assess human and environmental dimensions. Implementation details are provided in Appendix D.
+330
+331   4.1        GLOBAL HUMAN MOTION ESTIMATION
+332
+333   We assess global human motion on EMDB-2 and RICH using WA-MPJPE, W-MPJPE, and RTE.
+334   The joint metrics assess world-space motion under different alignment scopes, while RTE measures
+335   root-trajectory accuracy.
+336                           Preprocessed Input (✓ = not required)                        Output                                    EMDB-2 (24)                      RICH (24)
+      Category   Method
+337                           Tracking   Camera    Depth    Contact   Multi-Person   Metric Human–Scene   Contact-Aware   WA-MPJPE ↓    W-MPJPE ↓   RTE ↓   WA-MPJPE ↓   W-MPJPE ↓   RTE ↓
+                 GLAMR           ×         ✓         ✓        ✓            ✓                 ×                 ×            280.8          726.6    11.4      129.4        236.2      3.8
+338              SLAHMR          ×         ×         ✓        ✓            ✓                 ×                 ×            326.9          776.1    10.2      132.2        237.1      6.4
+                 COIN            ×         ×         ✓        ✓            ×                 ×                 ×            152.8          407.3     3.5      169.5        254.5       –
+339   Offline    GVHMR           ×         ×         ✓        ✓            ×                 ×                 ×            111.0          276.5     2.0       78.8        126.3      2.4
+                 TRAM            ×         ×         ×        ✓            ×                 ×                 ×            76.4           222.4     1.4      127.8        238.0      6.0
+                 JOSH            ×         ×         ×        ×            ✓                 ✓                 ✓            68.9           174.7     1.3       89.0        132.5      3.0
+340              PromptHMR       ✓         ✓         ✓        ✓            ×                 ×                 ×            71.0           216.5     1.3      118.2        207.0      5.6
+                 TRACE           ✓         ✓         ✓        ✓            ✓                 ×                 ×             529.0        1702.3    17.7      238.1        925.4     610.4
+341              WHAM            ×         ×         ✓        ✓            ×                 ×                 ×             135.6         354.8     6.0      108.4        196.1      4.5
+                 JOSH3R          ×         ×         ×        ×            ×                 ✓                 ×             220.0         661.7    13.1        –            –         –
+342   Online
+                 Human3R         ✓         ✓         ✓        ✓            ✓                 ✓                 ×             112.2         267.9     2.2      110.0        184.9      3.3
+                 MetricHMSR      ×         ×         ×        ×            ×                 ✓                 ×             72.1          199.5     1.4      109.6        165.5      1.9
+343              UniCon3R        ×         ×         ×        ×            ×                 ✓                 ✓             113.7         285.6     2.3       81.5        129.8      1.7
+                 UniSH           ×         ×         ×        ×            ×                 ✓                 ×             118.5         270.1     5.8      118.1        183.2      4.8
+                 Ours            ✓         ✓         ✓        ✓            ✓                 ✓                 ✓            58.468        149.959   1.079       –            –         –
+344
+345
+                          Table 1: Evaluation of global human motion estimation on EMDB-2 and RICH.
+346
+347
+348   World-space human motion depends on both camera motion and scene scale. Our comparison in-
+349   cludes dedicated motion estimators and joint reconstruction methods (Table 1). GroundedHuman
+350   places the body sequence within its environment through a scale shared by scene depth and camera
+351   translation.
+352   The reconstructed sequences expose articulation and global displacement within the same scene
+353   (Fig. 3). Sports warm-up, handstand, and walking-with-lunges examples show bodies at successive
+354   instants, alongside predicted and reference world trajectories. This joint view relates each motion
+355   path to the surrounding geometry rather than presenting it as an isolated trajectory.
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374   Figure 3: Temporal human–scene reconstruction. Each column shows input frames, reconstructed
+375   bodies within the scene, and world trajectories. Gray: ground truth; blue: ours.
+376
+377
+
+
+
+                                                                                                    7
+      Under review as a conference paper at ICLR 2027
+
+
+
+
+378
+      4.2   SCENE RECONSTRUCTION
+379
+380
+381   Video Depth Estimation. We evaluate video                  Method         Abs Rel ↓    δ < 1.25 ↑
+382
+      depth on Bonn using Abs Rel and δ < 1.25,
+      comparing dense scene reconstruction models                DUSt3R           0.151         0.839
+383                                                              MASt3R           0.188         0.765
+      with joint human–scene methods (Table 2). The
+384                                                              MonST3R          0.072         0.957
+      two metrics measure relative depth error and
+385   threshold accuracy, respectively, assessing the            Fast3R           0.194         0.772
+386   dense scene geometry beyond human trajecto-                MVDUSt3R         0.426         0.357
+387   ries.                                                      CUT3R            0.078         0.937
+388   The shared scale connects environmental di-                Aether           0.273         0.594
+389   mensions to the human metric reference and is              FLARE            0.152         0.790
+390   propagated to camera translation, while a depth            VGGT             0.057         0.966
+391   bias accounts for residual offsets. This design            π3               0.049         0.975
+392   preserves the backbone’s spatial structure and             Human3R          0.086         0.954
+      separates scene calibration from subsequent cor-           UniSH            0.035         0.980
+393
+      rections to human position.                                Ours            0.08599       0.96377
+394
+395                                                          Table 2: Evaluation of video depth estimation on
+396                                                          Bonn.
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408   Figure 4: Camera and depth evaluation across input lengths. Left: Sim(3)-aligned camera ATE.
+409   Center and right: relative-depth diagnostics with GT-fitted scale. Reference curves are approximately
+410   digitized from Human3R.
+411
+412   Figure 4 examines aligned camera and depth geometry, while Appendix A reports metric depth with-
+413   out GT scale fitting. Depth accuracy also varies non-monotonically with input length (Appendix A),
+414   showing that additional frames do not necessarily yield more accurate geometry. Evaluating multiple
+415   sequence lengths therefore complements the aggregate comparison and reveals variation concealed
+416   by a single evaluation window.
+417
+418   Camera Pose Estimation. We evaluate camera trajectories on TUM-Dynamic using ATE after
+419   Sim(3) alignment. Camera geometry determines how local human observations are transformed into
+420
+      the world frame; errors in this transformation can distort global human motion even when individ-
+      ual body estimates are accurate. Because similarity alignment removes global scale, this evaluation
+421
+      isolates relative trajectory geometry and complements the depth assessment. GroundedHuman re-
+422
+      tains the backbone’s camera rotations and propagates the shared scale to camera translation. Results
+423   across input lengths are provided in Appendix A.
+424
+425
+426
+427
+428
+429
+430
+431
+
+
+
+                                                         8
+      Under review as a conference paper at ICLR 2027
+
+
+
+
+432
+      4.3   HUMAN MESH RECOVERY
+433
+434
+435   We evaluate local human mesh recovery on 3DPW and EMDB-1 using PA-MPJPE, MPJPE, and PVE,
+436   measured in millimeters. Joint errors assess articulated body geometry, while vertex error addition-
+437   ally captures surface reconstruction. The comparison includes dedicated human mesh estimators and
+438   joint reconstruction methods (Table 3).
+439
+        Method    Crop-free   Detection-free   Intrinsic-free             3DPW (14)                      EMDB-1 (24)
+440
+                                                                PA-MPJPE ↓   MPJPE ↓   PVE ↓   PA-MPJPE ↓    MPJPE ↓   PVE ↓
+441
+      CLIFF          ×             ×                ×              43.0        69.0    81.2       68.3         103.3   123.7
+442   HMR2.0         ×             ×                ✓              44.4        69.8    82.2       61.5          97.8   120.0
+443   ReFit          ×             ×                ×               –           –       –         58.6          88.0   104.5
+      TokenHMR       ×             ×                ✓              44.3        71.0    84.6       55.6          91.7   109.4
+444   CameraHMR      ×             ×                ✓              38.5        62.1    72.9       43.7          73.0    85.4
+445   BEV            ✓             ✓                ✓              46.9        78.5    92.3       70.9         112.2   133.4
+      Multi-HMR      ✓             ✓                ×              45.9        73.1    87.1       50.1          81.6    95.7
+446   Human3R        ✓             ✓                ✓              44.1        71.2    84.9       48.5          73.9    86.0
+447   Ours           ×             ×                ✓              37.3        60.3    71.4        –             –       –
+448
+449               Table 3: Evaluation of local human mesh recovery on 3DPW and EMDB-1.
+450
+451   GroundedHuman retains the local pose and shape supplied by the frozen NLF observer. Scene cal-
+452   ibration and root-translation refinement operate on global geometry, leaving the articulated body
+453   representation unchanged. Local mesh evaluation therefore complements the world-motion compar-
+454   ison: together, they distinguish the quality of the recovered body from its placement and movement
+455   within the environment.
+456
+457
+458
+459   4.4   QUALITATIVE RESULTS
+460
+461
+462   Human–Scene Spatial Alignment. We compare human placement with UniSH and Human3R on
+463   PROX-D and outdoor sequences containing lying, reclining, and sitting poses (Fig. 5). The indoor
+464   scenes emphasize torso-to-cushion and pelvis-to-seat alignment, while the outdoor scenes expose the
+465   position of the body relative to benches and backrests. These relationships reveal global offsets that
+466
+      can remain inconspicuous when a body is inspected in isolation. Our regional refinement uses the
+      surrounding geometry to adjust root position while preserving the observer’s local articulation.
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484   Figure 5: Human placement in reconstructed scenes. Columns show the input, UniSH, Human3R,
+485
+      and GroundedHuman. Lying, reclining, and outdoor sitting examples highlight the position of the
+      body relative to nearby support surfaces.
+
+
+                                                                   9
+      Under review as a conference paper at ICLR 2027
+
+
+
+
+486   Metric Measurements. On PROX, we compare
+487   reconstructed human height and furniture dimen-
+488   sions with reference measurements and MapAny-
+489   thing reconstructions (Fig. 6). The standing-person
+490   example places body height and table length in
+491   the same coordinate system, while the seated ex-
+492
+      ample relates the person to the surrounding parti-
+      tions. These measurements complement the place-
+493
+      ment comparison: a body may appear aligned with
+494
+      nearby surfaces from one viewpoint even when the
+495   overall scene dimensions are inaccurate. Inspect-
+496   ing both human and environmental lengths there-
+497   fore provides a physical interpretation of the joint
+498   geometry beyond its projected appearance. The ex-
+499   amples also expose how scale affects objects at dif-
+500   ferent positions within the scene, rather than only
+501   the human used as a reference.
+502   Together, these evaluations connect local body ge-
+503
+      ometry, global motion, and scene-relative place-
+      ment within a single reconstruction.                   Figure 6: Comparison of the metric measure-
+504                                                          ment on PROX.
+505
+506   5   CONCLUSION
+507
+508   We presented GroundedHuman, a framework that connects metric human priors with relative scene
+509   geometry to reconstruct humans, scenes, and camera motion from monocular video. Scale calibra-
+510   tion establishes a shared metric reference for scene depth and camera translation, while regional
+511
+      translation refinement uses local geometric evidence to adjust human placement without changing
+      pose or shape. Evaluations of world-space motion, scene depth, and local human meshes, together
+512
+      with qualitative comparisons, examine complementary aspects of this reconstruction: body structure,
+513
+      movement, and placement within the environment. The framework makes scene scale and human
+514   position explicit calibration variables while retaining the local geometry supplied by pretrained es-
+515   timators. Future work will explore temporal evidence aggregation and contact constraints to extend
+516   this formulation to longer sequences and more complex interactions.
+517
+518   Limitations. GroundedHuman depends on the quality and visibility of the initial human estimates
+519   and on the accuracy of scene depth. Biased body shape or root position can affect scale calibration,
+520   while occlusion and local depth errors can weaken the evidence for translation refinement. Without
+521   reliable human observations, the metric scale is weakly constrained. Preserving pose and shape
+522   prevents global alignment errors from being absorbed by local deformation, but also leaves incorrect
+523   articulation and body shape unchanged. Translation alone cannot resolve all human–scene contact
+524
+      errors, particularly when these require changes in pose or scene geometry.
+525
+526   ACKNOWLEDGMENTS
+527
+      Omitted in the double-blind review version.
+528
+529
+      GENERATIVE AI USE DISCLOSURE
+530
+531   Generative AI tools were used to assist with the organization and language editing of the Chinese
+532   draft, its English translation, and early sketches of conceptual figures. All technical designs, code,
+533   experimental data, equations, literature claims, and final content were reviewed by the authors; the
+534   authors take full responsibility for the contents of this paper.
+535
+536   ETHICS STATEMENT
+537
+538   This work uses public human and scene research datasets for method development and evaluation,
+539   and does not target identity recognition or individual-attribute inference. Human-video reconstruc-
+      tion may raise privacy concerns, risks of surveillance misuse, and scale bias across body types;
+
+
+                                                       10
+      Under review as a conference paper at ICLR 2027
+
+
+
+
+540
+      Appendix F discusses these boundaries. Dataset licenses and conditions of use will be checked in-
+541   dividually before final submission, and no unverified information is inferred in this manuscript.
+542
+543
+      REPRODUCIBILITY STATEMENT
+544
+545   The appendix documents coordinate and scale conventions, the complete inference procedure, train-
+546   ing objectives, datasets, and evaluation protocols, and explicitly marks ablation, robustness, and
+547   eﬀiciency results that still require real experiments. Before final submission, all placeholders will
+548   be replaced with verified server configurations, anonymous code, execution scripts, and real experi-
+549   mental outputs. No quantitative conclusion in this paper is supported by placeholder content.
+550
+551   REFERENCES
+552
+553   Fabien Baradel, Matthieu Armando, Salma Galaaoui, Romain Brégier, Philippe Weinzaepfel, Gré-
+554
+        gory Rogez, and Thomas Lucas. Multi-hmr: Multi-person whole-body human mesh recovery in
+        a single shot. 2024.
+555
+556   Yue Chen, Xingyu Chen, Yuxuan Xue, Anpei Chen, Yuliang Xiu, and Gerard Pons-Moll. Human3r:
+557     Everyone everywhere all at once. In International Conference on Learning Representations, 2026.
+558     arXiv:2510.06219.
+559
+      Shubham Goel, Georgios Pavlakos, Jathushan Rajasegaran, Angjoo Kanazawa, and Jitendra Malik.
+560
+        Humans in 4d: Reconstructing and tracking humans with transformers. 2023.
+561
+562   Vincent Leroy, Yohann Cabon, and Jérôme Revaud. Grounding image matching in 3d with mast3r.
+563     In European Conference on Computer Vision, 2024.
+564
+      Mengfei Li, Peng Li, Zheng Zhang, Jiahao Lu, Chengfeng Zhao, Wei Xue, Qifeng Liu, Sida Peng,
+565
+       Wenxiao Zhang, Wenhan Luo, Yuan Liu, and Yike Guo. Unish: Unifying scene and human re-
+566
+       construction in a feed-forward pass. arXiv preprint arXiv:2601.01222, 2026.
+567
+568   Zhizheng Liu, Joe Lin, Wayne Wu, and Bolei Zhou. Joint optimization for 4d human-scene
+569     reconstruction in the wild. In International Conference on Learning Representations, 2026.
+570     arXiv:2501.02158.
+571
+      Matthew Loper, Naureen Mahmood, Javier Romero, Gerard Pons-Moll, and Michael J. Black. Smpl:
+572    A skinned multi-person linear model. In Seminal Graphics Papers: Pushing the Boundaries,
+573    Volume 2, pp. 851–866. Association for Computing Machinery, 2023.
+574
+575   Georgios Pavlakos, Vasileios Choutas, Nima Ghorbani, Timo Bolkart, Ahmed A. A. Osman, Dim-
+576     itrios Tzionas, and Michael J. Black. Expressive body capture: 3d hands, face, and body from a
+577
+        single image. In IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 10975–
+        10985, 2019.
+578
+579   Pradyumna YM, Yuxuan Xue, Yue Chen, Nikita Kister, István Sárándi, and Gerard Pons-Moll. Graft:
+580     Geometric refinement and fitting transformer for human scene reconstruction. arXiv preprint
+581     arXiv:2604.19624, 2026.
+582
+      Sara Rojas, Matthieu Armando, Bernard Ghanem, Philippe Weinzaepfel, Vincent Leroy, and Gré-
+583
+        gory Rogez. Hamst3r: Human-aware multi-view stereo 3d reconstruction. arXiv preprint
+584
+        arXiv:2508.16433, 2025.
+585
+586   István Sárándi and Gerard Pons-Moll. Neural localizer fields for continuous 3d human pose and
+587      shape estimation. In Advances in Neural Information Processing Systems, 2024.
+588
+      Zehong Shen, Huaijin Pi, Yan Xia, Zhi Cen, Sida Peng, Zechen Hu, Hujun Bao, Ruizhen Hu, and
+589
+        Xiaowei Zhou. World-grounded human motion recovery via gravity-view coordinates. In SIG-
+590
+        GRAPH Asia Conference Papers, 2024.
+591
+592   Soyong Shin, Juyong Kim, Eni Halilaj, and Michael J. Black. Wham: Reconstructing world-
+593     grounded humans with accurate 3d motion. In IEEE/CVF Conference on Computer Vision and
+        Pattern Recognition, pp. 2070–2080, 2024.
+
+
+                                                       11
+      Under review as a conference paper at ICLR 2027
+
+
+
+
+594
+      Chentao Song, He Zhang, Haolei Yuan, Haozhe Lin, Jianhua Tao, Hongwen Zhang, and Tao Yu.
+595     Metrichmsr: Metric human mesh and scene recovery from monocular images. arXiv preprint
+596     arXiv:2506.09919, 2026.
+597
+598   Tanuj Sur, Shashank Tripathi, Nikos Athanasiou, Ha Linh Nguyen, Kai Xu, Michael J. Black, and
+599     Angela Yao. Unicon3r: Unified contact-aware 4d human-scene reconstruction from monocular
+600
+        video. arXiv preprint arXiv:2604.19923, 2026.
+601   Jianyuan Wang, Minghao Chen, Nikita Karaev, Andrea Vedaldi, Christian Rupprecht, and David
+602      Novotny. Vggt: Visual geometry grounded transformer. In IEEE/CVF Conference on Computer
+603      Vision and Pattern Recognition, 2025a.
+604
+605
+      Jianyuan Wang, Minghao Chen, Shangzhan Zhang, Nikita Karaev, Johannes Schönberger, Patrick
+         Labatut, Piotr Bojanowski, David Novotny, Andrea Vedaldi, and Christian Rupprecht. Vggt-ω.
+606
+         arXiv preprint arXiv:2605.15195, 2026a.
+607
+608   Qianqian Wang, Yifei Zhang, Aleksander Holynski, Alexei A. Efros, and Angjoo Kanazawa. Con-
+609     tinuous 3d perception model with persistent state. arXiv preprint, 2025b.
+610
+      Shuzhe Wang, Vincent Leroy, Yohann Cabon, Boris Chidlovskii, and Jérôme Revaud. Dust3r: Ge-
+611
+        ometric 3d vision made easy. In IEEE/CVF Conference on Computer Vision and Pattern Recog-
+612
+        nition, 2024a.
+613
+614   Yifan Wang, Jianjun Zhou, Haoyi Zhu, Wenzheng Chang, Yang Zhou, Zizun Li, Junyi Chen, Jiang-
+615     miao Pang, Chunhua Shen, and Tong He. π 3 : Permutation-equivariant visual geometry learning.
+616     arXiv preprint arXiv:2507.13347, 2025c.
+617
+      Yufu Wang, Ziyun Wang, Lingjie Liu, and Kostas Daniilidis. Tram: Global trajectory and motion of
+618     3d humans from in-the-wild videos. In European Conference on Computer Vision, pp. 467–487,
+619     2024b.
+620
+621   Yufu Wang, Evonne Ng, Soyong Shin, Rawal Khirodkar, Yuan Dong, Zhaoen Su, Jinhyung Park, Kris
+622     Kitani, Alexander Richard, Fabian Prada, and Michael Zollhöfer. Duomo: Dual motion diffusion
+623
+        for world-space human reconstruction. arXiv preprint arXiv:2603.03265, 2026b.
+624   Vickie Ye, Georgios Pavlakos, Jitendra Malik, and Angjoo Kanazawa. Decoupling human and cam-
+625     era motion from videos in the wild. 2023.
+626
+627   Ye Yuan, Umar Iqbal, Pavlo Molchanov, Kris Kitani, and Jan Kautz. Glamr: Global occlusion-aware
+628
+        human mesh recovery with dynamic cameras. In IEEE/CVF Conference on Computer Vision and
+        Pattern Recognition, pp. 11038–11049, 2022.
+629
+630   Junyi Zhang, Charles Herrmann, Junhwa Hur, Varun Jampani, Trevor Darrell, Forrester Cole, Deqing
+631     Sun, and Ming-Hsuan Yang. Monst3r: A simple approach for estimating geometry in the presence
+632     of motion. arXiv preprint arXiv:2410.03825, 2024.
+633
+      Yizhou Zhao, Tuanfeng Yang Wang, Bhiksha Raj, Min Xu, Jimei Yang, and Chun-Hao Paul Huang.
+634
+        Synergistic global-space camera and human reconstruction from videos. In Proceedings of the
+635
+        IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 1216–1226, 2024.
+636
+637
+638
+639
+640
+641
+642
+643
+644
+645
+646
+647
+
+
+
+                                                    12
+      Under review as a conference paper at ICLR 2027
+
+
+
+
+648
+      A     EVALUATION PROTOCOLS AND SUPPLEMENTARY RESULTS
+649
+650
+651   This appendix provides evaluation protocols, results across sequence lengths, and additional visual-
+652
+      izations for Sec. 4.
+653
+654   A.1   BONN DEPTH PROTOCOLS
+655
+656   The Bonn evaluation uses balloon2, crowd2, crowd3, person_tracking2, and synchronous. We dis-
+657   tinguish metric-depth evaluation without ground-truth scale or shift from scale-aligned evaluation
+658   of relative depth. For sequence-length evaluation, each window begins at frame 30, and sequences
+659   shorter than the request contribute all remaining frames without padding. Metrics are aggregated
+660   using valid depth pixels across the five sequences.
+661   Table 4 reports depth accuracy without GT alignment as the requested input length varies from 50
+662   to 500 views. This evaluation complements the main comparison by examining the dependence of
+663   scene calibration on the temporal extent of the input.
+664
+665
+666   Table 4: Bonn depth without GT scale or shift alignment across input lengths. Metrics are weighted
+667   by valid pixels across five sequences; actual frame counts account for shorter sequences.
+668                         Requested views   Actual frames   Abs Rel ↓   δ < 1.25 ↑
+669
+                                        50             50      0.17049      0.82854
+670
+                                       100            100      0.14637      0.86971
+671                                    150            150      0.14197      0.86684
+672                                    200            200      0.13640      0.88192
+673                                    250            250      0.15130      0.84632
+674                                    300            300      0.18281      0.74750
+                                       350        302–350      0.20185      0.68086
+675
+                                       400        302–400      0.21045      0.65423
+676                                    450        302–450      0.20948      0.68589
+677                                    500        302–500      0.20229      0.72605
+678
+679
+680
+      A.2   CAMERA GEOMETRY AND ORACLE DIAGNOSTICS
+681
+682   Table 5 reports camera-translation RMSE after Sim(3) alignment, averaged across eight TUM-
+683   Dynamic sequences. This alignment convention follows Human3R (Chen et al., 2026). Align-
+684   ment removes the global similarity transform, making this evaluation a measure of relative camera-
+685   trajectory geometry.
+686
+687
+688   Table 5: Backbone camera errors on TUM-Dynamic after Sim(3) alignment. Each value is the mean
+689   ATE over eight sequences.
+690                                            Views    ATE (m)
+691
+                                                  50     0.00299
+692
+                                                 100     0.00434
+693                                              150     0.00493
+694                                              200     0.00591
+695                                              300     0.00634
+696                                              400     0.00645
+                                                 500     0.00692
+697
+698
+699
+700   Figure 4 in Sec. 4.2 visualizes aligned camera and depth diagnostics. Its reference curves are ap-
+701   proximately digitized from Human3R; the red depth curves use GT-fitted scale and are distinct from
+      the unaligned metric-depth results in Table 4.
+
+
+                                                       13
+      Under review as a conference paper at ICLR 2027
+
+
+
+
+702
+      B     NOTATION, COORDINATE SYSTEMS, AND METRIC GAUGE
+703
+704
+      Appendix B specifies coordinate and scale conventions; Appendix C gives the inference procedure;
+705   Appendix D summarizes training; Appendix E details the evaluation protocols; and Appendix F
+706   discusses limitations.
+707
+708   B.1   COORDINATE AND DEPTH CONVENTIONS
+709
+710   For frame t and person q in a clip, VGGT-Ω predicts relative scene depth and camera parameters,
+711   while NLF provides SMPL human observations expressed in meters. We establish correspondences
+712   between human surfaces and scene depth using Z-depth along the camera optical axis; Euclidean
+713   distance along a camera ray is not treated as Z-depth. Extrinsics follow the camera-from-world con-
+714   vention, Xc = Rcw,t Xw + tm    cw,t , with points written as column vectors. The shared-scale camera
+715
+      translation and its inverse world transform are given in Eqs. 5 and 13. In the mesh equations, trans-
+      lation is broadcast over vertices.
+716
+717   Let Drel denote relative depth, sclip the shared clip-level scale, and bclip the residual depth bias. Metric
+718   depth and metric camera translation are
+719
+                                  Dmetric = sclip Drel + bclip ,    tmetric = sclip trel .                     (14)
+720
+721   The bias acts only in the depth domain and is not directly added to camera translation. After shared-
+722   scale propagation, TRSTR performs a constrained camera-space translation update on the human
+723   root, while pose and shape remain frozen.
+724
+725   B.2   TENSOR, PRECISION, AND DEVICE CONVENTIONS
+726
+727
+728   Table 6: Main tensors and implementation conventions. Exact dimensions follow the final imple-
+729   mentation configuration.
+730               Object                Main dimensions            Unit/coordinates          Status
+731               Input images          B×T ×3×H ×W                image plane               defined
+732               Relative depth        B×T ×H ×W                  relative Z-depth          defined
+733               SMPL vertices         B×T ×N ×V ×3               camera, meter             defined
+734               Human anchors         B × T × N × 24 × C         feature space             defined
+                  TRSTR regions         B × T × N × 96 × Cr        canonical body            defined
+735
+                  Exact dtype/device    –                          –                         To be evaluated
+736
+737
+738
+739
+      C     MODEL ARCHITECTURE DETAILS AND COMPLETE INFERENCE
+740
+      C.1   VGGT-Ω, NLF, AND BASELINE BOUNDARIES
+741
+742   VGGT-Ω provides relative scene structure, camera parameters, and multi-level scene features. NLF
+743   provides local human pose, shape, camera-space translation, and confidence. GroundedHuman does
+744   not replace either baseline, and TRSTR is not allowed to reduce world-space error by changing pose
+745   or shape. The final version must list frozen parameters, trainable parameters, input resolution, clip
+746   length, and the maximum number of person slots.
+747
+      Placeholder: The frozen-module inventory, checkpoint paths, input shapes, dtypes, devices,
+748   and memory configuration must be verified against the server implementation.
+749
+750
+      C.2   SURFACE SAMPLING AND SCALE INITIALIZATION
+751
+752   Sampled vertices from all accepted people in a frame are pooled before projection. Pixel coordi-
+753   nates are rounded to the nearest integer, and only finite vertices with positive Z-depth and in-image
+754   projections are retained. The scene depth at each retained pixel must also be finite and positive.
+755   When several sampled vertices share a pixel, the nearest human surface sample is kept. Ratios out-
+      side the configured positive interval are removed, and the frame estimate is accepted only if enough
+
+
+                                                            14
+      Under review as a conference paper at ICLR 2027
+
+
+
+
+756
+      pixels remain. Equation 1 takes a median over these surface ratios; it does not first average a scale
+757   independently predicted for each person.
+758
+759   The inspected spatial inference launcher uses vertex stride 8, at least 32 retained pixels, and ratio
+760
+      limits [0.10, 10.0]. These are inference defaults rather than a claim about every benchmark run.
+      The accepted scale-training configuration uses a different disturbance range and validity policy. The
+761
+      nearest-sample test resolves conflicts among projected humans; it does not establish visibility with
+762
+      respect to an independently known environment. Consequently, systematic human-translation errors
+763   and environmental occlusion can still bias the scale.
+764
+765   Placeholder: The person-confidence threshold and all benchmark-specific sampling overrides
+766
+      must be checked against the evaluation records. Do not substitute training thresholds for in-
+      ference settings.
+767
+768
+769
+      C.3   PERSON-CONDITIONED RESIDUAL AFFINE
+770
+      The 24 anchors comprise 21 non-root SMPL joints, two hand anchors obtained from adjacent
+771   wrist/hand joints, and a global anchor formed by averaging 27 fixed template vertices. Each token
+772   contains the body’s 6D joint rotations, shape coeﬀicients and root translation, the anchor’s 3D po-
+773   sition and normalized image projection, and geometric attributes sampled from the initialized depth
+774   Dtc . The local probe searches a 9 × 9 window for the nearest valid scene point in 3D; when none is
+775   available, it uses the center depth sample. The attributes include the sampled point, surface normal,
+776   3D offset, distance, and Z-depth residual.
+777   Scene features from the final four cached aggregator layers are projected and concatenated into the
+778   scene representation. The spatial configuration uses 512D anchor tokens, eight attention heads, five
+779   interaction layers, and three passes through those layers. Each anchor attends to a 3×3 neighborhood
+780   of scene tokens around its projection. The token mean within a person is mapped to residual log-scale
+781   and bias. Confidence aggregation is
+782                                 max(ctq , 0)
+783                  wtq =          P                    ,
+                             max(     j max(ctj , 0), ε)
+784                            "                                        !#                               (15)
+785                                       X                                             X
+786
+                       ρt = exp clip           wtq ∆ℓtq , ℓmin , ℓmax        ,   bt =       wtq ∆btq .
+                                           q                                            q
+787
+788   The inspected configuration uses ℓmin = −5 and ℓmax = 5. If all person confidences are zero, the
+789   aggregation returns ρt = 1 and bt = 0. This is an identity residual, not evidence that the scene’s
+790   absolute scale is known.
+791
+792   C.4   CLIP-LEVEL CONSENSUS AND CAMERA PROPAGATION
+793
+      If a frame has no accepted analytic estimate, the sequence-median fallback substitutes the log-median
+794
+      scale of frames with successful surface estimates. Residual prediction then operates on this initial-
+795
+      ized depth. In the shared-world inference path, the composed scale sct ρt and the predicted bias are
+796   aggregated over the selected clip before TRSTR is run. The inspected wrapper takes the median over
+797   all selected frames after fallback; it does not apply an additional confidence mask to the final tempo-
+798   ral aggregation. Thus V in Eq. ?? includes frames whose initialization was filled from the clip, not
+799   only frames with directly observed surface support.
+800
+      If no frame has a valid analytic scale, the wrapper emits a warning and retains its unit initialization.
+801
+      Such a clip has no supported human-derived metric scale; this numerical fallback must not be pre-
+802   sented as successful absolute-scale recovery. The separate per-frame inference option does not apply
+803   the clip aggregation in Eq. ??. Benchmark reports must identify which option was used.
+804
+805   C.5   COMPLETE TRSTR UPDATE
+806
+807   TRSTR assigns template vertices to anatomical groups using their dominant linear-blend-skinning
+808   joint, then partitions each group using deterministic farthest-point seeds. The spatial configuration
+809   contains 96 regions and eight representative vertices per region. Region identity is fixed; centers and
+      representative points follow the current body geometry. Four support domains are used: 3 × 3 and
+
+
+                                                             15
+      Under review as a conference paper at ICLR 2027
+
+
+
+
+810
+      7 × 7 windows, an adaptive neighborhood, and an outer annulus. The adaptive radius is bounded by
+811
+      eight pixels and the annulus width is two pixels in the inspected configuration.
+812
+813   The human depth buffer stores the nearest projected human and its instance identity. A scene sample
+814   is associated with that human when the depth difference lies within the configured tolerance. Self-
+815
+      surface and environment observations are pooled separately in each support domain, producing eight
+      tokens. Other-human samples are excluded from both pooling channels and retained as an interfer-
+816
+      ence ratio. Region validity requires a positive center depth, a valid person, and suﬀicient support in
+817
+      at least one pooled channel. The spatial configuration uses a minimum support ratio of 0.25, 16D
+818   probe tokens, a 32D anatomical embedding, and a 256D regional representation.
+819
+820
+821
+                                                                        P
+                                                                           α v
+822                          αr = mr gr exp(−ℓr ),             b
+                                                               v=       Pr r r         ,
+                                                                    max( r αr , 10−5 )                 (16)
+823
+824
+                             ∆τ = g person clip[−dmax ,dmax ]3 (b
+                                                                v).
+825
+826
+      Each regional vote is predicted in the ray/tangent basis using bounded coeﬀicients. Log-variance is
+827
+      scalar and clamped to [−4, 4]; it is not a directional covariance estimate. Equation 16 applies the
+828   component-wise camera-space clip before the person gate. Two iterations share parameters and re-
+829   evaluate region locations, sample ownership, and geometric support after each update. The spatial
+830   configuration disables the optional temporal branch.
+831
+      Placeholder: Translation bounds differ between the inspected inference configuration and the
+832
+      later refinement-training configuration. Report the effective checkpoint and launch-time values
+833
+      for each experiment rather than assuming a single set of bounds.
+834
+835
+836
+837
+838
+839
+840
+841
+842
+843
+844
+845
+846
+847
+848
+849
+850
+851
+852
+853
+854
+855
+856
+857
+858
+859   Figure 7: Complete architecture of human-scale bridging and regional translation refinement.
+860   (a) The human front surface projected into the relative-depth map provides an analytic coarse scale,
+861   and 24 HSI anchors use local scene features to predict residual scale and bias. (b) TRSTR partitions
+862   the human surface into deterministic regions and iteratively corrects translation using multi-scale
+863   human–environment probing, gating, and uncertainty-weighted regional votes while preserving pose
+      and shape. This detail figure is moved from the main paper to the appendix.
+
+
+                                                         16
+      Under review as a conference paper at ICLR 2027
+
+
+
+
+864
+      C.6   INFERENCE ALGORITHM
+865
+866         1. Run the frozen VGGT-Ω to obtain relative depth, cameras, and scene features.
+            2. Run the frozen NLF to obtain local humans and confidence values.
+867
+            3. Project the visible SMPL front surface and compute person/frame scale proposals.
+868         4. Apply robust aggregation to obtain the analytic coarse scale.
+869         5. Run the person-conditioned residual aﬀine module to obtain residual scale and depth bias.
+870         6. Aggregate the shared scale within the clip and propagate it to depth and camera translation.
+871         7. Run two TRSTR iterations, updating only each person’s root translation.
+            8. Output humans, scene geometry, and camera trajectories in a shared world coordinate system.
+872
+873
+874   D     IMPLEMENTATION AND TRAINING DETAILS
+875
+876   D.1   STAGED TRAINING
+877
+878   Scale calibration and TRSTR are trained separately. The scale stage learns residual aﬀine param-
+879   eters from metric depth and SMPL supervision; the translation stage learns root corrections from
+880   perturbed human–scene states. VGGT-Ω and the human observer are not jointly optimized with
+881   these objectives. At inference, neither module receives ground-truth depth, camera motion, or hu-
+882   man parameters.
+883
+884
+      Table 7: v0.3 training-configuration placeholders. Every red entry must be replaced with a verified
+885
+      server configuration.
+886
+                                Item                                       Configuration
+887
+888                             Training/validation split                  To be evaluated
+889                             Input resolution and clip length           To be evaluated
+                                Optimizer / learning rate                  To be evaluated
+890
+                                Scheduler / warm-up                        To be evaluated
+891                             Batch size / accumulation                  To be evaluated
+892                             Epochs or steps                            To be evaluated
+893                             Mixed precision / gradient clipping        To be evaluated
+894                             GPU, training time, and random seed        To be evaluated
+                                Checkpoint selection                       To be evaluated
+895
+896
+897
+      D.2   COMPLETE LOSSES AND WEIGHTS
+898
+899
+      The scale-stage objective supervises the residual log-scale, depth bias, and calibrated depth:
+900
+901                                    Lscale = λs Llog -scale + λb Lbias + λd Ldepth .                       (17)
+902
+903   Training uses metric BEDLAM depth and SMPL observations. After an initial residual-scale train-
+904
+      ing stage, the accepted scale-head training path perturbs metric depth by an absolute scale factor,
+      estimates an analytic initialization from the perturbed depth, and injects an additional initialization
+905
+      error. The residual target is the ratio between the required absolute correction and the initialization
+906
+      actually used. Identity and non-identity perturbation groups expose the heads to both correct and in-
+907   accurate initial scales. Frames without valid scale supervision are excluded from the scale and depth
+908   losses. The bias target is zero in this training path; a general learned correction for arbitrary additive
+909   depth errors is not established by that supervision alone.
+910
+      TRSTR training includes clean, scene-scale perturbation, human-translation perturbation, and mixed
+911
+      states. Translation perturbations act along the camera ray and tangent directions. The training ob-
+912
+      jective is
+913
+914                LTRSTR = λvote Lvote + λtrans Ltrans + λgate Lgate + λreg Lreg
+                                                                                                              (18)
+915                         + λstrong Lstrong + λid Lidentity + λsafe Lno-worse + λmono Lmonotonic .
+916
+917   Regional votes are supervised toward the remaining target displacement divided by the number of
+      remaining iterations. The final root estimate receives translation supervision, gates receive validity
+
+
+                                                             17
+      Under review as a conference paper at ICLR 2027
+
+
+
+
+918
+      supervision, and update regularization controls correction magnitude. State-specific terms empha-
+919   size recovery from large errors, penalize displacement of clean inputs, and penalize worsening rel-
+920   ative to the initialization or the preceding iteration. These are training penalties, not guarantees of
+921   improvement on every test example.
+922
+      Placeholder: Loss weights must not be filled with expected values; they must be extracted from
+923
+      training configurations and checkpoint records.
+924
+925
+      D.3    TRAINING STAGES AND FREEZING STRATEGY
+926
+927   In the accepted scale-head training record, only the residual scale and bias heads are updated; the
+928   scene backbone, human observer, HSI interaction backbone, and body-parameter update branches re-
+929   main frozen. During TRSTR training, the scale module and upstream observers remain frozen, while
+930   the regional features, translation votes, uncertainty estimates, and gates are trained. The geometric
+931   output being corrected is root translation, not pose or shape.
+932
+      Both stages must report the training and validation sources, sampling ratios, perturbation ranges,
+933   effective configuration, and checkpoint-selection criterion. Local configuration inspection does not
+934   establish which checkpoints generated the reported benchmark results; this association remains to be
+935   checked against the server records. No placeholder in the tables above supplies missing experimental
+936   evidence.
+937
+938
+      E     COMPLETE EVALUATION PROTOCOLS
+939
+940
+      For EMDB-2, we evaluate world-space human motion in 100-frame segments following Human3R
+941
+      (Chen et al., 2026). WA-MPJPE uses segment-wide similarity alignment, W-MPJPE uses alignment
+942   estimated from the first two frames, and RTE measures root-trajectory error after rigid alignment,
+943   normalized by the reference trajectory length.
+944
+945
+946                    Table 8: Summary of evaluation tasks and alignment conventions.
+947    Dataset       Task                Metrics                  Alignment/GT use                          Status
+948    3DPW          local human         PA-MPJPE, MPJPE, PVE     observer reference; pelvis / similarity   reference comparison
+       EMDB-2        world motion        WA-MPJPE, W-MPJPE, RTE   100-frame segments; 24 joints             25 sequences
+949    TUM-Dynamic   camera trajectory   ATE                      Sim(3); sequence mean                     8 sequences
+950    Bonn          video depth         Abs Rel, δ < 1.25        aligned and unaligned settings            5 sequences
+951
+952
+953   F ADDITIONAL QUALITATIVE RESULTS, FAILURE CASES, AND RESPONSIBLE USE
+954
+955   Figures 3, 5, and 6 show temporal reconstruction, human placement, and selected length measure-
+956   ments in the main paper. Camera and oracle diagnostics appear in Fig. 4 of Sec. 4.2. These examples
+957   do not replace controlled robustness or failure-rate evaluation.
+958   The main failure chains include insuﬀicient anchor support caused by invisibility or severe trunca-
+959   tion; biased metric priors caused by incorrect SMPL shape or height; unreliable local probes caused
+960   by VGGT-Ω relative-structure errors; failed environment/other-human separation under dynamic ob-
+961   jects or multi-person occlusion; and the inability of translation-only TRSTR to correct pose, shape,
+962   or fine-grained contact.
+963   These conditions motivate further evaluation of failure detection and reliability under missing or
+964   misleading geometric evidence.
+965
+      Human-video reconstruction may be misused for privacy-sensitive behavioral analysis or surveil-
+966
+      lance. This work is limited to geometric reconstruction and does not perform identity recognition or
+967
+      sensitive-attribute inference. Canonical human dimensions may also produce systematic scale bias
+968   for children, uncommon body types, or populations outside the training distribution; quantifying this
+969   bias requires a dedicated sensitivity evaluation that is not supplied by the current results.
+970
+971
+
+
+
+                                                            18
+
