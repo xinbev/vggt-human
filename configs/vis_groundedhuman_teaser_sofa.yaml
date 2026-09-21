@@ -1,0 +1,25 @@
+# Independent asset export; existing model/training configurations stay unchanged.
+image: assets/image/teaser/sofa.png
+output_dir: outputs/vis/groundedhuman_teaser/sofa
+path_config: configs/path.yaml
+model_config: configs/infer_smpl_hsi_v3_trstr_spatial.yaml
+# Same default sources as serve_walking_hsi_v3_trstr_spatial.sh.
+# Override CHECKPOINT / SCALE_CHECKPOINT if the accepted server run differs.
+checkpoint: outputs/train/smpl_hsi_stage2_trstr_v3_scale_spatial/checkpoint_latest.pt
+scale_checkpoint: outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt
+device: cuda:0
+person_rank: 0  # Confidence-sorted; does not remove other people from ownership tests.
+confidence_threshold: 0.05
+coarse_anchor_stride: 8
+coarse_min_anchor_pixels: 32
+coarse_scale_min: 0.10
+coarse_scale_max: 10.0
+render_scale: 3
+scene_stride: 2
+max_scene_depth: 80.0
+region_groups: [hands, pelvis, feet]
+regions_per_group: 2
+anchor_indices: [12, 15, 20, 21, 22, 6, 7, 9, 10, 23]
+# Physical values are always exported at 1x; this affects an explicitly labeled
+# alternative arrow layer only. Zero updates remain zero, never fabricated.
+arrow_display_gain: 5.0
