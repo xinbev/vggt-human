@@ -57,4 +57,5 @@ echo "Frames max : ${MAX_FRAMES_PER_SEQUENCE} (0 means all selected label frames
 echo "Output     : ${OUTPUT_DIR}"
 
 CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}" \
+PYTHONPATH="${ROOT_DIR}${PYTHONPATH:+:${PYTHONPATH}}" \
 python scripts/eval/evaluate_rich_physical_grounding.py "${args[@]}"
