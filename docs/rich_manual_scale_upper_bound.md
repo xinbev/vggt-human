@@ -75,6 +75,20 @@ Selections are written immediately to:
 
 `outputs/eval/rich_manual_scale/cache/manual_scales.json`
 
+`Preview Window Metrics` does not write a file and does not modify the
+inference cache. It only recomputes the currently selected window and updates
+the Viser text. To start the manual experiment over while preserving the
+expensive inference cache, stop Viser with `Ctrl+C` and run:
+
+```bash
+cd /home/zhw/lab_users/xyb/home/projects/vggt-human
+bash scripts/eval/reset_rich_manual_scale.sh
+```
+
+This removes `manual_scales.json` and prior manual/oracle metric outputs, but
+keeps `outputs/eval/rich_manual_scale/cache/windows/` and
+`cache/manifest.json`.
+
 The final evaluator requires every window to have an explicit saved value.
 Saving `x1.0` is valid when no adjustment is wanted.
 
