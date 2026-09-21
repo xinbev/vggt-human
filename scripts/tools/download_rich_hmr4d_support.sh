@@ -1,64 +1,69 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Download the GVHMR RICH evaluation support bundle. This is separate from the
-# official RICH images, scans, and calibration archives.
+# Minimal RICH support files used by this project. The GVHMR image-feature file
+# rich_test_preproc.pt is intentionally omitted: OmegaHSR processes RGB itself.
 
 RICH_ROOT="${RICH_ROOT:-/home/zhw/xyb_space/RICH}"
-DOWNLOAD_DIR="${DOWNLOAD_DIR:-${RICH_ROOT}/official_downloads}"
 SUPPORT_ROOT="${SUPPORT_ROOT:-${RICH_ROOT}/hmr4d_support}"
-ARCHIVE_PATH="${DOWNLOAD_DIR}/RICH_hmr4d_support.tar.gz"
-GDRIVE_URL="https://drive.google.com/file/d/1IyxQ-9VGnROTKqg8EuA5jdQzgtVoORnI/view?usp=sharing"
+LABELS_URL="https://drive.google.com/file/d/17fbG1IsN6DfF_KwYWR2FbNZFKvs9waVb/view?usp=drive_link"
+CAM_PARAMS_URL="https://raw.githubusercontent.com/zju3dv/GVHMR/088caff492aa38c2d82cea363b78a3c65a83118f/hmr4d/dataset/rich/resource/cam2params.pt"
 
-mkdir -p "${DOWNLOAD_DIR}" "${SUPPORT_ROOT}"
+mkdir -p "${SUPPORT_ROOT}/resource"
 
 if ! command -v gdown >/dev/null 2>&1; then
   echo "gdown is not installed; installing it into the active Python environment..."
   python -m pip install gdown
 fi
 
-echo "[download] ${ARCHIVE_PATH}"
-gdown --fuzzy --continue --output "${ARCHIVE_PATH}" "${GDRIVE_URL}"
+echo "[download] rich_test_labels.pt"
+gdown \
+  --fuzzy \
+  --continue \
+  --output "${SUPPORT_ROOT}/rich_test_labels.pt" \
+  "${LABELS_URL}"
 
-if [[ "$(head -c 2 "${ARCHIVE_PATH}" | od -An -t x1 | tr -d ' \n')" != "1f8b" ]]; then
-  echo "error: ${ARCHIVE_PATH} is not a gzip archive." >&2
-  echo "Google Drive may have returned an error page or blocked the download quota." >&2
+echo "[download] resource/cam2params.pt"
+if command -v curl >/dev/null 2>&1; then
+  curl -L --fail --retry 5 \
+    --output "${SUPPORT_ROOT}/resource/cam2params.pt" \
+    "${CAM_PARAMS_URL}"
+elif command -v wget >/dev/null 2>&1; then
+  wget --continue --tries=5 \
+    --output-document="${SUPPORT_ROOT}/resource/cam2params.pt" \
+    "${CAM_PARAMS_URL}"
+else
+  echo "error: curl or wget is required to download cam2params.pt." >&2
   exit 1
 fi
 
-echo "[extract] ${ARCHIVE_PATH}"
-tar -xzf "${ARCHIVE_PATH}" -C "${RICH_ROOT}"
+python - "${SUPPORT_ROOT}/rich_test_labels.pt" <<'PY'
+import sys
+from pathlib import Path
 
-labels_path="$(find "${RICH_ROOT}" -type f -name rich_test_labels.pt -print -quit)"
-preproc_path="$(find "${RICH_ROOT}" -type f -name rich_test_preproc.pt -print -quit)"
+import torch
 
-if [[ -z "${labels_path}" ]]; then
-  echo "error: rich_test_labels.pt was not found after extraction." >&2
-  exit 1
-fi
-if [[ -z "${preproc_path}" ]]; then
-  echo "error: rich_test_preproc.pt was not found after extraction." >&2
-  exit 1
-fi
+path = Path(sys.argv[1])
+try:
+    labels = torch.load(path, map_location="cpu", weights_only=False)
+except TypeError:
+    labels = torch.load(path, map_location="cpu")
 
-link_if_needed() {
-  local source_path="$1"
-  local target_path="$2"
-  if [[ "$(readlink -f "${source_path}")" == "$(readlink -m "${target_path}")" ]]; then
-    return 0
-  fi
-  if [[ -e "${target_path}" || -L "${target_path}" ]]; then
-    echo "error: refusing to replace existing ${target_path}" >&2
-    exit 1
-  fi
-  ln -s "${source_path}" "${target_path}"
-}
+if not isinstance(labels, dict) or not labels:
+    raise RuntimeError(f"Unexpected RICH labels payload in {path}")
 
-link_if_needed "${labels_path}" "${SUPPORT_ROOT}/rich_test_labels.pt"
-link_if_needed "${preproc_path}" "${SUPPORT_ROOT}/rich_test_preproc.pt"
+missing = [key for key, value in labels.items() if "frame_id" not in value]
+if missing:
+    raise RuntimeError(f"RICH labels missing frame_id for {len(missing)} sequences")
+
+print(f"[verified] {path}: {len(labels)} test sequences")
+print("[first sequences]")
+for key in sorted(labels)[:5]:
+    print(f"  {key}: {len(labels[key]['frame_id'])} frames")
+PY
 
 echo
-echo "RICH hmr4d support files are ready:"
+echo "RICH support files are ready:"
 ls -lh \
   "${SUPPORT_ROOT}/rich_test_labels.pt" \
-  "${SUPPORT_ROOT}/rich_test_preproc.pt"
+  "${SUPPORT_ROOT}/resource/cam2params.pt"
