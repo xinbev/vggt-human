@@ -1,0 +1,10 @@
+# RICH official test recordings marked moving_cam=V. Use the untracked cam_10 view.
+test/ParkingLot2_017_burpeejump2/cam_10
+test/ParkingLot2_017_burpeejump1/cam_10
+test/ParkingLot2_017_overfence1/cam_10
+test/ParkingLot2_017_overfence2/cam_10
+test/ParkingLot2_017_eating1/cam_10
+test/ParkingLot2_017_pushup2/cam_10
+test/Gym_011_cooking1/cam_10
+test/Gym_011_cooking2/cam_10
+test/Gym_012_cooking2/cam_10

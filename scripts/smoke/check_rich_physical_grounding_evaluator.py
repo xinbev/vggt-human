@@ -13,7 +13,11 @@ import numpy as np
 import torch
 from PIL import Image
 
-from vggt_omega.data.rich_physical_grounding import RichPhysicalGroundingDataset
+from vggt_omega.data.rich_physical_grounding import (
+    RICH_PROTOCOL_HMR4D_VIEWS,
+    RICH_PROTOCOL_MOVING_TEST9,
+    RichPhysicalGroundingDataset,
+)
 from vggt_omega.evaluation.rich_physical_grounding import (
     GroundEstimatorConfig,
     compute_physical_metrics,
@@ -90,6 +94,7 @@ def main() -> None:
             patch_size=16,
             max_humans=2,
             sequence_filters=["Gym_010_cooking1/cam_01"],
+            protocol=RICH_PROTOCOL_HMR4D_VIEWS,
         )
         record = dataset.records[0]
         batch = dataset.load_batch(record, [0, 1])
@@ -98,6 +103,31 @@ def main() -> None:
         assert batch.images.shape == (2, 3, 32, 32)
         assert bool(batch.query_mask[:, 0].all())
         assert not bool(batch.query_mask[:, 1].any())
+
+        moving_dir = official / "test" / "ParkingLot2_017_burpeejump2" / "cam_10"
+        moving_dir.mkdir(parents=True)
+        for index in range(3):
+            Image.fromarray(np.full((24, 40, 3), index * 60, dtype=np.uint8)).save(
+                moving_dir / f"{index:05d}.jpg"
+            )
+        moving_dataset = RichPhysicalGroundingDataset(
+            official_root=official,
+            support_root=support_root,
+            image_resolution=32,
+            patch_size=16,
+            max_humans=2,
+            sequence_filters=["ParkingLot2_017_burpeejump2/cam_10"],
+            protocol=RICH_PROTOCOL_MOVING_TEST9,
+        )
+        moving_record = moving_dataset.records[0]
+        moving_batch = moving_dataset.load_batch(moving_record, [0, 2])
+        assert moving_record.vid == "test/ParkingLot2_017_burpeejump2/cam_10"
+        assert moving_record.frame_ids == (0, 1, 2)
+        assert moving_batch.source_frame_ids == (0, 2)
+        assert not bool(moving_batch.query_mask.any())
+        assert moving_batch.images.shape[:2] == (2, 3)
+        assert moving_batch.images.shape[-2] % 16 == 0
+        assert moving_batch.images.shape[-1] % 16 == 0
 
     print("RICH physical-grounding evaluator smoke checks passed.")
 

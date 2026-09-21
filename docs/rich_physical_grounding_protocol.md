@@ -11,14 +11,17 @@ Reproduce only the physical-grounding half of UniCon3R Table 3 on RICH:
 
 The existing VGGT-Omega paths remain unchanged. The evaluator must be added as
 an optional evaluation path and must not replace the current baseline metrics.
+The currently runnable benchmark is deliberately reduced to the nine moving-
+camera recordings in the official RICH test split; it is not presented as the
+full 40-recording Table 3 result.
 
 ## Dedicated Evaluator
 
 The metric path is intentionally independent of all Viser/viewer modules:
 
-- `vggt_omega/data/rich_physical_grounding.py` reads the official RICH JPG tree,
-  applies each support label's `frame_id`, and converts `bbx_xys` into the
-  processed-image query box.
+- `vggt_omega/data/rich_physical_grounding.py` reads all frames from `cam_10`
+  for the nine official test recordings marked `moving_cam=V`. Its retained
+  `hmr4d_test_camera_views` mode still supports label-selected static views.
 - `vggt_omega/evaluation/rich_physical_grounding.py` runs the two-pass metric
   cascade and implements the grounding metrics.
 - `scripts/eval/evaluate_rich_physical_grounding.py` handles sequence/chunk
@@ -26,10 +29,11 @@ The metric path is intentionally independent of all Viser/viewer modules:
 - `scripts/eval/evaluate_rich_physical_grounding.sh` is the server entry point.
 
 NLF runs in detector mode with eight candidate slots, matching the accepted
-inference script. Each frame's predicted boxes are compared with the RICH
-`bbx_xys` target box; only the maximum-IoU prediction is scored, and frames
-below the configured IoU threshold are marked invalid. This prevents another
-person in the image from being silently scored as the target.
+inference script. The untracked `cam_10` view has no entry in HMR4D's
+`rich_test_labels.pt`, so the moving-camera protocol scores the highest-
+confidence valid person detection in each frame. These nine recordings contain
+one captured subject. The retained static-view protocol continues to match the
+detector output to the RICH `bbx_xys` target by maximum IoU.
 
 The inference path is:
 
@@ -49,8 +53,9 @@ checkpoint is loaded over the VGGT baseline, the v3 scale checkpoint overlays
 only `hsi_refinement_head.*`, and the model uses
 `hsi_align_feature_version=legacy_scale_bias_v0`,
 `hsi_scene_affine_mode=per_frame`, `smpl_use_aggregator_queries=false`, and
-eight NLF detector slots. The evaluator then adds target-person selection using
-the RICH box, which the general-purpose visualization script does not perform.
+eight NLF detector slots. The evaluator then adds protocol-specific target-
+person selection, which the general-purpose visualization script does not
+perform.
 
 ## References
 
@@ -134,7 +139,8 @@ The available UniCon3R paper does not specify:
 3. Whether one ground height is fitted per frame, window, camera view, or action
    recording.
 4. Whether final numbers are pooled over all frames or averaged per sequence.
-5. The exact list of the 40 moving-camera RICH recordings used by UniCon3R.
+5. Whether UniCon3R aggregates its 40 moving-camera recordings by frame or by
+   sequence.
 
 The paper states that source code and models will be released upon acceptance,
 so the exact private evaluation implementation is not currently available in
@@ -149,7 +155,7 @@ Server roots:
 /home/zhw/xyb_space/RICH/hmr4d_support
 ```
 
-The asset audit currently reports:
+The original HMR4D asset audit reports:
 
 ```text
 RICH camera views: 191
@@ -158,8 +164,26 @@ Selected frames: 106446
 Sequences with issues: 0
 ```
 
-This proves that the downloaded files are complete for the current adapter. It
-does not establish which 40 recordings were used for UniCon3R Table 3.
+Those 191 entries are calibrated static-camera views and are not the current
+moving-camera protocol. RICH's official metadata contains exactly 40 recordings
+marked `moving_cam=V`: 22 train, 9 validation, and 9 test. The current reduced
+protocol intentionally evaluates only the nine test recordings, using their
+untracked `cam_10` directories:
+
+```text
+ParkingLot2_017_burpeejump2
+ParkingLot2_017_burpeejump1
+ParkingLot2_017_overfence1
+ParkingLot2_017_overfence2
+ParkingLot2_017_eating1
+ParkingLot2_017_pushup2
+Gym_011_cooking1
+Gym_011_cooking2
+Gym_012_cooking2
+```
+
+The canonical manifest is `configs/eval/rich_test_moving_camera_9.txt`. This
+reduced result must not be reported as the full UniCon3R Table 3 protocol.
 
 ## Evaluation Model Path
 
@@ -187,7 +211,7 @@ current inference system.
 ## Implementation Order
 
 1. Verify the evaluation checkpoint and SMPL body-model assets.
-2. Run one camera view as an inference smoke test and save world-frame body
+2. Run one `cam_10` recording as an inference smoke test and save world-frame body
    vertices plus the reconstructed scene representation.
 3. Validate the coordinate convention, gravity axis, metre scale, and body/scene
    alignment visually and numerically.
@@ -195,11 +219,12 @@ current inference system.
    the output, while keeping the 5 mm tolerance fixed.
 5. Compare multiple robust ground estimators on the smoke sequence before
    launching the full RICH evaluation.
-6. Run all 191 camera views only after the 40-recording subset is identified or
-   report the evaluated recording list explicitly as a protocol deviation.
+6. Run the nine-recording test subset and report it explicitly as a reduced
+   protocol. Add the 31 train/validation moving-camera recordings only after
+   those images are downloaded.
 
-All full-evaluation outputs must be written under
-`outputs/eval/rich_physical_grounding/`.
+All full-evaluation outputs for this reduced protocol are written under
+`outputs/eval/rich_physical_grounding_test_moving9_cam10/`.
 
 ## Server Commands
 
@@ -210,30 +235,41 @@ cd /home/zhw/lab_users/xyb/home/projects/vggt-human
 bash scripts/smoke/check_rich_physical_grounding_evaluator.sh
 ```
 
-Then run four label-selected frames from a known existing camera view:
+Then run four frames from a known moving-camera recording:
 
 ```bash
 cd /home/zhw/lab_users/xyb/home/projects/vggt-human
 CUDA_VISIBLE_DEVICES_VALUE=0 \
 MODE=smoke \
-RICH_SEQUENCE=Gym_010_cooking1/cam_01 \
+RICH_SEQUENCE=ParkingLot2_017_burpeejump2/cam_10 \
 SMOKE_FRAMES=4 \
 WINDOW_SIZE=100 \
 bash scripts/eval/evaluate_rich_physical_grounding.sh
 ```
 
 Smoke outputs are written to
-`outputs/debug/rich_physical_grounding/evaluator_smoke/`. A full run uses
-`MODE=full` and writes to `outputs/eval/rich_physical_grounding/`. The supplied
-paper does not publish the exact list of 40 moving-camera sequences, so a paper-
-comparable run must pass that list through `SEQUENCE_MANIFEST`; the evaluator
-never invents the subset.
+`outputs/debug/rich_physical_grounding/test_moving9_cam10_smoke/`. A full run
+uses `MODE=full`, automatically loads
+`configs/eval/rich_test_moving_camera_9.txt`, and writes to
+`outputs/eval/rich_physical_grounding_test_moving9_cam10/`.
+
+```bash
+cd /home/zhw/lab_users/xyb/home/projects/vggt-human
+CUDA_VISIBLE_DEVICES_VALUE=0 \
+MODE=full \
+WINDOW_SIZE=100 \
+MAX_FRAMES_PER_SEQUENCE=0 \
+bash scripts/eval/evaluate_rich_physical_grounding.sh
+```
+
+Full mode enables resume by default. Re-running the same command skips completed
+recordings only when their saved protocol and window size still match.
 
 Primary output files are:
 
-- `summary.json` and `summary.csv`: pooled-frame and camera-view-mean metrics.
+- `summary.json` and `summary.csv`: pooled-frame and sequence-mean metrics.
 - `per_window.csv`: one row per non-overlapping 100-frame evaluation window;
-  the final shorter window of each camera view is retained.
-- `per_sequence.csv`: one row per RICH camera-view key.
-- `per_frame.csv`: signed clearance and validity for every selected label frame.
-- `sequences/*.json`: resumable per-view records with 100-frame window ground diagnostics.
+  the final shorter window of each recording is retained.
+- `per_sequence.csv`: one row per moving-camera recording.
+- `per_frame.csv`: signed clearance and validity for every source frame.
+- `sequences/*.json`: resumable per-recording results and ground diagnostics.

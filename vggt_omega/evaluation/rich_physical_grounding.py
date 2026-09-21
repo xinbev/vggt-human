@@ -35,6 +35,7 @@ class GroundEstimatorConfig:
     tolerance_m: float = 0.005
     target_min_iou: float = 0.30
     target_min_confidence: float = 0.05
+    target_selection: str = "rich_box_iou"
 
 
 def configure_reference_cascade_model(
@@ -90,7 +91,7 @@ def configure_reference_cascade_model(
         "hsi_scene_affine_mode": "per_frame",
         "smpl_use_aggregator_queries": False,
         "num_smpl_queries": int(max_humans),
-        "target_selection": "NLF detector prediction matched to RICH bbx_xys by IoU",
+        "target_selection": "configured by the evaluation protocol",
     }
     del checkpoint
     return restored, report
@@ -275,37 +276,58 @@ def evaluate_prediction_chunk(
     frame_payloads: list[dict[str, Any]] = []
     frame_ground_estimates = []
     for frame_index in range(depth.shape[1]):
-        is_target_valid = bool(target_mask[0, frame_index, 0])
-        if not is_target_valid:
-            frame_payloads.append(
-                {"valid": False, "invalid_reason": "missing_rich_target_box"}
-            )
-            frame_ground_estimates.append(None)
-            continue
         predicted_boxes = predictions["pred_boxes"][0, frame_index].detach().float()
         predicted_confidences = predictions["pred_confs"][0, frame_index, :, 0].detach().float()
-        ious = normalized_cxcywh_iou(predicted_boxes, target_boxes[0, frame_index, 0])
         valid_detections = (
             torch.isfinite(predicted_boxes).all(dim=-1)
             & (predicted_boxes[:, 2:] > 0.0).all(dim=-1)
+            & torch.isfinite(predicted_confidences)
             & (predicted_confidences >= config.target_min_confidence)
         )
-        ious = torch.where(valid_detections, ious, ious.new_full(ious.shape, -1.0))
-        query_index = int(torch.argmax(ious).item())
-        target_iou = float(ious[query_index].cpu())
-        confidence = float(predicted_confidences[query_index].cpu())
-        if target_iou < config.target_min_iou:
+        if not bool(valid_detections.any()):
             frame_payloads.append(
-                {
-                    "valid": False,
-                    "invalid_reason": "target_iou_below_threshold",
-                    "query_index": query_index,
-                    "target_iou": target_iou,
-                    "confidence": confidence,
-                }
+                {"valid": False, "invalid_reason": "no_valid_detector_prediction"}
             )
             frame_ground_estimates.append(None)
             continue
+
+        if config.target_selection == "rich_box_iou":
+            if not bool(target_mask[0, frame_index, 0]):
+                frame_payloads.append(
+                    {"valid": False, "invalid_reason": "missing_rich_target_box"}
+                )
+                frame_ground_estimates.append(None)
+                continue
+            selection_box = target_boxes[0, frame_index, 0]
+            ious = normalized_cxcywh_iou(predicted_boxes, selection_box)
+            ious = torch.where(valid_detections, ious, ious.new_full(ious.shape, -1.0))
+            query_index = int(torch.argmax(ious).item())
+            target_iou: float | None = float(ious[query_index].cpu())
+            if target_iou < config.target_min_iou:
+                frame_payloads.append(
+                    {
+                        "valid": False,
+                        "invalid_reason": "target_iou_below_threshold",
+                        "query_index": query_index,
+                        "target_iou": target_iou,
+                        "confidence": float(predicted_confidences[query_index].cpu()),
+                    }
+                )
+                frame_ground_estimates.append(None)
+                continue
+        elif config.target_selection == "detector_confidence":
+            scores = torch.where(
+                valid_detections,
+                predicted_confidences,
+                predicted_confidences.new_full(predicted_confidences.shape, -1.0),
+            )
+            query_index = int(torch.argmax(scores).item())
+            target_iou = None
+            selection_box = predicted_boxes[query_index]
+        else:
+            raise ValueError(f"Unsupported target selection: {config.target_selection}")
+
+        confidence = float(predicted_confidences[query_index].cpu())
         vertices_world = camera_points_to_world(
             vertices_cam[0, frame_index, query_index], extrinsics[0, frame_index]
         )
@@ -315,7 +337,7 @@ def evaluate_prediction_chunk(
             extrinsics[0, frame_index],
             stride=config.scene_point_stride,
             max_depth_m=config.max_scene_depth_m,
-            exclusion_box=target_boxes[0, frame_index, 0],
+            exclusion_box=selection_box,
             bbox_expand_ratio=config.bbox_expand_ratio,
         )
         body_low_y = float(vertices_world[:, 1].max().cpu())

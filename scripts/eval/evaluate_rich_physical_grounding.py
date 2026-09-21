@@ -17,7 +17,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.train.train_smpl import build_model  # noqa: E402
-from vggt_omega.data.rich_physical_grounding import RichPhysicalGroundingDataset  # noqa: E402
+from vggt_omega.data.rich_physical_grounding import (  # noqa: E402
+    RICH_PROTOCOL_HMR4D_VIEWS,
+    RICH_PROTOCOL_MOVING_TEST9,
+    RichPhysicalGroundingDataset,
+)
 from vggt_omega.evaluation.rich_physical_grounding import (  # noqa: E402
     CascadeConfig,
     GroundEstimatorConfig,
@@ -54,6 +58,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--baseline-checkpoint", type=Path, default=None)
     parser.add_argument("--output-dir", type=Path, default=ROOT / "outputs/eval/rich_physical_grounding")
+    parser.add_argument(
+        "--dataset-protocol",
+        choices=(RICH_PROTOCOL_MOVING_TEST9, RICH_PROTOCOL_HMR4D_VIEWS),
+        default=RICH_PROTOCOL_MOVING_TEST9,
+    )
     parser.add_argument("--sequence", action="append", default=[])
     parser.add_argument("--sequence-manifest", type=Path, default=None)
     parser.add_argument("--max-sequences", type=int, default=0)
@@ -128,6 +137,12 @@ def main() -> None:
         max_sequences=args.max_sequences,
         frame_stride=args.frame_stride,
         max_frames_per_sequence=args.max_frames_per_sequence,
+        protocol=args.dataset_protocol,
+    )
+    target_selection = (
+        "detector_confidence"
+        if args.dataset_protocol == RICH_PROTOCOL_MOVING_TEST9
+        else "rich_box_iou"
     )
     cascade_config = CascadeConfig(
         confidence_threshold=args.confidence_threshold,
@@ -147,10 +162,12 @@ def main() -> None:
         tolerance_m=args.tolerance_m,
         target_min_iou=args.target_min_iou,
         target_min_confidence=args.confidence_threshold,
+        target_selection=target_selection,
     )
 
     print(
-        f"[setup] camera views={len(dataset)} image_resolution={image_resolution} "
+        f"[setup] sequences={len(dataset)} protocol={args.dataset_protocol} "
+        f"image_resolution={image_resolution} "
         f"window_size={args.window_size}",
         flush=True,
     )
@@ -170,18 +187,20 @@ def main() -> None:
     )
     smpl = SMPLLayer(smpl_model_dir).to(device).eval()
     run_metadata = {
-        "protocol": "UniCon3R Table 3 physical-grounding reproduction hypothesis",
+        "protocol": args.dataset_protocol,
         "official_identity_claim": False,
-        "target_person_selection": "NLF detector prediction matched to RICH bbx_xys by maximum IoU",
+        "target_person_selection": target_selection,
         "ground_source": "model-reconstructed metric depth, not the RICH reference scan",
-        "aggregation": ["pooled_frames", "mean_of_camera_view_metrics"],
+        "aggregation": ["pooled_frames", "mean_of_sequence_metrics"],
         "evaluation_window_frames": args.window_size,
-        "windowing": "non-overlapping within each camera view; final shorter window retained",
+        "windowing": "non-overlapping within each sequence; final shorter window retained",
         "selection_warning": (
-            "UniCon3R's exact 40-sequence moving-camera list is not published in the provided materials. "
-            "This run evaluates exactly the camera-view keys listed below."
+            "This is the nine-recording moving-camera subset of the official RICH test split. "
+            "UniCon3R Table 3 uses all 40 moving-camera recordings across train, val, and test."
+            if args.dataset_protocol == RICH_PROTOCOL_MOVING_TEST9
+            else "This is the retained HMR4D static-camera-view protocol, not the moving-camera benchmark."
         ),
-        "selected_camera_views": [record.vid for record in dataset],
+        "selected_sequences": [record.vid for record in dataset],
         "cascade": asdict(cascade_config),
         "ground_estimator": asdict(ground_config),
         "weights": weight_report,
@@ -204,7 +223,10 @@ def main() -> None:
         result_path = sequence_dir / f"{safe_name(record.vid)}.json"
         if args.resume and result_path.is_file():
             payload = json.loads(result_path.read_text(encoding="utf-8"))
-            if int(payload.get("evaluation_window_frames", -1)) == args.window_size:
+            if (
+                int(payload.get("evaluation_window_frames", -1)) == args.window_size
+                and payload.get("dataset_protocol") == args.dataset_protocol
+            ):
                 sequence_results.append(payload["sequence"])
                 all_frames.extend(payload["frames"])
                 all_windows.extend(payload["windows"])
@@ -212,7 +234,7 @@ def main() -> None:
                 continue
             print(
                 f"[recompute {sequence_index}/{len(dataset)}] {record.vid}: "
-                "saved result uses a different evaluation window",
+                "saved result uses a different protocol or evaluation window",
                 flush=True,
             )
 
@@ -237,7 +259,7 @@ def main() -> None:
                         "recording": record.recording,
                         "camera": record.camera,
                         "window_index": window_index,
-                        "label_position": int(batch.label_positions[local_index]),
+                        "sequence_position": int(batch.label_positions[local_index]),
                         "source_frame_id": int(batch.source_frame_ids[local_index]),
                         "image": str(batch.image_paths[local_index]),
                     }
@@ -258,8 +280,8 @@ def main() -> None:
                 "window_index": window_index,
                 "selected_frames": len(evaluated),
                 "invalid_frames": len(evaluated) - window_metrics["valid_frames"],
-                "label_position_start": int(batch.label_positions[0]),
-                "label_position_end": int(batch.label_positions[-1]),
+                "sequence_position_start": int(batch.label_positions[0]),
+                "sequence_position_end": int(batch.label_positions[-1]),
                 "source_frame_id_start": int(batch.source_frame_ids[0]),
                 "source_frame_id_end": int(batch.source_frame_ids[-1]),
                 **window_metrics,
@@ -268,14 +290,14 @@ def main() -> None:
             window_reports.append(
                 {
                     "window_index": window_index,
-                    "label_positions": list(batch.label_positions),
+                    "sequence_positions": list(batch.label_positions),
                     "metrics": window_summary,
                     "ground": ground_report,
                     "cascade": cascade_report,
                 }
             )
             print(
-                f"  [window {window_index + 1}] labels={batch.label_positions[0]}..{batch.label_positions[-1]} "
+                f"  [window {window_index + 1}] frames={batch.label_positions[0]}..{batch.label_positions[-1]} "
                 f"valid={sum(bool(row['valid']) for row in evaluated)}/{len(evaluated)}",
                 flush=True,
             )
@@ -293,11 +315,12 @@ def main() -> None:
             **metrics,
         }
         payload = {
+            "dataset_protocol": args.dataset_protocol,
             "evaluation_window_frames": args.window_size,
             "sequence": sequence_summary,
             "assets": {
                 "scan_path": str(record.scan_path),
-                "calibration_path": str(record.calibration_path),
+                "calibration_path": str(record.calibration_path) if record.calibration_path is not None else None,
                 "multicam2world_path": str(record.multicam2world_path),
                 "reference_assets_used_for_ground": False,
             },
@@ -317,19 +340,19 @@ def main() -> None:
     }
     summary = {
         **run_metadata,
-        "camera_view_count": len(sequence_results),
+        "sequence_count": len(sequence_results),
         "selected_frames": len(all_frames),
         "invalid_frames": sum(not bool(row.get("valid")) for row in all_frames),
         "pooled_frames": pooled,
-        "mean_of_camera_views": sequence_mean,
+        "mean_of_sequences": sequence_mean,
     }
     write_json(output_dir / "summary.json", summary)
     write_csv(output_dir / "per_frame.csv", all_frames)
     write_csv(output_dir / "per_window.csv", all_windows)
     write_csv(output_dir / "per_sequence.csv", sequence_results)
-    write_csv(output_dir / "summary.csv", [{"aggregation": "pooled_frames", **pooled}, {"aggregation": "mean_of_camera_views", **sequence_mean}])
+    write_csv(output_dir / "summary.csv", [{"aggregation": "pooled_frames", **pooled}, {"aggregation": "mean_of_sequences", **sequence_mean}])
     print("[done] RICH physical-grounding evaluation", flush=True)
-    print(json.dumps({"pooled_frames": pooled, "mean_of_camera_views": sequence_mean}, indent=2), flush=True)
+    print(json.dumps({"pooled_frames": pooled, "mean_of_sequences": sequence_mean}, indent=2), flush=True)
     print(f"[output] {output_dir}", flush=True)
 
 

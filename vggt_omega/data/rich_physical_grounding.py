@@ -18,6 +18,21 @@ from vggt_omega.data.geometry import (
 
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png"}
 
+RICH_TEST_MOVING_CAMERA_RECORDINGS = (
+    "ParkingLot2_017_burpeejump2",
+    "ParkingLot2_017_burpeejump1",
+    "ParkingLot2_017_overfence1",
+    "ParkingLot2_017_overfence2",
+    "ParkingLot2_017_eating1",
+    "ParkingLot2_017_pushup2",
+    "Gym_011_cooking1",
+    "Gym_011_cooking2",
+    "Gym_012_cooking2",
+)
+
+RICH_PROTOCOL_MOVING_TEST9 = "rich_test_moving_camera_9"
+RICH_PROTOCOL_HMR4D_VIEWS = "hmr4d_test_camera_views"
+
 
 @dataclass(frozen=True, slots=True)
 class RichPhysicalGroundingSequence:
@@ -31,7 +46,7 @@ class RichPhysicalGroundingSequence:
     label: dict[str, Any]
     scene_asset: str
     scan_path: Path
-    calibration_path: Path
+    calibration_path: Path | None
     multicam2world_path: Path
 
 
@@ -49,13 +64,15 @@ class RichFrameBatch:
 
 
 class RichPhysicalGroundingDataset:
-    """Read label-selected RGB frames and target-person boxes for RICH.
+    """Read RICH moving-camera recordings or HMR4D camera-view labels.
 
-    ``rich_test_labels.pt['frame_id']`` is interpreted as an index into the
-    sorted official image list of the corresponding camera directory. This is
-    the same contract checked by ``check_rich_physical_grounding_assets.py``.
-    The RICH target box is stored in slot zero for deterministic detector-output
-    matching; it is not silently treated as the highest-confidence person.
+    The moving-camera protocol reads every image from ``cam_10`` for the nine
+    official test recordings marked ``moving_cam=V``. These untracked views do
+    not occur in HMR4D's labels, so their target boxes are intentionally empty.
+
+    The retained HMR4D protocol interprets ``rich_test_labels.pt['frame_id']``
+    as an index into the sorted official image list and places the RICH target
+    box in slot zero for deterministic detector-output matching.
     """
 
     def __init__(
@@ -70,6 +87,7 @@ class RichPhysicalGroundingDataset:
         max_sequences: int = 0,
         frame_stride: int = 1,
         max_frames_per_sequence: int = 0,
+        protocol: str = RICH_PROTOCOL_MOVING_TEST9,
     ) -> None:
         self.official_root = Path(official_root).expanduser()
         self.support_root = Path(support_root).expanduser()
@@ -79,11 +97,30 @@ class RichPhysicalGroundingDataset:
         self.max_humans = int(max_humans)
         self.frame_stride = int(frame_stride)
         self.max_frames_per_sequence = int(max_frames_per_sequence)
+        self.protocol = str(protocol)
         if self.max_humans <= 0:
             raise ValueError("max_humans must be positive")
         if self.frame_stride <= 0:
             raise ValueError("frame_stride must be positive")
 
+        filters = tuple(str(value).strip().strip("/") for value in (sequence_filters or ()) if str(value).strip())
+        if self.protocol == RICH_PROTOCOL_MOVING_TEST9:
+            records = self._build_moving_test_records(filters)
+        elif self.protocol == RICH_PROTOCOL_HMR4D_VIEWS:
+            records = self._build_hmr4d_records(filters)
+        else:
+            raise ValueError(
+                f"Unsupported RICH physical-grounding protocol {self.protocol!r}; "
+                f"expected {RICH_PROTOCOL_MOVING_TEST9!r} or {RICH_PROTOCOL_HMR4D_VIEWS!r}"
+            )
+        if max_sequences > 0:
+            records = records[: int(max_sequences)]
+        if not records:
+            requested = ", ".join(filters) if filters else "<all>"
+            raise RuntimeError(f"No RICH sequences matched protocol={self.protocol!r}: {requested}")
+        self.records = records
+
+    def _build_hmr4d_records(self, filters: tuple[str, ...]) -> list[RichPhysicalGroundingSequence]:
         labels_path = self.support_root / "rich_test_labels.pt"
         preproc_path = self.support_root / "rich_test_preproc.pt"
         labels = _load_torch(labels_path)
@@ -93,7 +130,6 @@ class RichPhysicalGroundingDataset:
         if not isinstance(preproc, dict) or not preproc:
             raise RuntimeError(f"Unexpected RICH preprocessing payload: {preproc_path}")
 
-        filters = tuple(str(value).strip().strip("/") for value in (sequence_filters or ()) if str(value).strip())
         records = []
         for vid, raw_label in sorted(labels.items()):
             if filters and not any(_matches_sequence_filter(str(vid), value) for value in filters):
@@ -104,12 +140,16 @@ class RichPhysicalGroundingDataset:
                     if key in preproc[vid]:
                         label[key] = preproc[vid][key]
             records.append(self._build_record(str(vid), label))
-        if max_sequences > 0:
-            records = records[: int(max_sequences)]
-        if not records:
-            requested = ", ".join(filters) if filters else "<all>"
-            raise RuntimeError(f"No RICH camera-view sequences matched: {requested}")
-        self.records = records
+        return records
+
+    def _build_moving_test_records(self, filters: tuple[str, ...]) -> list[RichPhysicalGroundingSequence]:
+        records = []
+        for recording in RICH_TEST_MOVING_CAMERA_RECORDINGS:
+            vid = f"test/{recording}/cam_10"
+            if filters and not any(_matches_sequence_filter(vid, value) for value in filters):
+                continue
+            records.append(self._build_untracked_record(vid))
+        return records
 
     def __len__(self) -> int:
         return len(self.records)
@@ -135,10 +175,12 @@ class RichPhysicalGroundingDataset:
             raise IndexError(f"Label positions outside [0, {len(record.frame_ids)}): {positions}")
 
         bbx = record.label.get("bbx_xys")
-        if bbx is None:
-            raise KeyError(f"RICH preprocessing has no bbx_xys for {record.vid}")
-        bbx_tensor = torch.as_tensor(bbx, dtype=torch.float32)
-        if bbx_tensor.ndim < 2 or bbx_tensor.shape[0] < len(record.frame_ids) or bbx_tensor.shape[-1] < 3:
+        bbx_tensor = None if bbx is None else torch.as_tensor(bbx, dtype=torch.float32)
+        if bbx_tensor is not None and (
+            bbx_tensor.ndim < 2
+            or bbx_tensor.shape[0] < len(record.frame_ids)
+            or bbx_tensor.shape[-1] < 3
+        ):
             raise ValueError(f"Unexpected bbx_xys shape for {record.vid}: {tuple(bbx_tensor.shape)}")
         raw_eval_mask = record.label.get("mask")
         eval_mask = (
@@ -173,14 +215,15 @@ class RichPhysicalGroundingDataset:
             paths.append(path)
             source_ids.append(source_id)
 
-            center_x, center_y, size = [float(value) for value in bbx_tensor[label_position].reshape(-1)[:3]]
-            xyxy = np.asarray(
-                [center_x - 0.5 * size, center_y - 0.5 * size, center_x + 0.5 * size, center_y + 0.5 * size],
-                dtype=np.float32,
-            )
-            transformed, valid = transform_xyxy_to_normalized_cxcywh(xyxy, geometry)
-            boxes[output_index, 0] = torch.as_tensor(transformed, dtype=torch.float32)
-            mask[output_index, 0] = bool(valid) and bool(eval_mask[label_position])
+            if bbx_tensor is not None:
+                center_x, center_y, size = [float(value) for value in bbx_tensor[label_position].reshape(-1)[:3]]
+                xyxy = np.asarray(
+                    [center_x - 0.5 * size, center_y - 0.5 * size, center_x + 0.5 * size, center_y + 0.5 * size],
+                    dtype=np.float32,
+                )
+                transformed, valid = transform_xyxy_to_normalized_cxcywh(xyxy, geometry)
+                boxes[output_index, 0] = torch.as_tensor(transformed, dtype=torch.float32)
+                mask[output_index, 0] = bool(valid) and bool(eval_mask[label_position])
 
         input_hws = {geometry.input_hw for geometry in geometries}
         if len(input_hws) != 1:
@@ -242,7 +285,45 @@ class RichPhysicalGroundingDataset:
             label=label,
             scene_asset=scene_asset,
             scan_path=self.official_root / "scan_calibration" / scene / scan_name,
-            calibration_path=self.official_root / "scan_calibration" / scene / "calibration" / f"{camera_id:03d}.xml",
+            calibration_path=(
+                self.official_root
+                / "scan_calibration"
+                / scene
+                / "calibration"
+                / f"{camera_id:03d}.xml"
+            ),
+            multicam2world_path=self.official_root / "multicam2world" / f"{scene_asset}_multicam2world.json",
+        )
+
+    def _build_untracked_record(self, vid: str) -> RichPhysicalGroundingSequence:
+        split, recording, camera = vid.split("/")
+        camera_id = int(camera.removeprefix("cam_"))
+        image_dir = self.official_root / split / recording / camera
+        if not image_dir.is_dir():
+            raise FileNotFoundError(f"Missing RICH moving-camera image directory: {image_dir}")
+        image_paths = tuple(sorted(path for path in image_dir.iterdir() if path.suffix.lower() in IMAGE_SUFFIXES))
+        if not image_paths:
+            raise FileNotFoundError(f"No RICH moving-camera images found in: {image_dir}")
+
+        scene = recording.split("_", 1)[0]
+        scene_asset = resolve_scene_asset_name(recording)
+        scan_name = (
+            f"scan_{scene_asset.removeprefix('LectureHall_')}_scene_camcoord.ply"
+            if scene == "LectureHall"
+            else "scan_camcoord.ply"
+        )
+        return RichPhysicalGroundingSequence(
+            vid=vid,
+            split=split,
+            recording=recording,
+            camera=camera,
+            camera_id=camera_id,
+            frame_ids=tuple(range(len(image_paths))),
+            image_paths=image_paths,
+            label={},
+            scene_asset=scene_asset,
+            scan_path=self.official_root / "scan_calibration" / scene / scan_name,
+            calibration_path=None,
             multicam2world_path=self.official_root / "multicam2world" / f"{scene_asset}_multicam2world.json",
         )
 
