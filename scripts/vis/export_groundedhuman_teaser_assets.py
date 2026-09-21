@@ -260,7 +260,9 @@ def export_hsi(data, settings, output):
         depth=torch.as_tensor(data['coarse'],device=device)[None,None]
         uv=torch.as_tensor(project(np_cpu(all_anchors),data['k']),device=device,dtype=torch.float32)
         uv_depth=uv*uv.new_tensor([depth.shape[-1]/data['hw'][1],depth.shape[-2]/data['hw'][0]])
-        nearest,normals=_local_nearest_scene_probe(depth,_estimate_depth_normals(depth,k),all_anchors,
+        depth_height,depth_width=depth.shape[-2:]
+        depth_normals=_estimate_depth_normals(depth,k,height=depth_height,width=depth_width)
+        nearest,normals=_local_nearest_scene_probe(depth,depth_normals,all_anchors,
             uv_depth,k,data['hw'],hsi.probe_window)
     # This accepted config uses local_nearest for affine scale; avoid silently wrong provenance.
     if hsi.affine_probe_mode!='local_nearest' or float(hsi.probe_blend)!=1.0:

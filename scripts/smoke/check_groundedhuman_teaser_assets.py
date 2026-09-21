@@ -92,6 +92,7 @@ def main():
 def check_live_probe(out):
     import torch
     from vggt_omega.models.geometry.regional_scene_probe import RegionalSceneProbe, _rasterize_human_depth_and_owner
+    from vggt_omega.models.heads.hsi_refinement_head import _estimate_depth_normals, _local_nearest_scene_probe
     # Two overlapping people, front and rear depths, and a rectangular depth plane.
     torch.manual_seed(0)
     module=RegionalSceneProbe(token_dim=8,adaptive_radius_max=4,annulus_width=2,
@@ -106,6 +107,18 @@ def check_live_probe(out):
     depth[:,5:7,7:9]=1.;depth[:,0,0]=float('nan')
     people=torch.tensor([[True,True]])
     with torch.no_grad():
+        # Exercise the HSI normal/search API on a rectangular depth plane before
+        # expensive real-image inference. This needs neither SMPL files nor ckpts.
+        hsi_depth=torch.full((1,1,*dhw),2.)
+        normals=_estimate_depth_normals(hsi_depth,k,height=dhw[0],width=dhw[1])
+        assert normals.shape==(1,1,*dhw,3)
+        assert normals.dtype==hsi_depth.dtype and normals.device==hsi_depth.device
+        anchor=torch.tensor([[[[[0.,0.,2.]]]]])
+        projected=torch.tensor([[[[[7.5,5.5]]]]])
+        nearest,nearest_normal=_local_nearest_scene_probe(hsi_depth,normals,anchor,projected,k,hw,9)
+        assert nearest.shape==nearest_normal.shape==anchor.shape
+        assert torch.isfinite(nearest).all() and torch.isfinite(nearest_normal).all()
+        torch.testing.assert_close(nearest[...,2],torch.full_like(nearest[...,2],2.))
         live=module(centers,reps,vertices,depth,k,people,hw)
         hd,owner=_rasterize_human_depth_and_owner(vertices,k,people,hw,dhw,1)
     for q in range(2):
@@ -114,7 +127,8 @@ def check_live_probe(out):
                 hd[0].numpy(),owner[0].numpy(),k[0].numpy(),hw,q,radius_max=4,tolerance=.1)
             np.testing.assert_allclose(exported['valid_ratios'],live['valid_ratios'][q,r].numpy(),atol=1e-6)
             assert int(exported['adaptive_radius'])==int(live['adaptive_radius'][q,r])
-    return {'executed':True,'device':'cpu','comparison':'live RegionalSceneProbe, four region/person combinations'}
+    return {'executed':True,'device':'cpu','hsi_normal_and_nearest_probe':'passed',
+            'comparison':'live RegionalSceneProbe, four region/person combinations'}
 
 
 if __name__=='__main__':main()
