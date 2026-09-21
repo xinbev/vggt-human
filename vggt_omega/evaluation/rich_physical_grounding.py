@@ -268,7 +268,7 @@ def evaluate_prediction_chunk(
     extrinsics, intrinsics = encoding_to_camera(
         predictions["pose_enc"].detach().float(), image_size_hw=image_hw, build_intrinsics=True
     )
-    scale = predictions["hsi_scene_scale"].detach().float().reshape(depth.shape[:2], -1)[..., 0]
+    scale = predictions["hsi_scene_scale"].detach().float().reshape(*depth.shape[:2], -1)[..., 0]
     extrinsics = extrinsics.detach().float().clone()
     extrinsics[..., :3, 3] *= scale[..., None]
 
