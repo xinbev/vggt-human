@@ -1,6 +1,6 @@
 # Independent asset export; existing model/training configurations stay unchanged.
-image: assets/image/teaser/sofa.png
-output_dir: outputs/vis/groundedhuman_teaser/sofa
+image: assets/image/teaser/woman_sofa.jpg
+output_dir: outputs/vis/groundedhuman_teaser/woman_sofa
 path_config: configs/path.yaml
 model_config: configs/infer_smpl_hsi_v3_trstr_spatial.yaml
 # Same default sources as serve_walking_hsi_v3_trstr_spatial.sh.

@@ -17,6 +17,6 @@ args=(--config "${CONFIG:-configs/vis_groundedhuman_teaser_sofa.yaml}")
 [[ -z "${DEVICE:-}" ]] || args+=(--device "${DEVICE}")
 [[ -z "${PERSON_RANK:-}" ]] || args+=(--person-rank "${PERSON_RANK}")
 [[ "${PREFLIGHT_ONLY:-false}" != true ]] || args+=(--preflight-only)
-echo "[teaser] input default: ${REPO_ROOT}/assets/image/teaser/sofa.png"
-echo "[teaser] outputs default: ${REPO_ROOT}/outputs/vis/groundedhuman_teaser/sofa"
+echo "[teaser] input default: ${REPO_ROOT}/assets/image/teaser/woman_sofa.jpg"
+echo "[teaser] outputs default: ${REPO_ROOT}/outputs/vis/groundedhuman_teaser/woman_sofa"
 "${PYTHON_BIN:-python}" scripts/vis/export_groundedhuman_teaser_assets.py "${args[@]}" "$@"

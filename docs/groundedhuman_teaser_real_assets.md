@@ -1,8 +1,8 @@
-# 从 sofa.png 导出 GroundedHuman teaser 的真实素材
+# 从 woman_sofa.jpg 导出 GroundedHuman teaser 的真实素材
 
 ## 目标和实现边界
 
-输入为服务器上的 `/home/zhw/lab_users/xyb/home/projects/vggt-human/assets/image/teaser/sofa.png`。
+输入为服务器上的 `/home/zhw/lab_users/xyb/home/projects/vggt-human/assets/image/teaser/woman_sofa.jpg`。
 导出人体、场景、anchor、局部 scene tokens、几何搜索候选点、区域四尺度采样和真实平移建议，供后续 teaser 排版使用。没有调用图像生成服务，没有修改 `.paper/`、模型源码、训练配置或 baseline 路径。
 
 参考的是当前 GroundedHuman 的 Anchor-Scene Cross Attention 和 Regional Translation Prediction；具体复用本仓库 `HSIRefinementHead`、`RegionalSceneProbe`、`HSIRegionalTranslationRefiner`。属于可视化适配，不是移植第三方模型。沿用 `infer_smpl_hsi_v3_trstr_spatial.yaml` 的结构，不新增模型分支。
@@ -26,7 +26,7 @@ bash scripts/vis/export_groundedhuman_teaser_assets.sh
 
 smoke 不需要 ckpt 或 SMPL 文件；默认使用 torch 在 CPU 上把独立导出掩码与真正的 `RegionalSceneProbe` 对照。输出在 `outputs/debug/groundedhuman_teaser_smoke/`，其中图片明确标记为合成测试，不是 sofa 推理结果。
 
-资源预检查不构建模型，读取配置并检查输入、VGGT、NLF、SMPL 和两个 head ckpt。正式推理和绘图输出在 `outputs/vis/groundedhuman_teaser/sofa/`。
+资源预检查不构建模型，读取配置并检查输入、VGGT、NLF、SMPL 和两个 head ckpt。正式推理和绘图输出在 `outputs/vis/groundedhuman_teaser/woman_sofa/`，与之前 sofa.png 的输出目录分开。
 
 多 GPU 服务器可指定可见卡，进程内部仍使用 `cuda:0`：
 
@@ -39,7 +39,7 @@ CUDA_VISIBLE_DEVICES_VALUE=7 bash scripts/vis/export_groundedhuman_teaser_assets
 ```bash
 CHECKPOINT=/absolute/path/to/accepted_trstr.pt \
 SCALE_CHECKPOINT=/absolute/path/to/accepted_scale.pt \
-OUTPUT_DIR=outputs/vis/groundedhuman_teaser/sofa_run02 \
+OUTPUT_DIR=outputs/vis/groundedhuman_teaser/woman_sofa_run02 \
 bash scripts/vis/export_groundedhuman_teaser_assets.sh
 ```
 
