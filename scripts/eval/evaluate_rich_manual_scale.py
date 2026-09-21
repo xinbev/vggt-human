@@ -131,6 +131,8 @@ def main() -> None:
     summary = {
         "experiment": "RICH test-9 cached scale upper-bound diagnostic",
         "official_model_result": False,
+        "scale_scope": "one shared multiplier per non-overlapping inference window",
+        "inference_window_frames": int(manifest["window_size"]),
         "mode": args.mode,
         "cache_manifest": str(manifest_path),
         "manual_scale_file": str(scale_path) if args.mode == "manual" else None,

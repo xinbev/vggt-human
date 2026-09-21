@@ -7,7 +7,9 @@ This is a diagnostic upper-bound experiment for the reduced RICH test-9
 improved if a human supplies one scale multiplier for every non-overlapping
 100-frame window.
 
-The multiplier uses the existing viewer calibration convention:
+The multiplier is **one value for the whole inference window**. A 100-frame
+window is one VGGT forward pass, so the viewer never asks you to save 100
+independent frame scales. It uses the existing viewer calibration convention:
 
 - scale reconstructed scene points and camera centers about the shared world
   origin;
@@ -54,14 +56,20 @@ cd /home/zhw/lab_users/xyb/home/projects/vggt-human
 PORT=8080 bash scripts/vis/serve_rich_manual_scale_viewer.sh
 ```
 
-For each window:
+For each window (one scale controls all of its frames):
 
 1. Select the window.
 2. Move `Scale Multiplier (log10)`.
-3. Inspect multiple frames with `Frame in Window`.
+3. Inspect multiple frames with `Frame in Window`. Turn on `Accumulate Window
+   Frames` when you want to see all earlier frames together.
 4. Click `Preview Window Metrics`.
 5. Click `Save Window Scale`.
 6. Move to the next window.
+
+The Viser display keeps the human pixels in the point cloud by default. This
+is for visual alignment. The metric evaluator still removes the selected
+person region from the scene support points, exactly as the original metric
+path does, so the human depth does not artificially define the ground plane.
 
 Selections are written immediately to:
 

@@ -19,6 +19,7 @@ if str(ROOT) not in sys.path:
 
 from scripts.vis.serve_stage2_viewer_cache import (  # noqa: E402
     add_button,
+    add_checkbox,
     add_dropdown,
     add_mesh,
     add_point_cloud,
@@ -129,11 +130,19 @@ class RichManualScaleViewer:
         self.window_info = add_text(self.server, "Window Status", "")
         self.frame_info = add_text(self.server, "Frame Status", "")
         self.metric_info = add_text(self.server, "Metric Preview", "Not computed")
+        self.include_human_points = add_checkbox(
+            self.server, "Keep Human Point Cloud", True
+        )
+        self.accumulate_frames = add_checkbox(
+            self.server, "Accumulate Window Frames", False
+        )
         bind_update(self.window_choice, self._on_window_choice)
         bind_click(self.previous_window, self._on_previous_window)
         bind_click(self.next_window, self._on_next_window)
         bind_update(self.frame, self._on_frame)
         bind_update(self.scale_log10, self._on_scale)
+        bind_update(self.include_human_points, self._on_display_option)
+        bind_update(self.accumulate_frames, self._on_display_option)
         bind_click(self.save_scale, self._on_save)
         bind_click(self.preview_metrics, self._on_preview_metrics)
 
@@ -193,6 +202,10 @@ class RichManualScaleViewer:
             set_text_value(self.metric_info, "Scale changed; preview metrics again before saving")
             self._rebuild_geometry()
 
+    def _on_display_option(self, _: Any = None) -> None:
+        if not self._switching:
+            self._rebuild_geometry()
+
     def _on_save(self, _: Any = None) -> None:
         record = self.windows[self.window_index]
         window_id = str(record["window_id"])
@@ -237,29 +250,44 @@ class RichManualScaleViewer:
                     pass
         self.geometry_handles = []
         valid = bool(self.cache["selected_valid"][self.frame_index])
-        points, colors, vertices = reconstruct_scale_frame(
-            self.cache,
-            self.frame_index,
-            self._current_scale(),
-            self.ground_config,
-            exclude_person=valid,
+        frame_indices = (
+            list(range(self.frame_index + 1))
+            if bool(self.accumulate_frames.value)
+            else [self.frame_index]
         )
-        points_np = points.numpy()
-        if points_np.size:
-            self.geometry_handles.append(
-                add_point_cloud(self.server, "/rich_scale/scene", points_np, colors, float(self.args.point_size))
+        for frame_index in frame_indices:
+            frame_valid = bool(self.cache["selected_valid"][frame_index])
+            points, colors, vertices = reconstruct_scale_frame(
+                self.cache,
+                frame_index,
+                self._current_scale(),
+                self.ground_config,
+                # Viewer mode intentionally keeps human pixels visible. The
+                # metric evaluator continues to exclude them independently.
+                exclude_person=not bool(self.include_human_points.value),
             )
-        if valid:
-            self.geometry_handles.append(
-                add_mesh(
-                    self.server,
-                    "/rich_scale/person",
-                    vertices.numpy(),
-                    self.faces,
-                    (232, 142, 82),
-                    0.95,
+            points_np = points.numpy()
+            if points_np.size:
+                self.geometry_handles.append(
+                    add_point_cloud(
+                        self.server,
+                        f"/rich_scale/scene/frame_{frame_index:04d}",
+                        points_np,
+                        colors,
+                        float(self.args.point_size),
+                    )
                 )
-            )
+            if frame_valid:
+                self.geometry_handles.append(
+                    add_mesh(
+                        self.server,
+                        f"/rich_scale/person/frame_{frame_index:04d}",
+                        vertices.numpy(),
+                        self.faces,
+                        (232, 142, 82),
+                        0.95,
+                    )
+                )
         self._update_info(status="saved" if self._is_current_saved() else "unsaved")
 
     def _is_current_saved(self) -> bool:
@@ -273,7 +301,8 @@ class RichManualScaleViewer:
         model_scale = float(self.cache["model_scale"][self.frame_index])
         set_text_value(
             self.window_info,
-            f"{self.window_index + 1}/{len(self.windows)} | {record['vid']} | window {record['window_index']} | {status}",
+            f"{self.window_index + 1}/{len(self.windows)} | {record['vid']} | "
+            f"window {record['window_index']} ({record['frame_count']} frames, one scale) | {status}",
         )
         set_text_value(
             self.frame_info,
