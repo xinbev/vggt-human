@@ -20,7 +20,7 @@
     "storage": "frame pickle and scene_metadata.pkl"
   },
   "viewer_args": {
-    "frames_dir": "outputs/vis/measure_woman_n3library_20/input",
+    "frames_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/assets/image/teaser",
     "query_source": "nlf_detector",
     "preprocessed_root": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/bedlam_boxes",
     "bedlam_root": "/home/zhw/xyb_space/bedlam/processed_bedlam",
@@ -30,9 +30,9 @@
     "train_config": "/home/zhw/lab_users/xyb/home/projects/vggt-human/configs/train_smpl_hsi_nlf_stage2_human_scene_align.yaml",
     "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/measure_woman_n3library_20",
     "viewer_cache_output": "",
-    "full_viewer_cache_output": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/measure_woman_n3library_20/full_viewer_cache",
+    "full_viewer_cache_output": "/home/zhw/lab_users/xyb/home/projects/vggt-human/assets/image/teaser/outputs/full_viewer_cache",
     "device": "cuda",
-    "port": 8080,
+    "port": 8086,
     "image_size": 0,
     "start_index": 0,
     "end_index": -1,
@@ -54,7 +54,7 @@
     "viewer_mode": "4D current frame",
     "environment_display": "points",
     "hsi_visual_scale": 1.0,
-    "human_mask_dilation_px": 12,
+    "human_mask_dilation_px": 6,
     "filter_human_points": false,
     "env_mesh_depth_edge_rtol": 0.15,
     "env_mesh_color_groups": 216,
@@ -95,8 +95,8 @@
       "position": 0,
       "frame_index": 0,
       "source_frame_index": 0,
-      "frame_id": "tmp",
-      "source_image": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/measure_woman_n3library_20/input/tmp.jpg",
+      "frame_id": "woman_sofa",
+      "source_image": "/home/zhw/lab_users/xyb/home/projects/vggt-human/assets/image/teaser/woman_sofa.jpg",
       "file": "frame_0000.pkl"
     }
   ],

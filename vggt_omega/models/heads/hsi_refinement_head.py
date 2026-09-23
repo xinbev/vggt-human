@@ -935,7 +935,10 @@ def _project_points(points_cam: torch.Tensor, intrinsics: torch.Tensor) -> torch
 
 def _unproject_pixels(px: torch.Tensor, py: torch.Tensor, z: torch.Tensor, intrinsics: torch.Tensor, num_queries: int) -> torch.Tensor:
     batch_size, num_frames = px.shape[:2]
-    flat_intrinsics = intrinsics.reshape(batch_size, num_frames, 1, 1, 3, 3).expand(-1, -1, num_queries, 24, -1, -1)
+    num_tokens = px.shape[-1]
+    flat_intrinsics = intrinsics.reshape(batch_size, num_frames, 1, 1, 3, 3).expand(
+        -1, -1, num_queries, num_tokens, -1, -1
+    )
     fx = flat_intrinsics[..., 0, 0]
     fy = flat_intrinsics[..., 1, 1]
     cx = flat_intrinsics[..., 0, 2]

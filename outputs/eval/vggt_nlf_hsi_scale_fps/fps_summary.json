@@ -1,0 +1,218 @@
+{
+  "benchmark": "VGGT+NLF vs VGGT+NLF+HSI scale steady-state inference",
+  "protocol": {
+    "timing": "wall clock with torch.cuda.synchronize before and after every timed iteration",
+    "fps_definition": "num_input_frames / mean synchronized latency",
+    "excluded": [
+      "model construction and checkpoint loading",
+      "image file read, decode, resize, stacking, and host-to-device transfer",
+      "lazy NLF TorchScript loading",
+      "warm-up iterations",
+      "validation and output serialization"
+    ],
+    "base_included": "one VGGT forward plus NLF detector/SMPL estimation",
+    "hsi_included": "base VGGT+NLF pass, SMPL surface decode, analytic coarse scale, second VGGT+HSI pass with first-pass NLF tensors reused, residual scale/bias composition",
+    "explicitly_disabled": [
+      "TRSTR",
+      "legacy HSI translation alignment",
+      "contact refinement",
+      "grounding",
+      "temporal HSI momentum",
+      "visualization and metric evaluation"
+    ]
+  },
+  "environment": {
+    "platform": "Linux-6.8.0-136-generic-x86_64-with-glibc2.35",
+    "python": "3.11.14",
+    "torch": "2.10.0+cu128",
+    "cuda_runtime": "12.8",
+    "cudnn": 91002,
+    "gpu": "NVIDIA A800-SXM4-80GB",
+    "device": "cuda:0"
+  },
+  "input": {
+    "frames_dir": "/home/zhw/lab_users/xyb/home/projects/Human3R-master/outputs/walking/color",
+    "selected_frame_count": 100,
+    "first_frame": "/home/zhw/lab_users/xyb/home/projects/Human3R-master/outputs/walking/color/000000.png",
+    "last_frame": "/home/zhw/lab_users/xyb/home/projects/Human3R-master/outputs/walking/color/000099.png",
+    "baseline_checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt",
+    "scale_checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt",
+    "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/vggt_nlf_hsi_scale_fps",
+    "device": "cuda:0",
+    "tensor_shape": [
+      1,
+      100,
+      3,
+      448,
+      592
+    ],
+    "tensor_dtype": "torch.float32",
+    "image_resolution": 512,
+    "resize_mode": "balanced",
+    "start_index": 0,
+    "frame_stride": 1,
+    "max_humans": 8
+  },
+  "settings": {
+    "warmup": 5,
+    "repeats": 20,
+    "conf_threshold": 0.05,
+    "coarse_scale_range": [
+      0.1,
+      25.0
+    ],
+    "coarse_anchor_stride": 8,
+    "coarse_min_anchor_pixels": 32
+  },
+  "checkpoint_audit": {
+    "vggt_nlf": {
+      "baseline": {
+        "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt",
+        "missing": 1,
+        "unexpected": 0,
+        "shape_skipped": 0
+      }
+    },
+    "vggt_nlf_hsi_scale": {
+      "baseline": {
+        "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt",
+        "missing": 141,
+        "unexpected": 0,
+        "shape_skipped": 0
+      },
+      "hsi_scale": {
+        "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt",
+        "loaded_tensors": 140,
+        "prefix": "hsi_refinement_head."
+      }
+    }
+  },
+  "validation": {
+    "vggt_nlf": {
+      "depth_shape": [
+        1,
+        100,
+        448,
+        592,
+        1
+      ],
+      "pose_shape": [
+        1,
+        100,
+        8,
+        72
+      ],
+      "device": "cuda:0",
+      "dtype": "torch.float32"
+    },
+    "vggt_nlf_hsi_scale": {
+      "depth_shape": [
+        1,
+        100,
+        448,
+        592,
+        1
+      ],
+      "pose_shape": [
+        1,
+        100,
+        8,
+        72
+      ],
+      "device": "cuda:0",
+      "dtype": "torch.float32",
+      "coarse_scale": {
+        "valid_frames": 100,
+        "fallback_frames": 0,
+        "all_frames_unit_fallback": false
+      }
+    }
+  },
+  "results": [
+    {
+      "name": "vggt_nlf",
+      "timing": "synchronized_wall_clock",
+      "warmup_iterations_excluded": 5,
+      "timed_iterations": 20,
+      "frames_per_iteration": 100,
+      "latency_ms_mean": 10249.174803867936,
+      "latency_ms_median": 10253.68974544108,
+      "latency_ms_std": 16.736601468564864,
+      "latency_ms_p10": 10224.009340861812,
+      "latency_ms_p90": 10268.258195370436,
+      "fps_from_mean_latency": 9.756883057771734,
+      "fps_from_median_latency": 9.752586871907381,
+      "peak_memory_allocated_gb": 13.727190494537354,
+      "peak_memory_reserved_gb": 18.689453125,
+      "latency_ms_each": [
+        10221.150408033282,
+        10221.529359929264,
+        10234.983304981142,
+        10230.272375047207,
+        10224.284894298762,
+        10238.952812738717,
+        10231.771310325712,
+        10240.202517714351,
+        10250.581671018153,
+        10251.52323488146,
+        10257.015057373792,
+        10255.856256000698,
+        10261.24151935801,
+        10260.551233775914,
+        10264.815071597695,
+        10268.331604078412,
+        10266.506302636117,
+        10268.250038847327,
+        10271.40272082761,
+        10264.2743838951
+      ]
+    },
+    {
+      "name": "vggt_nlf_hsi_scale",
+      "timing": "synchronized_wall_clock",
+      "warmup_iterations_excluded": 5,
+      "timed_iterations": 20,
+      "frames_per_iteration": 100,
+      "latency_ms_mean": 18920.86978999432,
+      "latency_ms_median": 18921.346394577995,
+      "latency_ms_std": 6.865804915793288,
+      "latency_ms_p10": 18916.364386305213,
+      "latency_ms_p90": 18927.131250780076,
+      "fps_from_mean_latency": 5.285169292422366,
+      "fps_from_median_latency": 5.285036165748516,
+      "peak_memory_allocated_gb": 13.83589792251587,
+      "peak_memory_reserved_gb": 20.72265625,
+      "latency_ms_each": [
+        18899.43686220795,
+        18908.324914053082,
+        18923.479394055903,
+        18918.380468152463,
+        18920.140089001507,
+        18925.45482283458,
+        18917.450352106243,
+        18919.554655905813,
+        18925.664039328694,
+        18924.27639523521,
+        18926.106253173202,
+        18930.457941256464,
+        18924.961377866566,
+        18917.257660999894,
+        18921.96338996291,
+        18920.143753755838,
+        18927.910145837814,
+        18918.65917807445,
+        18927.04470688477,
+        18920.72939919308
+      ]
+    }
+  ],
+  "comparison": {
+    "latency_ratio_hsi_over_base": 1.8460871389230062,
+    "latency_overhead_percent": 84.60871389230063,
+    "fps_ratio_hsi_over_base": 0.5416862394607184
+  },
+  "outputs": {
+    "json": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/vggt_nlf_hsi_scale_fps/fps_summary.json",
+    "csv": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/vggt_nlf_hsi_scale_fps/fps_summary.csv"
+  }
+}

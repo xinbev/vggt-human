@@ -1,5 +1,5 @@
 {
-  "frames_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/measure_woman_n3library_20/input",
+  "frames_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/assets/image/teaser",
   "num_frames": 1,
   "frame_selection": {
     "mode": "legacy",
@@ -15,7 +15,7 @@
       0
     ],
     "selected_files": [
-      "woman_n3library_20.jpg"
+      "woman_sofa.jpg"
     ]
   },
   "legacy_long_sequence_limit": 500,
@@ -56,48 +56,48 @@
         0
       ]
     ],
-    "mean_track_quality": 0.9365234375
+    "mean_track_quality": 0.93994140625
   },
   "tracking_geometry_unchanged": true,
   "image_shape": [
     1,
     1,
     3,
-    384,
-    688
+    416,
+    624
   ],
   "nlf_image_hw": [
-    384,
-    688
+    416,
+    624
   ],
   "point_counts_hsi": [
-    58755
+    52079
   ],
   "point_counts_hsi_full": [
-    66048
+    64896
   ],
   "human_points_removed_hsi": [
-    7293
+    12817
   ],
   "human_mask_pixels_hsi": [
-    29247
+    51301
   ],
   "human_point_removal": {
     "method": "projected_smpl_triangle_silhouette_dilated_unconditional",
-    "dilation_px": 12,
+    "dilation_px": 6,
     "calibration_mode_uses_full_points": true
   },
   "people_counts": [
     1
   ],
   "hsi_scene_scale": [
-    6.252615928649902
+    3.9384632110595703
   ],
   "hsi_scene_depth_bias": [
     0.0
   ],
   "hsi_frame_scene_scale": [
-    6.252615928649902
+    3.9384632110595703
   ],
   "hsi_frame_scene_depth_bias": [
     0.0
@@ -124,9 +124,9 @@
       "num_cameras": 1,
       "positions_world": [
         [
-          1.6225338185904548e-05,
-          9.176736057270318e-05,
-          -0.00030044553568586707
+          -1.891632200567983e-05,
+          5.8136476582149044e-05,
+          -0.00024682789808139205
         ]
       ],
       "step_distances": [],
@@ -144,9 +144,9 @@
       "num_cameras": 1,
       "positions_world": [
         [
-          0.00010145080159418285,
-          0.0005737859755754471,
-          -0.001878570532426238
+          -7.450123666785657e-05,
+          0.0002289683761773631,
+          -0.0009721225942485034
         ]
       ],
       "step_distances": [],
@@ -165,145 +165,145 @@
   "depth_alignment_overall": {
     "base_raw": {
       "people": 1,
-      "valid_points": 428,
-      "median_abs_m_mean": 1.7495781183242798,
-      "median_abs_m_median": 1.7495781183242798,
-      "median_signed_m_mean": 1.7495781183242798,
-      "median_signed_m_median": 1.7495781183242798
+      "valid_points": 417,
+      "median_abs_m_mean": 2.11733078956604,
+      "median_abs_m_median": 2.11733078956604,
+      "median_signed_m_mean": 2.11733078956604,
+      "median_signed_m_median": 2.11733078956604
     },
     "base_hsi": {
       "people": 1,
-      "valid_points": 428,
-      "median_abs_m_mean": 1.3554801940917969,
-      "median_abs_m_median": 1.3554801940917969,
-      "median_signed_m_mean": -1.3565120697021484,
-      "median_signed_m_median": -1.3565120697021484
+      "valid_points": 417,
+      "median_abs_m_mean": 0.2939753532409668,
+      "median_abs_m_median": 0.2939753532409668,
+      "median_signed_m_mean": 0.2732827663421631,
+      "median_signed_m_median": 0.2732827663421631
     },
     "hsi_hsi": {
       "people": 1,
-      "valid_points": 428,
-      "median_abs_m_mean": 1.3446345329284668,
-      "median_abs_m_median": 1.3446345329284668,
-      "median_signed_m_mean": -1.3449392318725586,
-      "median_signed_m_median": -1.3449392318725586
+      "valid_points": 416,
+      "median_abs_m_mean": 0.27337098121643066,
+      "median_abs_m_median": 0.27337098121643066,
+      "median_signed_m_mean": 0.2549726963043213,
+      "median_signed_m_median": 0.2549726963043213
     }
   },
   "depth_alignment_by_frame": [
     {
       "base_raw": [
         {
-          "valid_points": 428,
-          "median_signed_m": 1.7495781183242798,
-          "median_abs_m": 1.7495781183242798,
-          "mean_abs_m": 1.74041748046875,
-          "p90_abs_m": 1.88742995262146,
+          "valid_points": 417,
+          "median_signed_m": 2.11733078956604,
+          "median_abs_m": 2.11733078956604,
+          "mean_abs_m": 2.1160717010498047,
+          "p90_abs_m": 2.291653871536255,
           "query_index": 0,
-          "confidence": 0.9365234375
+          "confidence": 0.93994140625
         }
       ],
       "base_hsi": [
         {
-          "valid_points": 428,
-          "median_signed_m": -1.3565120697021484,
-          "median_abs_m": 1.3554801940917969,
-          "mean_abs_m": 1.4973238706588745,
-          "p90_abs_m": 1.7320464849472046,
+          "valid_points": 417,
+          "median_signed_m": 0.2732827663421631,
+          "median_abs_m": 0.2939753532409668,
+          "mean_abs_m": 0.33077457547187805,
+          "p90_abs_m": 0.5449811220169067,
           "query_index": 0,
-          "confidence": 0.9365234375
+          "confidence": 0.93994140625
         }
       ],
       "hsi_hsi": [
         {
-          "valid_points": 428,
-          "median_signed_m": -1.3449392318725586,
-          "median_abs_m": 1.3446345329284668,
-          "mean_abs_m": 1.5034160614013672,
-          "p90_abs_m": 1.7783094644546509,
+          "valid_points": 416,
+          "median_signed_m": 0.2549726963043213,
+          "median_abs_m": 0.27337098121643066,
+          "mean_abs_m": 0.307976096868515,
+          "p90_abs_m": 0.5306664705276489,
           "query_index": 0,
-          "confidence": 0.9365234375
+          "confidence": 0.93994140625
         }
       ]
     }
   ],
   "timings": {
     "select_frames": {
-      "seconds": 0.0001288279891014099,
-      "ms_per_frame": 0.1288279891014099,
-      "fps": 7762.288358105373
+      "seconds": 0.00013505201786756516,
+      "ms_per_frame": 0.13505201786756516,
+      "fps": 7404.554302777031
     },
     "load_config": {
-      "seconds": 0.02010290394537151,
-      "ms_per_frame": 20.10290394537151,
-      "fps": 49.74405701372512
+      "seconds": 0.020472560077905655,
+      "ms_per_frame": 20.472560077905655,
+      "fps": 48.845869602757574
     },
     "load_images_and_priors": {
-      "seconds": 0.36257728817872703,
-      "ms_per_frame": 362.57728817872703,
-      "fps": 2.758032652908654
+      "seconds": 0.3382486761547625,
+      "ms_per_frame": 338.2486761547625,
+      "fps": 2.9564047710934998
     },
     "load_models": {
-      "seconds": 14.983763101045042,
-      "ms_per_frame": 14983.763101045042,
-      "fps": 0.066738908861303
+      "seconds": 14.607540948316455,
+      "ms_per_frame": 14607.540948316455,
+      "fps": 0.06845779200880842
     },
     "transfer_images_to_device": {
-      "seconds": 0.0011536120437085629,
-      "ms_per_frame": 1.1536120437085629,
-      "fps": 866.8425450771647
+      "seconds": 0.0011766348034143448,
+      "ms_per_frame": 1.1766348034143448,
+      "fps": 849.8813710917032
     },
     "model_forward": {
-      "seconds": 12.437692616833374,
-      "ms_per_frame": 12437.692616833374,
-      "fps": 0.08040076490124735
+      "seconds": 12.256097835954279,
+      "ms_per_frame": 12256.097835954279,
+      "fps": 0.0815920379703903
     },
     "posthoc_tracking_overlay": {
-      "seconds": 0.0017257858999073505,
-      "ms_per_frame": 1.7257858999073505,
-      "fps": 579.4461526506187
+      "seconds": 0.0015508872456848621,
+      "ms_per_frame": 1.5508872456848621,
+      "fps": 644.792200582194
     },
     "scene_camera_and_depth": {
-      "seconds": 0.0007139658555388451,
-      "ms_per_frame": 0.7139658555388451,
-      "fps": 1400.6272040072265
+      "seconds": 0.0007242984138429165,
+      "ms_per_frame": 0.7242984138429165,
+      "fps": 1380.6464033164054
     },
     "decode_people_smpl": {
-      "seconds": 0.0040041550528258085,
-      "ms_per_frame": 4.0041550528258085,
-      "fps": 249.7405786757136
+      "seconds": 0.003996734973043203,
+      "ms_per_frame": 3.9967349730432034,
+      "fps": 250.2042308896398
     },
     "depth_alignment": {
-      "seconds": 0.007866594940423965,
-      "ms_per_frame": 7.8665949404239655,
-      "fps": 127.11980311345555
+      "seconds": 0.00775195611640811,
+      "ms_per_frame": 7.75195611640811,
+      "fps": 128.99969826755841
     },
     "build_frame_point_clouds": {
-      "seconds": 0.5918028980959207,
-      "ms_per_frame": 591.8028980959207,
-      "fps": 1.6897517792113244
+      "seconds": 0.24447010597214103,
+      "ms_per_frame": 244.47010597214103,
+      "fps": 4.090479676537452
     },
     "build_scene_data": {
-      "seconds": 0.6046204769518226,
-      "ms_per_frame": 604.6204769518226,
-      "fps": 1.6539300902302752
+      "seconds": 0.2571307569742203,
+      "ms_per_frame": 257.1307569742203,
+      "fps": 3.889071893877943
     },
     "validate_and_summarize": {
-      "seconds": 0.00017062993720173836,
-      "ms_per_frame": 0.17062993720173836,
-      "fps": 5860.636277546565
+      "seconds": 0.00013102684170007706,
+      "ms_per_frame": 0.13102684170007706,
+      "fps": 7632.023996190178
     },
     "export_full_viewer_cache": {
-      "seconds": 0.006965541979297996,
-      "ms_per_frame": 6.965541979297996,
-      "fps": 143.56384657102913
+      "seconds": 0.009509640745818615,
+      "ms_per_frame": 9.509640745818615,
+      "fps": 105.15644352177021
     },
     "total_before_viewer": {
-      "seconds": 28.50663771899417,
-      "ms_per_frame": 28506.63771899417,
-      "fps": 0.03507954918631786
+      "seconds": 27.579735917970538,
+      "ms_per_frame": 27579.735917970538,
+      "fps": 0.036258505265397235
     }
   },
   "output_dir": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/measure_woman_n3library_20",
   "hsi_overlay_checkpoint": null,
   "viewer_cache_manifest": null,
-  "full_viewer_cache_manifest": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/measure_woman_n3library_20/full_viewer_cache/manifest.json"
+  "full_viewer_cache_manifest": "/home/zhw/lab_users/xyb/home/projects/vggt-human/assets/image/teaser/outputs/full_viewer_cache/manifest.json"
 }

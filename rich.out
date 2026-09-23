@@ -1,0 +1,126 @@
+开始评估，作业 ID: 15928
+当前环境: zhw_env
+分配的 GPU: 0
+RICH physical-grounding metric evaluation
+Mode       : full
+Protocol   : rich_test_moving_camera_9
+Sequence   : <manifest/all>
+Frames max : 0 (0 means all source frames)
+Window size: 100 (non-overlapping; final shorter window is retained)
+Train cfg  : /home/zhw/lab_users/xyb/home/projects/vggt-human/configs/train_smpl_hsi_nlf_stage2_human_scene_align.yaml
+Stage2 ckpt: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt
+Scale ckpt : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt
+NLF slots  : 8 (cam_10 uses highest-confidence detector target)
+Output     : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/rich_manual_scale/base_evaluation
+Scale cache: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/rich_manual_scale/cache
+[setup] sequences=9 protocol=rich_test_moving_camera_9 image_resolution=512 window_size=100
+[setup] Stage-2 align schema=legacy_scale_bias_v0 (input_dim=25)
+[sequence 1/9] test/ParkingLot2_017_burpeejump2/cam_10 frames=495
+  [window 1] frames=0..99 valid=100/100
+  [window 2] frames=100..199 valid=100/100
+  [window 3] frames=200..299 valid=100/100
+  [window 4] frames=300..399 valid=100/100
+  [window 5] frames=400..494 valid=95/95
+[sequence 2/9] test/ParkingLot2_017_burpeejump1/cam_10 frames=778
+  [window 1] frames=0..99 valid=100/100
+  [window 2] frames=100..199 valid=100/100
+  [window 3] frames=200..299 valid=100/100
+  [window 4] frames=300..399 valid=100/100
+  [window 5] frames=400..499 valid=100/100
+  [window 6] frames=500..599 valid=100/100
+  [window 7] frames=600..699 valid=100/100
+  [window 8] frames=700..777 valid=78/78
+[sequence 3/9] test/ParkingLot2_017_overfence1/cam_10 frames=552
+  [window 1] frames=0..99 valid=100/100
+  [window 2] frames=100..199 valid=100/100
+  [window 3] frames=200..299 valid=100/100
+  [window 4] frames=300..399 valid=100/100
+  [window 5] frames=400..499 valid=100/100
+  [window 6] frames=500..551 valid=52/52
+[sequence 4/9] test/ParkingLot2_017_overfence2/cam_10 frames=855
+  [window 1] frames=0..99 valid=100/100
+  [window 2] frames=100..199 valid=100/100
+  [window 3] frames=200..299 valid=100/100
+  [window 4] frames=300..399 valid=100/100
+  [window 5] frames=400..499 valid=100/100
+  [window 6] frames=500..599 valid=100/100
+  [window 7] frames=600..699 valid=100/100
+  [window 8] frames=700..799 valid=100/100
+  [window 9] frames=800..854 valid=55/55
+[sequence 5/9] test/ParkingLot2_017_eating1/cam_10 frames=799
+  [window 1] frames=0..99 valid=100/100
+  [window 2] frames=100..199 valid=100/100
+  [window 3] frames=200..299 valid=100/100
+  [window 4] frames=300..399 valid=100/100
+  [window 5] frames=400..499 valid=100/100
+  [window 6] frames=500..599 valid=100/100
+  [window 7] frames=600..699 valid=100/100
+  [window 8] frames=700..798 valid=99/99
+[sequence 6/9] test/ParkingLot2_017_pushup2/cam_10 frames=738
+  [window 1] frames=0..99 valid=100/100
+  [window 2] frames=100..199 valid=100/100
+  [window 3] frames=200..299 valid=100/100
+  [window 4] frames=300..399 valid=100/100
+  [window 5] frames=400..499 valid=100/100
+  [window 6] frames=500..599 valid=100/100
+  [window 7] frames=600..699 valid=100/100
+  [window 8] frames=700..737 valid=38/38
+[sequence 7/9] test/Gym_011_cooking1/cam_10 frames=1141
+  [window 1] frames=0..99 valid=0/100
+  [window 2] frames=100..199 valid=76/100
+  [window 3] frames=200..299 valid=100/100
+  [window 4] frames=300..399 valid=100/100
+  [window 5] frames=400..499 valid=100/100
+  [window 6] frames=500..599 valid=100/100
+  [window 7] frames=600..699 valid=100/100
+  [window 8] frames=700..799 valid=100/100
+  [window 9] frames=800..899 valid=100/100
+  [window 10] frames=900..999 valid=100/100
+  [window 11] frames=1000..1099 valid=100/100
+  [window 12] frames=1100..1140 valid=41/41
+[sequence 8/9] test/Gym_011_cooking2/cam_10 frames=1144
+  [window 1] frames=0..99 valid=100/100
+  [window 2] frames=100..199 valid=100/100
+  [window 3] frames=200..299 valid=100/100
+  [window 4] frames=300..399 valid=100/100
+  [window 5] frames=400..499 valid=100/100
+  [window 6] frames=500..599 valid=100/100
+  [window 7] frames=600..699 valid=100/100
+  [window 8] frames=700..799 valid=100/100
+  [window 9] frames=800..899 valid=100/100
+  [window 10] frames=900..999 valid=100/100
+  [window 11] frames=1000..1099 valid=100/100
+  [window 12] frames=1100..1143 valid=44/44
+[sequence 9/9] test/Gym_012_cooking2/cam_10 frames=993
+  [window 1] frames=0..99 valid=100/100
+  [window 2] frames=100..199 valid=100/100
+  [window 3] frames=200..299 valid=100/100
+  [window 4] frames=300..399 valid=100/100
+  [window 5] frames=400..499 valid=100/100
+  [window 6] frames=500..599 valid=100/100
+  [window 7] frames=600..699 valid=100/100
+  [window 8] frames=700..799 valid=100/100
+  [window 9] frames=800..899 valid=100/100
+  [window 10] frames=900..992 valid=93/93
+[manual-scale-cache] /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/rich_manual_scale/cache/manifest.json
+[done] RICH physical-grounding evaluation
+{
+  "pooled_frames": {
+    "valid_frames": 7371,
+    "collision_frames": 449,
+    "floating_frames": 6806,
+    "neutral_frames": 116,
+    "collision_ratio_pct": 6.091439424772758,
+    "penetrate_cm": 6.770576128449897,
+    "float_cm": 17.47090571109921,
+    "penetration_max_cm": 20.975449681282043,
+    "tolerance_m": 0.005
+  },
+  "mean_of_sequences": {
+    "collision_ratio_pct": 6.479905705570926,
+    "penetrate_cm": 4.65297190326327,
+    "float_cm": 17.145417705814893,
+    "penetration_max_cm": 7.3078559504614935
+  }
+}
+[output] /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/rich_manual_scale/base_evaluation

@@ -1,0 +1,44 @@
+#!/bin/bash
+#SBATCH --job-name=paoku
+#SBATCH --partition=general
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=64G
+#SBATCH --gres=gpu:1
+#SBATCH --time=02:00:00
+#SBATCH --output=vis_%j.out
+#SBATCH --error=vis_%j.err
+
+set -e
+
+# 激活 zhw_env 环境
+source /opt/miniconda3/etc/profile.d/conda.sh
+conda activate zhw_env
+
+echo "开始 GPU 推理并导出 Viser 缓存，作业 ID: ${SLURM_JOB_ID}"
+echo "当前环境: ${CONDA_DEFAULT_ENV}"
+echo "分配的 GPU: ${CUDA_VISIBLE_DEVICES}"
+
+
+
+SHOW_TRACK_IDS=false \
+FILTER_HUMAN_POINTS=false \
+FRAMES_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/assets/image/paoku \
+STAGE2_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full \
+CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt \
+OUTPUT_DIR=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/vis/paoku \
+FULL_VIEWER_CACHE_OUTPUT=/home/zhw/lab_users/xyb/home/projects/vggt-human/assets/image/paoku/outputs/full_viewer_cache \
+CUDA_VISIBLE_DEVICES_VALUE=0 \
+PORT=8086 \
+MAX_FRAMES=0 \
+VIEWER_MODE=4d \
+HUMAN_MASK_DILATION_PX=6 \
+ENVIRONMENT_DISPLAY=points \
+SMOKE_ONLY=true \
+bash scripts/vis/serve_stage2_human_scene_align_walking_id_overlay.sh
+
+
+
+
+echo "GPU 推理和 Viser 缓存导出完成"

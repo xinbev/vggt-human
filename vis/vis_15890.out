@@ -1,0 +1,37 @@
+开始评估，作业 ID: 15890
+当前环境: zhw_env
+分配的 GPU: 0
+RICH physical-grounding metric evaluation
+Mode       : smoke
+Sequence   : Gym_010_cooking1/cam_01
+Frames max : 32 (0 means all selected label frames)
+Train cfg  : /home/zhw/lab_users/xyb/home/projects/vggt-human/configs/train_smpl_hsi_nlf_stage2_human_scene_align.yaml
+Stage2 ckpt: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt
+Scale ckpt : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt
+NLF slots  : 8 (detector, then RICH-box IoU matching)
+Output     : outputs/debug/rich_physical_grounding/evaluator_smoke_32
+[setup] camera views=1 image_resolution=512 chunk_size=32
+[setup] Stage-2 align schema=legacy_scale_bias_v0 (input_dim=25)
+[sequence 1/1] test/Gym_010_cooking1/cam_01 frames=32
+  [chunk 1] labels=0..31 valid=26/32
+[done] RICH physical-grounding evaluation
+{
+  "pooled_frames": {
+    "valid_frames": 26,
+    "collision_frames": 0,
+    "floating_frames": 26,
+    "neutral_frames": 0,
+    "collision_ratio_pct": 0.0,
+    "penetrate_cm": 0.0,
+    "float_cm": 2.606536791874812,
+    "penetration_max_cm": 0.0,
+    "tolerance_m": 0.005
+  },
+  "mean_of_camera_views": {
+    "collision_ratio_pct": 0.0,
+    "penetrate_cm": 0.0,
+    "float_cm": 2.606536791874812,
+    "penetration_max_cm": 0.0
+  }
+}
+[output] /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/debug/rich_physical_grounding/evaluator_smoke_32

@@ -103,6 +103,18 @@ def gt_joints(record, positions, smplx_model, joint_mapping, device):
         values["body_pose"] = values["body_pose"].reshape(len(ids), 63)
         values["betas"] = values["betas"].reshape(len(ids), -1)[:, :10]
         values["transl"] = values["transl"].reshape(len(ids), 3)
+        # Pass neutral auxiliary poses explicitly so SMPL-X does not create
+        # batch=1 defaults that conflict with the chunk batch dimension.
+        batch = len(ids)
+        dtype = values["global_orient"].dtype
+        values.update({
+            "jaw_pose": torch.zeros(batch, 3, device=device, dtype=dtype),
+            "leye_pose": torch.zeros(batch, 3, device=device, dtype=dtype),
+            "reye_pose": torch.zeros(batch, 3, device=device, dtype=dtype),
+            "left_hand_pose": torch.zeros(batch, 45, device=device, dtype=dtype),
+            "right_hand_pose": torch.zeros(batch, 45, device=device, dtype=dtype),
+            "expression": torch.zeros(batch, 10, device=device, dtype=dtype),
+        })
         vertices = smplx_model(**values).vertices
         joints = torch.einsum("jv,bvc->bjc", joint_mapping, vertices)
         chunks.append(joints.cpu().numpy())

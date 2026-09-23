@@ -1,0 +1,213 @@
+开始评估，作业 ID: 15892
+当前环境: zhw_env
+分配的 GPU: 0
+RICH physical-grounding metric evaluation
+Mode       : full
+Sequence   : <manifest/all>
+Frames max : 0 (0 means all selected label frames)
+Train cfg  : /home/zhw/lab_users/xyb/home/projects/vggt-human/configs/train_smpl_hsi_nlf_stage2_human_scene_align.yaml
+Stage2 ckpt: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt
+Scale ckpt : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt
+NLF slots  : 8 (detector, then RICH-box IoU matching)
+Output     : outputs/eval/rich_physical_grounding/all_views_100f
+[setup] camera views=191 image_resolution=512 chunk_size=32
+[setup] Stage-2 align schema=legacy_scale_bias_v0 (input_dim=25)
+[sequence 1/191] test/Gym_010_cooking1/cam_01 frames=775
+  [chunk 1] labels=0..31 valid=26/32
+  [chunk 2] labels=32..63 valid=24/32
+  [chunk 3] labels=64..95 valid=0/32
+  [chunk 4] labels=96..127 valid=0/32
+  [chunk 5] labels=128..159 valid=0/32
+  [chunk 6] labels=160..191 valid=0/32
+  [chunk 7] labels=192..223 valid=0/32
+  [chunk 8] labels=224..255 valid=0/32
+  [chunk 9] labels=256..287 valid=0/32
+  [chunk 10] labels=288..319 valid=0/32
+  [chunk 11] labels=320..351 valid=0/32
+  [chunk 12] labels=352..383 valid=0/32
+  [chunk 13] labels=384..415 valid=0/32
+  [chunk 14] labels=416..447 valid=0/32
+  [chunk 15] labels=448..479 valid=0/32
+  [chunk 16] labels=480..511 valid=0/32
+  [chunk 17] labels=512..543 valid=0/32
+  [chunk 18] labels=544..575 valid=0/32
+  [chunk 19] labels=576..607 valid=0/32
+  [chunk 20] labels=608..639 valid=0/32
+  [chunk 21] labels=640..671 valid=0/32
+  [chunk 22] labels=672..703 valid=0/32
+  [chunk 23] labels=704..735 valid=0/32
+  [chunk 24] labels=736..767 valid=0/32
+  [chunk 25] labels=768..774 valid=0/7
+[sequence 2/191] test/Gym_010_cooking1/cam_03 frames=775
+  [chunk 1] labels=0..31 valid=0/32
+  [chunk 2] labels=32..63 valid=0/32
+  [chunk 3] labels=64..95 valid=0/32
+  [chunk 4] labels=96..127 valid=0/32
+  [chunk 5] labels=128..159 valid=8/32
+  [chunk 6] labels=160..191 valid=0/32
+  [chunk 7] labels=192..223 valid=25/32
+  [chunk 8] labels=224..255 valid=26/32
+  [chunk 9] labels=256..287 valid=23/32
+  [chunk 10] labels=288..319 valid=13/32
+  [chunk 11] labels=320..351 valid=1/32
+  [chunk 12] labels=352..383 valid=21/32
+  [chunk 13] labels=384..415 valid=0/32
+  [chunk 14] labels=416..447 valid=28/32
+  [chunk 15] labels=448..479 valid=32/32
+  [chunk 16] labels=480..511 valid=32/32
+  [chunk 17] labels=512..543 valid=25/32
+  [chunk 18] labels=544..575 valid=11/32
+  [chunk 19] labels=576..607 valid=29/32
+  [chunk 20] labels=608..639 valid=17/32
+  [chunk 21] labels=640..671 valid=32/32
+  [chunk 22] labels=672..703 valid=32/32
+  [chunk 23] labels=704..735 valid=7/32
+  [chunk 24] labels=736..767 valid=11/32
+  [chunk 25] labels=768..774 valid=0/7
+[sequence 3/191] test/Gym_010_cooking1/cam_04 frames=775
+  [chunk 1] labels=0..31 valid=32/32
+  [chunk 2] labels=32..63 valid=32/32
+  [chunk 3] labels=64..95 valid=3/32
+  [chunk 4] labels=96..127 valid=0/32
+  [chunk 5] labels=128..159 valid=0/32
+  [chunk 6] labels=160..191 valid=0/32
+  [chunk 7] labels=192..223 valid=11/32
+  [chunk 8] labels=224..255 valid=0/32
+  [chunk 9] labels=256..287 valid=0/32
+  [chunk 10] labels=288..319 valid=0/32
+  [chunk 11] labels=320..351 valid=0/32
+  [chunk 12] labels=352..383 valid=7/32
+  [chunk 13] labels=384..415 valid=0/32
+  [chunk 14] labels=416..447 valid=0/32
+  [chunk 15] labels=448..479 valid=0/32
+  [chunk 16] labels=480..511 valid=0/32
+  [chunk 17] labels=512..543 valid=0/32
+  [chunk 18] labels=544..575 valid=0/32
+  [chunk 19] labels=576..607 valid=0/32
+  [chunk 20] labels=608..639 valid=0/32
+  [chunk 21] labels=640..671 valid=0/32
+  [chunk 22] labels=672..703 valid=0/32
+  [chunk 23] labels=704..735 valid=0/32
+  [chunk 24] labels=736..767 valid=12/32
+  [chunk 25] labels=768..774 valid=0/7
+[sequence 4/191] test/Gym_010_cooking1/cam_05 frames=775
+  [chunk 1] labels=0..31 valid=0/32
+  [chunk 2] labels=32..63 valid=0/32
+  [chunk 3] labels=64..95 valid=0/32
+  [chunk 4] labels=96..127 valid=0/32
+  [chunk 5] labels=128..159 valid=0/32
+  [chunk 6] labels=160..191 valid=0/32
+  [chunk 7] labels=192..223 valid=0/32
+  [chunk 8] labels=224..255 valid=0/32
+  [chunk 9] labels=256..287 valid=0/32
+  [chunk 10] labels=288..319 valid=0/32
+  [chunk 11] labels=320..351 valid=5/32
+  [chunk 12] labels=352..383 valid=7/32
+  [chunk 13] labels=384..415 valid=0/32
+  [chunk 14] labels=416..447 valid=0/32
+  [chunk 15] labels=448..479 valid=0/32
+  [chunk 16] labels=480..511 valid=0/32
+  [chunk 17] labels=512..543 valid=0/32
+  [chunk 18] labels=544..575 valid=0/32
+  [chunk 19] labels=576..607 valid=0/32
+  [chunk 20] labels=608..639 valid=0/32
+  [chunk 21] labels=640..671 valid=0/32
+  [chunk 22] labels=672..703 valid=0/32
+  [chunk 23] labels=704..735 valid=0/32
+  [chunk 24] labels=736..767 valid=0/32
+  [chunk 25] labels=768..774 valid=0/7
+[sequence 5/191] test/Gym_010_dips1/cam_00 frames=550
+  [chunk 1] labels=0..31 valid=0/32
+  [chunk 2] labels=32..63 valid=0/32
+  [chunk 3] labels=64..95 valid=16/32
+  [chunk 4] labels=96..127 valid=26/32
+  [chunk 5] labels=128..159 valid=27/32
+  [chunk 6] labels=160..191 valid=20/32
+  [chunk 7] labels=192..223 valid=0/32
+  [chunk 8] labels=224..255 valid=3/32
+  [chunk 9] labels=256..287 valid=13/32
+  [chunk 10] labels=288..319 valid=23/32
+  [chunk 11] labels=320..351 valid=22/32
+  [chunk 12] labels=352..383 valid=32/32
+  [chunk 13] labels=384..415 valid=32/32
+  [chunk 14] labels=416..447 valid=23/32
+  [chunk 15] labels=448..479 valid=1/32
+  [chunk 16] labels=480..511 valid=32/32
+  [chunk 17] labels=512..543 valid=9/32
+  [chunk 18] labels=544..549 valid=0/6
+[sequence 6/191] test/Gym_010_dips1/cam_04 frames=550
+  [chunk 1] labels=0..31 valid=32/32
+  [chunk 2] labels=32..63 valid=32/32
+  [chunk 3] labels=64..95 valid=2/32
+  [chunk 4] labels=96..127 valid=0/32
+  [chunk 5] labels=128..159 valid=10/32
+  [chunk 6] labels=160..191 valid=19/32
+  [chunk 7] labels=192..223 valid=32/32
+  [chunk 8] labels=224..255 valid=32/32
+  [chunk 9] labels=256..287 valid=32/32
+  [chunk 10] labels=288..319 valid=32/32
+  [chunk 11] labels=320..351 valid=32/32
+  [chunk 12] labels=352..383 valid=32/32
+  [chunk 13] labels=384..415 valid=32/32
+  [chunk 14] labels=416..447 valid=32/32
+  [chunk 15] labels=448..479 valid=17/32
+  [chunk 16] labels=480..511 valid=32/32
+  [chunk 17] labels=512..543 valid=13/32
+  [chunk 18] labels=544..549 valid=0/6
+[sequence 7/191] test/Gym_010_dips1/cam_05 frames=550
+  [chunk 1] labels=0..31 valid=0/32
+  [chunk 2] labels=32..63 valid=0/32
+  [chunk 3] labels=64..95 valid=0/32
+  [chunk 4] labels=96..127 valid=0/32
+  [chunk 5] labels=128..159 valid=0/32
+  [chunk 6] labels=160..191 valid=0/32
+  [chunk 7] labels=192..223 valid=0/32
+  [chunk 8] labels=224..255 valid=0/32
+  [chunk 9] labels=256..287 valid=0/32
+  [chunk 10] labels=288..319 valid=0/32
+  [chunk 11] labels=320..351 valid=0/32
+  [chunk 12] labels=352..383 valid=0/32
+  [chunk 13] labels=384..415 valid=0/32
+  [chunk 14] labels=416..447 valid=0/32
+  [chunk 15] labels=448..479 valid=0/32
+  [chunk 16] labels=480..511 valid=0/32
+  [chunk 17] labels=512..543 valid=0/32
+  [chunk 18] labels=544..549 valid=0/6
+[sequence 8/191] test/Gym_010_dips1/cam_06 frames=550
+  [chunk 1] labels=0..31 valid=32/32
+  [chunk 2] labels=32..63 valid=32/32
+  [chunk 3] labels=64..95 valid=22/32
+  [chunk 4] labels=96..127 valid=32/32
+  [chunk 5] labels=128..159 valid=32/32
+  [chunk 6] labels=160..191 valid=32/32
+  [chunk 7] labels=192..223 valid=32/32
+  [chunk 8] labels=224..255 valid=32/32
+  [chunk 9] labels=256..287 valid=32/32
+  [chunk 10] labels=288..319 valid=32/32
+  [chunk 11] labels=320..351 valid=32/32
+  [chunk 12] labels=352..383 valid=32/32
+  [chunk 13] labels=384..415 valid=32/32
+  [chunk 14] labels=416..447 valid=32/32
+  [chunk 15] labels=448..479 valid=32/32
+  [chunk 16] labels=480..511 valid=32/32
+  [chunk 17] labels=512..543 valid=20/32
+  [chunk 18] labels=544..549 valid=0/6
+[sequence 9/191] test/Gym_010_dips2/cam_01 frames=599
+  [chunk 1] labels=0..31 valid=0/32
+  [chunk 2] labels=32..63 valid=3/32
+  [chunk 3] labels=64..95 valid=32/32
+  [chunk 4] labels=96..127 valid=8/32
+  [chunk 5] labels=128..159 valid=0/32
+  [chunk 6] labels=160..191 valid=11/32
+  [chunk 7] labels=192..223 valid=32/32
+  [chunk 8] labels=224..255 valid=18/32
+  [chunk 9] labels=256..287 valid=30/32
+  [chunk 10] labels=288..319 valid=14/32
+  [chunk 11] labels=320..351 valid=17/32
+  [chunk 12] labels=352..383 valid=9/32
+  [chunk 13] labels=384..415 valid=13/32
+  [chunk 14] labels=416..447 valid=32/32
+  [chunk 15] labels=448..479 valid=20/32
+  [chunk 16] labels=480..511 valid=18/32
+  [chunk 17] labels=512..543 valid=2/32
+  [chunk 18] labels=544..575 valid=11/32

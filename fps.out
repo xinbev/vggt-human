@@ -1,0 +1,24 @@
+开始评估，作业 ID: 15941
+当前环境: zhw_env
+分配的 GPU: 0
+========== Steady-state FPS: VGGT+NLF vs VGGT+NLF+HSI scale ==========
+Frames            : /home/zhw/lab_users/xyb/home/projects/Human3R-master/outputs/walking/color
+Frame count       : 100
+Resolution        : 512
+Max humans        : 8
+Warm-up / repeats : 5 / 20
+GPU selector      : 0
+Output            : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/vggt_nlf_hsi_scale_fps
+[input] tensor=(1, 100, 3, 448, 592) dtype=torch.float32 device=cuda:0
+[timing] excluded: model/config/checkpoint load, image I/O/resize/H2D, NLF lazy load, warm-up, writes
+[timing] included: synchronized model compute, NLF detector, SMPL coarse scale, HSI residual scale/bias
+
+Steady-state synchronized wall-clock results
+pipeline                         latency mean (ms)    FPS       peak alloc (GB)
+vggt_nlf                            10249.175      9.757          13.727
+vggt_nlf_hsi_scale                  18920.870      5.285          13.836
+HSI scale latency overhead: 84.61% | FPS ratio vs base: 0.5417
+JSON: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/vggt_nlf_hsi_scale_fps/fps_summary.json
+CSV : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/vggt_nlf_hsi_scale_fps/fps_summary.csv
+JSON: /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/vggt_nlf_hsi_scale_fps/fps_summary.json
+CSV : /home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/vggt_nlf_hsi_scale_fps/fps_summary.csv

@@ -74,3 +74,9 @@ outputs/debug/groundedhuman_v1_ablation_revision_20260923/
 outputs/debug/groundedhuman_v1_method_rewrite/xelatex_pass2.txt
 outputs/vis/2_dance_frames/
 outputs/vis/reference_10fps_frames/*
+outputs/eval/rich_manual_scale/cache/windows/
+assets/image/paoku/
+video/part1/
+outputs/eval/rich_manual_scale/
+outputs/debug/
+outputs/eval/rich*
