@@ -33,17 +33,17 @@
     "num_smpl_queries": 8,
     "target_selection": "configured by the evaluation protocol"
   },
-  "num_windows": 8,
-  "num_person_frames": 800,
-  "num_sequences_evaluated": 1,
+  "num_windows": 251,
+  "num_person_frames": 24117,
+  "num_sequences_evaluated": 17,
   "frames_root": "outputs/preprocess/hmr4d_eval_frames",
   "mask_source": "gt_smpl_projection",
   "primary_branch": "refined",
   "table3": {
-    "hs_v5": 0.00874617630848661,
-    "hs_v10": 0.01171278486814117,
-    "hs_cf5": 4.987192497253418,
-    "hs_cf10": 4.861955979764462
+    "hs_v5": 0.015604006981471116,
+    "hs_v10": 0.01590103159257903,
+    "hs_cf5": 7.491868274958863,
+    "hs_cf10": 7.33268464666924
   },
   "protocol": {
     "metric": "SHOW released HS-V/HS-CF implementation",
@@ -76,45 +76,45 @@
   "branches": {
     "refined": {
       "means": {
-        "chamfer_abs_p10_90": 0.11346750791650266,
-        "chamfer_abs_p5_95": 0.11690514552406966,
-        "chamfer_norm_pct_p10_90": 4.861955979764462,
-        "chamfer_norm_pct_p5_95": 4.987192497253418,
-        "chamfer_scene_to_body_m10": 0.11346750791650266,
-        "chamfer_scene_to_body_m5": 0.11690514552406966,
-        "hs_cf10": 4.861955979764462,
-        "hs_cf5": 4.987192497253418,
-        "hs_v10": 0.01171278486814117,
-        "hs_v5": 0.00874617630848661,
-        "xy_scale_mse_p10_90": 0.01171278486814117,
-        "xy_scale_mse_p5_95": 0.00874617630848661
+        "chamfer_abs_p10_90": 0.18049372066830752,
+        "chamfer_abs_p5_95": 0.18524356008180884,
+        "chamfer_norm_pct_p10_90": 7.33268464666924,
+        "chamfer_norm_pct_p5_95": 7.491868274958863,
+        "chamfer_scene_to_body_m10": 0.18049372066830752,
+        "chamfer_scene_to_body_m5": 0.18524356008180884,
+        "hs_cf10": 7.33268464666924,
+        "hs_cf5": 7.491868274958863,
+        "hs_v10": 0.01590103159257903,
+        "hs_v5": 0.015604006981471116,
+        "xy_scale_mse_p10_90": 0.01590103159257903,
+        "xy_scale_mse_p5_95": 0.015604006981471116
       },
       "counts": {
-        "chamfer_abs_p10_90": 800,
-        "chamfer_abs_p5_95": 800,
-        "chamfer_norm_pct_p10_90": 800,
-        "chamfer_norm_pct_p5_95": 800,
-        "chamfer_scene_to_body_m10": 800,
-        "chamfer_scene_to_body_m5": 800,
-        "hs_cf10": 800,
-        "hs_cf5": 800,
-        "hs_v10": 800,
-        "hs_v5": 800,
-        "xy_scale_mse_p10_90": 800,
-        "xy_scale_mse_p5_95": 800
+        "chamfer_abs_p10_90": 24117,
+        "chamfer_abs_p5_95": 24117,
+        "chamfer_norm_pct_p10_90": 24117,
+        "chamfer_norm_pct_p5_95": 24117,
+        "chamfer_scene_to_body_m10": 24117,
+        "chamfer_scene_to_body_m5": 24117,
+        "hs_cf10": 24117,
+        "hs_cf5": 24117,
+        "hs_v10": 24117,
+        "hs_v5": 24117,
+        "xy_scale_mse_p10_90": 24117,
+        "xy_scale_mse_p5_95": 24117
       },
       "invalid": {},
       "table3_show_code": {
-        "hs_v5": 0.00874617630848661,
-        "hs_v10": 0.01171278486814117,
-        "hs_cf5": 4.987192497253418,
-        "hs_cf10": 4.861955979764462
+        "hs_v5": 0.015604006981471116,
+        "hs_v10": 0.01590103159257903,
+        "hs_cf5": 7.491868274958863,
+        "hs_cf10": 7.33268464666924
       },
       "official_show_names": {
-        "xy_scale_mse_p5_95": 0.00874617630848661,
-        "xy_scale_mse_p10_90": 0.01171278486814117,
-        "chamfer_norm_pct_p5_95": 4.987192497253418,
-        "chamfer_norm_pct_p10_90": 4.861955979764462
+        "xy_scale_mse_p5_95": 0.015604006981471116,
+        "xy_scale_mse_p10_90": 0.01590103159257903,
+        "chamfer_norm_pct_p5_95": 7.491868274958863,
+        "chamfer_norm_pct_p10_90": 7.33268464666924
       }
     }
   },
