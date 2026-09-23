@@ -1,0 +1,122 @@
+{
+  "dataset": "3dpw",
+  "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt",
+  "scale_checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt",
+  "checkpoint_load": {
+    "baseline": {
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/checkpoints/vggt_omega_1b_512.pt",
+      "missing": 165,
+      "unexpected": 0,
+      "shape_skipped": 0
+    },
+    "stage2": {
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt",
+      "missing": 1412,
+      "unexpected": 0,
+      "tensors": 164
+    },
+    "scale_overlay": {
+      "path": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt",
+      "prefix": "hsi_refinement_head.",
+      "tensors": 140,
+      "missing": 1436,
+      "unexpected": 0
+    }
+  },
+  "checkpoint_model_config": {
+    "reference": "scripts/vis/serve_stage2_walking_coarse_scale_hsi_cascade.sh",
+    "checkpoint": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt",
+    "checkpoint_align_input_dim": 25,
+    "configured_align_feature_version": "legacy_scale_bias_v0",
+    "hsi_scene_affine_mode": "per_frame",
+    "smpl_use_aggregator_queries": false,
+    "num_smpl_queries": 8,
+    "target_selection": "configured by the evaluation protocol"
+  },
+  "num_windows": 8,
+  "num_person_frames": 799,
+  "num_sequences_evaluated": 1,
+  "frames_root": "outputs/preprocess/hmr4d_eval_frames",
+  "mask_source": "gt_smpl_projection",
+  "primary_branch": "refined",
+  "table3": {
+    "hs_v5": 0.05420090389952008,
+    "hs_v10": 0.056572130628312484,
+    "hs_cf5": 43.36526431697182,
+    "hs_cf10": 44.24996195672003
+  },
+  "protocol": {
+    "metric": "SHOW released HS-V/HS-CF implementation",
+    "region": "GT SMPL mesh projection; identical region protocol must be used for every compared method",
+    "inference": "accepted analytic-coarse + residual-scale + Stage-2 human-scene alignment cascade",
+    "windowing": "non-overlapping windows; final shorter window retained; every source frame counted once",
+    "cascade": {
+      "confidence_threshold": 0.05,
+      "coarse_min_anchor_pixels": 32,
+      "coarse_scale_min": 0.1,
+      "coarse_scale_max": 10.0,
+      "coarse_anchor_stride": 8,
+      "coarse_fallback": "sequence_median",
+      "effective_affine_mode": "clip_median"
+    },
+    "percentile_trims": [
+      5.0,
+      10.0
+    ],
+    "visibility_backend": "torch_triangle",
+    "invalid_policy": "show_zero",
+    "compute_paper_audit": false,
+    "depth_conf_threshold": 0.05,
+    "scene_point_stride": 1,
+    "distance_chunk_size": 2048,
+    "min_body_points": 1,
+    "min_scene_points": 1,
+    "min_points_for_percentile": 20
+  },
+  "branches": {
+    "refined": {
+      "means": {
+        "chamfer_abs_p10_90": 0.8777378243493273,
+        "chamfer_abs_p5_95": 0.8814682729159935,
+        "chamfer_norm_pct_p10_90": 44.24996195672003,
+        "chamfer_norm_pct_p5_95": 43.36526431697182,
+        "chamfer_scene_to_body_m10": 0.8777378243493273,
+        "chamfer_scene_to_body_m5": 0.8814682729159935,
+        "hs_cf10": 44.24996195672003,
+        "hs_cf5": 43.36526431697182,
+        "hs_v10": 0.056572130628312484,
+        "hs_v5": 0.05420090389952008,
+        "xy_scale_mse_p10_90": 0.056572130628312484,
+        "xy_scale_mse_p5_95": 0.05420090389952008
+      },
+      "counts": {
+        "chamfer_abs_p10_90": 799,
+        "chamfer_abs_p5_95": 799,
+        "chamfer_norm_pct_p10_90": 799,
+        "chamfer_norm_pct_p5_95": 799,
+        "chamfer_scene_to_body_m10": 799,
+        "chamfer_scene_to_body_m5": 799,
+        "hs_cf10": 799,
+        "hs_cf5": 799,
+        "hs_v10": 799,
+        "hs_v5": 799,
+        "xy_scale_mse_p10_90": 799,
+        "xy_scale_mse_p5_95": 799
+      },
+      "invalid": {},
+      "table3_show_code": {
+        "hs_v5": 0.05420090389952008,
+        "hs_v10": 0.056572130628312484,
+        "hs_cf5": 43.36526431697182,
+        "hs_cf10": 44.24996195672003
+      },
+      "official_show_names": {
+        "xy_scale_mse_p5_95": 0.05420090389952008,
+        "xy_scale_mse_p10_90": 0.056572130628312484,
+        "chamfer_norm_pct_p5_95": 43.36526431697182,
+        "chamfer_norm_pct_p10_90": 44.24996195672003
+      }
+    }
+  },
+  "rows_csv": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/show_human_scene_3dpw/3dpw_show_human_scene_rows.csv"
+}

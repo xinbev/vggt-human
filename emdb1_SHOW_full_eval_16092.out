@@ -1,0 +1,16 @@
+开始评估，作业 ID: 16092
+当前环境: zhw_env
+分配的 GPU: 0
+[show-hs] dataset=emdb1 processed_windows=10
+[show-hs] dataset=emdb1 processed_windows=20
+[show-hs] dataset=emdb1 processed_windows=30
+[show-hs] dataset=emdb1 processed_windows=40
+[show-hs] dataset=emdb1 processed_windows=50
+[show-hs] dataset=emdb1 processed_windows=60
+[show-hs] dataset=emdb1 processed_windows=70
+[show-hs] dataset=emdb1 processed_windows=80
+[show-hs] dataset=emdb1 processed_windows=90
+[show-hs] dataset=emdb1 processed_windows=100
+[show-hs] dataset=emdb1 processed_windows=110
+[show-hs] dataset=emdb1 processed_windows=120
+[show-hs] dataset=emdb1 processed_windows=130
