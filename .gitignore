@@ -72,3 +72,5 @@ outputs/vis/emdb2_method_comparison/wa_mpjpe_mm_preview.pdf
 outputs/vis/emdb2_method_comparison/wa_mpjpe_vs_rte_preview.pdf
 outputs/debug/groundedhuman_v1_ablation_revision_20260923/
 outputs/debug/groundedhuman_v1_method_rewrite/xelatex_pass2.txt
+outputs/vis/2_dance_frames/
+outputs/vis/reference_10fps_frames/*
