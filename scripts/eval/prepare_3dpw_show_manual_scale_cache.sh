@@ -16,7 +16,7 @@ ARGS=(
   --output-dir "${OUTPUT_DIR:-outputs/eval/show_3dpw_manual_scale}"
   --sequence-length "${WINDOW_SIZE:-200}"
   --max-humans "${MAX_HUMANS:-1}"
-  --max-windows "${MAX_WINDOWS:-0}"
+  --max-sequences "${MAX_SEQUENCES:-0}"
   --num-workers "${NUM_WORKERS:-2}"
   --support-root "${SUPPORT_ROOT:-}"
   --frames-root "${FRAMES_ROOT:-}"

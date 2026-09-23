@@ -226,6 +226,7 @@ def build_dataset(config: dict[str, Any], args: argparse.Namespace) -> HMR4DSupp
         patch_size=int(config.get("model", {}).get("patch_size", 16)),
         full_sequence=False,
         non_overlapping_windows=bool(data_cfg.get("non_overlapping_windows", True)),
+        one_window_per_sequence=bool(getattr(args, "one_window_per_sequence", False)),
     )
 
 

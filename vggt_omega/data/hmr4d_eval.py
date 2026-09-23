@@ -102,6 +102,7 @@ class HMR4DSupportEvalDataset(Dataset):
         patch_size: int = 16,
         full_sequence: bool = False,
         non_overlapping_windows: bool = False,
+        one_window_per_sequence: bool = False,
     ) -> None:
         super().__init__()
         self.dataset = _canonical_dataset_key(dataset)
@@ -117,16 +118,21 @@ class HMR4DSupportEvalDataset(Dataset):
         self.patch_size = int(patch_size)
         self.full_sequence = bool(full_sequence)
         self.non_overlapping_windows = bool(non_overlapping_windows)
+        self.one_window_per_sequence = bool(one_window_per_sequence)
         if self.sequence_length <= 0:
             raise ValueError(f"sequence_length must be positive, got {sequence_length}")
         if self.stride <= 0:
             raise ValueError(f"stride must be positive, got {stride}")
         if self.max_humans <= 0:
             raise ValueError(f"max_humans must be positive, got {max_humans}")
-
         self.records = self._load_records()
-        self._index: list[tuple[int, int, int]] = []
+        self._index: list[tuple[int, int, int] | tuple[int, list[int]]] = []
         for record_idx, record in enumerate(self.records):
+            if self.one_window_per_sequence:
+                count = min(self.sequence_length, record.length)
+                frame_indices = list(range(count))
+                self._index.append((record_idx, frame_indices))
+                continue
             if self.non_overlapping_windows and not self.full_sequence:
                 source_span = self.sequence_length * self.stride
                 for start in range(0, record.length, source_span):
@@ -147,9 +153,16 @@ class HMR4DSupportEvalDataset(Dataset):
         return len(self._index)
 
     def __getitem__(self, idx: int) -> dict[str, Any]:
-        record_idx, start, window = self._index[idx]
+        entry = self._index[idx]
+        if len(entry) == 2:
+            record_idx, selected_indices = entry
+            frame_indices = [int(value) for value in selected_indices]
+            start = int(frame_indices[0]) if frame_indices else 0
+            window = len(frame_indices)
+        else:
+            record_idx, start, window = entry
+            frame_indices = [start + step * self.stride for step in range(window)]
         record = self.records[record_idx]
-        frame_indices = [start + step * self.stride for step in range(window)]
         images = []
         intrinsics = []
         orig_hws = []
@@ -183,6 +196,9 @@ class HMR4DSupportEvalDataset(Dataset):
                 "safe_vid": record.safe_vid,
                 "start": int(start),
                 "frame_indices": [int(v) for v in frame_indices],
+                "original_sequence_length": int(record.length),
+                "sampled_sequence_length": int(len(frame_indices)),
+                "frame_sampling": "head" if self.one_window_per_sequence else "window",
             },
             "eval_mask": self._select_eval_mask(record, frame_indices),
             "eval_label": self._select_label(record, frame_indices),

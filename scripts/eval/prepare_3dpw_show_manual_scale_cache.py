@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Run the 3DPW SHOW cascade once and persist replayable 200-frame windows.
+"""Run the 3DPW SHOW cascade once and cache the first 200 frames per sequence.
 
 The cache deliberately stores the selected prediction mesh and metric depth,
 not model activations.  Manual calibration therefore never runs inference a
-second time: a window scale is applied to the cached scene depth only, which
+second time: a sequence scale is applied to the cached scene depth only, which
 matches the project's existing RICH manual-scale semantics.
 """
 
@@ -47,7 +47,7 @@ from vggt_omega.models.smpl_layer import SMPLLayer  # noqa: E402
 from vggt_omega.training.config import require_path  # noqa: E402
 
 
-CACHE_FORMAT = "vggt_omega_show_3dpw_manual_scale_cache_v1"
+CACHE_FORMAT = "vggt_omega_show_3dpw_manual_scale_cache_v2"
 MANIFEST_NAME = "manifest.json"
 FACES_NAME = "smpl_faces.npy"
 INCOMPLETE_NAME = ".incomplete"
@@ -71,8 +71,8 @@ def main() -> None:
     )
     output_dir = resolve_output_dir(args.output_dir)
     cache_dir = output_dir / "cache"
-    windows_dir = cache_dir / "windows"
-    windows_dir.mkdir(parents=True, exist_ok=True)
+    sequences_dir = cache_dir / "sequences"
+    sequences_dir.mkdir(parents=True, exist_ok=True)
     (cache_dir / INCOMPLETE_NAME).write_text("Cache export is in progress.\n", encoding="utf-8")
 
     model = build_model(config).to(device)
@@ -92,8 +92,8 @@ def main() -> None:
 
     dataset = build_dataset(config, args)
     indices = list(range(len(dataset)))
-    if int(args.max_windows) > 0:
-        indices = indices[: int(args.max_windows)]
+    if int(args.max_sequences) > 0:
+        indices = indices[: int(args.max_sequences)]
     loader = DataLoader(
         Subset(dataset, indices), batch_size=1, shuffle=False, num_workers=int(args.num_workers),
         pin_memory=True, collate_fn=hmr4d_eval_collate_fn, drop_last=False,
@@ -109,35 +109,43 @@ def main() -> None:
         vid = str(meta["vid"][0])
         start = int(meta["start"][0])
         frame_ids = [int(value) for value in meta["frame_indices"][0]]
-        window_id = f"3dpw_{safe_name(vid)}_window_{position:04d}"
-        frame_file = windows_dir / f"{window_id}.pkl"
+        original_length = int(meta["original_sequence_length"][0])
+        sampled_length = int(meta["sampled_sequence_length"][0])
+        sequence_id = f"3dpw_{safe_name(vid)}"
+        frame_file = sequences_dir / f"{sequence_id}.pkl"
         with frame_file.open("wb") as file:
             pickle.dump(frames, file, protocol=pickle.HIGHEST_PROTOCOL)
         windows.append({
-            "window_id": window_id, "vid": vid, "window_index": len(windows),
+            "sequence_id": sequence_id, "vid": vid, "sequence_index": len(windows),
             "dataset_index": int(indices[position]), "start_frame": start,
-            "frame_count": len(frames), "source_frame_ids": frame_ids[: len(frames)],
+            "frame_count": len(frames), "sampled_frame_count": sampled_length,
+            "original_frame_count": original_length,
+            "sample_expansion_weight": float(original_length) / float(max(sampled_length, 1)),
+            "frame_sampling": "head",
+            "source_frame_ids": frame_ids[: len(frames)],
             "cache_file": str(frame_file.relative_to(cache_dir)),
         })
-        print(f"[show-cache] {len(windows)} windows={len(windows)} vid={vid} start={start} frames={len(frames)}", flush=True)
+        print(f"[show-cache] sequences={len(windows)} vid={vid} sampled={len(frames)}/{original_length} frames", flush=True)
 
     manifest = {
         "format": CACHE_FORMAT,
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "dataset": "3dpw", "split": args.split, "window_size": int(args.sequence_length or config.get("data", {}).get("sequence_length", 200)),
+        "dataset": "3dpw", "split": args.split, "sample_frames_per_sequence": int(args.sequence_length or config.get("data", {}).get("sequence_length", 200)),
         "branch": "refined", "mask_source": mask_source,
         "checkpoint": str(args.checkpoint), "scale_checkpoint": str(args.scale_checkpoint),
         "checkpoint_model_config": checkpoint_report, "checkpoint_load": checkpoint_audit,
         "faces_file": FACES_NAME, "metric_config": asdict(metric_config),
-        "cascade": asdict(cascade_config), "windows": windows,
-        "scale_scope": "one shared manual multiplier per non-overlapping window",
+        "cascade": asdict(cascade_config), "sequences": windows,
+        "sampling_protocol": f"first min({int(args.sequence_length)}, N) frames from every sequence",
+        "aggregation_protocol": "each sampled sequence mean is weighted by its original sequence length N",
+        "scale_scope": "one shared manual multiplier per sequence",
     }
     manifest_path = cache_dir / MANIFEST_NAME
     temporary = cache_dir / f"{MANIFEST_NAME}.tmp"
     temporary.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
     temporary.replace(manifest_path)
     (cache_dir / INCOMPLETE_NAME).unlink(missing_ok=True)
-    print(json.dumps({"manifest": str(manifest_path), "windows": len(windows)}, indent=2), flush=True)
+    print(json.dumps({"manifest": str(manifest_path), "sequences": len(windows)}, indent=2), flush=True)
 
 
 def build_cached_frames(predictions: dict[str, Any], batch: dict[str, Any], smpl: SMPLLayer, gt_smpl_by_gender: dict[str, SMPLLayer], metric_config: Any, dataset: Any) -> list[dict[str, Any]]:
@@ -199,10 +207,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sequence-length", type=int, default=200)
     parser.add_argument("--max-humans", type=int, default=1)
     parser.add_argument("--stride", type=int, default=1)
-    parser.add_argument("--max-windows", type=int, default=0)
+    parser.add_argument("--max-sequences", type=int, default=0)
     parser.add_argument("--split", default="test")
     # The shared HMR4D builder uses this field to select the support labels.
-    parser.set_defaults(dataset="3dpw")
+    parser.set_defaults(dataset="3dpw", one_window_per_sequence=True)
     parser.add_argument("--override", action="append", default=[])
     return parser.parse_args()
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Re-evaluate a cached 3DPW SHOW run after manual per-window scaling."""
+"""Re-evaluate cached 3DPW SHOW samples after manual per-sequence scaling."""
 
 from __future__ import annotations
 
@@ -22,8 +22,8 @@ from scripts.eval.evaluate_show_human_scene_3dpw import resolve_output_dir  # no
 from vggt_omega.evaluation import HumanSceneConsistencyConfig, compute_human_scene_consistency, render_mesh_silhouette  # noqa: E402
 
 
-CACHE_FORMAT = "vggt_omega_show_3dpw_manual_scale_cache_v1"
-SCALE_FILE_FORMAT = "vggt_omega_show_3dpw_manual_scale_selections_v1"
+CACHE_FORMAT = "vggt_omega_show_3dpw_manual_scale_cache_v2"
+SCALE_FILE_FORMAT = "vggt_omega_show_3dpw_manual_scale_selections_v2"
 
 
 def main() -> None:
@@ -33,9 +33,9 @@ def main() -> None:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if manifest.get("format") != CACHE_FORMAT:
         raise ValueError(f"Unsupported cache manifest: {manifest_path}")
-    windows = list(manifest.get("windows", []))
+    windows = list(manifest.get("sequences", []))
     if not windows:
-        raise ValueError("Cache contains no windows")
+        raise ValueError("Cache contains no sequences")
     scale_file = Path(args.scale_file).expanduser().resolve() if args.scale_file else cache_dir / "manual_scales.json"
     scales = load_scales(scale_file, windows, mode=args.scale_mode, allow_missing=bool(args.allow_missing_manual_scales))
     metric_config = HumanSceneConsistencyConfig(**manifest["metric_config"])
@@ -48,8 +48,11 @@ def main() -> None:
     for window in windows:
         with (cache_dir / str(window["cache_file"])).open("rb") as file:
             frames = pickle.load(file)
-        scale = float(scales[str(window["window_id"])])
+        scale = float(scales[str(window["sequence_id"])])
         values: list[dict[str, Any]] = []
+        evaluated_count = sum(bool(frame.get("eval_valid", True)) for frame in frames)
+        original_count = int(window.get("original_frame_count", len(frames)))
+        expansion_weight = float(original_count) / float(max(evaluated_count, 1))
         for frame in frames:
             if not bool(frame.get("eval_valid", True)):
                 continue
@@ -63,26 +66,39 @@ def main() -> None:
             metric = compute_human_scene_consistency(pred, depth, pred_k, human_mask, faces=faces, scene_valid_mask=valid, config=metric_config)
             values.append(metric)
             frame_rows.append({
-                "window_id": window["window_id"], "vid": window["vid"], "window_index": window["window_index"],
-                "source_frame_id": frame["source_frame_id"], "scale_multiplier": scale, **metric,
+                "sequence_id": window["sequence_id"], "vid": window["vid"], "sequence_index": window["sequence_index"],
+                "source_frame_id": frame["source_frame_id"], "scale_multiplier": scale,
+                "original_frame_count": original_count, "sampled_frame_count": len(frames),
+                "sample_expansion_weight": expansion_weight, **metric,
             })
         means = mean_metrics(values)
-        window_rows.append({"window_id": window["window_id"], "vid": window["vid"], "window_index": window["window_index"], "frame_count": len(frames), "scale_multiplier": scale, **means})
+        window_rows.append({
+            "sequence_id": window["sequence_id"], "vid": window["vid"], "sequence_index": window["sequence_index"],
+            "sampled_frame_count": len(frames), "evaluated_sampled_frame_count": evaluated_count,
+            "original_frame_count": original_count, "sequence_weight": original_count,
+            "sample_expansion_weight": expansion_weight, "scale_multiplier": scale, **means,
+        })
 
     write_csv(output_dir / "per_frame.csv", frame_rows)
-    write_csv(output_dir / "per_window.csv", window_rows)
-    (output_dir / "applied_scales.json").write_text(json.dumps({"format": SCALE_FILE_FORMAT, "mode": args.scale_mode, "windows": scales}, indent=2), encoding="utf-8")
+    write_csv(output_dir / "per_sequence.csv", window_rows)
+    (output_dir / "applied_scales.json").write_text(json.dumps({"format": SCALE_FILE_FORMAT, "mode": args.scale_mode, "sequences": scales}, indent=2), encoding="utf-8")
     summary = {
         "dataset": "3dpw", "cache_manifest": str(manifest_path), "scale_file": str(scale_file),
-        "scale_mode": args.scale_mode, "scale_scope": f"one shared manual multiplier per non-overlapping {manifest.get('window_size', 200)}-frame window",
-        "window_size": manifest.get("window_size", 200), "num_windows": len(windows),
-        "num_frames": len(frame_rows), "num_sequences": len({row["vid"] for row in frame_rows}),
-        "valid_frames": sum(bool(row.get("valid", False)) for row in frame_rows),
+        "scale_mode": args.scale_mode, "scale_scope": "one shared manual multiplier per sequence",
+        "sampling_protocol": manifest.get("sampling_protocol"),
+        "aggregation_protocol": "sequence sampled means weighted by original sequence length N",
+        "aggregation_formula": "sum_i(original_frame_count_i * sampled_sequence_mean_i) / sum_i(original_frame_count_i)",
+        "sample_frames_per_sequence": manifest.get("sample_frames_per_sequence", 200), "num_sequences": len(windows),
+        "num_sampled_frames": sum(int(row["sampled_frame_count"]) for row in window_rows),
+        "num_evaluated_sampled_frames": len(frame_rows),
+        "effective_original_frames": sum(int(row["original_frame_count"]) for row in window_rows),
+        "valid_sampled_frames": sum(bool(row.get("valid", False)) for row in frame_rows),
         "mask_source": manifest.get("mask_source"), "branch": manifest.get("branch"),
         "visibility_backend": metric_config.visibility_backend,
-        "table3": {key: mean_metric(frame_rows, key) for key in ("hs_v5", "hs_v10", "hs_cf5", "hs_cf10")},
-        "means": {key: mean_metric(frame_rows, key) for key in ("hs_v5", "hs_v10", "hs_cf5", "hs_cf10")},
-        "files": {"per_frame": str(output_dir / "per_frame.csv"), "per_window": str(output_dir / "per_window.csv"), "applied_scales": str(output_dir / "applied_scales.json")},
+        "table3": {key: weighted_sequence_metric(window_rows, key) for key in ("hs_v5", "hs_v10", "hs_cf5", "hs_cf10")},
+        "weighted_means": {key: weighted_sequence_metric(window_rows, key) for key in ("hs_v5", "hs_v10", "hs_cf5", "hs_cf10")},
+        "unweighted_sampled_frame_means": {key: mean_metric(frame_rows, key) for key in ("hs_v5", "hs_v10", "hs_cf5", "hs_cf10")},
+        "files": {"per_frame": str(output_dir / "per_frame.csv"), "per_sequence": str(output_dir / "per_sequence.csv"), "applied_scales": str(output_dir / "applied_scales.json")},
     }
     (output_dir / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
     print(json.dumps(summary, indent=2, ensure_ascii=False), flush=True)
@@ -90,17 +106,17 @@ def main() -> None:
 
 def load_scales(path: Path, windows: list[dict[str, Any]], *, mode: str, allow_missing: bool) -> dict[str, float]:
     if mode == "base":
-        return {str(row["window_id"]): 1.0 for row in windows}
+        return {str(row["sequence_id"]): 1.0 for row in windows}
     if not path.is_file():
         raise FileNotFoundError(f"Manual scale file not found: {path}")
     payload = json.loads(path.read_text(encoding="utf-8"))
     if payload.get("format") != SCALE_FILE_FORMAT:
         raise ValueError(f"Unsupported scale file: {path}")
-    records = payload.get("windows", {})
+    records = payload.get("sequences", {})
     out: dict[str, float] = {}
     missing = []
     for row in windows:
-        key = str(row["window_id"])
+        key = str(row["sequence_id"])
         record = records.get(key)
         if record is None:
             missing.append(key)
@@ -111,7 +127,7 @@ def load_scales(path: Path, windows: list[dict[str, Any]], *, mode: str, allow_m
                 raise ValueError(f"Invalid scale for {key}: {value}")
             out[key] = value
     if missing and not allow_missing:
-        raise ValueError(f"Manual scales are missing for {len(missing)} windows; first={missing[:3]}. Finish Viser annotation or pass --allow-missing-manual-scales for a diagnostic run.")
+        raise ValueError(f"Manual scales are missing for {len(missing)} sequences; first={missing[:3]}. Finish Viser annotation or pass --allow-missing-manual-scales for a diagnostic run.")
     return out
 
 
@@ -124,8 +140,21 @@ def mean_metrics(rows: list[dict[str, Any]]) -> dict[str, float]:
     return {key: mean_metric(rows, key) for key in ("hs_v5", "hs_v10", "hs_cf5", "hs_cf10")}
 
 
+def weighted_sequence_metric(rows: list[dict[str, Any]], key: str) -> float:
+    pairs = [
+        (float(row[key]), float(row["original_frame_count"]))
+        for row in rows
+        if key in row and np.isfinite(float(row[key])) and float(row["original_frame_count"]) > 0
+    ]
+    if not pairs:
+        return 0.0
+    numerator = sum(value * weight for value, weight in pairs)
+    denominator = sum(weight for _, weight in pairs)
+    return float(numerator / denominator)
+
+
 def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
-    fields = sorted({key for row in rows for key in row}) if rows else ["window_id"]
+    fields = sorted({key for row in rows for key in row}) if rows else ["sequence_id"]
     with path.open("w", encoding="utf-8", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=fields)
         writer.writeheader()

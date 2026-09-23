@@ -8,4 +8,4 @@ python scripts/vis/serve_3dpw_show_manual_scale_viewer.py \
   --port "${PORT:-8080}" \
   --point-stride "${POINT_STRIDE:-8}" \
   --point-size "${POINT_SIZE:-0.006}" \
-  --initial-window "${INITIAL_WINDOW:-0}"
+  --initial-sequence "${INITIAL_SEQUENCE:-0}"

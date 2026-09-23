@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Viser replay viewer for the cached 3DPW SHOW manual-scale windows."""
+"""Viser replay viewer for cached 3DPW SHOW per-sequence samples."""
 
 from __future__ import annotations
 
@@ -32,8 +32,8 @@ from scripts.vis.serve_stage2_viewer_cache import (  # noqa: E402
 from vggt_omega.evaluation import HumanSceneConsistencyConfig, compute_human_scene_consistency, render_mesh_silhouette  # noqa: E402
 
 
-CACHE_FORMAT = "vggt_omega_show_3dpw_manual_scale_cache_v1"
-SCALE_FILE_FORMAT = "vggt_omega_show_3dpw_manual_scale_selections_v1"
+CACHE_FORMAT = "vggt_omega_show_3dpw_manual_scale_cache_v2"
+SCALE_FILE_FORMAT = "vggt_omega_show_3dpw_manual_scale_selections_v2"
 
 
 def parse_args() -> argparse.Namespace:
@@ -41,7 +41,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cache-dir", required=True)
     parser.add_argument("--scale-file", default="")
     parser.add_argument("--port", type=int, default=8080)
-    parser.add_argument("--initial-window", type=int, default=0)
+    parser.add_argument("--initial-sequence", type=int, default=0)
     parser.add_argument("--scale-min", type=float, default=0.10)
     parser.add_argument("--scale-max", type=float, default=10.0)
     parser.add_argument("--point-stride", type=int, default=8)
@@ -59,14 +59,14 @@ class ShowManualScaleViewer:
         if manifest.get("format") != CACHE_FORMAT:
             raise ValueError(f"Unsupported cache manifest: {self.manifest_path}")
         self.manifest = manifest
-        self.windows = list(manifest.get("windows", []))
+        self.windows = list(manifest.get("sequences", []))
         if not self.windows:
-            raise RuntimeError("The cache contains no windows")
+            raise RuntimeError("The cache contains no sequences")
         self.faces = np.load(self.cache_dir / str(manifest["faces_file"]), allow_pickle=False).astype(np.int32)
         self.metric_config = HumanSceneConsistencyConfig(**manifest["metric_config"])
         self.scale_file = Path(args.scale_file).expanduser().resolve() if args.scale_file else self.cache_dir / "manual_scales.json"
         self.selections = self._load_selections()
-        self.window_index = min(max(int(args.initial_window), 0), len(self.windows) - 1)
+        self.window_index = min(max(int(args.initial_sequence), 0), len(self.windows) - 1)
         self.frame_index = 0
         self.frames: list[dict[str, Any]] = []
         self.handles: list[Any] = []
@@ -81,7 +81,7 @@ class ShowManualScaleViewer:
             if payload.get("format") != SCALE_FILE_FORMAT:
                 raise ValueError(f"Unsupported scale file: {self.scale_file}")
             return payload
-        return {"format": SCALE_FILE_FORMAT, "cache_manifest": str(self.manifest_path), "windows": {}}
+        return {"format": SCALE_FILE_FORMAT, "cache_manifest": str(self.manifest_path), "sequences": {}}
 
     def _load_window(self, index: int) -> None:
         self.window_index = int(index)
@@ -89,20 +89,20 @@ class ShowManualScaleViewer:
         with (self.cache_dir / str(record["cache_file"])).open("rb") as file:
             self.frames = pickle.load(file)  # trusted local cache
         if not self.frames:
-            raise ValueError(f"Empty cache window: {record['window_id']}")
+            raise ValueError(f"Empty cached sequence: {record['sequence_id']}")
         self.frame_index = min(self.frame_index, len(self.frames) - 1)
 
     def _build_gui(self) -> None:
         record = self.windows[self.window_index]
-        self.window_choice = add_slider(self.server, "Window", 0, len(self.windows) - 1, 1, self.window_index)
-        self.previous_window = add_button(self.server, "Previous Window")
-        self.next_window = add_button(self.server, "Next Window")
-        self.frame = add_slider(self.server, "Frame in Window", 0, max(len(self.frames) - 1, 0), 1, 0)
-        scale = self._saved_scale(str(record["window_id"]))
+        self.window_choice = add_slider(self.server, "Sequence", 0, len(self.windows) - 1, 1, self.window_index)
+        self.previous_window = add_button(self.server, "Previous Sequence")
+        self.next_window = add_button(self.server, "Next Sequence")
+        self.frame = add_slider(self.server, "Frame in Sample", 0, max(len(self.frames) - 1, 0), 1, 0)
+        scale = self._saved_scale(str(record["sequence_id"]))
         self.scale_log10 = add_slider(self.server, "Manual Scale (log10)", float(np.log10(self.args.scale_min)), float(np.log10(self.args.scale_max)), 0.005, float(np.log10(scale)))
-        self.save_scale = add_button(self.server, "Save Window Scale")
+        self.save_scale = add_button(self.server, "Save Sequence Scale")
         self.preview = add_button(self.server, "Preview SHOW Metrics")
-        self.window_info = add_text(self.server, "Window Status", "")
+        self.window_info = add_text(self.server, "Sequence Status", "")
         self.frame_info = add_text(self.server, "Frame Status", "")
         self.metric_info = add_text(self.server, "Metric Preview", "Not computed")
         bind_update(self.window_choice, self._on_window)
@@ -114,7 +114,7 @@ class ShowManualScaleViewer:
         bind_click(self.preview, self._on_preview)
 
     def _saved_scale(self, window_id: str) -> float:
-        return float(self.selections.get("windows", {}).get(window_id, {}).get("scale_multiplier", 1.0))
+        return float(self.selections.get("sequences", {}).get(window_id, {}).get("scale_multiplier", 1.0))
 
     def _current_scale(self) -> float:
         return float(10.0 ** float(self.scale_log10.value))
@@ -134,7 +134,7 @@ class ShowManualScaleViewer:
             except Exception:
                 pass
             self.frame.value = 0
-            self.scale_log10.value = float(np.log10(self._saved_scale(str(self.windows[index]["window_id"]))))
+            self.scale_log10.value = float(np.log10(self._saved_scale(str(self.windows[index]["sequence_id"]))))
             set_text_value(self.metric_info, "Not computed")
         finally:
             self.switching = False
@@ -153,10 +153,10 @@ class ShowManualScaleViewer:
 
     def _on_save(self, _: Any = None) -> None:
         record = self.windows[self.window_index]
-        window_id = str(record["window_id"])
+        window_id = str(record["sequence_id"])
         scale = self._current_scale()
-        self.selections.setdefault("windows", {})[window_id] = {
-            "scale_multiplier": scale, "vid": record["vid"], "window_index": int(record["window_index"]),
+        self.selections.setdefault("sequences", {})[window_id] = {
+            "scale_multiplier": scale, "vid": record["vid"], "sequence_index": int(record["sequence_index"]),
             "saved_at": datetime.now(timezone.utc).isoformat(),
         }
         self.selections["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -178,7 +178,8 @@ class ShowManualScaleViewer:
             mask = render_mesh_silhouette(gt, torch.from_numpy(frame["gt_intrinsics"]), tuple(frame["scene_depth"].shape), faces=torch.from_numpy(self.faces).long(), backend=self.metric_config.visibility_backend)
             values.append(compute_human_scene_consistency(pred, torch.from_numpy(frame["scene_depth"]).float() * scale, torch.from_numpy(frame["pred_intrinsics"]), mask, faces=torch.from_numpy(self.faces).long(), scene_valid_mask=torch.from_numpy(frame["scene_valid_mask"]).bool(), config=self.metric_config))
         summary = summarize_metrics(values)
-        set_text_value(self.metric_info, f"window frames={len(values)} | HS-V5={summary.get('hs_v5', 0):.5g} HS-V10={summary.get('hs_v10', 0):.5g} HS-CF5={summary.get('hs_cf5', 0):.5g} HS-CF10={summary.get('hs_cf10', 0):.5g}")
+        record = self.windows[self.window_index]
+        set_text_value(self.metric_info, f"sample={len(values)}/{record.get('original_frame_count', len(values))} | HS-V5={summary.get('hs_v5', 0):.5g} HS-V10={summary.get('hs_v10', 0):.5g} HS-CF5={summary.get('hs_cf5', 0):.5g} HS-CF10={summary.get('hs_cf10', 0):.5g}")
 
     def _rebuild_geometry(self) -> None:
         for handle in self.handles:
@@ -197,11 +198,11 @@ class ShowManualScaleViewer:
         vertices = np.asarray(frame["pred_vertices_cam"], dtype=np.float32)
         self.handles.append(add_mesh(self.server, "/show_manual_scale/person", vertices, self.faces, (232, 142, 82), 0.95))
         record = self.windows[self.window_index]
-        set_text_value(self.window_info, f"{self.window_index + 1}/{len(self.windows)} | {record['vid']} | window={record['window_index']} | scale=x{self._current_scale():.6g}")
+        set_text_value(self.window_info, f"{self.window_index + 1}/{len(self.windows)} | {record['vid']} | sampled={record.get('sampled_frame_count', len(self.frames))}/{record.get('original_frame_count', len(self.frames))} | scale=x{self._current_scale():.6g}")
         set_text_value(self.frame_info, f"frame {self.frame_index + 1}/{len(self.frames)} | source={frame['source_frame_id']} | query={frame['query_idx']}")
 
     def run(self) -> None:
-        print(f"[show-manual-scale] http://127.0.0.1:{self.args.port} | windows={len(self.windows)} | scale_file={self.scale_file}", flush=True)
+        print(f"[show-manual-scale] http://127.0.0.1:{self.args.port} | sequences={len(self.windows)} | scale_file={self.scale_file}", flush=True)
         try:
             while True:
                 time.sleep(1.0)
