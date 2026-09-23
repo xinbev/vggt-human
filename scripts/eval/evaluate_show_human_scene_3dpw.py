@@ -484,7 +484,7 @@ def evaluate_batch(
                 metric = invalid_mask_metrics(metric_config, metric_config.visibility_backend, "missing_sam2_mask")
             else:
                 metric = compute_human_scene_consistency(
-                    values["vertices"][flat_frame, query_idx],
+                    select_branch_vertices(values, flat_frame, query_idx, branch),
                     values["depth"][flat_frame],
                     intrinsics_flat[flat_frame],
                     full_mask,
@@ -542,15 +542,47 @@ def resolve_branch(predictions: dict[str, Any], branch: str, smpl: SMPLLayer) ->
     poses = predictions[pose_key].detach()
     betas = predictions[beta_key].detach()
     translation = predictions[transl_key].detach()
+    if poses.ndim < 4:
+        raise ValueError(f"{pose_key} must start with [B,S,Q], got {tuple(poses.shape)}")
     shape = poses.shape[:3]
+    if tuple(betas.shape[:3]) != tuple(shape) or tuple(translation.shape[:3]) != tuple(shape):
+        raise ValueError(
+            "SMPL branch tensors disagree on [B,S,Q]: "
+            f"poses={tuple(poses.shape)}, betas={tuple(betas.shape)}, "
+            f"translation={tuple(translation.shape)}"
+        )
     vertices, _ = smpl(poses.reshape(-1, 72).float(), betas.reshape(-1, betas.shape[-1]).float())
     vertices = vertices.reshape(*shape, vertices.shape[-2], 3).to(translation) + translation[..., None, :]
     return {
-        "vertices": vertices.reshape(-1, vertices.shape[-2], 3),
+        # Preserve the query axis because callers associate one query per
+        # person-frame. Only batch and sequence are flattened together.
+        "vertices": vertices.reshape(shape[0] * shape[1], shape[2], vertices.shape[-2], 3),
         "depth": depth.reshape(-1, *depth.shape[-2:]),
         "body_source": f"{pose_key}+{beta_key}+{transl_key}",
         "depth_source": depth_source,
     }
+
+
+def select_branch_vertices(
+    values: dict[str, Any],
+    flat_frame: int,
+    query_idx: int,
+    branch: str,
+) -> torch.Tensor:
+    """Select one decoded person mesh and enforce the metric's ``[V,3]`` contract."""
+
+    vertices = values.get("vertices")
+    if not isinstance(vertices, torch.Tensor) or vertices.ndim != 4 or vertices.shape[-1] != 3:
+        shape = tuple(vertices.shape) if isinstance(vertices, torch.Tensor) else type(vertices).__name__
+        raise ValueError(f"Resolved branch {branch!r} vertices must be [B*S,Q,V,3], got {shape}")
+    if not (0 <= int(flat_frame) < int(vertices.shape[0])):
+        raise IndexError(f"flat_frame={flat_frame} is outside branch {branch!r} shape {tuple(vertices.shape)}")
+    if not (0 <= int(query_idx) < int(vertices.shape[1])):
+        raise IndexError(f"query_idx={query_idx} is outside branch {branch!r} shape {tuple(vertices.shape)}")
+    mesh = vertices[int(flat_frame), int(query_idx)]
+    if mesh.ndim != 2 or mesh.shape[-1] != 3:
+        raise ValueError(f"Selected branch {branch!r} mesh must be [V,3], got {tuple(mesh.shape)}")
+    return mesh
 
 
 def canonical_batch_depth(value: torch.Tensor) -> torch.Tensor:

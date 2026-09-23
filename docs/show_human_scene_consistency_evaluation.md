@@ -84,6 +84,9 @@ For every matched person-frame:
 
 - SMPL vertices: `[V, 3]`, `float32`, camera coordinates, meters for metric
   model branches.
+- Predicted branch meshes are decoded as `[B,S,Q,V,3]`; evaluation flattens
+  only batch and frame to `[B*S,Q,V,3]`, then selects the associated query to
+  obtain the required `[V,3]` mesh.
 - Scene depth: `[H, W]`, `float32`, positive camera `z`, same scale as SMPL.
 - Intrinsics: `[3, 3]`, calibrated for the depth resolution.
 - Human mask: by default a dense GT SMPL projection at `[H, W]`; optionally an

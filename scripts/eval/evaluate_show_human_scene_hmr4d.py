@@ -28,6 +28,7 @@ from scripts.eval.evaluate_show_human_scene_3dpw import (  # noqa: E402
     metric_config_to_json,
     resolve_branch,
     resolve_output_dir,
+    select_branch_vertices,
     validate_evaluation_config,
 )
 from scripts.train.train_smpl import apply_overrides, build_model  # noqa: E402
@@ -275,7 +276,7 @@ def evaluate_batch(
             )
             for branch, values in branch_values.items():
                 metric = compute_human_scene_consistency(
-                    values["vertices"][flat_frame, query_idx],
+                    select_branch_vertices(values, flat_frame, query_idx, branch),
                     values["depth"][flat_frame],
                     intrinsics_flat[flat_frame],
                     human_mask,
