@@ -1,0 +1,166 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand*\HyPL@Entry[1]{}
+\citation{chen2026human3r,li2026unish,liu2026josh}
+\HyPL@Entry{0<</S/D>>}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Overview of GroundedHuman. Left: body-anchored scene queries calibrate scene scale and depth bias, while body-region context queries aggregate multi-scale human--scene evidence to refine whole-body translation. Center: calibrated scene geometry and interaction-aware human placement. Right: world-space joint accuracy versus inference speed.}}{1}{figure.1}\protected@file@percent }
+\newlabel{fig:teaser}{{1}{1}{Overview of GroundedHuman. Left: body-anchored scene queries calibrate scene scale and depth bias, while body-region context queries aggregate multi-scale human--scene evidence to refine whole-body translation. Center: calibrated scene geometry and interaction-aware human placement. Right: world-space joint accuracy versus inference speed}{figure.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
+\newlabel{sec:introduction}{{1}{1}{Introduction}{section.1}{}}
+\citation{wang2025vggt,wang2026vggtomega,sarandi2024nlf}
+\citation{chen2026human3r,li2026unish}
+\citation{sur2026unicon3r,ym2026graft}
+\citation{wang2024dust3r,leroy2024mast3r}
+\citation{wang2025vggt,wang2025pi3}
+\citation{zhang2024monst3r,wang2025cut3r,wang2026vggtomega}
+\citation{loper2023smpl,pavlakos2019smplx}
+\citation{goel2023humans4d,baradel2024multihmr,sarandi2024nlf}
+\citation{yuan2022glamr,ye2023slahmr}
+\citation{wang2024tram,shin2024wham,shen2024gvhmr}
+\citation{wang2026duomo}
+\citation{zhao2024synchmr}
+\citation{song2026metrichmsr}
+\citation{liu2026josh}
+\citation{rojas2025hamst3r,chen2026human3r}
+\citation{li2026unish}
+\citation{sur2026unicon3r}
+\citation{ym2026graft}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Related Work}{4}{section.2}\protected@file@percent }
+\newlabel{sec:related-work}{{2}{4}{Related Work}{section.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{3D Scene Reconstruction}{4}{section*.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Human Reconstruction and Global Motion}{4}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Scene-Human Reconstruction}{4}{section*.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces GroundedHuman infers metric calibration and human placement from implicit interaction representations. Body-Anchored Scene Query encodes human--scene correspondence, whose metric readout calibrates scene depth and camera translation. Within this reference, Hierarchical Context Attention encodes regional relations, whose placement readout updates whole-body translation. Updating the body changes its relation to the scene, so the regional representation is recomputed before the next refinement step.}}{5}{figure.2}\protected@file@percent }
+\newlabel{fig:method-overview}{{2}{5}{GroundedHuman infers metric calibration and human placement from implicit interaction representations. Body-Anchored Scene Query encodes human--scene correspondence, whose metric readout calibrates scene depth and camera translation. Within this reference, Hierarchical Context Attention encodes regional relations, whose placement readout updates whole-body translation. Updating the body changes its relation to the scene, so the regional representation is recomputed before the next refinement step}{figure.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Method}{5}{section.3}\protected@file@percent }
+\newlabel{sec:method}{{3}{5}{Method}{section.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{Initial observations.}{5}{section*.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Body-Anchored Metric Calibration}{5}{subsection.3.1}\protected@file@percent }
+\newlabel{sec:scale-calibration}{{3.1}{5}{Body-Anchored Metric Calibration}{subsection.3.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{Analytic Scale Initialization.}{5}{section*.5}\protected@file@percent }
+\newlabel{eq:scale-initialization}{{1}{5}{Analytic Scale Initialization}{equation.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{Body-Anchored Scene Query.}{6}{section*.6}\protected@file@percent }
+\newlabel{eq:anchor-scene-attention}{{2}{6}{Body-Anchored Scene Query}{equation.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Temporal Aggregation.}{6}{section*.7}\protected@file@percent }
+\newlabel{eq:temporal-calibration}{{3}{6}{Temporal Aggregation}{equation.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Dynamic Interaction Grounding}{6}{subsection.3.2}\protected@file@percent }
+\newlabel{sec:translation-refinement}{{3.2}{6}{Dynamic Interaction Grounding}{subsection.3.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Hierarchical Context Attention.}{6}{section*.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Interaction-Aware Placement.}{6}{section*.9}\protected@file@percent }
+\newlabel{eq:interaction-placement}{{4}{7}{Interaction-Aware Placement}{equation.4}{}}
+\@writefile{toc}{\contentsline {paragraph}{Translation Refinement.}{7}{section*.10}\protected@file@percent }
+\newlabel{eq:translation-iteration}{{5}{7}{Translation Refinement}{equation.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Training Objectives}{7}{subsection.3.3}\protected@file@percent }
+\newlabel{sec:training}{{3.3}{7}{Training Objectives}{subsection.3.3}{}}
+\newlabel{eq:calibration-loss}{{6}{7}{Training Objectives}{equation.6}{}}
+\newlabel{eq:grounding-loss}{{7}{7}{Training Objectives}{equation.7}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Experiments}{8}{section.4}\protected@file@percent }
+\newlabel{sec:experiments}{{4}{8}{Experiments}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Global Human Motion Estimation}{8}{subsection.4.1}\protected@file@percent }
+\newlabel{sec:global-motion}{{4.1}{8}{Global Human Motion Estimation}{subsection.4.1}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Evaluation of global human motion estimation on EMDB-2 and RICH. Contact Control denotes a human--scene grounding mechanism that adjusts human placement to reduce interpenetration, through explicit constraints or learned geometric updates; it does not require explicit contact-label prediction.}}{8}{table.1}\protected@file@percent }
+\newlabel{tab:global-motion}{{1}{8}{Evaluation of global human motion estimation on EMDB-2 and RICH. Contact Control denotes a human--scene grounding mechanism that adjusts human placement to reduce interpenetration, through explicit constraints or learned geometric updates; it does not require explicit contact-label prediction}{table.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Temporal human--scene reconstruction. Each column shows input frames, reconstructed bodies within the scene, and world trajectories. Gray: ground truth; blue: ours.}}{9}{figure.3}\protected@file@percent }
+\newlabel{fig:temporal-4d}{{3}{9}{Temporal human--scene reconstruction. Each column shows input frames, reconstructed bodies within the scene, and world trajectories. Gray: ground truth; blue: ours}{figure.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Scene Reconstruction}{9}{subsection.4.2}\protected@file@percent }
+\newlabel{sec:scene-reconstruction}{{4.2}{9}{Scene Reconstruction}{subsection.4.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Evaluation of generic 3D reconstruction across different input lengths. (a) Camera pose estimation on TUM-Dynamic using absolute trajectory error (ATE) after Sim(3) trajectory alignment. (b) Video depth estimation on Bonn in metric scale using Abs Rel and $\delta <1.25$. For GroundedHuman, metric depth is obtained with the Body-Anchored Metric Calibration module in Sec.~\ref {sec:scale-calibration}, without per-sequence ground-truth scale or shift fitting.}}{9}{figure.4}\protected@file@percent }
+\newlabel{fig:general-reconstruction}{{4}{9}{Evaluation of generic 3D reconstruction across different input lengths. (a) Camera pose estimation on TUM-Dynamic using absolute trajectory error (ATE) after Sim(3) trajectory alignment. (b) Video depth estimation on Bonn in metric scale using Abs Rel and $\delta <1.25$. For GroundedHuman, metric depth is obtained with the Body-Anchored Metric Calibration module in Sec.~\ref {sec:scale-calibration}, without per-sequence ground-truth scale or shift fitting}{figure.4}{}}
+\@writefile{toc}{\contentsline {paragraph}{Camera Pose Estimation.}{9}{section*.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Video Depth Estimation.}{9}{section*.12}\protected@file@percent }
+\citation{sur2026unicon3r}
+\citation{sur2026unicon3r}
+\citation{sur2026unicon3r}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Human Mesh Recovery}{10}{subsection.4.3}\protected@file@percent }
+\newlabel{sec:local-human-recovery}{{4.3}{10}{Human Mesh Recovery}{subsection.4.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Evaluation of local human mesh recovery on 3DPW and EMDB-1.}}{10}{table.2}\protected@file@percent }
+\newlabel{tab:local-hmr}{{2}{10}{Evaluation of local human mesh recovery on 3DPW and EMDB-1}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Ablation of Dynamic Interaction Grounding}{10}{subsection.4.4}\protected@file@percent }
+\newlabel{sec:contact-ablation}{{4.4}{10}{Ablation of Dynamic Interaction Grounding}{subsection.4.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Ablation of Dynamic Interaction Grounding on RICH under the physical-grounding protocol of UniCon3R~\citep  {sur2026unicon3r}. Each ablated variant removes the indicated component from GroundedHuman while retaining metric calibration. Lower is better; bold and underlined values denote the best and second-best results, respectively.}}{10}{table.3}\protected@file@percent }
+\newlabel{tab:body-region-ablation}{{3}{10}{Ablation of Dynamic Interaction Grounding on RICH under the physical-grounding protocol of UniCon3R~\citep {sur2026unicon3r}. Each ablated variant removes the indicated component from GroundedHuman while retaining metric calibration. Lower is better; bold and underlined values denote the best and second-best results, respectively}{table.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Qualitative Results}{11}{subsection.4.5}\protected@file@percent }
+\newlabel{sec:qualitative-results}{{4.5}{11}{Qualitative Results}{subsection.4.5}{}}
+\@writefile{toc}{\contentsline {paragraph}{Human--Scene Spatial Alignment.}{11}{section*.13}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Human placement in reconstructed scenes. Columns show the input, UniSH, Human3R, and GroundedHuman. Lying, reclining, and outdoor sitting examples highlight the position of the body relative to nearby support surfaces.}}{11}{figure.5}\protected@file@percent }
+\newlabel{fig:human-scene-interaction}{{5}{11}{Human placement in reconstructed scenes. Columns show the input, UniSH, Human3R, and GroundedHuman. Lying, reclining, and outdoor sitting examples highlight the position of the body relative to nearby support surfaces}{figure.5}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Comparison of the metric measurement on PROX.}}{11}{figure.6}\protected@file@percent }
+\newlabel{fig:metric-measurement}{{6}{11}{Comparison of the metric measurement on PROX}{figure.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Conclusion}{11}{section.5}\protected@file@percent }
+\newlabel{sec:conclusion}{{5}{11}{Conclusion}{section.5}{}}
+\bibdata{references}
+\bibcite{baradel2024multihmr}{{1}{2024}{{Baradel et~al.}}{{Baradel, Armando, Galaaoui, Br{\'e}gier, Weinzaepfel, Rogez, and Lucas}}}
+\bibcite{chen2026human3r}{{2}{2026}{{Chen et~al.}}{{Chen, Chen, Xue, Chen, Xiu, and Pons-Moll}}}
+\bibcite{goel2023humans4d}{{3}{2023}{{Goel et~al.}}{{Goel, Pavlakos, Rajasegaran, Kanazawa, and Malik}}}
+\bibcite{leroy2024mast3r}{{4}{2024}{{Leroy et~al.}}{{Leroy, Cabon, and Revaud}}}
+\bibcite{li2026unish}{{5}{2026}{{Li et~al.}}{{Li, Li, Zhang, Lu, Zhao, Xue, Liu, Peng, Zhang, Luo, Liu, and Guo}}}
+\bibcite{liu2026josh}{{6}{2026}{{Liu et~al.}}{{Liu, Lin, Wu, and Zhou}}}
+\@writefile{toc}{\contentsline {paragraph}{Limitations.}{12}{section*.14}\protected@file@percent }
+\bibcite{loper2023smpl}{{7}{2023}{{Loper et~al.}}{{Loper, Mahmood, Romero, Pons-Moll, and Black}}}
+\bibcite{pavlakos2019smplx}{{8}{2019}{{Pavlakos et~al.}}{{Pavlakos, Choutas, Ghorbani, Bolkart, Osman, Tzionas, and Black}}}
+\bibcite{ym2026graft}{{9}{2026}{{{Pradyumna YM} et~al.}}{{{Pradyumna YM}, Xue, Chen, Kister, S{\'a}r{\'a}ndi, and Pons-Moll}}}
+\bibcite{rojas2025hamst3r}{{10}{2025}{{Rojas et~al.}}{{Rojas, Armando, Ghanem, Weinzaepfel, Leroy, and Rogez}}}
+\bibcite{sarandi2024nlf}{{11}{2024}{{S{\'a}r{\'a}ndi \& Pons-Moll}}{{S{\'a}r{\'a}ndi and Pons-Moll}}}
+\bibcite{shen2024gvhmr}{{12}{2024}{{Shen et~al.}}{{Shen, Pi, Xia, Cen, Peng, Hu, Bao, Hu, and Zhou}}}
+\bibcite{shin2024wham}{{13}{2024}{{Shin et~al.}}{{Shin, Kim, Halilaj, and Black}}}
+\bibcite{song2026metrichmsr}{{14}{2026}{{Song et~al.}}{{Song, Zhang, Yuan, Lin, Tao, Zhang, and Yu}}}
+\bibcite{sur2026unicon3r}{{15}{2026}{{Sur et~al.}}{{Sur, Tripathi, Athanasiou, Nguyen, Xu, Black, and Yao}}}
+\bibcite{wang2025vggt}{{16}{2025{a}}{{Wang et~al.}}{{Wang, Chen, Karaev, Vedaldi, Rupprecht, and Novotny}}}
+\bibcite{wang2026vggtomega}{{17}{2026{a}}{{Wang et~al.}}{{Wang, Chen, Zhang, Karaev, Sch{\"o}nberger, Labatut, Bojanowski, Novotny, Vedaldi, and Rupprecht}}}
+\bibcite{wang2025cut3r}{{18}{2025{b}}{{Wang et~al.}}{{Wang, Zhang, Holynski, Efros, and Kanazawa}}}
+\bibcite{wang2024dust3r}{{19}{2024{a}}{{Wang et~al.}}{{Wang, Leroy, Cabon, Chidlovskii, and Revaud}}}
+\bibcite{wang2025pi3}{{20}{2025{c}}{{Wang et~al.}}{{Wang, Zhou, Zhu, Chang, Zhou, Li, Chen, Pang, Shen, and He}}}
+\bibcite{wang2024tram}{{21}{2024{b}}{{Wang et~al.}}{{Wang, Wang, Liu, and Daniilidis}}}
+\bibcite{wang2026duomo}{{22}{2026{b}}{{Wang et~al.}}{{Wang, Ng, Shin, Khirodkar, Dong, Su, Park, Kitani, Richard, Prada, and Zollh{\"o}fer}}}
+\bibcite{ye2023slahmr}{{23}{2023}{{Ye et~al.}}{{Ye, Pavlakos, Malik, and Kanazawa}}}
+\bibcite{yuan2022glamr}{{24}{2022}{{Yuan et~al.}}{{Yuan, Iqbal, Molchanov, Kitani, and Kautz}}}
+\bibcite{zhang2024monst3r}{{25}{2024}{{Zhang et~al.}}{{Zhang, Herrmann, Hur, Jampani, Darrell, Cole, Sun, and Yang}}}
+\bibcite{zhao2024synchmr}{{26}{2024}{{Zhao et~al.}}{{Zhao, Wang, Raj, Xu, Yang, and Huang}}}
+\bibstyle{iclr2027_conference}
+\citation{chen2026human3r}
+\@writefile{toc}{\contentsline {section}{\numberline {A}Evaluation Protocols and Supplementary Results}{15}{appendix.A}\protected@file@percent }
+\newlabel{app:bonn-results}{{A}{15}{Evaluation Protocols and Supplementary Results}{appendix.A}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.1}Bonn Depth Protocols}{15}{subsection.A.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Bonn depth without GT scale or shift alignment across input lengths. Metrics are weighted by valid pixels across five sequences; actual frame counts account for shorter sequences.}}{15}{table.4}\protected@file@percent }
+\newlabel{tab:bonn-length}{{4}{15}{Bonn depth without GT scale or shift alignment across input lengths. Metrics are weighted by valid pixels across five sequences; actual frame counts account for shorter sequences}{table.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.2}Camera Geometry and Metric-Depth Diagnostics}{15}{subsection.A.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Backbone camera errors on TUM-Dynamic after Sim(3) alignment. Each value is the mean ATE over eight sequences.}}{15}{table.5}\protected@file@percent }
+\newlabel{tab:tum-camera}{{5}{15}{Backbone camera errors on TUM-Dynamic after Sim(3) alignment. Each value is the mean ATE over eight sequences}{table.5}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {B}Notation, Coordinate Systems, and Metric Gauge}{16}{appendix.B}\protected@file@percent }
+\newlabel{app:coordinates}{{B}{16}{Notation, Coordinate Systems, and Metric Gauge}{appendix.B}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.1}Coordinate and Depth Conventions}{16}{subsection.B.1}\protected@file@percent }
+\newlabel{eq:appendix-metric-propagation}{{8}{16}{Coordinate and Depth Conventions}{equation.8}{}}
+\newlabel{eq:grounded-world-reconstruction}{{9}{16}{Coordinate and Depth Conventions}{equation.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.2}Tensor, Precision, and Device Conventions}{16}{subsection.B.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Main tensors and implementation conventions. Exact dimensions follow the final implementation configuration.}}{16}{table.6}\protected@file@percent }
+\newlabel{tab:tensor-conventions}{{6}{16}{Main tensors and implementation conventions. Exact dimensions follow the final implementation configuration}{table.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {C}Model Architecture Details and Complete Inference}{16}{appendix.C}\protected@file@percent }
+\newlabel{app:architecture}{{C}{16}{Model Architecture Details and Complete Inference}{appendix.C}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.1}VGGT-Ω, NLF, and Baseline Boundaries}{16}{subsection.C.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.2}Surface Sampling and Scale Initialization}{17}{subsection.C.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.3}Person-conditioned Residual Affine}{17}{subsection.C.3}\protected@file@percent }
+\newlabel{eq:residual-affine}{{10}{17}{Person-conditioned Residual Affine}{equation.10}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.4}Clip-level Consensus and Camera Propagation}{17}{subsection.C.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.5}Complete TRSTR Update}{18}{subsection.C.5}\protected@file@percent }
+\newlabel{eq:placement-conditioned-attention}{{11}{18}{Complete TRSTR Update}{equation.11}{}}
+\newlabel{eq:appendix-trstr-update}{{12}{18}{Complete TRSTR Update}{equation.12}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces \textbf  {Interaction representations and geometric readouts.} (a) Human-surface depth ratios initialize scene scale; Body-Anchored Scene Query relates 24 body anchors to local scene features, forming a metric interaction representation for residual scale and bias prediction. (b) Hierarchical Context Attention pools self-surface and environmental evidence across four supports around 96 body regions, forming regional interaction representations for whole-body translation proposals. Reprojecting and resampling after an update recomputes the relations for the next placement readout. Pose and shape are preserved.}}{19}{figure.7}\protected@file@percent }
+\newlabel{fig:method-detail}{{7}{19}{\textbf {Interaction representations and geometric readouts.} (a) Human-surface depth ratios initialize scene scale; Body-Anchored Scene Query relates 24 body anchors to local scene features, forming a metric interaction representation for residual scale and bias prediction. (b) Hierarchical Context Attention pools self-surface and environmental evidence across four supports around 96 body regions, forming regional interaction representations for whole-body translation proposals. Reprojecting and resampling after an update recomputes the relations for the next placement readout. Pose and shape are preserved}{figure.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.6}Inference Algorithm}{19}{subsection.C.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {D}Implementation and Training Details}{19}{appendix.D}\protected@file@percent }
+\newlabel{app:training}{{D}{19}{Implementation and Training Details}{appendix.D}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {D.1}Staged Training}{19}{subsection.D.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces v0.3 training-configuration placeholders. Every red entry must be replaced with a verified server configuration.}}{19}{table.7}\protected@file@percent }
+\newlabel{tab:training-placeholder}{{7}{19}{v0.3 training-configuration placeholders. Every red entry must be replaced with a verified server configuration}{table.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {D.2}Complete Losses and Weights}{19}{subsection.D.2}\protected@file@percent }
+\newlabel{eq:scale-loss}{{13}{19}{Complete Losses and Weights}{equation.13}{}}
+\citation{chen2026human3r}
+\newlabel{eq:trstr-loss}{{14}{20}{Complete Losses and Weights}{equation.14}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {D.3}Training Stages and Freezing Strategy}{20}{subsection.D.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {E}Complete Evaluation Protocols}{20}{appendix.E}\protected@file@percent }
+\newlabel{app:evaluation}{{E}{20}{Complete Evaluation Protocols}{appendix.E}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Summary of evaluation tasks and alignment conventions.}}{20}{table.8}\protected@file@percent }
+\newlabel{tab:evaluation-protocol}{{8}{20}{Summary of evaluation tasks and alignment conventions}{table.8}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {F}Additional Qualitative Results, Failure Cases, and Responsible Use}{20}{appendix.F}\protected@file@percent }
+\newlabel{app:limitations}{{F}{20}{Additional Qualitative Results, Failure Cases, and Responsible Use}{appendix.F}{}}
+\gdef \@abspage@last{21}

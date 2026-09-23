@@ -55,7 +55,7 @@ OFFICIAL_SHOW_METRICS = (
     "chamfer_norm_pct_p10_90",
 )
 ALLOWED_BRANCHES = frozenset({"base", "refined"})
-ALLOWED_VISIBILITY_BACKENDS = frozenset({"pytorch3d", "vertex_zbuffer"})
+ALLOWED_VISIBILITY_BACKENDS = frozenset({"torch_triangle", "pytorch3d", "vertex_zbuffer"})
 ALLOWED_MASK_SOURCES = frozenset({"gt_smpl_projection", "sam2_patch"})
 
 
@@ -263,10 +263,11 @@ def validate_evaluation_config(
             f"got {invalid_trims}"
         )
 
-    backend = str(eval_cfg.get("visibility_backend", "pytorch3d")).strip().lower()
+    backend = str(eval_cfg.get("visibility_backend", "torch_triangle")).strip().lower()
     if backend not in ALLOWED_VISIBILITY_BACKENDS:
         raise ValueError(
-            "human_scene_evaluation.visibility_backend must be pytorch3d or vertex_zbuffer; "
+            "human_scene_evaluation.visibility_backend must be torch_triangle, pytorch3d, "
+            "or vertex_zbuffer; "
             f"got {backend!r}"
         )
 
@@ -283,8 +284,11 @@ def validate_evaluation_config(
             "human_scene_evaluation.mask_source must be gt_smpl_projection or sam2_patch; "
             f"got {mask_source!r}"
         )
-    if mask_source == "gt_smpl_projection" and backend != "pytorch3d":
-        raise ValueError("mask_source=gt_smpl_projection requires visibility_backend=pytorch3d")
+    if mask_source == "gt_smpl_projection" and backend == "vertex_zbuffer":
+        raise ValueError(
+            "mask_source=gt_smpl_projection requires a dense triangle backend "
+            "(torch_triangle or pytorch3d)"
+        )
 
     positive_ints = {
         "scene_point_stride": int(eval_cfg.get("scene_point_stride", 1)),
@@ -461,6 +465,7 @@ def evaluate_batch(
                 gt_intrinsics_flat[flat_frame],
                 image_hw=image_hw,
                 faces=faces,
+                backend=metric_config.visibility_backend,
             )
         else:
             assert mask_flat is not None and mask_valid_flat is not None

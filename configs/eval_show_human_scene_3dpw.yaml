@@ -26,10 +26,9 @@ human_scene_evaluation:
   mask_source: gt_smpl_projection
   percentile_trims: [5, 10]
 
-  # Official-comparison surface sampling. This lazily uses PyTorch3D, matching the
-  # SHOW release without adding it to the baseline project's dependencies.
-  # Use vertex_zbuffer only for dependency-free diagnostics/smoke tests.
-  visibility_backend: pytorch3d
+  # Dense triangle z-buffer implemented with torch only. PyTorch3D remains an
+  # optional comparison backend. vertex_zbuffer is only a sparse diagnostic.
+  visibility_backend: torch_triangle
 
   # SHOW's released evaluator inserts zero when rendering/points are empty and
   # includes that frame in the concatenated mean. `skip_nan` is available only

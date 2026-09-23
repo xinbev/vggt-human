@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
 
 from vggt_omega.evaluation.human_scene_consistency import (  # noqa: E402
     HumanSceneConsistencyConfig,
+    _rasterize_mesh_depth_torch,
     compute_from_visible_points,
     compute_human_scene_consistency,
     directed_nearest_mean,
@@ -86,6 +87,59 @@ def main() -> None:
     assert end_to_end["chamfer_norm_pct_p0_100"] == end_to_end["hs_cf0"]
     assert end_to_end["xy_scale_mse_p0_100"] == end_to_end["hs_v0"]
 
+    # Two overlapping screen-space squares exercise dense triangle filling and
+    # the z-buffer: the farther square must never overwrite depth=2.
+    raster_vertices = torch.tensor(
+        [
+            [-1.0, -1.0, 2.0],
+            [1.0, -1.0, 2.0],
+            [1.0, 1.0, 2.0],
+            [-1.0, 1.0, 2.0],
+            [-2.0, -2.0, 4.0],
+            [2.0, -2.0, 4.0],
+            [2.0, 2.0, 4.0],
+            [-2.0, 2.0, 4.0],
+        ],
+        dtype=torch.float32,
+    )
+    raster_faces = torch.tensor(
+        [[0, 1, 2], [0, 2, 3], [4, 5, 6], [4, 6, 7]],
+        dtype=torch.int64,
+    )
+    raster_intrinsics = torch.tensor(
+        [[4.0, 0.0, 4.0], [0.0, 4.0, 4.0], [0.0, 0.0, 1.0]],
+        dtype=torch.float32,
+    )
+    raster_depth, raster_mask = _rasterize_mesh_depth_torch(
+        raster_vertices,
+        raster_faces,
+        raster_intrinsics,
+        (8, 8),
+        max_candidate_pixels=7,
+    )
+    expected_mask = torch.zeros((8, 8), dtype=torch.bool)
+    expected_mask[2:6, 2:6] = True
+    assert torch.equal(raster_mask.cpu(), expected_mask)
+    assert torch.allclose(raster_depth[raster_mask], torch.full((16,), 2.0), atol=1e-6, rtol=0.0)
+    dense_end_to_end = compute_human_scene_consistency(
+        raster_vertices,
+        torch.full((8, 8), 2.0, dtype=torch.float32),
+        raster_intrinsics,
+        expected_mask,
+        faces=raster_faces,
+        config=HumanSceneConsistencyConfig(
+            percentile_trims=(0.0,),
+            visibility_backend="torch_triangle",
+            distance_chunk_size=8,
+            min_body_points=1,
+            min_scene_points=1,
+            min_points_for_percentile=1,
+        ),
+    )
+    assert dense_end_to_end["valid_0"]
+    assert abs(float(dense_end_to_end["hs_cf0"])) < 1e-6
+    assert abs(float(dense_end_to_end["hs_v0"])) < 1e-6
+
     invalid_show = compute_human_scene_consistency(
         torch.empty((0, 3), dtype=torch.float32),
         depth,
@@ -132,6 +186,8 @@ def main() -> None:
                 "scaled": scaled,
                 "degenerate_paper": degenerate_paper,
                 "end_to_end_vertex_zbuffer": end_to_end,
+                "end_to_end_torch_triangle": dense_end_to_end,
+                "torch_triangle_pixels": int(raster_mask.sum()),
                 "invalid_show_zero": invalid_show,
                 "chunked_distance": float(chunked),
                 "filtered_points": int(filtered.shape[0]),

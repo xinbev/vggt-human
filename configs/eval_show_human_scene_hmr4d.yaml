@@ -13,7 +13,9 @@ human_scene_evaluation:
   branches: [refined]
   mask_source: gt_smpl_projection
   percentile_trims: [5, 10]
-  visibility_backend: pytorch3d
+  # Dense triangle z-buffer implemented with torch only. PyTorch3D remains an
+  # optional comparison backend but is not required for the formal run.
+  visibility_backend: torch_triangle
   invalid_policy: show_zero
   compute_paper_audit: false
   depth_conf_threshold: 0.05

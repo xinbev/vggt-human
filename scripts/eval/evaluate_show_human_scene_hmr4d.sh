@@ -44,5 +44,8 @@ ARGS=(
 if [[ -n "${DEVICE:-}" ]]; then ARGS+=(--device "${DEVICE}"); fi
 if [[ -n "${SUPPORT_ROOT:-}" ]]; then ARGS+=(--support-root "${SUPPORT_ROOT}"); fi
 if [[ -n "${FRAMES_ROOT:-}" ]]; then ARGS+=(--frames-root "${FRAMES_ROOT}"); fi
+if [[ -n "${VISIBILITY_BACKEND:-}" ]]; then
+  ARGS+=(--override "human_scene_evaluation.visibility_backend=${VISIBILITY_BACKEND}")
+fi
 
 python scripts/eval/evaluate_show_human_scene_hmr4d.py "${ARGS[@]}"

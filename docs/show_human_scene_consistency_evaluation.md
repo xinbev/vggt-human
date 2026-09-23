@@ -91,14 +91,17 @@ For every matched person-frame:
 - Scene points: depth pixels inside the human mask, unprojected to camera XYZ.
 - Depth validity: the human mask is intersected with the project's
   `depth_conf > 0.05`, matching SHOW's released point-extraction threshold.
-- Visible body points: PyTorch3D-rasterized SMPL surface by default.
+- Visible body points: dense SMPL triangle rasterization with a pure-PyTorch
+  perspective z-buffer by default (`torch_triangle`).
 
 The 5/10 variants retain scene points within the 5–95% or 10–90% depth
 percentile interval, matching the release's implemented filtering axis.
 
-`vertex_zbuffer` is available only as a dependency-free diagnostic fallback.
-It keeps the nearest SMPL vertex per pixel and is not numerically comparable to
-the rasterized Table 3 protocol.
+`torch_triangle` fills projected triangles, performs perspective-correct depth
+interpolation, and keeps the nearest surface at every pixel. It needs no
+renderer dependency. `pytorch3d` remains available as an optional comparison
+backend. `vertex_zbuffer` keeps only the nearest SMPL vertex per pixel and is
+not numerically comparable to the dense rasterized Table 3 protocol.
 
 ## Files
 
@@ -221,8 +224,10 @@ CHECKPOINT=/absolute/path/to/checkpoint.pt \
 bash scripts/eval/evaluate_show_human_scene_3dpw.sh
 ```
 
-For an environment without PyTorch3D, a non-paper-comparable diagnostic can be
-run with `VISIBILITY_BACKEND=vertex_zbuffer`.
+PyTorch3D is not required by the default configuration. To audit renderer
+sensitivity in an environment that already has PyTorch3D, set
+`VISIBILITY_BACKEND=pytorch3d`. The sparse `vertex_zbuffer` backend remains a
+diagnostic only and cannot be used with the GT-projection mask path.
 
 ## Outputs
 
@@ -258,9 +263,10 @@ output directories outside `outputs/`.
 
 ## Remaining risks
 
-1. PyTorch3D and the project model/checkpoints are unavailable on the Windows
-   inspection machine, so the full rasterized evaluation must be run on the
-   Linux server.
+1. The project model/checkpoints are unavailable on the Windows inspection
+   machine, so the full model evaluation must still be run on the Linux
+   server. The pure-PyTorch rasterizer itself is covered by the numerical smoke
+   test.
 2. The default GT-projected mask removes segmentation noise but uses annotation
    information and therefore must be reported as a GT-region variant.  The
    optional SAM2 patch-mask route is closer to SHOW's mask source but its lower

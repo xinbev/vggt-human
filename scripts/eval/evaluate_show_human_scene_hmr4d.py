@@ -271,6 +271,7 @@ def evaluate_batch(
                 gt_intrinsics_flat[flat_frame],
                 image_hw=image_hw,
                 faces=faces,
+                backend=metric_config.visibility_backend,
             )
             for branch, values in branch_values.items():
                 metric = compute_human_scene_consistency(

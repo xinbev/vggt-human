@@ -34,14 +34,14 @@ import torch
 import torch.nn.functional as F
 
 
-VisibilityBackend = Literal["pytorch3d", "vertex_zbuffer"]
+VisibilityBackend = Literal["torch_triangle", "pytorch3d", "vertex_zbuffer"]
 InvalidPolicy = Literal["show_zero", "skip_nan"]
 
 
 @dataclass(frozen=True, slots=True)
 class HumanSceneConsistencyConfig:
     percentile_trims: tuple[float, ...] = (5.0, 10.0)
-    visibility_backend: VisibilityBackend = "pytorch3d"
+    visibility_backend: VisibilityBackend = "torch_triangle"
     invalid_policy: InvalidPolicy = "show_zero"
     compute_paper_audit: bool = False
     depth_conf_threshold: float = 0.05
@@ -59,7 +59,7 @@ class HumanSceneConsistencyConfig:
             raise ValueError(f"Each percentile trim must satisfy 0 <= trim < 50, got {self.percentile_trims}")
         if len({float(trim) for trim in self.percentile_trims}) != len(self.percentile_trims):
             raise ValueError(f"percentile_trims contains duplicates: {self.percentile_trims}")
-        if self.visibility_backend not in {"pytorch3d", "vertex_zbuffer"}:
+        if self.visibility_backend not in {"torch_triangle", "pytorch3d", "vertex_zbuffer"}:
             raise ValueError(f"Unsupported visibility_backend: {self.visibility_backend!r}")
         if self.invalid_policy not in {"show_zero", "skip_nan"}:
             raise ValueError(f"Unsupported invalid_policy: {self.invalid_policy!r}")
@@ -101,7 +101,7 @@ def compute_human_scene_consistency(
             nearest-neighbour interpolation when needed.
         scene_valid_mask: Optional depth-confidence/valid-image mask combined
             with ``human_mask`` before depth unprojection.
-        faces: Mesh triangle indices, required by the ``pytorch3d`` backend.
+        faces: Mesh triangle indices, required by the dense triangle backends.
         config: Metric and numerical settings.
 
     Returns:
@@ -332,6 +332,10 @@ def visible_body_surface_points(
     faces: torch.Tensor | None,
     backend: VisibilityBackend,
 ) -> torch.Tensor:
+    if backend == "torch_triangle":
+        if faces is None:
+            raise ValueError("faces are required for visibility_backend='torch_triangle'")
+        return _rasterize_mesh_surface_torch(vertices_cam, faces, intrinsics, image_hw)
     if backend == "pytorch3d":
         if faces is None:
             raise ValueError("faces are required for visibility_backend='pytorch3d'")
@@ -348,10 +352,19 @@ def render_mesh_silhouette(
     *,
     image_hw: tuple[int, int],
     faces: torch.Tensor,
+    backend: VisibilityBackend = "torch_triangle",
 ) -> torch.Tensor:
-    """Render a dense mesh silhouette with SHOW's PyTorch3D convention."""
+    """Render a dense mesh silhouette for the GT human-region mask."""
 
-    _, mask = _rasterize_mesh_depth_pytorch3d(vertices_cam, faces, intrinsics, image_hw)
+    if backend == "torch_triangle":
+        _, mask = _rasterize_mesh_depth_torch(vertices_cam, faces, intrinsics, image_hw)
+    elif backend == "pytorch3d":
+        _, mask = _rasterize_mesh_depth_pytorch3d(vertices_cam, faces, intrinsics, image_hw)
+    else:
+        raise ValueError(
+            "A dense triangle backend is required to render a mesh silhouette; "
+            f"got {backend!r}"
+        )
     if tuple(mask.shape) != tuple(image_hw):
         mask = F.interpolate(mask.float()[None, None], size=image_hw, mode="nearest")[0, 0] > 0.5
     return mask
@@ -447,6 +460,170 @@ def _visible_vertices_zbuffer(
 
 
 @torch.no_grad()
+def _rasterize_mesh_surface_torch(
+    vertices_cam: torch.Tensor,
+    faces: torch.Tensor,
+    intrinsics: torch.Tensor,
+    image_hw: tuple[int, int],
+) -> torch.Tensor:
+    """Rasterize dense visible surface points without third-party renderers."""
+
+    depth, rendered = _rasterize_mesh_depth_torch(vertices_cam, faces, intrinsics, image_hw)
+    return masked_depth_to_camera_points(depth, intrinsics, rendered, stride=1)
+
+
+@torch.no_grad()
+def _rasterize_mesh_depth_torch(
+    vertices_cam: torch.Tensor,
+    faces: torch.Tensor,
+    intrinsics: torch.Tensor,
+    image_hw: tuple[int, int],
+    *,
+    max_candidate_pixels: int = 1_000_000,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Rasterize a triangle mesh with a pure-PyTorch perspective z-buffer.
+
+    Candidate pixels are generated only inside each triangle's clipped screen
+    bounding box and are processed in bounded chunks.  This keeps memory
+    proportional to covered bounding-box area instead of ``faces * H * W``.
+    Depth is perspective-correct (reciprocal-z interpolation), and the nearest
+    triangle wins at every pixel through ``scatter_reduce_(amin)``.
+    """
+
+    vertices = _points_2d(vertices_cam, "vertices_cam").float()
+    device = vertices.device
+    faces_tensor = torch.as_tensor(faces, device=device, dtype=torch.int64)
+    if faces_tensor.ndim != 2 or faces_tensor.shape[-1] != 3:
+        raise ValueError(f"faces must have shape [F,3], got {tuple(faces_tensor.shape)}")
+    K = torch.as_tensor(intrinsics, device=device, dtype=torch.float32)
+    if tuple(K.shape) != (3, 3):
+        raise ValueError(f"intrinsics must have shape [3,3], got {tuple(K.shape)}")
+    height, width = int(image_hw[0]), int(image_hw[1])
+    if height <= 0 or width <= 0:
+        raise ValueError(f"image_hw must be positive, got {image_hw}")
+    if max_candidate_pixels <= 0:
+        raise ValueError(f"max_candidate_pixels must be positive, got {max_candidate_pixels}")
+
+    empty_depth = torch.zeros((height, width), device=device, dtype=torch.float32)
+    empty_mask = torch.zeros((height, width), device=device, dtype=torch.bool)
+    if vertices.shape[0] == 0 or faces_tensor.shape[0] == 0:
+        return empty_depth, empty_mask
+    if bool(((faces_tensor < 0) | (faces_tensor >= vertices.shape[0])).any()):
+        raise ValueError("faces contain vertex indices outside vertices_cam")
+
+    triangles = vertices[faces_tensor]
+    valid_faces = torch.isfinite(triangles).all(dim=(1, 2)) & (triangles[..., 2] > 1e-6).all(dim=1)
+    triangles = triangles[valid_faces]
+    if triangles.shape[0] == 0:
+        return empty_depth, empty_mask
+
+    z = triangles[..., 2]
+    projected = torch.stack(
+        (
+            K[0, 0] * triangles[..., 0] / z + K[0, 2],
+            K[1, 1] * triangles[..., 1] / z + K[1, 2],
+        ),
+        dim=-1,
+    )
+    x0, y0 = projected[:, 0, 0], projected[:, 0, 1]
+    x1, y1 = projected[:, 1, 0], projected[:, 1, 1]
+    x2, y2 = projected[:, 2, 0], projected[:, 2, 1]
+    denominator = (y1 - y2) * (x0 - x2) + (x2 - x1) * (y0 - y2)
+
+    xmin = projected[..., 0].amin(dim=1).floor().clamp(0, width - 1).long()
+    xmax = projected[..., 0].amax(dim=1).ceil().clamp(0, width - 1).long()
+    ymin = projected[..., 1].amin(dim=1).floor().clamp(0, height - 1).long()
+    ymax = projected[..., 1].amax(dim=1).ceil().clamp(0, height - 1).long()
+    intersects = (
+        (projected[..., 0].amax(dim=1) >= 0.5)
+        & (projected[..., 0].amin(dim=1) <= float(width) - 0.5)
+        & (projected[..., 1].amax(dim=1) >= 0.5)
+        & (projected[..., 1].amin(dim=1) <= float(height) - 0.5)
+    )
+    bbox_width = xmax - xmin + 1
+    bbox_height = ymax - ymin + 1
+    usable = intersects & torch.isfinite(denominator) & (denominator.abs() > 1e-8)
+    projected = projected[usable]
+    z = z[usable]
+    denominator = denominator[usable]
+    xmin, ymin = xmin[usable], ymin[usable]
+    bbox_width, bbox_height = bbox_width[usable], bbox_height[usable]
+    candidate_counts = bbox_width * bbox_height
+    if projected.shape[0] == 0:
+        return empty_depth, empty_mask
+
+    depth_flat = torch.full((height * width,), float("inf"), device=device, dtype=torch.float32)
+    counts_cpu = candidate_counts.detach().cpu().tolist()
+    chunk_start = 0
+    chunk_candidates = 0
+    face_chunks: list[tuple[int, int]] = []
+    for face_index, count in enumerate(counts_cpu):
+        if chunk_candidates and chunk_candidates + int(count) > int(max_candidate_pixels):
+            face_chunks.append((chunk_start, face_index))
+            chunk_start = face_index
+            chunk_candidates = 0
+        chunk_candidates += int(count)
+    face_chunks.append((chunk_start, len(counts_cpu)))
+
+    for start, end in face_chunks:
+        counts = candidate_counts[start:end]
+        face_ids = torch.repeat_interleave(
+            torch.arange(end - start, device=device, dtype=torch.long),
+            counts,
+        )
+        if face_ids.numel() == 0:
+            continue
+        starts = torch.cumsum(counts, dim=0) - counts
+        offsets = torch.arange(face_ids.numel(), device=device, dtype=torch.long)
+        offsets = offsets - torch.repeat_interleave(starts, counts)
+        local_width = bbox_width[start:end][face_ids]
+        pixel_x = xmin[start:end][face_ids] + torch.remainder(offsets, local_width)
+        pixel_y = ymin[start:end][face_ids] + torch.div(offsets, local_width, rounding_mode="floor")
+
+        tri = projected[start:end][face_ids]
+        tri_z = z[start:end][face_ids]
+        denom = denominator[start:end][face_ids]
+        sample_x = pixel_x.float() + 0.5
+        sample_y = pixel_y.float() + 0.5
+        weight0 = (
+            (tri[:, 1, 1] - tri[:, 2, 1]) * (sample_x - tri[:, 2, 0])
+            + (tri[:, 2, 0] - tri[:, 1, 0]) * (sample_y - tri[:, 2, 1])
+        ) / denom
+        weight1 = (
+            (tri[:, 2, 1] - tri[:, 0, 1]) * (sample_x - tri[:, 2, 0])
+            + (tri[:, 0, 0] - tri[:, 2, 0]) * (sample_y - tri[:, 2, 1])
+        ) / denom
+        weight2 = 1.0 - weight0 - weight1
+        edge_tolerance = 1e-6
+        inside = (
+            (weight0 >= -edge_tolerance)
+            & (weight1 >= -edge_tolerance)
+            & (weight2 >= -edge_tolerance)
+            & (weight0 <= 1.0 + edge_tolerance)
+            & (weight1 <= 1.0 + edge_tolerance)
+            & (weight2 <= 1.0 + edge_tolerance)
+        )
+        reciprocal_depth = weight0 / tri_z[:, 0] + weight1 / tri_z[:, 1] + weight2 / tri_z[:, 2]
+        inside = inside & torch.isfinite(reciprocal_depth) & (reciprocal_depth > 0.0)
+        if not bool(inside.any()):
+            continue
+        candidate_depth = reciprocal_depth[inside].reciprocal()
+        pixel_indices = pixel_y[inside] * width + pixel_x[inside]
+        depth_flat.scatter_reduce_(
+            0,
+            pixel_indices,
+            candidate_depth,
+            reduce="amin",
+            include_self=True,
+        )
+
+    rendered = torch.isfinite(depth_flat).reshape(height, width)
+    depth = depth_flat.reshape(height, width)
+    depth = torch.where(rendered, depth, torch.zeros_like(depth))
+    return depth, rendered
+
+
+@torch.no_grad()
 def _rasterize_mesh_surface_pytorch3d(
     vertices_cam: torch.Tensor,
     faces: torch.Tensor,
@@ -473,8 +650,8 @@ def _rasterize_mesh_depth_pytorch3d(
         from pytorch3d.structures import Meshes
     except ImportError as exc:
         raise RuntimeError(
-            "The official SHOW visibility backend requires pytorch3d. "
-            "Use visibility_backend='vertex_zbuffer' only for dependency-free diagnostics."
+            "visibility_backend='pytorch3d' requires the optional pytorch3d package. "
+            "Use visibility_backend='torch_triangle' for dense dependency-free rasterization."
         ) from exc
 
     vertices = _points_2d(vertices_cam, "vertices_cam").float()
