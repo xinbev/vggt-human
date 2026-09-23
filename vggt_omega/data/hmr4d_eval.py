@@ -101,6 +101,7 @@ class HMR4DSupportEvalDataset(Dataset):
         max_humans: int = 1,
         patch_size: int = 16,
         full_sequence: bool = False,
+        non_overlapping_windows: bool = False,
     ) -> None:
         super().__init__()
         self.dataset = _canonical_dataset_key(dataset)
@@ -115,6 +116,7 @@ class HMR4DSupportEvalDataset(Dataset):
         self.max_humans = int(max_humans)
         self.patch_size = int(patch_size)
         self.full_sequence = bool(full_sequence)
+        self.non_overlapping_windows = bool(non_overlapping_windows)
         if self.sequence_length <= 0:
             raise ValueError(f"sequence_length must be positive, got {sequence_length}")
         if self.stride <= 0:
@@ -125,6 +127,15 @@ class HMR4DSupportEvalDataset(Dataset):
         self.records = self._load_records()
         self._index: list[tuple[int, int, int]] = []
         for record_idx, record in enumerate(self.records):
+            if self.non_overlapping_windows and not self.full_sequence:
+                source_span = self.sequence_length * self.stride
+                for start in range(0, record.length, source_span):
+                    window = min(
+                        self.sequence_length,
+                        1 + (record.length - 1 - start) // self.stride,
+                    )
+                    self._index.append((record_idx, start, window))
+                continue
             window = record.length if self.full_sequence else min(self.sequence_length, record.length)
             max_start = record.length - (window - 1) * self.stride
             for start in range(max(max_start, 0)):

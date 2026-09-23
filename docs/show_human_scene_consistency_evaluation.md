@@ -170,20 +170,36 @@ DATASET=emdb1 bash scripts/preprocess/extract_hmr4d_eval_frames.sh
 DATASET=3dpw bash scripts/preprocess/extract_hmr4d_eval_frames.sh
 ```
 
-Then evaluate the same project checkpoint on each dataset:
+The primary Table-3 runner mirrors
+`serve_stage2_walking_coarse_scale_hsi_cascade.sh`.  It loads the Stage-2
+human--scene alignment checkpoint, overlays `hsi_refinement_head.*` from the
+accepted residual-scale checkpoint, estimates analytic coarse scale from NLF,
+and applies the composed scale/bias with `clip_median`.  Evaluation uses
+non-overlapping 100-frame windows (including the final shorter window), so
+every benchmark frame is counted once while preserving multi-frame scale
+consensus.
+
+Evaluate the same two-checkpoint cascade on each dataset:
 
 ```bash
-DATASET=emdb1 CHECKPOINT=/absolute/path/to/checkpoint.pt DEVICE=cuda:0 \
+DATASET=emdb1 \
+CHECKPOINT=/absolute/path/to/stage2_checkpoint.pt \
+SCALE_CHECKPOINT=/absolute/path/to/scale_checkpoint.pt \
+DEVICE=cuda:0 \
   bash scripts/eval/evaluate_show_human_scene_hmr4d.sh
 
-DATASET=3dpw CHECKPOINT=/absolute/path/to/checkpoint.pt DEVICE=cuda:0 \
+DATASET=3dpw \
+CHECKPOINT=/absolute/path/to/stage2_checkpoint.pt \
+SCALE_CHECKPOINT=/absolute/path/to/scale_checkpoint.pt \
+DEVICE=cuda:0 \
   bash scripts/eval/evaluate_show_human_scene_hmr4d.sh
 ```
 
 Or produce both datasets and the final Table-3-style JSON/CSV in one run:
 
 ```bash
-CHECKPOINT=/absolute/path/to/checkpoint.pt \
+CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt \
+SCALE_CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt \
 DEVICE=cuda:0 \
 bash scripts/eval/evaluate_show_human_scene_table3.sh
 ```
@@ -229,15 +245,12 @@ score must not be presented as the project's SHOW result.
 
 ## Checkpoint contract
 
-The evaluator first loads the configured VGGT baseline and then overlays
-`CHECKPOINT`, matching the project's staged training convention.  With the
-default inference model, a refined evaluation requires the checkpoint to
-contain both `hsi_refinement_head.*` and `hsi_trstr_head.*`.  The script checks
-these prefixes and that they match the built model, and aborts instead of
-silently evaluating randomly initialized heads.  The project's HSI-scoped
-TRSTR checkpoints are valid when their saved prefixes contain both heads; a
-checkpoint containing only one earlier stage is not sufficient for the default
-configuration.
+The primary HMR4D evaluator loads weights in the same order as the accepted
+viewer: VGGT baseline, Stage-2 `CHECKPOINT`, then only
+`hsi_refinement_head.*` from `SCALE_CHECKPOINT`.  It restores and validates the
+legacy Stage-2 alignment schema (`legacy_scale_bias_v0`, input dimension 25)
+before model construction.  This path does not instantiate or evaluate TRSTR.
+Both checkpoint paths and the load audit are written to the result JSON.
 
 The evaluator also rejects empty/unknown branches, unknown visibility
 backends, invalid percentile ranges, non-positive point/chunk settings, and

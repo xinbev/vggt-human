@@ -18,23 +18,27 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.eval.evaluate_hmr4d_smpl_metrics import (  # noqa: E402
-    choose_query_indices,
+    box_iou_cxcywh,
     extract_gt_smpl,
     move_to_device,
 )
 from scripts.eval.evaluate_show_human_scene_3dpw import (  # noqa: E402
     MetricAccumulator,
     canonical_batch_depth,
-    load_evaluation_checkpoint,
     metric_config_to_json,
-    required_checkpoint_prefixes,
     resolve_branch,
     resolve_output_dir,
     validate_evaluation_config,
 )
-from scripts.train.train_smpl import apply_overrides, build_model, forward_model, load_initial_checkpoint  # noqa: E402
+from scripts.train.train_smpl import apply_overrides, build_model  # noqa: E402
 from vggt_omega.data import HMR4DSupportEvalDataset, hmr4d_eval_collate_fn  # noqa: E402
 from vggt_omega.evaluation import compute_human_scene_consistency, render_mesh_silhouette  # noqa: E402
+from vggt_omega.evaluation.rich_physical_grounding import (  # noqa: E402
+    CascadeConfig,
+    configure_reference_cascade_model,
+    load_evaluation_weights,
+    run_metric_cascade,
+)
 from vggt_omega.models.smpl_layer import SMPLLayer  # noqa: E402
 from vggt_omega.training.config import deep_update, load_yaml_config, require_path  # noqa: E402
 from vggt_omega.utils.pose_enc import encoding_to_camera  # noqa: E402
@@ -48,16 +52,24 @@ def main() -> None:
     branches, mask_source, metric_config = validate_evaluation_config(config["human_scene_evaluation"])
     if mask_source != "gt_smpl_projection":
         raise ValueError("The HMR4D-support evaluator currently requires mask_source=gt_smpl_projection")
+    if int(args.batch_size) != 1:
+        raise ValueError("Reference cascade evaluation requires --batch-size=1 because windows may have different lengths")
+    cascade_config = build_cascade_config(config)
+    config, checkpoint_config_report = configure_reference_cascade_model(
+        config,
+        args.checkpoint,
+        max_humans=int(args.max_humans),
+    )
 
     output_dir = resolve_output_dir(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     model = build_model(config).to(device)
-    load_initial_checkpoint(model, config, device)
-    checkpoint_audit = load_evaluation_checkpoint(
-        model,
-        Path(args.checkpoint).expanduser(),
-        device,
-        required_prefixes=required_checkpoint_prefixes(config, branches),
+    checkpoint_audit = load_evaluation_weights(
+        model=model,
+        baseline_checkpoint=require_path(config, "checkpoints.vggt_baseline"),
+        stage2_checkpoint=Path(args.checkpoint).expanduser(),
+        scale_checkpoint=Path(args.scale_checkpoint).expanduser(),
+        device=device,
     )
     model.eval()
     smpl_model_dir = require_path(config, "assets.smpl_model_dir")
@@ -90,7 +102,7 @@ def main() -> None:
     processed = 0
     for batch in loader:
         batch = move_to_device(batch, device)
-        predictions = forward_model(model, batch, config)
+        predictions, _ = run_metric_cascade(model, smpl, batch["images"], cascade_config)
         evaluate_batch(
             predictions,
             batch,
@@ -114,7 +126,9 @@ def main() -> None:
     summary = {
         "dataset": args.dataset,
         "checkpoint": str(args.checkpoint),
+        "scale_checkpoint": str(args.scale_checkpoint),
         "checkpoint_load": checkpoint_audit,
+        "checkpoint_model_config": checkpoint_config_report,
         "num_windows": processed,
         "num_person_frames": len(rows) // max(len(branches), 1),
         "num_sequences_evaluated": len({str(row["vid"]) for row in rows}),
@@ -125,6 +139,17 @@ def main() -> None:
         "protocol": {
             "metric": "SHOW released HS-V/HS-CF implementation",
             "region": "GT SMPL mesh projection; identical region protocol must be used for every compared method",
+            "inference": "accepted analytic-coarse + residual-scale + Stage-2 human-scene alignment cascade",
+            "windowing": "non-overlapping windows; final shorter window retained; every source frame counted once",
+            "cascade": {
+                "confidence_threshold": cascade_config.confidence_threshold,
+                "coarse_min_anchor_pixels": cascade_config.coarse_min_anchor_pixels,
+                "coarse_scale_min": cascade_config.coarse_scale_min,
+                "coarse_scale_max": cascade_config.coarse_scale_max,
+                "coarse_anchor_stride": cascade_config.coarse_anchor_stride,
+                "coarse_fallback": cascade_config.coarse_fallback,
+                "effective_affine_mode": cascade_config.effective_affine_mode,
+            },
             **metric_config_to_json(metric_config),
         },
         "branches": branch_summaries,
@@ -138,8 +163,9 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset", required=True, choices=["3dpw", "emdb1"])
     parser.add_argument("--checkpoint", required=True)
+    parser.add_argument("--scale-checkpoint", required=True)
     parser.add_argument("--path-config", default="configs/path.yaml")
-    parser.add_argument("--model-config", default="configs/infer_smpl_hsi_v3_trstr_spatial.yaml")
+    parser.add_argument("--model-config", default="configs/train_smpl_hsi_nlf_stage2_human_scene_align.yaml")
     parser.add_argument("--eval-config", default="configs/eval_show_human_scene_hmr4d.yaml")
     parser.add_argument("--support-root", default="")
     parser.add_argument("--frames-root", default="")
@@ -148,6 +174,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--num-workers", type=int, default=2)
     parser.add_argument("--sequence-length", type=int, default=0)
+    parser.add_argument("--max-humans", type=int, default=8)
     parser.add_argument("--stride", type=int, default=1)
     parser.add_argument("--max-windows", type=int, default=0)
     parser.add_argument("--log-interval", type=int, default=10)
@@ -164,6 +191,19 @@ def load_config(args: argparse.Namespace) -> dict[str, Any]:
     model_cfg["enable_depth"] = True
     model_cfg["enable_smpl"] = True
     return config
+
+
+def build_cascade_config(config: dict[str, Any]) -> CascadeConfig:
+    cascade = config.get("reference_cascade", {})
+    return CascadeConfig(
+        confidence_threshold=float(cascade.get("confidence_threshold", 0.05)),
+        coarse_min_anchor_pixels=int(cascade.get("coarse_min_anchor_pixels", 32)),
+        coarse_scale_min=float(cascade.get("coarse_scale_min", 0.10)),
+        coarse_scale_max=float(cascade.get("coarse_scale_max", 10.0)),
+        coarse_anchor_stride=int(cascade.get("coarse_anchor_stride", 8)),
+        coarse_fallback=str(cascade.get("coarse_fallback", "sequence_median")),
+        effective_affine_mode=str(cascade.get("effective_affine_mode", "clip_median")),
+    )
 
 
 def build_dataset(config: dict[str, Any], args: argparse.Namespace) -> HMR4DSupportEvalDataset:
@@ -184,6 +224,7 @@ def build_dataset(config: dict[str, Any], args: argparse.Namespace) -> HMR4DSupp
         max_humans=1,
         patch_size=int(config.get("model", {}).get("patch_size", 16)),
         full_sequence=False,
+        non_overlapping_windows=bool(data_cfg.get("non_overlapping_windows", True)),
     )
 
 
@@ -214,16 +255,16 @@ def evaluate_batch(
     _, intrinsics = encoding_to_camera(predictions["pose_enc"].detach().float(), image_size_hw=image_hw, build_intrinsics=True)
     intrinsics_flat = intrinsics.reshape(-1, 3, 3)
     gt_intrinsics_flat = batch["K_scal3r"].reshape(-1, 3, 3).to(intrinsics_flat)
-    query_indices = choose_query_indices(predictions, batch)
+    query_indices = choose_frame_query_indices(predictions, batch)
     eval_mask = batch.get("eval_mask", torch.ones(batch_size, num_frames, device=reference_depth.device)).bool()
 
     for batch_index in range(batch_size):
-        query_idx = int(query_indices[batch_index].detach().cpu())
         vid = str(batch["meta"]["vid"][batch_index])
         frame_ids = batch["meta"]["frame_indices"][batch_index]
         for frame_offset in range(num_frames):
             if not bool(eval_mask[batch_index, frame_offset]):
                 continue
+            query_idx = int(query_indices[batch_index, frame_offset].detach().cpu())
             flat_frame = batch_index * num_frames + frame_offset
             human_mask = render_mesh_silhouette(
                 gt_vertices_cam[batch_index, frame_offset],
@@ -256,6 +297,33 @@ def evaluate_batch(
                         **metric,
                     }
                 )
+
+
+def choose_frame_query_indices(
+    predictions: dict[str, torch.Tensor],
+    batch: dict[str, Any],
+) -> torch.Tensor:
+    """Associate the annotated person independently in every frame.
+
+    NLF detector slots are confidence ordered and are not guaranteed to keep a
+    stable query index across a long evaluation window.  A clip-level argmax
+    can therefore score the wrong person on 3DPW multi-person sequences.
+    """
+
+    confs = predictions["pred_confs"]
+    fallback = confs[..., 0].argmax(dim=-1)
+    pred_boxes = predictions.get("pred_boxes")
+    gt_boxes = batch.get("gt_boxes")
+    boxes_mask = batch.get("boxes_mask")
+    if not all(isinstance(value, torch.Tensor) for value in (pred_boxes, gt_boxes, boxes_mask)):
+        return fallback
+    iou = box_iou_cxcywh(pred_boxes[:, :, :, None, :], gt_boxes[:, :, None, :, :])
+    valid_targets = boxes_mask.bool()
+    iou = iou.masked_fill(~valid_targets[:, :, None, :], -1.0)
+    per_query = iou.max(dim=-1).values
+    matched = per_query.argmax(dim=-1)
+    has_target = valid_targets.any(dim=-1)
+    return torch.where(has_target, matched, fallback)
 
 
 def apply_transform(points: torch.Tensor, transform: torch.Tensor) -> torch.Tensor:

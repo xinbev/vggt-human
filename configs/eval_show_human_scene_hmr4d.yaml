@@ -1,7 +1,9 @@
 data:
-  # HS-V/HS-CF are frame-wise; length 1 evaluates every frame exactly once and
-  # avoids overlapping-window weighting.
-  sequence_length: 1
+  # The metric is frame-wise, but the accepted project inference applies its
+  # composed scene affine with clip_median over a multi-frame window. Use
+  # non-overlapping windows so every source frame is scored exactly once.
+  sequence_length: 100
+  non_overlapping_windows: true
   image_size: 518
   image_resolution: 512
   resize_mode: balanced
@@ -20,3 +22,12 @@ human_scene_evaluation:
   min_body_points: 1
   min_scene_points: 1
   min_points_for_percentile: 20
+
+reference_cascade:
+  confidence_threshold: 0.05
+  coarse_min_anchor_pixels: 32
+  coarse_scale_min: 0.10
+  coarse_scale_max: 10.0
+  coarse_anchor_stride: 8
+  coarse_fallback: sequence_median
+  effective_affine_mode: clip_median
