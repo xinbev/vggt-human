@@ -1,0 +1,39 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "requested_quality": "low",
+  "requested_size": "1024x1024",
+  "generation": {
+    "success": true,
+    "attempts": 1,
+    "request_seconds": 18.8,
+    "download_seconds": 2.3
+  },
+  "reference_edit": {
+    "success": true,
+    "attempts": 1,
+    "request_seconds": 36.1,
+    "reference": "red_outfit.png",
+    "reference_optimized_to_jpeg": true
+  },
+  "outputs": [
+    {
+      "file": "red_outfit.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "format": "PNG",
+      "bytes": 1250296
+    },
+    {
+      "file": "black_outfit.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "format": "PNG",
+      "bytes": 1627966
+    }
+  ],
+  "visual_check": "Red dress successfully changed to black; subject, pose and beige background broadly preserved, with small regenerated detail differences. Reference-guided generation, not pixel-locked editing."
+}

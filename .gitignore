@@ -80,3 +80,5 @@ video/part1/
 outputs/eval/rich_manual_scale/
 outputs/debug/
 outputs/eval/rich*
+outputs/paper/
+outputs/vis/groundedhuman_*
