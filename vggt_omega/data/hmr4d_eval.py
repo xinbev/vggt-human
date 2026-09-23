@@ -224,11 +224,13 @@ class HMR4DSupportEvalDataset(Dataset):
         raise ValueError(f"Unsupported HMR4D eval dataset: {self.dataset}")
 
     def _frame_path(self, record: HMR4DSequenceRecord, frame_idx: int) -> Path:
-        candidates = [
-            self.frames_root / record.dataset_key / record.safe_vid / "rgb" / f"{frame_idx:06d}.png",
-            self.frames_root / record.dataset_id / record.safe_vid / "rgb" / f"{frame_idx:06d}.png",
-            self.frames_root / record.safe_vid / "rgb" / f"{frame_idx:06d}.png",
-        ]
+        candidates = []
+        for directory in (
+            self.frames_root / record.dataset_key / record.safe_vid / "rgb",
+            self.frames_root / record.dataset_id / record.safe_vid / "rgb",
+            self.frames_root / record.safe_vid / "rgb",
+        ):
+            candidates.extend(directory / f"{frame_idx:06d}{suffix}" for suffix in (".png", ".jpg", ".jpeg"))
         # A 3DPW user may point ``frames_root`` directly at the native
         # ``<3DPW>/imageFiles`` tree instead of first extracting HMR4D videos.
         # HMR4D record IDs can include a person suffix (e.g. ``seq_0``), so

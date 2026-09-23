@@ -153,8 +153,17 @@ DEVICE=cuda:0 \
 bash scripts/eval/evaluate_show_human_scene_3dpw.sh
 ```
 
-For the paired Table 3 datasets, first extract frames from the existing
-`hmr4d_support/videos` directories (no SAM2 run is involved):
+For the paired Table 3 datasets, first prepare the project-local RGB frame
+layout (no SAM2 run is involved).  The extractor prefers
+`hmr4d_support/videos/*.mp4` when present and otherwise automatically reads the
+native layouts supplied here:
+
+- EMDB: `<emdb_root>/P*/<sequence>/images/*.{jpg,png}`
+- 3DPW: `<3dpw_root>/imageFiles/<sequence>/*.{jpg,png}`
+
+Native image sequences are not re-encoded: the script creates ordered
+project-local symbolic links and falls back to copying only when symbolic links
+are unavailable.  This avoids duplicating large EMDB JPEG sequences as PNGs.
 
 ```bash
 DATASET=emdb1 bash scripts/preprocess/extract_hmr4d_eval_frames.sh

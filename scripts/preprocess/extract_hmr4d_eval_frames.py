@@ -1,5 +1,6 @@
 import argparse
 import json
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -25,9 +26,24 @@ def main() -> None:
         records = records[: args.max_sequences]
     summary = {"dataset": dataset, "support_root": str(support_root), "frames_root": str(frames_root), "sequences": []}
     for record in records:
-        written = extract_video(record, frames_root, overwrite=args.overwrite, png_compression=args.png_compression)
-        summary["sequences"].append({**record, "written_frames": written})
-        print(f"[frames] {record['dataset_key']} {record['vid']} -> {written} frames", flush=True)
+        written, source = extract_record(
+            record,
+            frames_root,
+            overwrite=args.overwrite,
+            png_compression=args.png_compression,
+        )
+        expected = int(record.get("expected_frames", 0) or 0)
+        if expected > 0 and written != expected:
+            raise RuntimeError(
+                f"RGB/label length mismatch for {record['vid']}: source produced {written} frames, "
+                f"but HMR4D support expects {expected}."
+            )
+        summary["sequences"].append({**record, "source": source, "written_frames": written})
+        print(
+            f"[frames] {record['dataset_key']} {record['vid']} "
+            f"source={source} -> {written} frames",
+            flush=True,
+        )
     frames_root.mkdir(parents=True, exist_ok=True)
     summary_path = frames_root / f"{dataset}_extract_summary.json"
     summary_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -60,17 +76,20 @@ def build_video_records(dataset: str, support_root: Path) -> list[dict[str, Any]
     if dataset in {"emdb1", "emdb2"}:
         labels = _torch_load(support_root / "emdb_vit_v4.pt")
         names = EMDB1_NAMES if dataset == "emdb1" else EMDB2_NAMES
-        return [
-            {
+        records = []
+        for vid in names:
+            if vid not in labels:
+                continue
+            participant, sequence_name = vid.split("_", 1)
+            records.append({
                 "dataset_key": dataset,
                 "vid": vid,
                 "safe_vid": _safe_vid(vid),
                 "video_path": str(support_root / "videos" / f"{vid}.mp4"),
+                "images_dir": str(support_root.parent / participant / sequence_name / "images"),
                 "expected_frames": int(len(labels[vid]["mask"])),
-            }
-            for vid in names
-            if vid in labels
-        ]
+            })
+        return records
     if dataset == "rich":
         labels = _torch_load(support_root / "rich_test_labels.pt")
         return [
@@ -91,6 +110,7 @@ def build_video_records(dataset: str, support_root: Path) -> list[dict[str, Any]
                 "vid": vid,
                 "safe_vid": _safe_vid(vid),
                 "video_path": str(support_root / "videos" / f"{label['vname']}.mp4"),
+                "images_dir": str(support_root.parent / "imageFiles" / str(label["vname"])),
                 "expected_frames": int(len(label["mask_wham"])),
             }
             for vid, label in sorted(labels.items())
@@ -98,18 +118,45 @@ def build_video_records(dataset: str, support_root: Path) -> list[dict[str, Any]
     raise ValueError(f"Unsupported dataset: {dataset}")
 
 
-def extract_video(record: dict[str, Any], frames_root: Path, overwrite: bool, png_compression: int) -> int:
+def extract_record(
+    record: dict[str, Any],
+    frames_root: Path,
+    overwrite: bool,
+    png_compression: int,
+) -> tuple[int, str]:
     video_path = Path(record["video_path"]).expanduser()
-    if not video_path.is_file():
-        raise FileNotFoundError(f"Video not found for {record['vid']}: {video_path}")
+    images_dir_value = str(record.get("images_dir", "") or "")
+    images_dir = Path(images_dir_value).expanduser() if images_dir_value else None
     out_dir = frames_root / record["dataset_key"] / record["safe_vid"] / "rgb"
     out_dir.mkdir(parents=True, exist_ok=True)
-    existing = sorted(out_dir.glob("*.png"))
+    existing = sorted(
+        path
+        for path in out_dir.iterdir()
+        if (path.is_file() or path.is_symlink()) and path.suffix.lower() in {".jpg", ".jpeg", ".png"}
+    )
     if existing and not overwrite:
-        return len(existing)
+        expected = int(record.get("expected_frames", 0) or 0)
+        if expected > 0 and len(existing) != expected:
+            raise RuntimeError(
+                f"Partial frame output for {record['vid']}: found {len(existing)}, expected {expected}. "
+                "Re-run with OVERWRITE=1."
+            )
+        return len(existing), "existing_output"
     if existing and overwrite:
         for path in existing:
             path.unlink()
+
+    if video_path.is_file():
+        return extract_video(video_path, out_dir, png_compression), f"video:{video_path}"
+    if images_dir is not None and images_dir.is_dir():
+        return extract_image_sequence(images_dir, out_dir, png_compression), f"images:{images_dir}"
+    raise FileNotFoundError(
+        f"No RGB source found for {record['vid']}. Checked video={video_path} "
+        f"and images_dir={images_dir}."
+    )
+
+
+def extract_video(video_path: Path, out_dir: Path, png_compression: int) -> int:
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
         raise RuntimeError(f"Failed to open video: {video_path}")
@@ -125,6 +172,25 @@ def extract_video(record: dict[str, Any], frames_root: Path, overwrite: bool, pn
     finally:
         cap.release()
     return frame_idx
+
+
+def extract_image_sequence(images_dir: Path, out_dir: Path, png_compression: int) -> int:
+    del png_compression  # Native frames keep their original encoding.
+    image_paths = sorted(
+        path
+        for path in images_dir.iterdir()
+        if path.is_file() and path.suffix.lower() in {".jpg", ".jpeg", ".png"}
+    )
+    if not image_paths:
+        raise FileNotFoundError(f"No JPG/PNG frames found under {images_dir}")
+    for frame_idx, image_path in enumerate(image_paths):
+        suffix = image_path.suffix.lower()
+        out_path = out_dir / f"{frame_idx:06d}{suffix}"
+        try:
+            out_path.symlink_to(image_path.resolve())
+        except OSError:
+            shutil.copy2(image_path, out_path)
+    return len(image_paths)
 
 
 if __name__ == "__main__":
