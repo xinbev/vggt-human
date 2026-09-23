@@ -22,8 +22,8 @@ from scripts.eval.evaluate_show_human_scene_3dpw import resolve_output_dir  # no
 from vggt_omega.evaluation import HumanSceneConsistencyConfig, compute_human_scene_consistency, render_mesh_silhouette  # noqa: E402
 
 
-CACHE_FORMAT = "vggt_omega_show_3dpw_manual_scale_cache_v2"
-SCALE_FILE_FORMAT = "vggt_omega_show_3dpw_manual_scale_selections_v2"
+CACHE_FORMAT = "vggt_omega_show_3dpw_manual_scale_cache_v3"
+SCALE_FILE_FORMAT = "vggt_omega_show_3dpw_manual_scale_selections_v3"
 
 
 def main() -> None:
@@ -51,6 +51,8 @@ def main() -> None:
         scale = float(scales[str(window["sequence_id"])])
         values: list[dict[str, Any]] = []
         evaluated_count = sum(bool(frame.get("eval_valid", True)) for frame in frames)
+        match_valid_count = sum(bool(frame.get("match_valid", True)) for frame in frames)
+        gt_eval_count = sum(bool(frame.get("gt_eval_valid", True)) for frame in frames)
         original_count = int(window.get("original_frame_count", len(frames)))
         expansion_weight = float(original_count) / float(max(evaluated_count, 1))
         for frame in frames:
@@ -75,6 +77,9 @@ def main() -> None:
         window_rows.append({
             "sequence_id": window["sequence_id"], "vid": window["vid"], "sequence_index": window["sequence_index"],
             "sampled_frame_count": len(frames), "evaluated_sampled_frame_count": evaluated_count,
+            "match_valid_frame_count": match_valid_count,
+            "association_invalid_frame_count": len(frames) - match_valid_count,
+            "gt_eval_valid_frame_count": gt_eval_count,
             "original_frame_count": original_count, "sequence_weight": original_count,
             "sample_expansion_weight": expansion_weight, "scale_multiplier": scale, **means,
         })
@@ -93,6 +98,7 @@ def main() -> None:
         "num_evaluated_sampled_frames": len(frame_rows),
         "effective_original_frames": sum(int(row["original_frame_count"]) for row in window_rows),
         "valid_sampled_frames": sum(bool(row.get("valid", False)) for row in frame_rows),
+        "association_invalid_sampled_frames": sum(int(row["association_invalid_frame_count"]) for row in window_rows),
         "mask_source": manifest.get("mask_source"), "branch": manifest.get("branch"),
         "visibility_backend": metric_config.visibility_backend,
         "table3": {key: weighted_sequence_metric(window_rows, key) for key in ("hs_v5", "hs_v10", "hs_cf5", "hs_cf10")},

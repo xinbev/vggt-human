@@ -31,7 +31,7 @@ from scripts.eval.evaluate_show_human_scene_hmr4d import (  # noqa: E402
     apply_transform,
     build_cascade_config,
     build_dataset,
-    choose_frame_query_indices,
+    choose_frame_query_matches,
     decode_gendered_gt_vertices,
     load_config,
 )
@@ -47,7 +47,7 @@ from vggt_omega.models.smpl_layer import SMPLLayer  # noqa: E402
 from vggt_omega.training.config import require_path  # noqa: E402
 
 
-CACHE_FORMAT = "vggt_omega_show_3dpw_manual_scale_cache_v2"
+CACHE_FORMAT = "vggt_omega_show_3dpw_manual_scale_cache_v3"
 MANIFEST_NAME = "manifest.json"
 FACES_NAME = "smpl_faces.npy"
 INCOMPLETE_NAME = ".incomplete"
@@ -58,6 +58,10 @@ def main() -> None:
     args = parse_args()
     if int(args.batch_size) != 1:
         raise ValueError("SHOW manual-scale cache requires --batch-size=1")
+    if int(args.max_humans) < 2:
+        raise ValueError("3DPW multi-person GT association requires --max-humans >= 2; use 8 by default")
+    if not 0.0 <= float(args.target_min_iou) <= 1.0:
+        raise ValueError(f"--target-min-iou must be within [0,1], got {args.target_min_iou}")
     device = torch.device(args.device if args.device else ("cuda" if torch.cuda.is_available() else "cpu"))
     config = load_config(args)
     branches, mask_source, metric_config = validate_evaluation_config(config["human_scene_evaluation"])
@@ -102,30 +106,52 @@ def main() -> None:
     for position, batch in enumerate(loader):
         batch = move_to_device(batch, device)
         predictions, _ = run_metric_cascade(model, smpl, batch["images"], cascade_config)
-        frames = build_cached_frames(predictions, batch, smpl, gt_smpl_by_gender, metric_config, dataset)
+        frames = build_cached_frames(
+            predictions, batch, smpl, gt_smpl_by_gender, metric_config, dataset,
+            target_min_iou=float(args.target_min_iou),
+        )
         if not frames:
             continue
+        gt_box_count = sum(bool(frame.get("gt_box_valid", False)) for frame in frames)
+        match_count = sum(bool(frame.get("match_valid", False)) for frame in frames)
+        if gt_box_count == 0:
+            raise RuntimeError(
+                "3DPW target association has no GT boxes. The cache would fall back to the most "
+                f"confident person and may switch identity: vid={batch['meta']['vid'][0]}"
+            )
+        valid_ious = [float(frame["target_iou"]) for frame in frames if bool(frame.get("gt_box_valid", False)) and np.isfinite(float(frame["target_iou"]))]
         meta = batch["meta"]
         vid = str(meta["vid"][0])
         start = int(meta["start"][0])
         frame_ids = [int(value) for value in meta["frame_indices"][0]]
         original_length = int(meta["original_sequence_length"][0])
         sampled_length = int(meta["sampled_sequence_length"][0])
+        source_video = str(next(item for item in dataset.records if item.vid == vid).label.get("vname", vid.rsplit("_", 1)[0]))
         sequence_id = f"3dpw_{safe_name(vid)}"
         frame_file = sequences_dir / f"{sequence_id}.pkl"
         with frame_file.open("wb") as file:
             pickle.dump(frames, file, protocol=pickle.HIGHEST_PROTOCOL)
         windows.append({
             "sequence_id": sequence_id, "vid": vid, "sequence_index": len(windows),
+            "target_person_record": vid, "source_video": source_video,
             "dataset_index": int(indices[position]), "start_frame": start,
             "frame_count": len(frames), "sampled_frame_count": sampled_length,
             "original_frame_count": original_length,
             "sample_expansion_weight": float(original_length) / float(max(sampled_length, 1)),
             "frame_sampling": "head",
+            "gt_box_frame_count": gt_box_count,
+            "matched_frame_count": match_count,
+            "match_valid_ratio": float(match_count) / float(max(len(frames), 1)),
+            "mean_target_iou": float(np.mean(valid_ious)) if valid_ious else None,
+            "target_min_iou": float(args.target_min_iou),
             "source_frame_ids": frame_ids[: len(frames)],
             "cache_file": str(frame_file.relative_to(cache_dir)),
         })
-        print(f"[show-cache] sequences={len(windows)} vid={vid} sampled={len(frames)}/{original_length} frames", flush=True)
+        print(
+            f"[show-cache] sequences={len(windows)} vid={vid} sampled={len(frames)}/{original_length} "
+            f"GT-box={gt_box_count} matched={match_count} mean-IoU={float(np.mean(valid_ious)):.3f}",
+            flush=True,
+        )
 
     manifest = {
         "format": CACHE_FORMAT,
@@ -139,6 +165,8 @@ def main() -> None:
         "sampling_protocol": f"first min({int(args.sequence_length)}, N) frames from every sequence",
         "aggregation_protocol": "each sampled sequence mean is weighted by its original sequence length N",
         "scale_scope": "one shared manual multiplier per sequence",
+        "target_association": "one HMR4D 3DPW person-track record; per-frame maximum IoU among detector candidates",
+        "target_min_iou": float(args.target_min_iou),
     }
     manifest_path = cache_dir / MANIFEST_NAME
     temporary = cache_dir / f"{MANIFEST_NAME}.tmp"
@@ -148,7 +176,7 @@ def main() -> None:
     print(json.dumps({"manifest": str(manifest_path), "sequences": len(windows)}, indent=2), flush=True)
 
 
-def build_cached_frames(predictions: dict[str, Any], batch: dict[str, Any], smpl: SMPLLayer, gt_smpl_by_gender: dict[str, SMPLLayer], metric_config: Any, dataset: Any) -> list[dict[str, Any]]:
+def build_cached_frames(predictions: dict[str, Any], batch: dict[str, Any], smpl: SMPLLayer, gt_smpl_by_gender: dict[str, SMPLLayer], metric_config: Any, dataset: Any, *, target_min_iou: float) -> list[dict[str, Any]]:
     gt = extract_gt_smpl(batch["eval_label"], predictions["pred_confs"].device)
     gt_world = decode_gendered_gt_vertices(gt, batch["eval_label"], gt_smpl_by_gender) + gt["transl"][..., None, :]
     transforms = torch.as_tensor(batch["eval_label"]["T_w2c"], device=gt_world.device, dtype=gt_world.dtype)
@@ -161,7 +189,12 @@ def build_cached_frames(predictions: dict[str, Any], batch: dict[str, Any], smpl
     _, intrinsics = encoding_to_camera(predictions["pose_enc"].detach().float(), image_size_hw=image_hw, build_intrinsics=True)
     pred_k = intrinsics.reshape(-1, 3, 3)
     gt_k = batch["K_scal3r"].reshape(-1, 3, 3)
-    query_indices = choose_frame_query_indices(predictions, batch)[0]
+    matches = choose_frame_query_matches(predictions, batch)
+    query_indices = matches["query_indices"][0]
+    target_ious = matches["target_iou"][0]
+    has_gt_box = matches["has_gt_box"][0]
+    pred_boxes = predictions.get("pred_boxes")
+    gt_boxes = batch.get("gt_boxes")
     eval_mask = batch.get("eval_mask", torch.ones(depth.shape[0], device=depth.device)).bool().reshape(-1)
     meta = batch["meta"]
     vid = str(meta["vid"][0])
@@ -170,6 +203,9 @@ def build_cached_frames(predictions: dict[str, Any], batch: dict[str, Any], smpl
     frames: list[dict[str, Any]] = []
     for frame_offset, source_id in enumerate(frame_ids):
         query_idx = int(query_indices[frame_offset].detach().cpu())
+        target_iou = float(target_ious[frame_offset].detach().cpu())
+        gt_box_valid = bool(has_gt_box[frame_offset].detach().cpu())
+        match_valid = bool(gt_box_valid and np.isfinite(target_iou) and target_iou >= float(target_min_iou))
         mesh = select_branch_vertices(branch, frame_offset, query_idx, "refined").detach().cpu().numpy().astype(np.float16)
         frame = {
             "source_frame_id": int(source_id),
@@ -180,8 +216,17 @@ def build_cached_frames(predictions: dict[str, Any], batch: dict[str, Any], smpl
             "gt_intrinsics": gt_k[frame_offset].detach().cpu().numpy().astype(np.float32),
             "pred_vertices_cam": mesh,
             "gt_vertices_cam": gt_cam[frame_offset].detach().cpu().numpy().astype(np.float16),
-            "query_idx": query_idx, "person_id": 0, "vid": vid,
-            "eval_valid": bool(eval_mask[frame_offset]),
+            "query_idx": query_idx, "target_person_record": vid,
+            "source_video": str(record.label.get("vname", vid.rsplit("_", 1)[0])),
+            "target_iou": target_iou,
+            "target_min_iou": float(target_min_iou),
+            "gt_box_valid": gt_box_valid,
+            "match_valid": match_valid,
+            "match_method": "per_frame_gt_box_iou" if gt_box_valid else "missing_gt_box",
+            "gt_box_cxcywh": None if not isinstance(gt_boxes, torch.Tensor) else gt_boxes[0, frame_offset, 0].detach().cpu().numpy().astype(np.float32),
+            "pred_box_cxcywh": None if not isinstance(pred_boxes, torch.Tensor) else pred_boxes[0, frame_offset, query_idx].detach().cpu().numpy().astype(np.float32),
+            "gt_eval_valid": bool(eval_mask[frame_offset]),
+            "eval_valid": bool(eval_mask[frame_offset]) and match_valid,
         }
         frames.append(frame)
     return frames
@@ -205,7 +250,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--num-workers", type=int, default=2)
     parser.add_argument("--sequence-length", type=int, default=200)
-    parser.add_argument("--max-humans", type=int, default=1)
+    parser.add_argument("--max-humans", type=int, default=8, help="Number of detector candidates; GT target slots remain one per person-track record.")
+    parser.add_argument("--target-min-iou", type=float, default=0.30)
     parser.add_argument("--stride", type=int, default=1)
     parser.add_argument("--max-sequences", type=int, default=0)
     parser.add_argument("--split", default="test")

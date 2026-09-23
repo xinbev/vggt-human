@@ -16,7 +16,7 @@
 
 其中 \(\mathcal H\) 和 \(\mathcal S\) 分别表示人体与场景观测。交互隐含于学习得到的关系特征 \(\mathbf Z_{\mathrm{int}}\) 及其支持的修正中，无需中间的接触标签预测。
 
-我们用两个顺序执行的模块及其各自的表示和读出实现这一原则。**Body-Anchored Metric Calibration** 通过 **Body-Anchored Scene Query** 编码人体—场景对应关系，读出残余度量修正。**Dynamic Interaction Grounding** 通过 **Hierarchical Context Attention** 编码区域性的人体—环境关系，读出人体位置更新。
+我们用两个顺序执行的模块及其各自的表示和读出实现这一原则。**Body-Anchored Metric Calibration** 通过 **Body-Anchored Scene Attention** 编码人体—场景对应关系，读出残余度量修正。**Dynamic Interaction Grounding** 通过 **Hierarchical Context Query** 编码区域性的人体—环境关系，读出人体位置更新。
 
 两个阶段的顺序针对一个歧义：相同的局部深度差，可能来自场景尺度错误，也可能来自人体位置错误。先建立公共度量参照，区域关系才具有用于位置推理的可比性。每次位置更新又改变这些关系，因此需要重新计算交互表示。
 
@@ -44,7 +44,7 @@ s_t^c=\operatorname{median}_{(q,i)\in\mathcal A_t}
 
 \(\pi\) 为透视投影，\(\mathcal A_t\) 保留通过投影与深度筛选的对应；投影重合时保留最近的人体表面采样。中位数减弱孤立误差的影响。采样与观测缺失时的处理见论文附录。
 
-### Body-Anchored Scene Query
+### Body-Anchored Scene Attention
 
 锚点同时指定**去哪里读取场景证据**，以及**相对于人体怎样解释证据**。每个人构造 24 个锚点 token，编码人体状态、锚点位置和投影，以及粗深度中的局部场景观测：三维位置、法向、相对偏移、距离和深度残差。每个锚点从多层场景特征中读取一个 \(3\times3\) 邻域，得到 \(\mathbf S_{tqj}\)。
 
@@ -83,7 +83,7 @@ D_t^m&=s^{\mathrm{vid}}D_t^r+b^{\mathrm{vid}},&
 
 公共度量参照建立后，第二个模块编码人体与周围环境之间的空间关系，并读出平移修正。人体移动会改变相关观测与几何残差，因此交互表示依赖当前位置，并随位置精修而重新计算。
 
-### Hierarchical Context Attention
+### Hierarchical Context Query
 
 将 SMPL 表面划分为 96 个对应区域，每个区域由中心点及 8 个采样顶点表示。第 \(k\) 次更新时，各区域从四种空间支持域采样：固定 \(3\times3\) 与 \(7\times7\) 窗口、随投影范围变化的自适应窗口，以及外围环形区域。这些支持域同时提供细粒度对齐线索与更大范围的环境结构。
 

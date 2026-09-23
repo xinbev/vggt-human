@@ -31,6 +31,8 @@ bash scripts/eval/prepare_3dpw_show_manual_scale_cache.sh
 
 每条序列生成一个 pickle，保存前 200 帧的 scene depth、confidence mask、预测 SMPL、GT SMPL、内参和源帧编号；`manifest.json` 同时记录 `sampled_frame_count`、`original_frame_count`、checkpoint 和 metric 配置。
 
+3DPW support 的一条记录代表原视频中的一个 GT 人物轨迹，例如 `flat_guitar_01_0` 和 `flat_guitar_01_1` 是同一视频中的两个不同目标。缓存推理保留默认 8 个检测候选，每帧使用该记录的预处理 GT bbox 与候选 bbox 做最大 IoU 匹配；候选 query 编号可以变化，但目标人物不能变化。默认要求 IoU 至少为 0.30，低于阈值的帧标记为关联无效，不参与指标汇总。Viser 的 Frame Status 会显示 `GT-box IoU` 和 `match_valid`。
+
 ## 2. Viser 人工调 scale
 
 ```bash

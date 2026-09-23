@@ -14,9 +14,9 @@
 |---|---|
 | 论文标题 | GroundedHuman: Implicit Interaction Grounding for Dynamic Human–Scene Reconstruction |
 | 模块一 | **Body-Anchored Metric Calibration** |
-| 模块一核心机制 | **Body-Anchored Scene Query** |
+| 模块一核心机制 | **Body-Anchored Scene Attention** |
 | 模块二 | **Dynamic Interaction Grounding** |
-| 模块二核心机制 | **Hierarchical Context Attention** |
+| 模块二核心机制 | **Hierarchical Context Query** |
 | 共同思想 | 人体与场景关联 → 隐式交互表示 → 几何读出；分别支持 metric calibration 和 human placement |
 | Dynamic | 人体位置更新后重新采样、重建交互上下文；两步整体平移精修，不代表新增时序注意力 |
 | 输出边界 | 保留人体姿态与形状；没有显式 contact-label prediction |
@@ -30,21 +30,21 @@
 - 位置：[fig1_teaser_v2.jpg](C:/Users/ROG/PycharmProjects/vggt-omega/.paper/my_paper/versions/v1/figures/fig1_teaser_v2.jpg) 左上；引用入口 [main.tex:49](C:/Users/ROG/PycharmProjects/vggt-omega/.paper/my_paper/versions/v1/main.tex:49)。
 - 图内原文：`(a) Human-anchored scale alignment`；下一行 `Anchor–Scene Cross Attention`。
 - 问题：没有采用模块一正式名称，也没有呈现“模块 / 核心机制”的新层级。`scale alignment` 还弱化了深度偏置校准的含义。
-- 建议核对后改为：主标题 **Body-Anchored Metric Calibration**，机制名 **Body-Anchored Scene Query**。Cross-attention 可继续作为机制内部的算子标注，**不是要删除或否定现有交叉注意力**。
+- 建议核对后改为：主标题 **Body-Anchored Metric Calibration**，机制名 **Body-Anchored Scene Attention**。Cross-attention 可继续作为机制内部的算子标注，**不是要删除或否定现有交叉注意力**。
 
-### A2｜Fig. 1(b)：第二模块仍被命名为 Query
+### A2｜Fig. 1(b)：第二模块图内仍使用旧的 Body Region Context Query 名称
 
 - 位置：同图左下。
 - 图内原文：`(b) Body Region Context Query`、`Region-conditioned geometry for body placement`，以及 `Query q_r`。
-- 问题：主标题仍沿用原区域 query 叙事，读者无法与正文的 **Dynamic Interaction Grounding / Hierarchical Context Attention** 对应；也削弱了“一阶段 Query 对齐、二阶段 Attention 精修”的结构。
-- 建议：主标题用 **Dynamic Interaction Grounding**，机制名用 **Hierarchical Context Attention**。内部 `Query q_r` 是否改成 regional interaction representation，要与具体图中节点含义一起确认，不能只做字符串替换。
+- 问题：图内主标题尚未与正文的 **Dynamic Interaction Grounding / Hierarchical Context Query** 对应。2026-09-24 用户已将第二机制正式改名为 Query，因此 Query 一词本身不再是问题，仅待图内完整名称同步。
+- 建议：主标题用 **Dynamic Interaction Grounding**，机制名用 **Hierarchical Context Query**。内部 `Query q_r` 是否改成 regional interaction representation，要与具体图中节点含义一起确认，不能只做字符串替换。
 
-### A3｜Fig. 1 与 caption 尚未表达新的共同思想
+### A3｜Fig. 1 图内尚未表达新的共同思想（caption 命名已同步）
 
 - 位置：[main.tex:50](C:/Users/ROG/PycharmProjects/vggt-omega/.paper/my_paper/versions/v1/main.tex:50) 及 teaser 左侧两个机制示意。
-- Caption 原文：`body-region context queries aggregate multi-scale human--scene evidence ...`。
-- 问题：caption 仍用旧的第二阶段名称；图内没有明确可辨识的“两种 interaction representation → 各自 geometric readout”对应关系。现有图主要讲尺度修正和区域几何汇总，还没有同步当前方法的高层组织方式。
-- 建议：caption 使用两组正式名称；图内在两个阶段分别突出 interaction representation 和 metric / placement readout。可保留现有几何示意，未必需要把整个 teaser 重画。
+- 当前 caption 已采用 Body-Anchored Scene Attention 和 Hierarchical Context Query。
+- 剩余问题：图内没有明确可辨识的“两种 interaction representation → 各自 geometric readout”对应关系。现有图主要讲尺度修正和区域几何汇总，还没有同步当前方法的高层组织方式。
+- 图片相关 A1/A2/A3 按用户 2026-09-24“只改文字、不动图片”的要求保留待办，本轮不修改任何图像文件。
 
 ### A7｜Fig. 2 方法总图仍是占位框，尚未接入新设计
 

@@ -12,9 +12,9 @@
 
 单目视频 → 上下排列的 VGGT-Ω / NLF → 两个并列虚线模块框 → 米制重建输出。
 
-第一模块：Body-Anchored Metric Calibration，内部机制名 Body-Anchored Scene Query。人体锚点与场景特征形成 Interaction representation，然后通过 Metric readout 预测尺度和偏置，并进行时间汇总。
+第一模块：Body-Anchored Metric Calibration，内部机制名 Body-Anchored Scene Attention。人体锚点与场景特征形成 Interaction representation，然后通过 Metric readout 预测尺度和偏置，并进行时间汇总。
 
-第二模块：Dynamic Interaction Grounding，内部机制名 Hierarchical Context Attention。自身表面/环境证据形成区域 Interaction representation，然后通过 Placement readout 预测 Root translation。框内回环标明 Update → resample ×2。
+第二模块：Dynamic Interaction Grounding，内部机制名 Hierarchical Context Query。自身表面/环境证据形成区域 Interaction representation，然后通过 Placement readout 预测 Root translation。框内回环标明 Update → resample ×2。
 
 两模块重复呈现“人体与场景证据 → 交互表示 → 几何修正”。没有添加接触标签预测、时序稳定器或姿态精修。
 

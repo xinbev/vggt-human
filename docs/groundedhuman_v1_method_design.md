@@ -34,9 +34,9 @@
 | 一级模块 | 小标题 |
 |---|---|
 | Body-Anchored Metric Calibration | Analytic Scale Initialization |
-| Body-Anchored Metric Calibration | Body-Anchored Scene Query |
+| Body-Anchored Metric Calibration | Body-Anchored Scene Attention |
 | Body-Anchored Metric Calibration | Temporal Aggregation |
-| Dynamic Interaction Grounding | Hierarchical Context Attention |
+| Dynamic Interaction Grounding | Hierarchical Context Query |
 | Dynamic Interaction Grounding | Interaction-Aware Placement |
 | Dynamic Interaction Grounding | Translation Refinement |
 

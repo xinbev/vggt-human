@@ -313,20 +313,49 @@ def choose_frame_query_indices(
     can therefore score the wrong person on 3DPW multi-person sequences.
     """
 
+    return choose_frame_query_matches(predictions, batch)["query_indices"]
+
+
+def choose_frame_query_matches(
+    predictions: dict[str, torch.Tensor],
+    batch: dict[str, Any],
+) -> dict[str, torch.Tensor]:
+    """Return frame-wise GT-box association diagnostics for one target track.
+
+    A 3DPW HMR4D record is a person track (for example ``flat_guitar_01_0``),
+    not a multi-person video label.  The selected query slot may change over
+    time, but every selection must overlap that record's GT/preprocessed box.
+    """
+
     confs = predictions["pred_confs"]
     fallback = confs[..., 0].argmax(dim=-1)
+    nan_iou = torch.full_like(fallback, float("nan"), dtype=torch.float32)
+    no_target = torch.zeros_like(fallback, dtype=torch.bool)
     pred_boxes = predictions.get("pred_boxes")
     gt_boxes = batch.get("gt_boxes")
     boxes_mask = batch.get("boxes_mask")
     if not all(isinstance(value, torch.Tensor) for value in (pred_boxes, gt_boxes, boxes_mask)):
-        return fallback
+        return {
+            "query_indices": fallback,
+            "target_iou": nan_iou,
+            "has_gt_box": no_target,
+            "used_gt_box": no_target,
+        }
     iou = box_iou_cxcywh(pred_boxes[:, :, :, None, :], gt_boxes[:, :, None, :, :])
     valid_targets = boxes_mask.bool()
     iou = iou.masked_fill(~valid_targets[:, :, None, :], -1.0)
     per_query = iou.max(dim=-1).values
     matched = per_query.argmax(dim=-1)
     has_target = valid_targets.any(dim=-1)
-    return torch.where(has_target, matched, fallback)
+    query_indices = torch.where(has_target, matched, fallback)
+    selected_iou = per_query.gather(-1, query_indices[..., None]).squeeze(-1)
+    selected_iou = torch.where(has_target, selected_iou, nan_iou)
+    return {
+        "query_indices": query_indices,
+        "target_iou": selected_iou,
+        "has_gt_box": has_target,
+        "used_gt_box": has_target,
+    }
 
 
 def apply_transform(points: torch.Tensor, transform: torch.Tensor) -> torch.Tensor:

@@ -32,8 +32,8 @@ from scripts.vis.serve_stage2_viewer_cache import (  # noqa: E402
 from vggt_omega.evaluation import HumanSceneConsistencyConfig, compute_human_scene_consistency, render_mesh_silhouette  # noqa: E402
 
 
-CACHE_FORMAT = "vggt_omega_show_3dpw_manual_scale_cache_v2"
-SCALE_FILE_FORMAT = "vggt_omega_show_3dpw_manual_scale_selections_v2"
+CACHE_FORMAT = "vggt_omega_show_3dpw_manual_scale_cache_v3"
+SCALE_FILE_FORMAT = "vggt_omega_show_3dpw_manual_scale_selections_v3"
 
 
 def parse_args() -> argparse.Namespace:
@@ -199,7 +199,13 @@ class ShowManualScaleViewer:
         self.handles.append(add_mesh(self.server, "/show_manual_scale/person", vertices, self.faces, (232, 142, 82), 0.95))
         record = self.windows[self.window_index]
         set_text_value(self.window_info, f"{self.window_index + 1}/{len(self.windows)} | {record['vid']} | sampled={record.get('sampled_frame_count', len(self.frames))}/{record.get('original_frame_count', len(self.frames))} | scale=x{self._current_scale():.6g}")
-        set_text_value(self.frame_info, f"frame {self.frame_index + 1}/{len(self.frames)} | source={frame['source_frame_id']} | query={frame['query_idx']}")
+        target_iou = frame.get("target_iou", float("nan"))
+        set_text_value(
+            self.frame_info,
+            f"frame {self.frame_index + 1}/{len(self.frames)} | source={frame['source_frame_id']} | "
+            f"query={frame['query_idx']} | GT-box IoU={float(target_iou):.3f} | "
+            f"match_valid={bool(frame.get('match_valid', True))}",
+        )
 
     def run(self) -> None:
         print(f"[show-manual-scale] http://127.0.0.1:{self.args.port} | sequences={len(self.windows)} | scale_file={self.scale_file}", flush=True)

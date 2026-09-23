@@ -6,7 +6,7 @@
 
 本文方法包含两个连续阶段：
 
-1. **Body-Anchored Metric Calibration**：解析人体表面尺度初始化、Body-Anchored Scene Query、残差 scale/bias readout、跨帧共识。
+1. **Body-Anchored Metric Calibration**：解析人体表面尺度初始化、Body-Anchored Scene Attention、残差 scale/bias readout、跨帧共识。
 2. **Dynamic Interaction Grounding**：四类空间 support、self-surface/environment 双通道、区域 vote、region gate、log-variance、person gate、两次共享参数的动态重查询。
 
 当前 v1 主文只有 `w/o Dynamic Interaction Grounding` 与完整模型两行结果。这能说明整体 placement refinement 有效，但还不能分别支持以下论文主张：
@@ -39,7 +39,7 @@
 |---|---:|---:|---:|---:|---|---:|
 | M0 |  |  |  |  | 原始 VGGT-Ω，作为任意尺度诊断基线 | 否 |
 | M1 | ✓ |  |  |  | 验证 human-surface analytic initialization | 否 |
-| M2 | ✓ | ✓ |  |  | 隔离 Body-Anchored Scene Query 的 residual scale 增益 | 否，bias 置零 |
+| M2 | ✓ | ✓ |  |  | 隔离 Body-Anchored Scene Attention 的 residual scale 增益 | 否，bias 置零 |
 | M3 | ✓ | ✓ | ✓ |  | 检验 affine depth readout 中 bias 的额外作用 | 否 |
 | M4 | ✓ | ✓ | ✓ | ✓ | 完整 Body-Anchored Metric Calibration | 否 |
 
@@ -249,7 +249,7 @@ bash scripts/eval/run_groundedhuman_v1_robustness.sh
 
 ## 12. 论文表述边界
 
-- 只有 M1→M2 改善，才能将尺度收益明确归因于 learned Body-Anchored Scene Query，而非人体解析尺度本身。
+- 只有 M1→M2 改善，才能将尺度收益明确归因于 learned Body-Anchored Scene Attention，而非人体解析尺度本身。
 - 只有 D2→D3 改善，才能有力支持“更新人体位置后重新编码 interaction relation”这一 dynamic 主张。
 - 只有 D4/D5 改善，才能分别支持 hierarchical support 和 self/environment separation，而不是仅说明整个 TRSTR 有效。
 - P.Max 若仍改善有限，应保持当前诚实解释：translation-only 无法修复 pose、shape 或局部 scene geometry 错误。

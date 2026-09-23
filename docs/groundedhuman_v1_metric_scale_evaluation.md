@@ -56,7 +56,7 @@ SE(3)-ATE 同时受轨迹形状和尺度影响，因此必须比较**相同 back
 |---|---|---|
 | VGGT-Ω (uncalibrated) | 原始轨迹，不使用 GT 归一化 | 显示尺度歧义的诊断基线；其原始单位任意，不把“击败未校准输出”作为唯一贡献证据 |
 | Analytic scale initialization | 人体表面解析尺度 + 相同跨帧汇总口径 | 最关键的校准基线 |
-| Body-Anchored Metric Calibration | 解析初始化 + learned residual metric readout + 跨帧汇总 | 检验 Body-Anchored Scene Query 的增益 |
+| Body-Anchored Metric Calibration | 解析初始化 + learned residual metric readout + 跨帧汇总 | 检验 Body-Anchored Scene Attention 的增益 |
 
 建议表列：`ATE_SE3 (m) ↓`、`E_scale ↓`；可另列 `ATE_Sim3 (m) ↓` 说明形状性能保持。若改 Fig. 4(a)，可保留输入帧数横轴，纵轴改为 `SE(3)-aligned ATE (m) ↓`，图例改为以上三种尺度处理。动态精修不改变相机，在此图中无需单独加一条“完整 GroundedHuman”来重复相同相机结果。
 
