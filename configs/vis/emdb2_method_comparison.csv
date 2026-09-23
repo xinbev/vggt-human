@@ -1,6 +1,6 @@
 method,group,is_ours,wa_mpjpe_mm,w_mpjpe_mm,rte_percent,fps,latency_s,gpu_memory_gb,params_m,label_dx,label_dy
-Human3R,Baseline,0,112.2,267.9,2.2,,,,,10,14
-UniCon3R,Baseline,0,113.7,285.6,2.3,,,,,10,-28
-UniSH,Baseline,0,118.5,270.1,5.8,,,,,6,6
-JOSH3R,Baseline,0,220.0,661.7,13.1,,,,,6,6
-Ours,Ours,1,58.468,149.959,1.079,,,,,6,6
+Human3R,Baseline,0,112.2,267.9,2.2,2.41,,,,-12,18
+UniCon3R,Baseline,0,113.7,285.6,2.3,2.40,,,,12,16
+UniSH,Baseline,0,118.5,270.1,5.8,2.00,,,,10,-14
+JOSH3R,Baseline,0,220.0,661.7,13.1,15.4,,,,-8,-16
+Ours,Ours,1,58.468,149.959,1.079,5.285,,,,8,8

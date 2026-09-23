@@ -1,0 +1,45 @@
+# SHOW Table-3-style human--scene consistency evaluation on 3DPW.
+# This file overrides dataset/evaluation settings only; model architecture is
+# loaded separately with --model-config and weights with --checkpoint.
+
+data:
+  dataset: 3dpw
+  root_key: datasets.threedpw_root
+  annotation_root_key: datasets.threedpw_smpl_base_root
+  sam2_patch_masks_root_key: datasets.threedpw_sam2_patch_masks_root
+  require_sam2_patch_masks: false
+  sequence_length: 1
+  stride: 1
+  image_size: 518
+  image_resolution: 512
+  resize_mode: balanced
+  max_humans: 20
+  require_boxes: true
+  require_smpl: true
+
+human_scene_evaluation:
+  # Evaluate this project's final HSI/TRSTR prediction by default. Add `base`
+  # only for a diagnostic ablation; raw VGGT depth is not metric-aligned.
+  branches: [refined]
+  # Avoid a SAM2 preprocessing dependency. The GT SMPL mesh is rendered only
+  # to define the evaluation region; predictions still supply body and scene.
+  mask_source: gt_smpl_projection
+  percentile_trims: [5, 10]
+
+  # Official-comparison surface sampling. This lazily uses PyTorch3D, matching the
+  # SHOW release without adding it to the baseline project's dependencies.
+  # Use vertex_zbuffer only for dependency-free diagnostics/smoke tests.
+  visibility_backend: pytorch3d
+
+  # SHOW's released evaluator inserts zero when rendering/points are empty and
+  # includes that frame in the concatenated mean. `skip_nan` is available only
+  # as a robustness audit and is not the strict Table-3 protocol.
+  invalid_policy: show_zero
+  compute_paper_audit: false
+  depth_conf_threshold: 0.05
+
+  scene_point_stride: 1
+  distance_chunk_size: 2048
+  min_body_points: 1
+  min_scene_points: 1
+  min_points_for_percentile: 20

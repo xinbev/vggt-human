@@ -1,0 +1,37 @@
+Create one polished, publication-quality computer-vision METHOD FIGURE for GroundedHuman. Generate the whole scientific illustration from this text alone. White background, wide horizontal canvas 3072 x 1024, crisp readable English typography, restrained pastel colors, thin dark arrows, subtle 3D technical illustrations. No large overall title, no decorative background. Use ONE horizontal pipeline, centered vertically with modest margins.
+
+LAYOUT, from left to right:
+1. Narrow tall input card, 8% of width.
+2. Two compact vertically stacked encoder cards, 15% of width.
+3. Large rounded blue dashed panel, 28% of width.
+4. Second equally large rounded blue dashed panel, 28% of width.
+5. Narrow tall reconstruction card, 12% of width.
+Distribute remaining width as gaps and arrows. Main module titles sit just above the two dashed panels. All labels must be spelled correctly and remain within their own panels. Avoid cramming text; use clean illustrated mechanisms with short labels.
+
+INPUT: Label "Monocular video". Three small stacked frames of a fully clothed adult technical avatar walking in a furnished room. Split the input arrow toward BOTH encoders.
+
+ENCODERS: Upper card labeled "VGGT-Ω", with depth map, camera frustum and lavender scene feature tokens; secondary label "Scene geometry + features". Lower card labeled "NLF", with a fully clothed neutral low-poly avatar, joint markers and coral body tokens; secondary label "Metric human prior". Both are frozen observation providers. Route the scene and human evidence clearly to the first panel. A thin coral bypass below the first panel carries the human prior to the second panel's body regions.
+
+FIRST DASHED PANEL: Title "Body-Anchored Metric Calibration" (two lines if needed).
+Inside, arrange a compact, readable flow:
+- Top strip: small body-depth/scene-depth correspondence illustration labeled "Analytic scale".
+- Middle: coral body-anchor tokens "Q" and a lavender 3 x 3 scene feature grid "K, V" linked through an attention graphic. Show body self-attention as small links between anchor tokens and cross-attention as links from anchors to the scene grid.
+- These relationships produce a distinct teal token stack labeled "Interaction representation".
+- An arrow leads from this stack to "Metric readout", then a small badge "Scale + bias". Below: "Temporal aggregation".
+- Bottom inside the panel: bold mechanism label "Body-Anchored Scene Query".
+Outgoing arrow to the next panel labeled "Metric scene". This stage calibrates scene depth and scales camera translation; only depth receives the additive bias.
+
+SECOND DASHED PANEL: Title "Dynamic Interaction Grounding" (two lines if needed).
+Inside, arrange a compact readable flow:
+- A fully clothed neutral technical avatar with highlighted body regions and nested image-space sampling windows near foot/floor. Label "Body regions".
+- Two evidence-token rows labeled "Self surface" and "Environment" feed a compact hierarchical attention graphic.
+- Their relationships produce a distinct teal token stack labeled "Interaction representation", with the same visual language as the first panel but a separate stage-specific representation.
+- Arrow to "Placement readout", then badge "Root translation".
+- One clear teal curved feedback arrow leads from the translation update BACK to body-region sampling, entirely inside this second panel. Label "Update → resample ×2". Direction matters: after moving the body, scene context is sampled again for the next refinement step.
+- Bottom inside the panel: bold mechanism label "Hierarchical Context Attention".
+
+OUTPUT: A tall pale-blue card showing an isometric reconstructed room: floor, wall, simple chair, sparse point cloud, small camera frustums, and the same fully clothed avatar naturally placed on the floor. Label "Metric reconstruction", with small secondary text "Scene · Cameras · Humans". Arrow from the second panel to this card.
+
+CENTRAL SCIENTIFIC IDEA: Human–scene relationships are encoded into implicit interaction representations; geometric readouts decode those relationships into metric calibration and body placement. Make the two repeated motifs "Interaction representation → readout" immediately visible, not hidden in captions. Query grounds metric scale; hierarchical attention grounds placement. Dynamic means spatial context is refreshed after each of two body translation updates. Pose and shape stay fixed. Exactly TWO proposed modules. No explicit contact classifier, no temporal-stability module, no pose refinement, no losses, no third network.
+
+Art direction: professional CVPR-style architecture figure, precise alignment, cobalt dashed module frames, lavender scene tokens, coral human tokens, teal relation representations and update arrows. White breathing room, visually appealing 3D reconstruction thumbnails, readable labels larger than fine explanatory details. This is a scientific architecture illustration, not a poster or sketch. All human figures are synthetic fully clothed adult avatars.

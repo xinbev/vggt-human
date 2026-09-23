@@ -1,0 +1,998 @@
+           Efficiently Reconstructing Dynamic Scenes One                                                D4RT at a Time
+
+              Chuhan Zhang⋆ Guillaume Le Moing⋆ Skanda Koppula⋆⋄ Ignacio Rocco⋆
+         Liliane Momeni⋆ Junyu Xie◦1 Shuyang Sun⋆ Rahul Sukthankar⋆ Joëlle K. Barral⋆
+               Raia Hadsell⋆ Zoubin Ghahramani⋆ Andrew Zisserman⋆◦ Junlin Zhang⋆
+                                      Mehdi S. M. Sajjadi⋆2
+                                                       ⋄                                ◦
+                            ⋆
+                                Google DeepMind            University College London        University of Oxford
+
+
+                            Abstract                                                           Video                          Independent Queries
+
+
+Understanding and reconstructing the complex geome-                                             …
+try and motion of dynamic scenes from video remains a
+formidable challenge in computer vision. This paper in-
+troduces D4RT, a simple yet powerful feedforward model                                                        Global Scene
+                                                                                              Encoder        Representation
+                                                                                                                                     Decoder
+designed to efficiently solve this task. D4RT utilizes a uni-
+fied transformer architecture to jointly infer depth, spatio-
+temporal correspondence, and full camera parameters from
+a single video. Its core innovation is a novel querying mech-
+anism that sidesteps the heavy computation of dense, per-
+frame decoding and the complexity of managing multiple,
+task-specific decoders. Our decoding interface allows the
+model to independently and flexibly probe the 3D position
+of any point in space and time. The result is a lightweight
+and highly scalable method that enables remarkably effi-
+cient training and inference. We demonstrate that our ap-
+proach sets a new state of the art, outperforming previous                 Figure 1. D4RT is a unified, efficient, feedforward method for
+methods across a wide spectrum of 4D reconstruction tasks.                 Dynamic 4D Reconstruction and Tracking, unlocking a variety
+We refer to the project webpage for animated results.3                     of outputs including point cloud ( ), point tracks ( ), camera
+                                                                           parameters ( ) through a single interface.
+
+1. Introduction
+                                                                           separate, specialized decoders for distinct modalities. Cru-
+Traditional 3D reconstruction asks: ‘What is the geometry                  cially, neither of these methods is capable of establishing
+of everything, everywhere, all at once?’ We argue this ex-                 correspondences for dynamic portions of the scene. While
+haustive, rigid approach is fundamentally ill-equipped for a               SpatialTrackerV2 [56] incorporates dynamics, it still lacks
+dynamic world. Despite the clear need for unified 4D un-                   a unified, single-stage formulation, instead relying on costly
+derstanding, leading approaches often tackle the problem                   iterative refinement.
+by dividing it into discrete, task-specific components.                        We propose shifting the paradigm from fragmented,
+   For instance, MegaSaM [29] relies on a complex mo-                      frame-level decoding to efficient, on-demand querying. We
+saic of off-the-shelf models to separately estimate mono-                  introduce D4RT, a feedforward method leveraging a flexi-
+depth, metric depth, and motion segmentation. Fusing these                 ble and scalable architecture to achieve full 4D reconstruc-
+disparate signals requires computationally expensive test-                 tion. As shown in Fig. 1, our model first encodes the in-
+time optimization to enforce geometric consistency. Re-                    put video, generating a latent scene representation which
+cent feedforward approaches such as VGGT [48] employ                       is then used to independently decode any number of spatio-
+1 Work was done during an internship at Google DeepMind.                   temporal point queries. This simple, novel design unifies all
+2 Correspondence: d4rt@msajjadi.com                                        4D reconstruction tasks into a single interface and unlocks
+3 Project website: https://d4rt-paper.github.io/                           efficient training and inference.
+
+
+                                                                       1
+  Video                                                                                                    Self-Attention
+                                                           …                                                 Encoder                                          t
+
+                                                                                                                                                                       P
+                                                                                                           Global Scene
+ Predict the 3D position of this 2D source point, into this target timestep as viewed from this camera    Representation
+
+                                                                                                                              t
+    Query                (u, v)                 t src             t tgt            t cam
+                                                                                                          Cross-Attention
+                             +              +              +                 +                               Decoder
+  embedding        patch          fourier       discrete        discrete          discrete
+
+
+Figure 2. D4RT model overview – A global self-attention encoder first transforms the input video into the latent Global Scene Represen-
+tation F , which is passed to a lightweight decoder. The decoder can be independently queried for the 3D position P of any given 2D point
+(u, v) from the source timestep tsrc at target timestep ttgt in camera coordinate tcam , unlocking full decoding at any point in space and time.
+The query also contains an embedding of the local video patch centered around (u, v), providing additional spatial context.
+
+
+Our key contributions are as follows:                                                                    stream applications in a unified, consistent manner (Tab. 1).
+• We propose D4RT, a novel method for efficient feedfor-
+  ward querying of point-level 4D scene information cap-                                                 2.1. D4RT Framework
+  tured in a video.                                                                                      Given a video V ∈ RT ×H×W ×3 , the encoder E extracts the
+• We demonstrate how our unified approach unlocks 4D                                                     latent Global Scene Representation
+  correspondence, point clouds, depth maps, and camera
+  parameters for both static and dynamic scenes through a                                                                      F = E(V ) ∈ RN ×C .
+  single interface.
+• In an extensive set of experiments, we show that D4RT                                                      Once F is calculated, it remains fixed throughout the
+  sets a new state of the art in Dynamic 4D Reconstruction                                               second stage, where the decoder D cross-attends from
+  and Tracking while outperforming existing approaches in                                                any number of queries into F . We define a query q =
+  both speed and accuracy.                                                                               (u, v, tsrc , ttgt , tcam ), where (u, v, tsrc ) correspond to source
+• Finally, we demonstrate how our flexible decoder unlocks                                               parameters and (ttgt , tcam ) correspond to target parameters.
+  an efficient algorithm to track all pixels in a video, en-                                             Here, (u, v) ∈ [0, 1]2 represent the normalized 2D coordi-
+  abling dense, holistic scene reconstruction.                                                           nates of a point of interest in the source frame tsrc , while
+                                                                                                         (ttgt , tcam ) ∈ [1, . . . , T ] denote the temporal indices of the
+2. Method                                                                                                target timestep and the reference camera coordinate system
+                                                                                                         (illustrated in Fig. 2). Each query q is processed fully in-
+D4RT is based on a simple encoder-decoder architecture                                                   dependently with the video features F to produce its corre-
+inspired by the Scene Representation Transformer [39, 40].                                               sponding 3D point position P:
+As shown in Fig. 2, the video is first processed by a power-
+ful encoder producing the Global Scene Representation F .                                                                      P = D(q, F ) ∈ R3 .
+The role of the encoder is to capture information about the
+full environment, identifying dense correspondence across                                                From query to 4D reconstruction. Through a simple vari-
+all video frames, as well as understanding the flow of time                                              ation of queries, our framework allows us to address a broad
+and its effect on the scene. In a second stage, a lightweight                                            range of 4D tasks as shown in Tab. 1. Choosing any fixed
+decoder queries F through a simple low-level interface.                                                  point (u, v) from a source frame tsrc in the video while vary-
+Specifically, given a 2D point in a source frame, the de-                                                ing ttgt = tcam = {1 . . . T } produces its point track, the 3D
+coder predicts the 3D position of the point at a given target                                            trajectory of the corresponding point throughout the video.
+timestep (defining the temporal state) and expressed relative                                            For full point cloud reconstruction, the 3D position of all
+to a given camera reference (defined by the frame timestep                                               pixels in the video can be directly predicted in a shared ref-
+where the camera viewpoint corresponds to this reference).                                               erence frame tcam by the model. This alleviates the need
+    We draw attention to three desirable properties of this                                              for coordinate transformations to map pixels from differ-
+formulation: first, the indices need not coincide, allowing a                                            ent video frames into a unified coordinate system using ex-
+full disentanglement of space and time; second, each query                                               plicit, potentially noisy camera estimates. Depth maps can
+is decoded independently, allowing for both efficient train-                                             be recovered by simply querying any pixel in the video with
+ing and inference as well as flexible decoding (both sparse                                              tsrc = ttgt = tcam and only keeping the Z-dimension of the
+and dense); and third, this interface unlocks a suite of down-                                           output P.
+
+
+                                                                                                     2
+                                               Query                                       Algorithm 1 Efficient Dense Tracking of All Pixels.
+        Task
+                         u             v        tsrc           ttgt        tcam            Require: Input video V , model encoder E and decoder D.
+                                                                                            1: F ← E(V )                        ▷ Compute Global Scene Representation
+     Point Track       Fixed        Fixed       Fixed                 1. . . T
+                                                                                            2: G ← {false}T ×H×W                           ▷ Initialize Occupancy Grid
+     Point Cloud      1. . . W      1. . . H        1. . . T                Fixed           3: T ← ∅                                    ▷ Initialize Set of Dense Tracks
+     Depth Map        1. . . W      1. . . H                1. . . T                        4: while any(G = false) do
+     Extrinsics        1...h        1...w           Fixed                   1. . . T        5:     Sample a batch B of unvisited source points from G
+                                                                                            6:     for each (u, v, tsrc ) ∈ B do             ▷ Process batch in parallel
+     Intrinsics        1...h        1...w                   1. . . T
+                                                                                            7:         Q ← {u, v, tsrc , ttgt =tcam =k}Tk=1         ▷ Get Track Queries
+                                                                                            8:         P ← {D(qk , F )}Tk=1                           ▷ Run the decoder
+Table 1. Unified decoding – A diverse set of geometry-related                               9:         G ← Visible(P )               ▷ Set visible track pixels as visited
+tasks can be inferred by querying the Cartesian product of the re-                         10:         T ←T ∪P                           ▷ Add new track to the output
+spective entries. Note that for intrinsics and extrinsics, we only                         11:     end for
+query a coarse (h, w) grid for faster inference.                                           12: end while
+                                                                                           13: return T
+
+   We next detail how camera extrinsics and intrinsics pre-
+dictions are obtained. To derive the relative camera pose
+                                                                                           augmenting the query with an embedding of the local 9×9
+between any pair of video frames i, j ∈ [1 . . . T ], we create
+                                                                                           pixel RGB patch centered at (u, v) dramatically improves
+queries for an ensemble of source points {(uk , vk )}k sam-
+                                                                                           performance, see Sec. 4.4.
+pled on a (h, w) grid in both reference frames:
+                                                                                               Each query is decoded independently through cross-
+      qi,k = (uk , vk , i, i, i),       qj,k = (uk , vk , i, i, j).                        attention into the Global Scene Representation F , ensur-
+                                                                                           ing that queries do not interact. The resulting output fea-
+The resulting sets {D(qi,k , F )}k and {D(qj,k , F )}k de-                                 ture is then mapped to a 3D point position P via a sim-
+scribe the same 3D points in different reference frames. We                                ple learned projection. Decoding queries independently is
+therefore only need to find the rigid transformation between                               a deliberate design decision with major advantages. It al-
+them, which can be efficiently derived through Umeyama’s                                   lows efficient training, as only a small number of queries
+algorithm [46] that solves a 3×3 SVD decomposition.                                        need to be decoded to provide a supervision signal to the
+   To recover intrinsics for video frame i ∈ [1 . . . T ], we                              model. Equally importantly, at inference time, the queries
+construct a set of queries for different source points, again                              can be chosen freely across all video frames as described
+sampled on a (h, w) grid. We decode all corresponding                                      in Sec. 2.3, and need not be correlated to each other to
+3D positions P = (px , py , pz ). Assuming a pinhole cam-                                  avoid out-of-distribution effects – indeed, we have empir-
+era model with a principal point at (0.5, 0.5), we get focal                               ically observed major performance drops when enabling
+length parameters as follows:                                                              self-attention between queries in early experiments. Finally,
+                                                                                           this design allows highly efficient inference thanks to its
+        fx =pz (u − 0.5)/px ,           fy =pz (v − 0.5)/py .
+                                                                                           trivial parallelism. As shown in Fig. 3 and Tab. 3, we obtain
+We take the median over the k estimates for robustness.                                    the best trade-off between performance and latency across
+Camera models with distortion (e.g., fisheye) can also be                                  multiple tasks.
+seamlessly incorporated by adding a non-linear refinement
+step on top of the initial estimation [61].                                                2.3. Training and Inference
+
+2.2. Model Architecture                                                                    The model is implemented in Kauldron [15] and trained
+                                                                                           end-to-end by minimizing the weighted sum of losses com-
+Our encoder E is based on the Vision Transformer [9] with                                  puted over a batch of N sampled queries. The primary su-
+interleaved local frame-wise, and global self-attention lay-                               pervision signal is derived from an L1 loss applied to the
+ers [48]. For simplicity, and to support arbitrary aspect ra-                              normalized 3D point position P. Specifically, both the tar-
+tios, we resize the input video to a fixed square resolution                               get and the estimated point sets are normalized by their
+before tokenizing it. To incorporate the original aspect ra-                               respective mean depths [51] and then passed through the
+tio, we embed it into a separate token and pass it to the                                  transform sign(x) · log(1+|x|) to dampen the influence of
+transformer along with the main video tokens.                                              far-away points on the loss. We also supervise a set of aux-
+Pointwise decoder. The decoder D is a small cross-                                         iliary predictions from additional linear projections on the
+attention transformer. A query token is first constructed                                  decoder output: An L1 loss on 2D coordinates of the point
+by adding the Fourier feature embedding [47] of the 2D                                     positions in image space; cosine similarity for 3D surface
+coordinates (u, v) to the learned discrete timestep embed-                                 normals [54]; binary cross-entropy for target point visibil-
+dings for tsrc , ttgt , and tcam . We empirically observe that                             ity; and L1 on the vector of point motion. All loss terms are
+
+
+                                                                                       3
+                         Task             Functionality      Architecture
+                                                                                                   0.9                                         D4RT
+                                                                                                         best                     π3
+
+
+
+
+                                                                                   Pose Accuracy
+Model            3D Recon- Dynamic Cor- Flexible     Sparse Global Single                                          STv2
+                  struction respondence Ref. Frames Decoding Context Decoder
+                                                                                                                                       VGGT
+MegaSaM [29]        ✓           ✗           ✗         ✗        ✗       ✗
+                                                                                                                MegaSaM
+                                                                                                   0.8
+DUSt3R[51]          ✓           ✗           ✗         ✗        ✗       ✗                                            MapAnything
+VGGT [48]           ✓           ✗           ✗         ✗        ✓       ✗
+                                                                                                                          0.475                     fastest
+π 3 [54]            ✓           ✗           ✓         ✗        ✓       ✗                           0.7
+St4RTrack [11]      ✓           ✓           ✗         ✗        ✗       ✗
+                                                                                                         1                   10               100      (FPS)
+STv2 [56]           ✓           ✓           ✗         ✓        ✓       ✗
+D4RT (Ours)         ✓           ✓           ✓         ✓        ✓       ✓           Figure 3. Pose accuracy vs. speed – We compare pose accuracy
+                                                                                   vs. throughput against recent state-of-the-art methods. Pose accu-
+Table 2. Model capabilities – We highlight both the tasks our                      racy is 1 – error, averaged over ATE/RTE/RPE on Sintel and Scan-
+model executes but also its comprehensive functionality and sim-                   Net. Throughput is measured in FPS on an A100 GPU. D4RT
+ple model architecture.                                                            achieves 200+ FPS pose estimation, 9× faster than VGGT, and
+                                                                                   100× faster than MegaSaM, while delivering superior accuracy.
+
+applied only where ground truth supervision is available.
+We finally incorporate a confidence penalty – log(c) where                         methods is their explicit enforcement of geometric con-
+c additionally weights the 3D point error [25].                                    sistency and mathematically interpretable reconstructions.
+                                                                                   However, they are computationally intensive and brittle.
+Efficient dense dynamic correspondence. A key capa-
+bility of our query-based model is that it can efficiently                         3.1. Feedforward 3D Reconstruction
+compute dense correspondences for all pixels in a video,
+                                                                                   The field of 3D reconstruction has recently shifted to-
+both static and dynamic. As shown in Fig. 4, this capabil-
+                                                                                   wards end-to-end, feedforward models that directly infer
+ity is crucial for building a complete, holistic scene recon-
+                                                                                   geometry from images. The seminal work DUSt3R [51]
+struction, which in turn is key to eliminating the occlusion-
+                                                                                   demonstrated that Transformer-based networks [47] can
+induced discontinuities and sparse artifacts common in prior
+                                                                                   perform 3D reconstruction from unposed and uncalibrated
+works. However, a naive approach to reconstruct tracks
+                                                                                   image pairs in an end-to-end approach. VGGT [48] later
+for all pixels across the video would involve O(T 2 HW )
+                                                                                   scaled this approach beyond pairs by using a Vision Trans-
+queries, the majority of which are not required.
+                                                                                   former [9] with global attention. Building on this feedfor-
+    We introduce Alg. 1 which exploits spatio-temporal re-
+                                                                                   ward paradigm, several works have extended the method-
+dundancy using an occupancy grid G ∈ {0, 1}T ×H×W
+                                                                                   ology to dynamic videos [3, 50, 52, 60] and more efficient
+to speed this procedure up significantly. The algorithm
+                                                                                   inference [54, 57]. However, these models share significant
+only initiates new tracks from unvisited pixels. Each full-
+                                                                                   limitations. For instance, many do not support changing
+video track marks all spatio-temporal pixels it visibly passes
+                                                                                   camera intrinsics within a video [29, 48, 54], and several
+through as visited. Empirically, we find that this yields an
+                                                                                   are restricted to using only the first frame as the camera
+adaptive speedup between 5–15× depending on the motion
+                                                                                   reference [29, 50, 51]. More importantly, architectures in-
+complexity in the video. This dense, flexible strategy is fea-
+                                                                                   spired by VGGT [48] either use separate decoder heads for
+sible for our method precisely because our decoder is both
+                                                                                   each task [50, 54, 60] (e.g., depth, pose, point cloud), or
+sparse, and lightweight. It is notable that prior works are
+                                                                                   they incorporate separate models for sub-tasks of 4D recon-
+ill-suited for this task for various reasons. Most methods
+                                                                                   struction [31, 44, 52], making the full pipeline cumbersome
+fail to provide any correspondences for dynamic portions of
+                                                                                   and computationally expensive to run. Finally, these meth-
+the scenes [29, 48, 54], dense frame-level decoding remains
+                                                                                   ods are not directly capable of providing correspondences
+locked in the costly naive approach [11], and models with
+                                                                                   for dynamic regions of the scene.
+heavy sparse decoders face a large per-query cost [23, 56].
+                                                                                   3.2. From 2D to 3D Point Tracking
+3. Related Work                                                                    The task of point tracking aims to establish long-term 2D
+                                                                                   correspondences through challenges like occlusions and
+Classical approaches to 3D reconstruction are funda-                               non-rigid motion, evolving from early methods such as Par-
+mentally anchored in multi-view geometry, specifically                             ticle Video [41] to newer deep-learning approaches [7, 8,
+Structure-from-Motion (SfM) [19, 33] and Multi-View                                17, 63]. This field has further progressed from tracking a
+Stereo (MVS) [12, 43]. The standard pipeline exemplified                           sparse set of points to the dense tracking of every pixel in a
+by COLMAP [42] incrementally estimates and optimizes                               video [18, 28, 32]. A parallel line of work has explored lift-
+sparse geometry and camera poses. The advantage of these                           ing these 2D tracks into 3D, which is achieved by project-
+
+
+                                                                               4                                                                               1
+ Input video
+Input                   MegaSaM[29]
+                       MegaSaM                            π 3 [54]                 SpatialTrackerV2[56]
+                                                                                 SpatialTrackerV2                    D4RT (Ours)
+                                                                                                                     D4RT  (Ours)
+
+
+
+
+    …
+
+
+
+
+    …
+
+
+
+
+    …
+Figure 4. Reconstruction results across methods – Pure reconstruction methods (MegaSaM and π 3 ) are only able to accumulate point
+clouds of all pixels; exhibiting clear failure cases in dynamic scenes. For example, the swan is repeated in MegaSaM’s reconstruction,
+and π 3 is failing entirely to reconstruct the flower. SpatialTrackerV2, a state-of-the-art tracking method, successfully captures dynamics,
+however its design only allows tracking points from one frame, leaving gaps in the reconstruction (behind the swan and train). D4RT is
+the only method that successfully reconstructs a full 4D representation of the scene including all pixels of the video.
+
+
+ing tracks from image space to camera coordinates using                                              Max. Track Count @ Target FPS
+ground truth or predicted depth and camera intrinsics [27].               Method
+                                                                                                    60 FPS    24 FPS    10 FPS     1 FPS
+    Most recently, models like SpatialTracker [55, 56],
+                                                                          DELTA [32]                     0         5       408      5,770
+L4P [1], DPM [44] and St4RTracker [11] have moved to                      SpatialTrackerV2 [56]         29        84       219      2,290
+directly predicting 3D tracks without priors. Yet, limi-
+                                                                          D4RT (Ours)                  550     1,570     3,890    40,180
+tations remain: St4RTracker [11] and DPM [44] follow
+the pairwise paradigm of DUSt3R [51], preventing holis-
+                                                                         Table 3. 3D tracking throughput – We measure the maximum
+tic video processing. SpatialTrackerV2 [56] is a multi-stage
+                                                                         number of full-video 3D point tracks that different model can pro-
+approach and exhibits slow inference speeds as it relies on              duce while maintaining a given FPS target on a single A100 GPU.
+iterative refinements. Meanwhile, L4P [1] requires differ-               Note that for D4RT, each track consists of T independent queries
+ent heads for sparse and dense outputs of the same nature                processed by the decoder. D4RT is 18–300× faster than others.
+(e.g., flow vs. 2D tracking or depth vs. 3D tracking). In
+contrast, our approach unifies these tasks within a single ar-
+chitecture. Tab. 2 summarizes capabilities across a recent               attention decoder contain 1 B and 144 M parameters, re-
+set of state-of-the-art models.                                          spectively. Our training mixture contains public and in-
+                                                                         ternal datasets including BlendedMVS [58], Co3Dv2 [38],
+                                                                         Dynamic Replica [22], Kubric [16], MVS-Synth [20],
+4. Experiments
+                                                                         PointOdyssey [62], ScanNet++ [59], ScanNet [4], Tar-
+We benchmark D4RT against recent state-of-the-art meth-                  tanair [53], VirtualKitti [13], and Waymo Open [45]. We
+ods. After inspecting qualitative differences in capability              train on 48-frame clips at 256×256 resolution, decoding
+in Sec. 4.1, we proceed with evaluating 4D Reconstruction                2048 random queries that are oversampled on specific re-
+and Tracking performance in Sec. 4.2, focusing the compar-               gions for more efficient training , see the appendix for de-
+ison on the best methods from Sec. 3.2. We then continue                 tails. The model is trained for 500 k steps using the AdamW
+with pure reconstruction tasks in Sec. 4.3, comparing to the             optimizer [26, 30] with a local batch size of 1 across 64 TPU
+recent SOTA models mentioned in Sec. 3.1. We conclude                    chips, taking a total of just over 2 days to complete.
+with a set of key ablations in Sec. 4.4.
+                                                                         4.1. Qualitative Analysis
+Training setup. For the encoder, we use the ViT-g
+model variant with 40 layers on a spatio-temporal patch                  We begin our evaluations by inspecting video reconstruc-
+size of 2×16×16. This encoder and our 8-layer cross-                     tion quality in Fig. 4. Dynamic objects (e.g., swan and
+
+
+                                                                     5
+      …                                                …                                                     …
+
+
+
+
+      …                                  …                                                              …
+Figure 5. Visualizations on in-the-wild videos – D4RT demonstrates accurate reconstructions on static (top row) and dynamic scenes
+(bottom row). In the presence of motion, D4RT additionally produces robust 3D point trajectories.
+
+                                                                                                TAPVid-3D
+w/ GT                                                            Camera Coordinate 3D tracking                             World Coordinate 3D tracking
+intrin. Method
+                                                 DriveTrack                    ADT                      PStudio             DriveTrack          ADT
+                                         AJ ↑     APD3D ↑     OA ↑    AJ ↑    APD3D ↑   OA ↑     AJ ↑   APD3D ↑   OA ↑    APD3D ↑   L1 ↓    APD3D ↑   L1 ↓
+       St4RTrack [11]                      -         -          -     -          -        -     -          -        -      0.020    0.499    0.062    0.839
+       CoTracker3 [23] + UniDepthV2 [36] 0.038     0.062      0.856 0.102      0.146    0.937 0.119      0.176    0.862      -        -        -        -
+  ✗    CoTracker3 [23] + VGGT [48]       0.129     0.189      0.856 0.132      0.190    0.937 0.045      0.070    0.862    0.205    0.170    0.192    0.736
+       SpatialTrackerV2 [56]             0.064     0.100      0.865 0.260      0.342    0.936 0.097      0.152    0.805    0.101    0.139    0.336    0.238
+       D4RT (Ours)                       0.257     0.345      0.875   0.240    0.319    0.926   0.138    0.186    0.897    0.373    0.020    0.319    0.096
+
+       CoTracker3 [23] + UniDepthV2 [36] 0.147     0.225      0.856 0.173      0.254    0.937 0.205      0.311    0.862      -        -        -        -
+       CoTracker3 [23] + VGGT [48]       0.245     0.342      0.856 0.175      0.250    0.937 0.215      0.318    0.862    0.292    0.160    0.234    0.755
+  ✓    DELTA [32]                        0.170     0.238      0.874 0.199      0.258    0.879 0.175      0.261    0.760      -        -        -        -
+       SpatialTrackerV2 [56]             0.195     0.275      0.865 0.303      0.404    0.936 0.175      0.270    0.805    0.201    0.117    0.378    0.263
+       D4RT (Ours)                       0.304     0.410      0.875   0.307    0.408    0.926   0.372    0.498    0.897    0.470    0.017    0.398    0.093
+
+
+Table 4. 4D reconstruction and tracking – We evaluate 3D tracking capability on dynamic videos, with tracks predicted in both local
+camera coordinates (left) and world coordinates (right). Our model achieves superior performance compared to the prior state-of-the-art.
+
+
+train) reveal qualitative differences, highlighting perfor-                       that can estimate dynamic correspondences. We evaluate
+mance gaps between different methods. Pure reconstruc-                            on TAPVid-3D [27] which is comprised of three subsets of
+tion methods (see Sec. 3.1), exemplified by the state-of-the-                     real-world videos in challenging settings.
+art models MegaSaM and π 3 , fail to understand dynamics                              We first evaluate 3D tracking in the local camera frame
+in the scenes, producing either repeated images of the en-                        using the standard protocol from Koppula et al. [27], which
+tities as they move through the scene, or failing to recon-                       measures a model’s ability to predict and track the 3D po-
+struct them altogether. Conversely, tracking-based models                         sition of every observed point in the local camera reference
+successfully reconstruct and track dynamics. However, they                        frames. We report standard 3D tracking metrics Average
+commonly only track points from one frame, leaving gaps                           percent of points within delta error APD3D , Occlusion Ac-
+in the reconstruction in all areas that are occluded in the first                 curacy (OA) and 3D Average Jaccard (AJ). As shown in
+frame as seen for SpatialTrackerV2 [56] here. Meanwhile,                          Tab. 4 (left), D4RT achieves state-of-the-art results against
+D4RT is able to track all dynamic pixels of the video in a                        competing methods, both with and without known ground-
+unified reference frame. We further evaluate our method on                        truth intrinsics.
+diverse in-the-wild videos in Fig. 5, demonstrating its per-                          Tab. 4 (right) shows results for world coordinate 3D
+formance to both static and dynamic scenes.                                       tracking. This task measures a model’s ability to predict
+                                                                                  tracks within a single, consistent world coordinate system,
+4.2. 4D Reconstruction and Tracking
+                                                                                  thereby also measuring the models’ ability to implicitly
+We now turn to the quantitative evaluation of 4D Recon-                           change reference frames. PStudio is omitted here as it has
+struction and Tracking, comparing D4RT to other methods                           no camera motion, rendering this task effectively identical
+
+
+                                                                              6
+                                  Point Cloud                                                                             Video Depth
+Method                          Sintel      Scannet                     Sintel                              ScanNet                        KITTI                          Bonn
+                                L1 ↓         L1 ↓      AbsRel (S) ↓        AbsRel (SS) ↓         AbsRel (S) ↓   AbsRel (SS) ↓   AbsRel (S) ↓   AbsRel (SS) ↓   AbsRel (S) ↓   AbsRel (SS) ↓
+MegaSaM [29]                    1.531        0.072            0.342              0.249              0.050             0.047        0.109           0.101          0.056          0.056
+VGGT [48]                       1.582        0.063            0.318              0.247              0.044             0.040        0.094           0.067          0.055          0.051
+MapAnything [24]                1.718        0.064            0.397              0.306              0.043             0.035        0.096           0.090          0.076          0.049
+SpatialTrackerV2 [56]           1.375        0.036            0.209              0.175              0.027             0.025        0.075           0.064          0.042          0.978
+π 3 [54]                        1.139        0.030            0.241              0.163              0.021             0.019        0.055           0.053          0.033          0.032
+D4RT (Ours)                     0.768        0.028            0.171              0.148              0.020             0.018        0.055           0.051          0.036          0.036
+
+
+Table 5. Video depth and point map estimation – Quantitative results for both video depth and point map estimation across four bench-
+marks. D4RT achieves top-tier performance on the depth estimation task under both scale-only (S) and scale-and-shift (SS) alignments.
+
+
+
+Method
+                                   Sintel                       ScanNet                  Re10K              alignment. Both settings determine a single global scale
+                        ATE ↓ RPE-T ↓ RPE-R ↓ ATE ↓ RPE-T ↓ RPE-R ↓ Pose AUC ↑
+                                                                                                            factor between the predicted and ground-truth depths across
+MegaSaM [29]            0.074     0.030      0.126    0.029     0.016      0.839          71.0
+VGGT [48]               0.168     0.056      0.428    0.016     0.012      0.316          70.2
+                                                                                                            the sequence, while the latter introduces an additional 3D
+MapAnything [24]        0.202     0.089      2.383    0.023     0.016      0.438          68.7              translation term, following an affine-invariant setup. After
+SpatialTrackerV2 [56]   0.126     0.053      1.052    0.018     0.012      0.324          75.7
+π 3 [54]                0.086     0.039      0.248    0.015     0.010      0.291          78.7              alignment, we compute the Absolute Relative Error (Ab-
+D4RT (Ours)             0.065     0.024      0.126    0.014     0.010      0.302          83.5              sRel) [10] between the predicted and ground-truth depths.
+                                                                                                                We show results in Tab. 5 (right). D4RT achieves
+Table 6. Camera pose estimation – We evaluate D4RT against                                                  top-tier performance across all benchmarks, with particu-
+state-of-the-art methods on static indoor scenes (ScanNet, Re10K)                                           larly strong results on Sintel which is the most challenging
+and dynamic outdoor scenes (Sintel).
+                                                                                                            dataset due to its highly dynamic scenes.
+                                                                                                            Camera pose estimation. We evaluate camera pose esti-
+to the preceding one. Since there is no concept of occlusion                                                mation performance on the same datasets. Following prior
+for this task, we report APD3D as well as the L1 distance                                                   work [21, 50], we evaluate on the 14-sequence subset of
+between the predicted and ground-truth tracks which pro-                                                    Sintel which provides full rendering with motion blur and
+vides a comprehensive, global measure of deviation. We                                                      atmospheric effects to measure in-the-wild performance.
+observe that our model excels at this task as well, exhibit-                                                We report the Absolute Translation Error (ATE), Relative
+ing strong improvements across metrics.                                                                     Translation Error (RPE trans), and Relative Rotation Error
+    We finally compare efficiency in Tab. 3, by counting the                                                (RPE rot) after Sim(3) alignment with the ground truth as in
+number of tracks each model can produce for a given target                                                  [50, 54, 60], as well as the Pose AUC@30 as in [48]. Tab. 6
+frame-per-second rate (FPS). The measurements show that                                                     presents the results, where our model strongly outperforms
+our model is 18-300× faster than prior methods.                                                             competing baselines on both indoor scenes (ScanNet and
+                                                                                                            Re10K) and simulated outdoor scenes (Sintel).
+4.3. 3D Reconstruction                                                                                         Fig. 3 visualizes efficiency and accuracy for camera pose
+We now evaluate the 3D reconstruction capabilities of our                                                   estimation across several recent state-of-the-art methods.
+model. The most holistic task here is 3D point cloud recon-                                                 To ensure a fair comparison, we remove the decoding heads
+struction, which requires predicting all observed pixels in                                                 of the baselines which are unrelated to camera estimation,
+the same world coordinate system.                                                                           making them faster. Despite this, we find that D4RT sur-
+                                                                                                            passes all existing methods in both accuracy and efficiency,
+    We evaluate on two standard benchmarks: MPI Sin-
+                                                                                                            notably outperforming MegaSaM in throughput by two or-
+tel [2] and ScanNet [5], which consist of dynamic and static
+                                                                                                            ders of magnitude.
+scenes, respectively. For evaluation, we first align the pre-
+dicted and ground-truth point clouds via mean-shifting fol-
+                                                                                                            4.4. Ablation Studies
+lowing Li et al. [29] before reporting the mean L1 distance.
+As shown in Tab. 5 (left), our model outperforms all recent                                                 We present a series of ablation studies to validate our de-
+state-of-the-art models across datasets.                                                                    sign choices and hyperparameters. Unless otherwise noted,
+Depth estimation. We evaluate depth estimation per-                                                         we adopt a ViT-L backbone with 6 decoder layers as the de-
+formance across four datasets: Sintel [2], ScanNet [5],                                                     fault setting. The model is trained for 300 k iterations with
+KITTI [14], and Bonn [34]. Following prior works [29, 50],                                                  a batch size 16. All results are reported on the challenging
+we align the predicted video depth with the ground-truth                                                    Sintel dataset for both video depth and camera pose.
+depth before computing metrics. Specifically, we adopt two                                                  Local RGB patch. As described in Sec. 2.2, we introduce
+alignment settings: scale-only (S) and scale-and-shift (SS)                                                 an additional embedding that encodes the local appearance
+
+
+                                                                                                       7
+ input video             w/o local patch                                                                 Video Depth                     Camera Pose
+                                                                              Losses
+                                                                                                  AbsRel(S) ↓   AbsRel(SS) ↓    ATE ↓     RPE-T ↓ RPE-R ↓
+                                                                              D4RT                   0.302         0.257        0.091      0.028       0.245
+                                                                              w/o 2D position       +0.071        +0.063        +0.002    +0.002     -0.028
+                                                                              w/o normal            +0.043        +0.026        +0.003    +0.003     -0.022
+                                                        w/ local patch        w/o displacement      +0.011        +0.007        +0.011    +0.003     +0.007
+                                                                              w/o visibility        -0.003        -0.025        +0.012    +0.011     +0.022
+                                                                              w/o confidence        +0.002        -0.025        +0.126    +0.061     +0.115
+
+
+                                                                              Table 8. Auxiliary losses – We remove auxiliary losses individu-
+ zoom (w/o)                           zoom (w/)                               ally to evaluate their impact on model performance. A slight trade-
+                                                                              off between depth and camera estimation pose is observed, though
+Figure 6. Preservation of low-level details – We ablate the effect            we find that all auxiliary losses improve overall performance.
+of including local patch information into the model’s queries, vi-
+sualizing the resulting depth maps on an example from the Sintel              Backbone        Video Depth                              Camera Pose
+dataset. We find that the local RGB patches help preserve fine-                 size   AbsRel (S) ↓ AbsRel (SS) ↓              ATE ↓     RPE-T ↓   RPE-R ↓
+grained details and produce sharper object boundaries.
+                                                                                ViT-B            0.319          0.232          0.145      0.034      0.266
+                                                                                ViT-L            0.256          0.214          0.073      0.027      0.191
+  w/ local           Video Depth                    Camera Pose                 ViT-H            0.226          0.173          0.070      0.028      0.186
+appear. patch AbsRel (S) ↓ AbsRel (SS) ↓   ATE ↓     RPE-T ↓   RPE-R ↓
+                                                                                ViT-g            0.191          0.168          0.078      0.026      0.160
+
+     ✗           0.366           0.306      0.173     0.031       0.262
+     ✓           0.302           0.257      0.091     0.028       0.245       Table 9. Backbone size – We examine how D4RT’s performance
+                                                                              scales with the size of the pretrained ViT encoder backbone, eval-
+Table 7. Local RGB patch – We evaluate a ViT-L model, trained                 uating video depth and camera pose estimation performance on
+with and without the appearance patch as input to the decoder, on             Sintel. We observe a clear improvement as the backbone size in-
+Sintel video depth and camera pose estimation.                                creases from ViT-B to ViT-g.
+
+
+
+around the query’s source location. This additional embed-                    5. Conclusion
+ding yields dramatic performance improvements as shown                        In this work, we introduce D4RT, a simple yet highly
+in Tab. 7 and Fig. 6. These improvements can be attributed                    scalable feedforward network that reconstructs dynamic 4D
+to two factors: (i) the local appearance information helps                    scenes with temporal correspondence. Our core innovation
+the query establish more reliable correspondences with the                    is an efficient, query-based decoder that allows for the in-
+encoded spatiotemporal features; and (ii) these patches pro-                  dependent prediction of any point’s 3D position in space
+vide low-level cues that help to segment objects from their                   and time. This flexible parametrization avoids the compu-
+surroundings, leading to fine-grained predictions, as exem-                   tational bottlenecks of dense per-frame decoders, enabling
+plified by the sharper depth estimates. We note that while                    inference that scales linearly with the number of points to
+most related works have specialized modules to preserve                       be reconstructed. Crucially, we demonstrate that D4RT
+low level details, such as DPT [37] with its skip connec-                     achieves state-of-the-art results across a wide range of 4D
+tions between encoder and decoder layers, our approach is                     tasks including depth, point cloud estimation, and 3D point
+much simpler. In Sec. C of the appendix, we further high-                     tracking. D4RT demonstrates that scaling to complex, dy-
+light how the patches unlock subpixel precision.                              namic environments does not require sacrificing precision,
+Encoder size. We now examine how performance scales                           offering a unified framework for the next generation of 4D
+with the size of our encoder. Tab. 9 summarizes our findings                  perception.
+for ViT-B (90 M) to ViT-g (1 B). As the number of trainable                   Contribution and Acknowledgements.           MS led the
+parameters increases, we observe a significant performance                    project, with management support from JZ. MS proposed
+improvement, particularly in depth estimation and RPE-R                       the SRT-style decoder, and GL proposed local RGB patches
+in camera pose estimation.                                                    and tracking-all-pixels. CZ, GL, IR, and MS contributed to
+Auxiliary losses. We finally investigate the contribution                     the core model design. LM, SS, IR, and SK designed and
+of each auxiliary loss in Tab. 8. We observe a range of                       created training datasets. CZ, GL, and MS carried out the
+behaviors acros the auxiliary losses: some significantly                      major implementation, with significant contributions from
+boost depth performance (e.g., 2D position, normal), oth-                     SK, IR, LM, and JX. CZ drove the model experimentation.
+ers are critical for better camera pose estimation (e.g., con-                Comprehensive evaluations and data pipelines were set up
+fidence), and displacement has small improvements across                      by CZ, GL, SK, IR, LM, JX, SS, and MS. Visualizations
+the board.                                                                    were produced by GL, IR and JX. RS, JB, RH, ZG, and AZ
+
+
+                                                                          8
+provided project support, advising, and guidance.                       [11] Haiwen Feng, Junyi Zhang, Qianqian Wang, Yufei Ye,
+We thank a number of colleagues and advisors for making                      Pengcheng Yu, Michael J Black, Trevor Darrell, and Angjoo
+this work possible. We thank Saurabh Saxena, Kaiming                         Kanazawa. St4rtrack: Simultaneous 4d reconstruction and
+He, Carl Doersch, Leonidas Guibas, Noah Snavely, Ben                         tracking in the world. ICCV, 2025. 4, 5, 6
+Poole, Joao Carreira, Pauline Luc, Yi Yang, Howard                      [12] Yasutaka Furukawa, Carlos Hernández, et al. Multi-view
+Huang, Huizhong Chen, Cordelia Schmid for providing                          stereo: A tutorial. Foundations and trends® in Computer
+advice during the project; Gabriel Brostow, for advising                     Graphics and Vision, 2015. 4
+SK during the course of the project and for providing                   [13] A Gaidon, Q Wang, Y Cabon, and E Vig. Virtual worlds as
+feedback on the manuscript; Relja Arand̄elović and Maks                     proxy for multi-object tracking analysis. In CVPR, 2016. 5
+Ovsjanikov for providing feedback on the manuscript;
+                                                                        [14] Andreas Geiger, Philip Lenz, Christoph Stiller, and Raquel
+Ross Goroshin, Tengda Han and Dilara Gokay for their
+                                                                             Urtasun. Vision meets robotics: The KITTI dataset. IJRR,
+help during early-stage development; Aravindh Mahen-
+                                                                             2013. 7, 13
+dran for helping with code reviews; Daniel Duckworth
+for helping with visualizations and comparisons against                 [15] Klaus Greff, Etienne Pot, and Mehdi S. M. Sajjadi. Kaul-
+baselines; and Alberto García and Jesús Pérez for the                        dron: A neural network training framework, optimized for
+invaluable contributions to data generation and collection.                  research velocity and modularity. https://github.
+                                                                             com/google-research/kauldron. 3
+                                                                        [16] Klaus Greff, Francois Belletti, Lucas Beyer, Carl Doersch,
+References                                                                   Yilun Du, Daniel Duckworth, David J Fleet, Dan Gnanapra-
+                                                                             gasam, Florian Golemo, Charles Herrmann, et al. Kubric: A
+ [1] Abhishek Badki, Hang Su, Bowen Wen, and Orazio Gallo.                   scalable dataset generator. In CVPR, 2022. 5
+     L4P: Towards unified low-level 4D vision perception. In            [17] Adam W Harley, Zhaoyuan Fang, and Katerina Fragkiadaki.
+     3DV, 2026. 5                                                            Particle video revisited: Tracking through occlusions using
+ [2] Daniel J. Butler, Jonas Wulff, Garrett B. Stanley, and                  point trajectories. In ECCV, 2022. 4
+     Michael J. Black. A naturalistic open source movie for opti-       [18] Adam W. Harley, Yang You, Xinglong Sun, Yang Zheng,
+     cal flow evaluation. In ECCV, 2012. 7                                   Nikhil Raghuraman, Yunqi Gu, Sheldon Liang, Wen-Hsuan
+ [3] Xingyu Chen, Yue Chen, Yuliang Xiu, Andreas Geiger, and                 Chu, Achal Dave, Pavel Tokmakov, Suya You, Rares Am-
+     Anpei Chen. Easi3r: Estimating disentangled motion from                 brus, Katerina Fragkiadaki, and Leonidas J. Guibas. All-
+     dust3r without training. ICCV, 2025. 4                                  Tracker: Efficient dense point tracking at high resolution. In
+ [4] Angela Dai, Angel X. Chang, Manolis Savva, Maciej Hal-                  ICCV, 2025. 4
+     ber, Thomas Funkhouser, and Matthias Nießner. Scannet:             [19] Richard Hartley and Andrew Zisserman. Multiple view ge-
+     Richly-annotated 3d reconstructions of indoor scenes. In                ometry in computer vision. Cambridge university press,
+     CVPR, 2017. 5                                                           2003. 4
+ [5] Angela Dai, Angel X. Chang, Manolis Savva, Maciej Hal-             [20] Po-Han Huang, Kevin Matzen, Johannes Kopf, Narendra
+     ber, Thomas Funkhouser, and Matthias Nießner. ScanNet:                  Ahuja, and Jia-Bin Huang. Deepmvs: Learning multi-view
+     Richly-annotated 3D reconstructions of indoor scenes. In                stereopsis. In CVPR, 2018. 5
+     CVPR, 2017. 7
+                                                                        [21] Zeren Jiang, Chuanxia Zheng, Iro Laina, Diane Larlus, and
+ [6] Kai Deng, Zexin Ti, Jiawei Xu, Jian Yang, and Jin Xie.
+                                                                             Andrea Vedaldi. Geo4d: Leveraging video generators for
+     VGGT-Long: Chunk it, loop it, align it – pushing VGGT’s
+                                                                             geometric 4d scene reconstruction. In ICCV, 2025. 7
+     limits on kilometer-scale long RGB sequences. arXiv
+     preprint, 2025. 13                                                 [22] Nikita Karaev, Ignacio Rocco, Benjamin Graham, Natalia
+                                                                             Neverova, Andrea Vedaldi, and Christian Rupprecht. Dy-
+ [7] Carl Doersch, Ankush Gupta, Larisa Markeeva, Adria Re-
+                                                                             namicstereo: Consistent dynamic depth from stereo videos.
+     casens, Lucas Smaira, Yusuf Aytar, Joao Carreira, Andrew
+                                                                             In CVPR, 2023. 5
+     Zisserman, and Yi Yang. Tap-vid: A benchmark for tracking
+     any point in a video. NeurIPS, 2022. 4                             [23] Nikita Karaev, Yuri Makarov, Jianyuan Wang, Natalia
+ [8] Carl Doersch, Yi Yang, Mel Vecerik, Dilara Gokay, Ankush                Neverova, Andrea Vedaldi, and Christian Rupprecht. Co-
+     Gupta, Yusuf Aytar, Joao Carreira, and Andrew Zisserman.                tracker3: Simpler and better point tracking by pseudo-
+     Tapir: Tracking any point with per-frame initialization and             labelling real videos. In ICCV, 2025. 4, 6
+     temporal refinement. In ICCV, 2023. 4                              [24] Nikhil Keetha, Norman Müller, Johannes Schönberger,
+ [9] Alexey Dosovitskiy, Lucas Beyer, Alexander Kolesnikov,                  Lorenzo Porzi, Yuchen Zhang, Tobias Fischer, Arno
+     Dirk Weissenborn, Xiaohua Zhai, Thomas Unterthiner,                     Knapitsch, Duncan Zauss, Ethan Weber, Nelson Antunes,
+     Mostafa Dehghani, Matthias Minderer, Georg Heigold, Syl-                et al. Mapanything: Universal feed-forward metric 3d re-
+     vain Gelly, Jakob Uszkoreit, and Neil Houlsby. An image is              construction. arXiv preprint, 2025. 7
+     worth 16x16 words: Transformers for image recognition at           [25] Alex Kendall and Yarin Gal. What uncertainties do we need
+     scale. In ICLR, 2021. 3, 4                                              in bayesian deep learning for computer vision? In NeurIPS,
+[10] David Eigen, Christian Puhrsch, and Rob Fergus. Depth map               2017. 4
+     prediction from a single image using a multi-scale deep net-       [26] Diederik P Kingma. Adam: A method for stochastic opti-
+     work. In NeurIPS, 2014. 7                                               mization. ICLR, 2015. 5
+
+
+                                                                    9
+[27] Skanda Koppula, Ignacio Rocco, Yi Yang, Joe Heyward,                 [43] Johannes L Schönberger, Enliang Zheng, Jan-Michael
+     Joao Carreira, Andrew Zisserman, Gabriel Brostow, and Carl                Frahm, and Marc Pollefeys. Pixelwise view selection for
+     Doersch. Tapvid-3d: A benchmark for tracking any point in                 unstructured multi-view stereo. In ECCV, 2016. 4
+     3d. In NeurIPS, 2024. 5, 6                                           [44] Edgar Sucar, Zihang Lai, Eldar Insafutdinov, and An-
+[28] Guillaume Le Moing, Jean Ponce, and Cordelia Schmid.                      drea Vedaldi. Dynamic point maps: A versatile repre-
+     Dense optical tracking: Connecting the dots. In CVPR, 2024.               sentation for dynamic 3d reconstruction. arXiv preprint
+     4                                                                         arXiv:2503.16318, 2025. 4, 5
+[29] Zhengqi Li, Richard Tucker, Forrester Cole, Qianqian Wang,           [45] Pei Sun, Henrik Kretzschmar, Xerxes Dotiwalla, Aurelien
+     Linyi Jin, Vickie Ye, Angjoo Kanazawa, Aleksander Holyn-                  Chouard, Vijaysai Patnaik, Paul Tsui, James Guo, Yin Zhou,
+     ski, and Noah Snavely. MegaSaM: Accurate, fast and robust                 Yuning Chai, Benjamin Caine, Vijay Vasudevan, Wei Han,
+     structure and motion from casual dynamic videos. In CVPR,                 Jiquan Ngiam, Hang Zhao, Aleksei Timofeev, Scott Et-
+     2025. 1, 4, 5, 7, 17                                                      tinger, Maxim Krivokon, Amy Gao, Aditya Joshi, Yu Zhang,
+                                                                               Jonathon Shlens, Zhifeng Chen, and Dragomir Anguelov.
+[30] Ilya Loshchilov and Frank Hutter. Decoupled weight decay
+                                                                               Scalability in perception for autonomous driving: Waymo
+     regularization. ICLR, 2019. 5
+                                                                               open dataset. In CVPR, 2020. 5
+[31] Jiahao Lu, Tianyu Huang, Peng Li, Zhiyang Dou, Cheng Lin,
+                                                                          [46] Shinji Umeyama. Least-squares estimation of transformation
+     Zhiming Cui, Zhen Dong, Sai-Kit Yeung, Wenping Wang,
+                                                                               parameters between two point patterns. TPAMI, 1991. 3, 13
+     and Yuan Liu. Align3r: Aligned monocular depth estimation
+                                                                          [47] Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszko-
+     for dynamic videos. In CVPR, 2025. 4
+                                                                               reit, Llion Jones, Aidan N Gomez, Ł ukasz Kaiser, and Illia
+[32] Tuan Duc Ngo, Peiye Zhuang, Chuang Gan, Evange-                           Polosukhin. Attention is all you need. In NeurIPS, 2017. 3,
+     los Kalogerakis, Sergey Tulyakov, Hsin-Ying Lee, and                      4
+     Chaoyang Wang. Delta: Dense efficient long-range 3d track-           [48] Jianyuan Wang, Minghao Chen, Nikita Karaev, Andrea
+     ing for any video. ICLR, 2025. 4, 5, 6                                    Vedaldi, Christian Rupprecht, and David Novotny. Vggt: Vi-
+[33] John Oliensis. A critique of structure-from-motion algo-                  sual geometry grounded transformer. In CVPR, 2025. 1, 3,
+     rithms. CVIU, 2000. 4                                                     4, 6, 7
+[34] Emanuele Palazzolo, Jens Behley, Philipp Lottes, Philippe            [49] Limin Wang, Bingkun Huang, Zhiyu Zhao, Zhan Tong, Yi-
+     Giguère, and Cyrill Stachniss. Refusion: 3d reconstruction                nan He, Yi Wang, Yali Wang, and Yu Qiao. VideoMAE v2:
+     in dynamic environments for rgb-d cameras exploiting resid-               Scaling video masked autoencoders with dual masking. In
+     uals. In IROS, 2019. 7                                                    CVPR, 2023. 15
+[35] Duc-Hai Pham, Tung Do, Phong Nguyen, Binh-Son Hua,                   [50] Qianqian Wang, Yifei Zhang, Aleksander Holynski,
+     Khoi Nguyen, and Rang Nguyen. SharpDepth: Sharpen-                        Alexei A Efros, and Angjoo Kanazawa. Continuous 3d per-
+     ing metric depth predictions using diffusion distillation. In             ception model with persistent state. In CVPR, 2025. 4, 7
+     CVPR, 2025. 14                                                       [51] Shuzhe Wang, Vincent Leroy, Yohann Cabon, Boris
+[36] Luigi Piccinelli, Christos Sakaridis, Yung-Hsu Yang, Mat-                 Chidlovskii, and Jerome Revaud. Dust3r: Geometric 3d vi-
+     tia Segu, Siyuan Li, Wim Abbeloos, and Luc Van Gool.                      sion made easy. In CVPR, 2024. 3, 4, 5
+     UniDepthV2: Universal Monocular Metric Depth Estima-                 [52] Shizun Wang, Zhenxiang Jiang, Xingyi Yang, and Xinchao
+     tion Made Simpler. PAMI, 2025. 6                                          Wang. C4d: 4d made from 3d through dual correspondences.
+[37] René Ranftl, Alexey Bochkovskiy, and Vladlen Koltun. Vi-                  In ICCV, 2025. 4
+     sion transformers for dense prediction. ICCV, 2021. 8                [53] Wenshan Wang, Delong Zhu, Xiangwei Wang, Yaoyu Hu,
+                                                                               Yuheng Qiu, Chen Wang, Yafei Hu, Ashish Kapoor, and Se-
+[38] Jeremy Reizenstein, Roman Shapovalov, Philipp Henzler,
+                                                                               bastian Scherer. TartanAir: A dataset to push the limits of
+     Luca Sbordone, Patrick Labatut, and David Novotny. Com-
+                                                                               visual slam. In IROS, 2020. 5
+     mon objects in 3d: Large-scale learning and evaluation of
+                                                                          [54] Yifan Wang, Jianjun Zhou, Haoyi Zhu, Wenzheng Chang,
+     real-life 3d category reconstruction. In ICCV, 2021. 5
+                                                                               Yang Zhou, Zizun Li, Junyi Chen, Jiangmiao Pang, Chun-
+[39] Mehdi SM Sajjadi, Henning Meyer, Etienne Pot, Urs                         hua Shen, and Tong He. pi3 : Permutation-equivariant visual
+     Bergmann, Klaus Greff, Noha Radwan, Suhani Vora, Mario                    geometry learning. arXiv preprint, 2025. 3, 4, 5, 7, 17
+     Lučić, Daniel Duckworth, Alexey Dosovitskiy, et al. Scene
+                                                                          [55] Yuxi Xiao, Qianqian Wang, Shangzhan Zhang, Nan Xue,
+     representation transformer: Geometry-free novel view syn-
+                                                                               Sida Peng, Yujun Shen, and Xiaowei Zhou. Spatialtracker:
+     thesis through set-latent scene representations. In CVPR,
+                                                                               Tracking any 2d pixels in 3d space. In CVPR, 2024. 5
+     2022. 2
+                                                                          [56] Yuxi Xiao, Jianyuan Wang, Nan Xue, Nikita Karaev, Yuri
+[40] Mehdi S. M. Sajjadi, Aravindh Mahendran, Thomas Kipf,                     Makarov, Bingyi Kang, Xing Zhu, Hujun Bao, Yujun Shen,
+     Etienne Pot, Daniel Duckworth, Mario Lučić, and Klaus Gr-               and Xiaowei Zhou. SpatialTrackerV2: Advancing 3d point
+     eff. RUST: Latent Neural Scene Representations from Un-                   tracking with explicit camera motion. In ICCV, 2025. 1, 4,
+     posed Imagery. CVPR, 2023. 2                                              5, 6, 7, 17
+[41] Peter Sand and Seth Teller. Particle video: Long-range mo-           [57] Jianing Yang, Alexander Sax, Kevin J Liang, Mikael Henaff,
+     tion estimation using point trajectories. IJCV, 2008. 4                   Hao Tang, Ang Cao, Joyce Chai, Franziska Meier, and Matt
+[42] Johannes L Schonberger and Jan-Michael Frahm. Structure-                  Feiszli. Fast3r: Towards 3d reconstruction of 1000+ images
+     from-motion revisited. In CVPR, 2016. 4                                   in one forward pass. In CVPR, 2025. 4
+
+
+                                                                     10
+[58] Yao Yao, Zixin Luo, Shiwei Li, Jingyang Zhang, Yufan Ren,
+     Lei Zhou, Tian Fang, and Long Quan. Blendedmvs: A large-
+     scale dataset for generalized multi-view stereo networks. In
+     CVPR, 2020. 5
+[59] Chandan Yeshwanth, Yueh-Cheng Liu, Matthias Nießner,
+     and Angela Dai. Scannet++: A high-fidelity dataset of 3d
+     indoor scenes. In ICCV, 2023. 5
+[60] Junyi Zhang, Charles Herrmann, Junhwa Hur, Varun Jam-
+     pani, Trevor Darrell, Forrester Cole, Deqing Sun, and Ming-
+     Hsuan Yang. Monst3r: A simple approach for estimating
+     geometry in the presence of motion. ICLR, 2025. 4, 7
+[61] Zhengyou Zhang. A flexible new technique for camera cali-
+     bration. TPAMI, 2002. 3
+[62] Yang Zheng, Adam W. Harley, Bokui Shen, Gordon Wet-
+     zstein, and Leonidas J. Guibas. Pointodyssey: A large-scale
+     synthetic dataset for long-term point tracking. In ICCV,
+     2023. 5
+[63] Artem Zholus, Carl Doersch, Yi Yang, Skanda Koppula,
+     Viorica Patraucean, Xu Owen He, Ignacio Rocco, Mehdi SM
+     Sajjadi, Sarath Chandar, and Ross Goroshin. TAPNext:
+     Tracking any point as next token prediction. In ICCV, 2025.
+     4
+
+
+
+
+                                                                    11
+                    Efficiently Reconstructing Dynamic Scenes One                                                                       D4RT at a Time
+                                                                                    Appendix
+
+A. Model Overview & Training Details
+                                           Resize to square aspect ratio
+
+                                                                                    Original          V
+                                                                                  aspect ratio
+
+           W                  Video frames                                           W/H
+
+                                                                                      FC     Tokenizer    PE                                        FC   4D Predictions (13 dims)
+H                                                                                                 +
+                                                                                                               M Decoder Blocks                          3D : XYZ position (3 dims)         P
+                                                                                                                                            MLP
+                                                                           Per-Frame Self-Attention
+                                                                                                                          Cross-Attention
+                                                                                                                                                         2D : UV position (2 dims)
+                                Query
+                                                                                                                                                         vis : Point visibility (1 dim)     A
+     (u, v)           t src               t tgt           t cam                            MLP
+                                                                                                                                                         disp : Point motion (3 dims)       u
+                                                                                                                   Key          Value       Query
+                                                                                                                                                         normal : Surface normal (3 dims)   x
+                                                                             Global Self-Attention
+                                                                                                                                                         conf : Conﬁdence (1 dim)
+                                                                                                                     Global Scene
+                              Learnable           embedding                                MLP                      Representation          MLP
+    Patch Fourier                                                                                                         F
+                                                                                      N Encoder Blocks
+                                                                                                                                            q
+     MLP       FC
+                                  +
+                                      Addition
+
+
+
+Figure 7. Full D4RT model overview – We provide a holistic overview of the model together with its inputs and outputs. FC corresponds
+to a fully connected layer, and PE for positional encoding. See Sec. 2 of the main paper for reference.
+
+The model is trained end-to-end by minimizing a composite loss L, which is a weighted sum of task-specific losses computed
+over a batch of N sampled queries:
+                            N
+                         1 X                                                                                             
+                    L=         cλ3D L3D − λconf log c + λ2D L2D + λvis Lvis + λdisp Ldisp + λconf Lconf + λnormal Lnormal
+                         N i=1                                                                                              i
+
+
+where c is the confidence score predicted by the model. We use the following loss weights: λ3D =1.0, λ2D =0.1, λvis =0.1,
+λdisp =0.1, λconf =0.2, λnormal =0.5, λconf =0.2. We train using the AdamW optimizer with a weight decay of 0.03. The
+learning rate is warmed up for 2,500 steps until it reaches a peak value of 10−4 . Subsequently, it follows a cosine annealing
+schedule, decaying to a final value of 10−6 . Gradients are clipped to a maximum L2 -norm of 10.
+
+Data augmentation. Extensive data augmentation techniques are applied to the video during training to improve model
+generalization. We apply temporally consistent color jittering by performing random brightness, saturation, contrast, and hue
+adjustments. We also apply random color drop with a probability of 0.2, and Gaussian blur augmentation with a probability of
+0.4. For spatial augmentation, we use random crop augmentations with a scale ratio between 0.3 and 1.0 of the original size.
+After determining the crop size, a random aspect ratio is selected by sampling from a uniform distribution in the logarithmic
+domain; this ensures equal probability for wide and tall crops while respecting image boundaries. Additionally, during the
+random crop augmentation, the image is randomly zoomed in with a probability of 0.05. On the temporal dimension, frames
+are subsampled from the full video with a random stride.
+
+Training queries. Queries are sampled from available ground truth point trajectories. To focus the model on challenging
+regions, 30% of the queries (along dimensions u, v) are sampled near depth discontinuities or motion boundaries, which are
+pre-computed using a Sobel filter on depth maps. Timesteps tsrc , ttgt , and tcam are sampled uniformly at random, except
+that we enforce ttgt = tcam with probability 0.4 to improve downstream performance.
+
+
+
+
+                                                                                                 12
+B. Generalization to Long Videos
+We implement a long-sequence processing algorithm by partitioning videos into overlapping segments. We then align these
+segments by estimating Sim(3) transformations using the Umeyama algorithm [46], based on the top 85% of points with the
+highest confidence in the overlapping regions. The process is similar to the first stage proposed in VGGT-Long [6], we omit
+loop detection and optimization stage in [6] to directly evaluate the reconstruction model’s raw precision. As shown in Fig. 8
+on KITTI [14], our model yields the best ATE in the first example, significantly outperforming VGG-T and π 3 by a large
+margin. On the second example, we significantly outperform VGG-T and produce a result on par with π 3 .
+
+
+
+
+                                    (a) Visualization of reconstruction of 1000 frames from KITTI sequence 00.
+
+
+
+
+                                      ATE=58.7m                                ATE=35.6m                                ATE=15.5m
+
+
+
+
+                                      ATE=36m                                 ATE=15.8m                                 ATE=16.3m
+
+
+                              VGG-T                                      𝝅3                                      D4RT
+
+                   (b) Comparison of raw chunked prediction alignment results against VGG-T and π 3 baselines (no loop closure).
+
+Figure 8. Long sequence results on KITTI sequences – We align and stitch predictions from overlapped chunks by Umeyama algorithm,
+without the loop detection and global optimization proposed in [6]. Our model obtains consistently better results than VGG-T, and signifi-
+cantly better results than π 3 on sequence “00" (top row).
+
+
+
+
+                                                                       13
+C. High-Resolution Decoding with Subpixel Precision
+A key advantage of D4RT’s architecture is the decoupling of the global scene encoding from the point-wise decoding. As
+the query coordinates (u, v) are defined in a continuous normalized space [0, 1]2 , our decoder is able to probe the scene at
+arbitrary resolutions, independent of the resolution of the Global Scene Representation F .
+   We explore this capability in Tab. 10. To quantify the preservation of high-frequency details, we report the Pseudo Depth
+Boundary Error accuracy (ϵacc  PDBE ) proposed by Pham et al. [35], in addition to standard depth metrics. We compare four
+configurations using a ViT-g encoder fixed at a resolution of 256×256. The baseline output at the encoder’s native resolution
+(Config ⃝1 ) is naturally coarse. Incorporating the local appearance patch mechanism described in the main paper (Config ⃝    2 )
+allows for the recovery of finer low-level structures, although pixelation artifacts persist. We further leverage the continuous
+nature of our query mechanism to predict at the original resolution. While naive dense querying (Config ⃝            3 ) recovers
+smoother edges, it still fails at recovering high frequencies.
+   In Config ⃝ 4 , we extract the local RGB patches from the source frames at their original resolution for decoding.
+
+   The significant drop in ϵacc
+                            PDBE demonstrates how this allows D4RT to recover finer details. We show qualitative results in
+Fig. 9 where we observe that hair strands and object boundaries are resolved more accurately.
+
+
+                       Encoder        RGB        Output        RGB patch                 Scale                Scale and Shift
+           Config.    Resolution      Patch     Resolution     Resolution       AbsRel ↓         ϵacc
+                                                                                                  PDBE ↓    AbsRel ↓    ϵacc
+                                                                                                                         PDBE ↓
+
+              ⃝
+              1        256×256          ✗        256×256         256×256         0.254           3.323       0.219       3.307
+              ⃝
+              2        256×256          ✓        256×256         256×256         0.218           2.254       0.179       2.243
+              ⃝
+              3        256×256          ✓        Original        256×256         0.217           2.266       0.178       2.258
+              ⃝
+              4        256×256          ✓        Original        Original        0.220           2.193       0.176       2.185
+
+Table 10. Quantitative impact of query density and patch fidelity – Feeding RGB patches from the high-resolution video into the
+                4 ) yields significantly sharper edges in depth maps as measured by ϵacc
+decoder (Config ⃝                                                                    PDBE .
+
+
+
+
+Input video             Config ⃝
+                               1               Config ⃝
+                                                      2               Config ⃝
+                                                                             3                   Config ⃝
+                                                                                                        4              GT Depth
+
+
+
+
+Figure 9. Visualizing sub-pixel detail recovery – We propose a visual comparison of the different high-res configurations. Config ⃝      4
+achieves the highest fidelity, it preserves sharp edges and recovers fine details—such as the hair in the bottom row—without increasing the
+computational cost or memory requirements of the overall model.
+
+
+
+
+                                                                    14
+D. Further Ablations
+Pretrained Encoder. In Tab. 11, we show our model performance when the video encoder is initialized with random
+weights compared to using pre-trained VideoMAE [49] weights. We observe significant improvements across the board.
+
+                                                                                   Video Depth Estimation     Camera Pose Estimation
+                                                   Model weight initialization
+                                                                                 AbsRel (S) ↓ AbsRel (SS) ↓ ATE ↓ RPE-T ↓ RPE-R ↓
+                                                              None                  0.738           0.520     0.334   0.139    1.126
+                                                         VideoMAE [49]              0.302           0.257     0.091   0.028    0.245
+
+        Table 11. Model initialization – Initializing the model with VideoMAE [49] weights leads to significant improvements.
+
+
+
+Local RGB patch size. We perform an ablation study on the size of the local RGB patch. As shown in Fig. 10, our results
+indicate that the patch size 9×9 yields the best overall performance across camera pose and depth estimation tasks.
+
+                                                                                 Average Error vs. RGB Patch Size
+
+                                                                                                   Avg. Depth Error (S, SS)
+                 Average Error (Lower is better)
+
+
+
+
+                                                   0.3                                             Avg. Pose Error (ATE, RPE-T, RPE-R)
+
+
+
+                                                   0.2
+
+
+                                                   0.1
+
+
+                                                     0
+                                                           0              3                 6            9             12              15
+                                                                                            RGB Patch Size
+
+Figure 10. Ablation study on RGB patch size – The plot shows the average error for depth and pose estimation on Sintel. A patch size
+between 9 and 12 yields the best performance for both tasks.
+
+
+
+E. Further Qualitative Results
+Complementing the qualitative visualizations in the main text, we provide additional examples of our reconstruction results
+in Fig. 11, along with further baseline comparisons in Fig. 12 and Fig. 13.
+
+
+
+
+                                                                                              15
+    …                             …                                                 …
+
+
+
+
+   …                                                                 …
+
+
+
+
+   …                                          …                                          …
+
+
+
+
+    …                                         …                                          …
+
+
+
+
+   …                                           …                                         …
+
+
+
+
+    …                                          …                                         …                                            …
+
+
+
+
+    …                                         …                                          …
+
+Figure 11. Additional visualizations of D4RT – D4RT produces accurate reconstructions for both static environments (top three rows)
+and dynamic sequences (bottom three rows).
+
+
+
+
+                                                                16
+ Input video
+Input  video           MegaSaM
+                     MegaSaM [29]                      π 3 [54]                 SpatialTrackerV2
+                                                                             SpatialTrackerV2 [56]              D4RT(Ours)
+                                                                                                                     (Ours)
+                                                                                                               D4RT
+
+
+
+
+    …
+
+
+
+
+    …
+
+
+
+
+    …
+
+
+
+
+    …
+Figure 12. Additional reconstruction results across methods – Pure reconstruction methods (MegaSaM and π 3 ) are visualized as
+accumulated point clouds. For SpatialTrackerV2, we visualize sparse tracks on a representative frame. In contrast, D4RT reconstructs a
+complete 4D scene representation, tracking all pixels across the entire video.
+
+
+
+
+ Input video                MegaSaM                   π3                         SpatialTrackerV2           D4RT (Ours)
+
+
+
+
+Figure 13. Qualitative depth comparison across methods – D4RT is able to perform dense depth estimation with finer details than
+current state-of-the-art methods, preserving geometric accuracy even in scenarios with large motion blur.
+
+
+
+                                                                  17
+

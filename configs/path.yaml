@@ -49,7 +49,7 @@ datasets:
   #   <emdb_hmr4d_support_root>/emdb_vit_v4.pt
   #   <rich_hmr4d_support_root>/rich_test_labels.pt
   #   <threedpw_hmr4d_support_root>/test_3dpw_gt_labels.pt
-  emdb_hmr4d_support_root: "/home/zhw/xyb_space/EMDB/hmr4d_support"
+  emdb_hmr4d_support_root: "/home/zhw/xyb_space/emdb/hmr4d_support"
   rich_official_root: "/home/zhw/xyb_space/RICH/official"
   rich_hmr4d_support_root: "/home/zhw/xyb_space/RICH/hmr4d_support"
   threedpw_hmr4d_support_root: "/home/zhw/xyb_space/3DPW/hmr4d_support"

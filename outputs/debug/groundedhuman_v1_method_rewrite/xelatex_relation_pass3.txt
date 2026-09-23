@@ -1,0 +1,160 @@
+This is XeTeX, Version 3.141592653-2.6-0.999997 (MiKTeX 25.12) (preloaded format=xelatex.fmt)
+ restricted \write18 enabled.
+entering extended mode
+(main.tex
+LaTeX2e <2025-11-01>
+L3 programming layer <2025-12-24>
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/base\article.cls
+Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/base\size10.clo))
+(iclr2027_conference.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/eso-pic\eso-pic.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\keyval.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/xcolor\xcolor.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\color.cfg)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics-def\xetex.def)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\mathcolor.ltx)))
+ (fancyhdr.sty) (natbib.sty))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\times.sty)
+(math_commands.tex
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsmath.sty
+For additional information on amsmath, use the `?' option.
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amstext.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsgen.sty))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsbsy.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsopn.sty))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amsfonts.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/tools\bm.sty))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspec.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/l3packages/xparse\xparse.
+sty (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/l3kernel\expl3.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/l3backend\l3backend-xetex
+.def)))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspec-xetex.s
+ty (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/base\fontenc.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspec.cfg)))Running miktex-makemf.exe...
+
+
+Sorry, but miktex-makemf did not succeed.
+
+
+
+The log file hopefully contains the information to get MiKTeX going again:
+
+
+
+  C:\Users\ROG\AppData\Local\MiKTeX\miktex\log\miktex-makemf.log
+
+Couldn't open `TeX Gyre Term.cfg'
+Running miktex-hbf2gf.exe...
+
+
+
+hbf2gf (CJK ver. 4.8.4)
+
+
+
+
+Sorry, but miktex-maketfm did not succeed.
+
+The log file hopefully contains the information to get MiKTeX going again:
+
+  C:\Users\ROG\AppData\Local\MiKTeX\miktex\log\miktex-maketfm.log
+Running miktex-makemf.exe...
+
+
+Sorry, but miktex-makemf did not succeed.
+
+
+
+The log file hopefully contains the information to get MiKTeX going again:
+
+
+
+  C:\Users\ROG\AppData\Local\MiKTeX\miktex\log\miktex-makemf.log
+
+Running miktex-hbf2gf.exe...
+Couldn't open `TeX Gyre Her.cfg'
+
+
+
+hbf2gf (CJK ver. 4.8.4)
+
+
+
+
+Sorry, but miktex-maketfm did not succeed.
+
+The log file hopefully contains the information to get MiKTeX going again:
+
+  C:\Users\ROG\AppData\Local\MiKTeX\miktex\log\miktex-maketfm.log
+
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphicx.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphics.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\trig.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\graphics.cfg
+))) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/wrapfig\wrapfig.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/float\float.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/booktabs\booktabs.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/tools\array.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/tools\tabularx.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/multirow\multirow.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amssymb.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hyperref.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/iftex\iftex.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/kvsetkeys\kvsetkeys.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/kvdefinekeys\kvdefineke
+ys.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/pdfescape\pdfescape.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/ltxcmds\ltxcmds.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/pdftexcmds\pdftexcmds.s
+ty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/infwarerr\infwarerr.sty
+))) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hycolor\hycolor.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\nameref.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/refcount\refcount.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/gettitlestring\gettitle
+string.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/kvoptions\kvoptions.sty))
+) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/etoolbox\etoolbox.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/stringenc\stringenc.sty
+) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\pd1enc.def)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/intcalc\intcalc.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\puenc.def)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/url\url.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/bitset\bitset.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/bigintcalc\bigintcalc.s
+ty))) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hxetex.def
+
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/rerunfilecheck\rerunfilec
+heck.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/uniquecounter\uniquecou
+nter.sty)))
+(C:/Users\ROG\PycharmProjects\vggt-omega\outputs\paper\groundedhuman_v1_method_
+rewrite\main.aux)
+(C:/Users\ROG\PycharmProjects\vggt-omega\outputs\paper\groundedhuman_v1_method_
+rewrite\main.out)
+(C:/Users\ROG\PycharmProjects\vggt-omega\outputs\paper\groundedhuman_v1_method_
+rewrite\main.out)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd)
+(tex/00_abs.tex) (tex/01_intro.tex [1]
+Underfull \vbox (badness 10000) has occurred while \output is active [2])
+(tex/02_relatedwork.tex [3]) (tex/03_method_v7.tex
+Underfull \vbox (badness 10000) has occurred while \output is active [4]
+[5] [6]
+Underfull \hbox (badness 1394) in paragraph at lines 118--119
+[]\TU/TimesNewRoman(0)/m/n/10 With calibration fixed, Dynamic Interaction Groun
+ding is trained on clean, scale-perturbed,
+) (tex/04_exp.tex [7] [8] [9] [10]) (tex/05_conclusion.tex [11])
+(C:/Users\ROG\PycharmProjects\vggt-omega\outputs\paper\groundedhuman_v1_method_
+rewrite\main.bbl [12] [13]) [14] (appendix_en.tex [15] [16] [17]
+Underfull \vbox (badness 10000) has occurred while \output is active [18]
+[19] [20]) [21]
+(C:/Users\ROG\PycharmProjects\vggt-omega\outputs\paper\groundedhuman_v1_method_
+rewrite\main.aux) )
+(see the transcript file for additional information)
+Output written on C:/Users\ROG\PycharmProjects\vggt-omega\outputs\paper\grounde
+dhuman_v1_method_rewrite\main.pdf (21 pages).
+Transcript written on C:/Users\ROG\PycharmProjects\vggt-omega\outputs\paper\gro
+undedhuman_v1_method_rewrite\main.log.

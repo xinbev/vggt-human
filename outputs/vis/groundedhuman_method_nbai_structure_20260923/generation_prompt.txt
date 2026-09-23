@@ -1,0 +1,41 @@
+Generate ONE finished scientific method figure for GroundedHuman, based on the ATTACHED PURE GEOMETRIC LAYOUT REFERENCE. Follow the exact one-row structure of the reference: a tall narrow input card; two compact stacked encoder cards; two equal large blue dashed rounded panels; a tall output card. Fill these shapes with the method below. Replace all placeholder text. Remove the gray screenshot border. This is an academic computer-vision architecture diagram with polished 3D-rendered technical thumbnails and crisp professional typography, NOT a hand-drawn sketch.
+
+CANVAS: 3072x1024. Arrange all content in a wide horizontal band about 4:1, vertically centered on pure white. Do not crop any content. No large decorative title. No additional lower panels. Thin dark arrows, restrained cobalt dashed outlines, softly tinted cards, lavender scene tokens, coral body tokens, teal interaction/readout accents. Use large clear black English labels, generous whitespace, and precise alignment. Match the supplied layout, not just the topic.
+
+LEFT INPUT, approximately x 2–9%:
+A tall rounded pale-blue card with three small stacked video thumbnails. Use the same fully clothed stylized adult avatar in a shirt and trousers, standing or walking in a simple light room. These are synthetic technical illustrations. Label "Monocular video". Split arrows lead to both encoders.
+
+STACKED ENCODERS, x 11–25%:
+Upper card labeled "VGGT-Ω"; show a small depth map, camera frustum and lavender feature-token row. Subtitle "Scene geometry + features".
+Lower card labeled "NLF"; show a neutral fully clothed low-poly avatar, joint markers and coral feature tokens. Subtitle "Metric human prior".
+These feed the two source streams of the first module.
+
+FIRST DASHED PANEL, x 28–52%:
+Title centered just above outline, on two lines: "Body-Anchored" / "Metric Calibration".
+Inside: a compact geometric initialization strip labeled "Analytic scale".
+Then show coral body-anchor tokens labeled "Q" and a lavender 3×3 scene-token grid labeled "K, V", connected by an attention association motif. A small blue human stick-skeleton can identify the anchors.
+The attention response goes into a CLEAR colored token stack labeled on two lines "Interaction" / "representation".
+Next, a thin arrow reaches a compact readout labeled "Metric readout" and a small output badge "Scale + bias".
+Small text beneath this readout: "Temporal aggregation".
+At the bottom INSIDE this panel put the exact bold mechanism name "Body-Anchored Scene Query".
+A clear arrow between the two big panels is labeled "Metric scene".
+
+SECOND DASHED PANEL, x 55–80%:
+Title centered just above outline, on two lines: "Dynamic Interaction" / "Grounding".
+At left show the same neutral clothed avatar with colored body regions and a few nested local sampling windows near its foot and nearby floor. Label "Body regions".
+From this derive two small token rows labeled "Self surface" and "Environment", colored coral and teal. They feed a compact attention association motif.
+The response enters a CLEAR token stack labeled on two lines "Interaction" / "representation", matching the first module's visual grammar.
+Then a readout labeled "Placement readout" predicts an arrow badge "Root translation". Use a small weighted-vector graphic if space permits.
+Inside this panel draw ONE slim teal curved feedback arrow from the update back toward regional sampling. Label "Update → resample" and "×2". This is a two-step spatial-refinement loop. It must not go back into the first module.
+At the bottom INSIDE this panel put the exact bold mechanism name "Hierarchical Context Attention".
+
+RIGHT OUTPUT, x 84–98%:
+A tall rounded pale-blue card showing an attractive 3D isometric technical reconstruction: a light floor and wall, a few simple furnishings, the same fully clothed low-poly avatar naturally placed on the floor, sparse teal point-cloud dots and small camera frustums. This is a stylized scientific scene, no photographs and no anatomy detail.
+Label beneath: "Metric reconstruction".
+Small secondary text: "Scene · Cameras · Humans".
+An arrow from the second module leads here.
+
+SCIENTIFIC MESSAGE:
+Both central panels must clearly show human/scene association leading to an implicit interaction representation and then to a geometric readout. First readout calibrates scene scale and depth bias, with scale shared by camera translation. Second readout updates whole-body placement with pose and shape fixed. Keep the two representations separate and stage-specific. Keep TWO proposed modules only. No contact-prediction head, no temporal stabilizer, no pose-refinement head, no losses, no extra networks. Use the attached image ONLY for layout; all content is the new scientific architecture described here.
+
+Make the figure feel like a meticulously art-directed, publication-ready machine learning paper figure. Avoid too much tiny text. Preserve the exact main module and mechanism names; prioritize readable relation representations and their two distinct readouts.

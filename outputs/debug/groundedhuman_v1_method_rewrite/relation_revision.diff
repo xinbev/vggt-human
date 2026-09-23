@@ -1,0 +1,244 @@
+--- previous_revision/tex/03_method_v7.tex
++++ current_v1/tex/03_method_v7.tex
+@@ -1,8 +1,16 @@
+ \section{Method}\label{sec:method}
+ 
+-Given a monocular video $\mathcal I=\{\mathbf I_t\}_{t=1}^{T}$, GroundedHuman recovers scene geometry, camera motion, and human meshes in a shared metric world coordinate system. Our central idea is to use the human body as a \emph{structured interface to the scene}: its metric extent provides a reference for scene calibration, while its spatial configuration determines which scene observations are relevant to human placement. We encode these body--scene relations through queries and attention, and read out the geometric corrections they support. Interaction is represented implicitly in these relations and their induced updates, without an intermediate contact-label prediction.
++Given a monocular video $\mathcal I=\{\mathbf I_t\}_{t=1}^{T}$, GroundedHuman recovers scene geometry, camera motion, and human meshes in a shared metric world coordinate system. We formulate human--scene grounding as learning \emph{implicit interaction representations}, from which metric calibration and human placement are inferred. These representations encode how scene observations relate to a body's metric extent and current spatial configuration. Human structure determines where and how to query the scene; attention integrates the relevant evidence into a relational representation, and geometric readouts convert it into corrections. The organizing principle is
++\[
++(\mathcal H,\mathcal S)
++\xrightarrow{\text{Query / Attention}}
++\mathbf Z_{\mathrm{int}}
++\xrightarrow{\text{Geometric readout}}
++(\text{Metric},\text{Placement}),
++\]
++where $\mathcal H$ and $\mathcal S$ denote human and scene observations. Interaction is implicit in the learned relation features $\mathbf Z_{\mathrm{int}}$ and the corrections they support, without an intermediate contact-label prediction.
+ 
+-This principle gives rise to two modules (Fig.~\ref{fig:method-overview}). \textbf{Body-Anchored Metric Calibration} uses \emph{Metric Alignment Query} to relate human anchors to scene features and recover a shared metric reference. \textbf{Dynamic Interaction Grounding} uses \emph{Placement-Conditioned Interaction Attention} to infer translation corrections from calibrated geometry around the body. Their ordering addresses an ambiguity: the same local depth discrepancy may reflect a scene-scale error or a misplaced human. We first calibrate the common reference, then interpret the remaining discrepancies as evidence for placement refinement. As the body moves, the attention context is rebuilt at its updated location.
++We instantiate this principle with two successive modules and their respective representations and readouts (Fig.~\ref{fig:method-overview}). \textbf{Body-Anchored Metric Calibration} uses \emph{Body-Anchored Scene Query} to encode human--scene correspondence and read out residual metric corrections. \textbf{Dynamic Interaction Grounding} uses \emph{Hierarchical Context Attention} to encode regional human--environment relations and read out placement updates. Their ordering addresses an ambiguity: the same local depth discrepancy may reflect a scene-scale error or a misplaced human. Establishing the common metric reference first makes regional relations comparable for placement reasoning. Each placement update then changes the relations themselves, prompting the interaction representation to be recomputed.
+ 
+ \paragraph{Initial observations.}
+ Frozen VGGT-$\Omega$ provides relative Z-depth $D_t^r$, intrinsics $\mathbf K_t$, extrinsics $(\mathbf R_{cw,t},\mathbf t_{cw,t}^r)$, and multi-layer scene features $\mathbf F_t$. Under the same intrinsics, frozen NLF provides metric SMPL observations: pose $\boldsymbol\theta_{tq}$, shape $\boldsymbol\beta_{tq}$, root translation $\boldsymbol\tau_{tq}^{(0)}$, and confidence $c_{tq}$ for person $q$. Let $\overline{\mathbf V}_{tq}$ denote the posed vertices before root translation; the current camera-space body is $\mathbf V_{tq}^{c,(k)}=\overline{\mathbf V}_{tq}+\boldsymbol\tau_{tq}^{(k)}$, with translation broadcast over vertices. These estimates supply the human metric prior; pose and shape are preserved throughout both modules.
+@@ -15,16 +23,16 @@
+ \textit{Method overview to be redrawn.}\\[4pt]
+ Body-Anchored Metric Calibration $\longrightarrow$ Dynamic Interaction Grounding
+ }}
+-\caption{GroundedHuman reads body--scene relations for two complementary corrections. Metric queries calibrate scene depth and camera translation against human anchors. Given this reference, interaction attention selects evidence around the current body and converts it into a whole-body translation update. Recomputing the evidence makes grounding responsive to the changing placement.}
++\caption{GroundedHuman infers metric calibration and human placement from implicit interaction representations. Body-Anchored Scene Query encodes human--scene correspondence, whose metric readout calibrates scene depth and camera translation. Within this reference, Hierarchical Context Attention encodes regional relations, whose placement readout updates whole-body translation. Updating the body changes its relation to the scene, so the regional representation is recomputed before the next refinement step.}
+ \label{fig:method-overview}
+ \end{figure}
+ 
+ \subsection{Body-Anchored Metric Calibration}
+ \label{sec:scale-calibration}
+ 
+-Metric calibration asks how scene geometry should be expressed relative to the human metric reference. Surface correspondences initialize this relation; structured body queries then read scene features to estimate the remaining correction.
++The first module encodes the correspondence between metric human observations and relative scene geometry. Surface depth ratios establish a coarse reference; body-anchored queries then form a relation representation from which the remaining metric correction is predicted.
+ 
+-\paragraph{Human-surface initialization.}
++\paragraph{Analytic Scale Initialization.}
+ Projecting an initial body vertex into $D_t^r$ yields a pair of depths along the same camera ray. We pool valid depth ratios across people:
+ \begin{equation}
+ s_t^c=\operatorname*{median}_{(q,i)\in\mathcal A_t}
+@@ -35,22 +43,20 @@
+ \end{equation}
+ Here, $\pi$ is perspective projection and $\mathcal A_t$ retains valid correspondences after projection and depth filtering, keeping the nearest sampled human surface when projections coincide. The median reduces sensitivity to isolated errors. Sampling and missing-observation handling are detailed in Appendix~\ref{app:architecture}.
+ 
+-\paragraph{Metric Alignment Query.}
+-An anchor specifies both \emph{where} to retrieve scene evidence and \emph{how} to interpret it relative to the body. We construct 24 anchor tokens per person from the body state, anchor position and projection, and a nearby observation from $D_t^{\mathrm{coarse}}$: its 3D position, normal, anchor-relative offset, distance, and depth residual. A $3\times3$ neighborhood of $\mathbf F_t$ supplies scene tokens $\mathbf S_{tqj}$ for anchor $j$. Self-attention first combines evidence across body anchors; each anchor then queries its scene neighborhood. Suppressing frame and person indices, the attention read is
++\paragraph{Body-Anchored Scene Query.}
++An anchor specifies both \emph{where} to retrieve scene evidence and \emph{how} to interpret it relative to the body. We construct 24 anchor tokens per person from the body state, anchor position and projection, and a nearby observation from $D_t^{\mathrm{coarse}}$: its 3D position, normal, anchor-relative offset, distance, and depth residual. A $3\times3$ neighborhood of $\mathbf F_t$ supplies scene tokens $\mathbf S_{tqj}$ for anchor $j$. Self-attention relates evidence across the body, while cross-attention associates each anchor with its local scene context. Let $\mathbf H_{tq}^{(l)}$ denote the anchor tokens at layer $l$:
+ \begin{equation}
+-\begin{aligned}
+-\widetilde{\mathbf H}^{(l)}
+-&=\mathbf H^{(l)}+\operatorname{SelfAttn}\!\left(\operatorname{LN}(\mathbf H^{(l)})\right),\\
+-\mathbf Q_j&=\operatorname{LN}(\widetilde{\mathbf h}_j^{(l)})\mathbf W_Q,
+-\quad \mathbf K_j=\mathbf S_j\mathbf W_K,
+-\quad \mathbf U_j=\mathbf S_j\mathbf W_V,\\
+-\mathbf o_j&=\operatorname{softmax}\!\left(\frac{\mathbf Q_j\mathbf K_j^{\mathsf T}}{\sqrt d}\right)\mathbf U_j.
+-\end{aligned}
++\widetilde{\mathbf H}_{tq}^{(l)}
++=\operatorname{SelfAttn}\!\left(\mathbf H_{tq}^{(l)}\right),
++\qquad
++\mathbf h_{tqj}^{(l+1)}
++=\operatorname{CrossAttn}\!\left(
++\widetilde{\mathbf h}_{tqj}^{(l)},\mathbf S_{tqj}\right).
+ \label{eq:anchor-scene-attention}
+ \end{equation}
+-The final line shows one attention head of dimension $d$; $\mathbf U_j$ denotes scene values to distinguish them from body vertices. Multi-head outputs, residual connections, and a feed-forward block update the anchor tokens. Pooling their final responses predicts residual log-scale $\Delta\ell_{tq}$ and depth bias $\Delta b_{tq}$. Thus the query reads scene information conditioned on a body--scene discrepancy, with the analytic initialization accounting for the dominant scale mismatch.
++In cross-attention, body anchors supply the queries and scene tokens supply the keys and values; normalization, residual connections, and feed-forward blocks are omitted for clarity. The resulting tokens encode body-conditioned scene evidence. Pooling the final responses gives the metric interaction representation $\mathbf z_{tq}^{\mathrm{met}}=\operatorname{Pool}(\mathbf H_{tq}^{(L)})$. A metric readout maps this representation to residual log-scale $\Delta\ell_{tq}$ and depth bias $\Delta b_{tq}$. Thus geometric correction is inferred from the learned human--scene relation, with analytic initialization accounting for the dominant scale mismatch.
+ 
+-\paragraph{Shared metric readout.}
++\paragraph{Temporal Aggregation.}
+ Normalized NLF confidences combine person-level predictions into frame-level residual scale $\rho_t$ and bias $b_t$ (Appendix~\ref{app:architecture}). Assuming a common scene scale within the input clip, we aggregate
+ \begin{equation}
+ \begin{aligned}
+@@ -66,26 +72,17 @@
+ \subsection{Dynamic Interaction Grounding}
+ \label{sec:translation-refinement}
+ 
+-With the metric reference established, grounding asks how a body's placement should change in response to its surroundings. Moving the body changes nearby observations, their geometric residuals, and their relevance. We therefore construct a placement-dependent interaction representation, read out a translation update, and recompute the representation at the revised location.
++With the metric reference established, the second module encodes how a body is situated relative to its surroundings and reads out a translation correction. Moving the body changes the relevant observations and geometric residuals. Its interaction representation must therefore depend on the current placement and be recomputed as that placement is refined.
+ 
+-\paragraph{Placement-Conditioned Interaction Attention.}
++\paragraph{Hierarchical Context Attention.}
+ We partition the SMPL surface into 96 corresponding regions, each represented by its centroid and eight sampled vertices. At iteration $k$, each region gathers scene points from four supports,
+-$\mathcal S=\{\mathcal W_3,\mathcal W_7,\mathcal W_{\mathrm{adp}},\mathcal W_{\mathrm{ann}}\}$:
++$\mathcal W=\{\mathcal W_3,\mathcal W_7,\mathcal W_{\mathrm{adp}},\mathcal W_{\mathrm{ann}}\}$:
+ fixed $3\times3$ and $7\times7$ windows, an adaptive window following its projected extent, and an outer annulus. These supports expose fine alignment cues together with broader environmental structure.
+ 
+-Each sample is encoded relative to the current body region using 3D and image-plane offsets and depth residuals. Comparison with an instance-aware human depth buffer separates observations associated with the person's own surface from environmental evidence. Other-human samples are excluded from both attention channels and retained only as interference statistics. Let $\mathbf z_{ri}^{(k)}$ encode sample $i$ relative to region $r$, and $\mathcal N_{rsc}^{(k)}$ be the valid sample set for support $s\in\mathcal S$ and channel $c\in\{\mathrm{self},\mathrm{env}\}$. Masked attention forms
+-\begin{equation}
+-\mathbf u_{rsc}^{(k)}=
+-\sum_{i\in\mathcal N_{rsc}^{(k)}}
+-\frac{\exp\!\left(a(\mathbf z_{ri}^{(k)})\right)}
+-{\sum_{j\in\mathcal N_{rsc}^{(k)}}\exp\!\left(a(\mathbf z_{rj}^{(k)})\right)}
+-\mathbf z_{ri}^{(k)},
+-\label{eq:placement-conditioned-attention}
+-\end{equation}
+-where $a$ is a learned scalar score; an empty set returns a zero token. Four supports and two channels yield eight context tokens per region, accompanied by valid-support ratios. Both the encoded relations and sampled sets depend on the current placement. Consequently, the same scene can yield different interaction evidence as the body moves.
++Each sample is encoded relative to the current body region using 3D and image-plane offsets and depth residuals. Comparison with an instance-aware human depth buffer separates observations associated with the person's own surface from environmental evidence. Other-human samples are excluded from both attention channels and retained only as interference statistics. Masked attention selects and pools the relation features within each support and channel, yielding eight context tokens per region together with valid-support ratios. Empty supports return zero tokens. Fusing this context with region geometry, body-region embeddings, and interference statistics gives a regional interaction representation $\mathbf z_r^{\mathrm{place},(k)}$. It encodes the body's agreement with observed human surfaces and its spatial relationship to the environment, supplying complementary evidence for placement. The pooling formulation is provided in Appendix~\ref{app:architecture}.
+ 
+-\paragraph{From interaction evidence to placement.}
+-Context tokens are fused with region geometry, body-region embeddings, support ratios, and interference statistics to obtain $\mathbf h_r^{(k)}$. Each region predicts a bounded translation proposal $\mathbf v_r^{(k)}$, gate $g_r^{(k)}$, and scalar log-variance $\ell_r^{(k)}$. Proposals are expressed along the region's viewing direction and two tangent directions, then converted to camera coordinates. Each proposes a translation of the \emph{whole body}. With $m_r^{(k)}$ indicating valid support, we aggregate
++\paragraph{Interaction-Aware Placement.}
++A placement readout maps $\mathbf z_r^{\mathrm{place},(k)}$ to a bounded translation proposal $\mathbf v_r^{(k)}$, gate $g_r^{(k)}$, and scalar log-variance $\ell_r^{(k)}$. This connects the implicit interaction representation to a concrete geometric action. Proposals are expressed along the region's viewing direction and two tangent directions, then converted to camera coordinates. Each proposes a translation of the \emph{whole body}. With $m_r^{(k)}$ indicating valid support, we aggregate
+ \begin{equation}
+ \alpha_r^{(k)}=m_r^{(k)}g_r^{(k)}\exp(-\ell_r^{(k)}),
+ \qquad
+@@ -94,27 +91,16 @@
+ {\max\!\left(\sum_r\alpha_r^{(k)},\varepsilon\right)}.
+ \label{eq:interaction-placement}
+ \end{equation}
+-The readout favors supported, reliable evidence. A person-level gate controls the bounded root update:
++The readout favors supported, reliable evidence. Supervision on these corrections trains the interaction representation without requiring explicit contact labels.
++
++\paragraph{Translation Refinement.}
++A person-level gate modulates the aggregated proposal after component-wise clipping (Appendix~\ref{app:architecture}), producing the root update $\Delta\boldsymbol\tau_{tq}^{(k)}$:
+ \begin{equation}
+-\begin{aligned}
+-\Delta\boldsymbol\tau_{tq}^{(k)}
+-&=g_{tq}^{\mathrm{person},(k)}\,
+-\operatorname{clip}_{[-d_{\max},d_{\max}]^3}\!\left(\widehat{\mathbf v}_{tq}^{(k)}\right),\\
+ \boldsymbol\tau_{tq}^{(k+1)}
+-&=\boldsymbol\tau_{tq}^{(k)}+\Delta\boldsymbol\tau_{tq}^{(k)}.
+-\end{aligned}
++=\boldsymbol\tau_{tq}^{(k)}+\Delta\boldsymbol\tau_{tq}^{(k)}.
+ \label{eq:translation-iteration}
+ \end{equation}
+-Two feed-forward steps share parameters and rebuild region locations, sample ownership, and attention context after each update. Here, \emph{dynamic} refers to this placement-dependent recomputation. Scene geometry, camera parameters, body pose, and shape remain fixed. Interaction is learned through the displacement supported by body--scene relations, without explicit contact classification or test-time optimization.
+-
+-\paragraph{World-space reconstruction.}
+-Extrinsics follow $\mathbf X^c=\mathbf R_{cw,t}\mathbf X^w+\mathbf t_{cw,t}^m$. The final human meshes are
+-\begin{equation}
+-\mathbf V_{tq}^{w}=\mathbf R_{cw,t}^{\mathsf T}
+-\left(\overline{\mathbf V}_{tq}+\boldsymbol\tau_{tq}^{(2)}-\mathbf t_{cw,t}^m\right),
+-\label{eq:grounded-world-reconstruction}
+-\end{equation}
+-applied vertexwise. The same inverse transform maps $\mathbf P_t^m$ to world coordinates, placing humans and scene geometry in a common metric frame.
++Two feed-forward steps share parameters. After each update, we rebuild region locations, sample ownership, and attention context to obtain a new $\mathbf z_r^{\mathrm{place},(k+1)}$. This closes the loop between relation encoding and geometric readout: an update changes the human--scene relationship on which the next update depends. Here, \emph{dynamic} refers to this placement-dependent recomputation. Scene geometry, camera parameters, body pose, and shape remain fixed. Finally, the calibrated inverse camera extrinsics map the refined bodies and metric scene points to a shared world frame (Appendix~\ref{app:coordinates}).
+ 
+ \subsection{Training Objectives}
+ \label{sec:training}
+--- previous_revision/tex/00_abs.tex
++++ current_v1/tex/00_abs.tex
+@@ -1,6 +1,6 @@
+ \begin{abstract}
+ 
+-Reconstructing humans and their surroundings from monocular video requires a common metric scale and coherent human placement. These quantities are coupled: a local human--scene discrepancy may arise from either an incorrectly scaled scene or a misplaced body. We introduce GroundedHuman, which uses the human body as a structured interface for reading scene evidence. Body--scene relations are encoded through queries and attention, from which the model infers metric calibration and placement corrections. \textbf{Body-Anchored Metric Calibration} initializes scale from human surfaces, queries scene features with body anchors, and aggregates the resulting corrections to calibrate scene depth and camera translation. Given this metric reference, \textbf{Dynamic Interaction Grounding} attends to body-relative geometry across spatial supports and converts the evidence into reliable whole-body translation updates. The attention context is recomputed at each updated placement, allowing refinement to respond to the changing human--scene relationship while preserving body pose and shape. This formulation grounds interaction implicitly, without explicit contact prediction, and reconstructs humans, scenes, and camera motion in a shared metric world. Experiments evaluate world-space human motion, scene depth, camera trajectories, and human--scene spatial consistency.
++Reconstructing humans and their surroundings from monocular video requires a common metric scale and coherent human placement. These quantities are coupled: a local human--scene discrepancy may arise from either an incorrectly scaled scene or a misplaced body. We introduce GroundedHuman, which infers metric calibration and human placement from learned implicit interaction representations. Human structure determines how to query scene evidence; attention encodes their associations, and geometric readouts convert these relations into corrections. \textbf{Body-Anchored Metric Calibration} initializes scale from human surfaces and uses body-anchored scene queries to encode correspondence for residual calibration of scene depth and camera translation. Within this metric reference, \textbf{Dynamic Interaction Grounding} encodes regional human--environment relations through hierarchical context attention and reads out reliable whole-body translation updates. Each update changes the body's relation to the scene, prompting the interaction representation to be recomputed while preserving pose and shape. This formulation grounds interaction without explicit contact prediction and reconstructs humans, scenes, and camera motion in a shared metric world. Experiments evaluate world-space human motion, scene depth, camera trajectories, and human--scene spatial consistency.
+ 
+ \end{abstract}
+ 
+--- previous_revision/tex/01_intro.tex
++++ current_v1/tex/01_intro.tex
+@@ -6,21 +6,21 @@
+ 
+ Recent work has increasingly coupled human and scene reconstruction. Human3R jointly predicts humans, scenes, and cameras, while UniSH combines human and scene features for metric reconstruction and human placement \citep{chen2026human3r,li2026unish}. UniCon3R introduces contact-aware feedback to correct human reconstruction, and GRAFT iteratively refines human parameters using nearby scene geometry \citep{sur2026unicon3r,ym2026graft}. These methods demonstrate the importance of scene-aware human reasoning, but metric ambiguity and interaction ambiguity remain closely entangled. Before local geometric discrepancies can reliably indicate whether a body is misplaced, the human and scene must first be expressed in a comparable metric space. Moreover, interaction constraints need not always be represented by explicit contact predictions; they can also be inferred from the spatial context surrounding the body.
+ 
+-Based on this observation, we introduce \textbf{GroundedHuman}, a framework that uses the human body as a \emph{structured interface to the scene}. A body specifies where scene evidence should be gathered and supplies the geometric reference needed to interpret that evidence. Its metric extent anchors scene scale; its spatial configuration determines which surrounding observations can guide human placement. We encode these relations through body-conditioned queries and attention, then read out the corresponding geometric corrections. This view connects metric calibration and placement refinement through a common principle: human--scene relations provide the evidence from which a coherent reconstruction is grounded. Interaction is represented implicitly by these relations and their induced updates, without an intermediate contact-label prediction.
++Based on this observation, we introduce \textbf{GroundedHuman}, a framework that infers metric calibration and human placement from \emph{implicit interaction representations}. Our key idea is that the relationship between a body and its observed surroundings provides evidence for both the scene's metric reference and the body's placement within it. Human structure specifies where and how to query scene evidence; attention encodes the resulting associations into relation features, and geometric readouts translate these features into corrections. This connects calibration and placement through a common formulation: encode human--scene interaction, then infer the geometry it supports. Interaction is represented by these learned relations and their induced updates, without an intermediate contact-label prediction.
+ 
+-\textbf{Body-Anchored Metric Calibration} first establishes the reference in which these relations can be compared. Human-surface depth correspondences provide an analytic scale initialization. Our \emph{Metric Alignment Query} then uses body anchors, conditioned on their current geometric discrepancies, to retrieve scene features and predict residual scale and depth corrections. Combining observations across people and frames yields a shared calibration for scene depth and camera translation. Human structure therefore serves both as a metric reference and as a means of selecting scene evidence for calibration.
++\textbf{Body-Anchored Metric Calibration} first establishes the reference in which regional relations can be compared. Human-surface depth correspondences provide an analytic scale initialization. Our \emph{Body-Anchored Scene Query} then relates geometrically conditioned body anchors to local scene features, forming a metric interaction representation. A metric readout predicts residual scale and depth corrections, and aggregation across people and frames yields a shared calibration for scene depth and camera translation. Human geometry therefore supplies both the metric prior and the conditions under which scene evidence is interpreted.
+ 
+-\textbf{Dynamic Interaction Grounding} then reads the calibrated scene from the perspective of the current body placement. Our \emph{Placement-Conditioned Interaction Attention} gathers body-relative geometry across local and broader supports, treating self-surface and environmental observations as complementary evidence. Regional representations yield whole-body translation proposals, which are combined according to their reliability. Updating placement also changes the evidence: we reproject the body, rebuild its surrounding context, and attend again. This dynamic process refines root translation while preserving pose and shape, learning how body--scene relations should influence placement without explicitly classifying contact.
++\textbf{Dynamic Interaction Grounding} encodes the relation between the current body and the calibrated scene. Our \emph{Hierarchical Context Attention} combines body-relative geometry across local and broader supports, treating self-surface and environmental observations as complementary evidence. The resulting regional interaction representations support a placement readout that predicts and aggregates whole-body translation proposals according to their reliability. Updating the body changes these relations: we reproject it, rebuild the context, and encode interaction again. This dynamic loop refines root translation while preserving pose and shape, learning how human--scene relations should influence placement without explicitly classifying contact.
+ 
+ Our contributions are summarized as follows:
+ 
+ \begin{itemize}
+ 
+-\item We introduce \textbf{GroundedHuman}, a framework for monocular dynamic human--scene reconstruction that uses the body as a structured interface to scene evidence. It connects metric calibration and placement refinement through body--scene relations, reconstructing humans, scene geometry, and cameras in a shared metric world.
++\item We introduce \textbf{GroundedHuman}, a framework for monocular dynamic human--scene reconstruction that infers metric calibration and human placement from implicit interaction representations. This relation-based formulation reconstructs humans, scene geometry, and cameras in a shared metric world without explicit contact prediction.
+ 
+-\item We propose \textbf{Body-Anchored Metric Calibration}, whose \emph{Metric Alignment Query} reads scene features using geometrically conditioned body anchors. Together with surface-based initialization and temporal aggregation, it establishes a common metric reference for scene depth and camera translation.
++\item We propose \textbf{Body-Anchored Metric Calibration}, whose \emph{Body-Anchored Scene Query} encodes human--scene correspondence for a residual metric readout. Together with surface-based initialization and temporal aggregation, it establishes a common metric reference for scene depth and camera translation.
+ 
+-\item We develop \textbf{Dynamic Interaction Grounding}, whose \emph{Placement-Conditioned Interaction Attention} converts regional geometric evidence into reliable translation updates. Recomputing context at the updated body location enables implicit interaction refinement while preserving pose and shape.
++\item We develop \textbf{Dynamic Interaction Grounding}, whose \emph{Hierarchical Context Attention} forms regional interaction representations for reliable translation updates. Re-encoding the relations at each updated body location enables dynamic placement refinement while preserving pose and shape.
+ 
+ \end{itemize}
+ 
+--- previous_revision/tex/05_conclusion.tex
++++ current_v1/tex/05_conclusion.tex
+@@ -1,6 +1,6 @@
+ \section{Conclusion}\label{sec:conclusion}
+ 
+-We presented GroundedHuman, which uses the human body as a structured interface to scene evidence for monocular dynamic human--scene reconstruction. Body-Anchored Metric Calibration reads scene features through metric alignment queries to establish a shared reference for depth and camera translation. Dynamic Interaction Grounding then attends to body-relative geometry and converts the resulting interaction evidence into placement corrections, recomputing context as the body moves. Together, the modules recover metric scale and human placement from body--scene relations while retaining the pose and shape supplied by pretrained estimators. Evaluations examine world-space motion, scene geometry, and human--scene spatial consistency. Extending placement-conditioned reasoning to temporal interaction evidence and articulated corrections is a direction for future work.
++We presented GroundedHuman, which formulates metric calibration and human placement as geometric readouts of implicit interaction representations. Body-Anchored Scene Query encodes human--scene correspondence to establish a shared metric reference; Hierarchical Context Attention encodes regional relations within that reference to infer placement corrections. Updating placement changes the relations themselves, so Dynamic Interaction Grounding recomputes its representation before the next correction. This connects queries, attention, and geometric updates through a common relation-based formulation while retaining the pose and shape supplied by pretrained estimators. Evaluations examine world-space motion, scene geometry, and human--scene spatial consistency. Extending these interaction representations to temporal evidence and articulated corrections is a direction for future work.
+ 
+ \paragraph{Limitations.}
+ GroundedHuman depends on the quality and visibility of the initial human estimates and on the accuracy of scene depth. Biased body shape or root position can affect scale calibration, while occlusion and local depth errors can weaken the evidence for translation refinement. Without reliable human observations, the metric scale is weakly constrained. Preserving pose and shape prevents global alignment errors from being absorbed by local deformation, but also leaves incorrect articulation and body shape unchanged. Translation alone cannot resolve all human--scene contact errors, particularly when these require changes in pose or scene geometry.
+--- previous_revision/appendix_en.tex
++++ current_v1/appendix_en.tex
+@@ -76,6 +76,14 @@
+ \end{equation}
+ The bias acts only in the depth domain and is not directly added to camera translation. After shared-scale propagation, TRSTR performs a constrained camera-space translation update on the human root, while pose and shape remain frozen.
+ 
++With $\overline{\mathbf V}_{tq}$ denoting the posed vertices before root translation, the refined human mesh is transformed vertexwise as
++\begin{equation}
++\mathbf V_{tq}^{w}=\mathbf R_{cw,t}^{\mathsf T}
++\left(\overline{\mathbf V}_{tq}+\boldsymbol\tau_{tq}^{(2)}-\mathbf t_{cw,t}^m\right).
++\label{eq:grounded-world-reconstruction}
++\end{equation}
++The same inverse camera transform maps the metric scene points to the shared world frame.
++
+ \subsection{Tensor, Precision, and Device Conventions}
+ 
+ \begin{table}[H]
+@@ -100,7 +108,7 @@
+ \section{Model Architecture Details and Complete Inference}
+ \label{app:architecture}
+ 
+-The residual calibration implementation is referred to as HSI in the configuration and architecture records below; its anchor--scene read implements Metric Alignment Query in Sec.~\ref{sec:scale-calibration}. TRSTR denotes the regional translation refiner underlying Dynamic Interaction Grounding in Sec.~\ref{sec:translation-refinement}. These implementation names identify components of the two main modules, rather than additional stages. Placement-Conditioned Interaction Attention is implemented by the masked regional pooling described below; the dynamic update recomputes this evidence at the revised body location.
++The residual calibration implementation is referred to as HSI in the configuration and architecture records below; its anchor--scene read implements Body-Anchored Scene Query in Sec.~\ref{sec:scale-calibration}. TRSTR denotes the regional translation refiner underlying Dynamic Interaction Grounding in Sec.~\ref{sec:translation-refinement}. These implementation names identify components of the two main modules, rather than additional stages. Hierarchical Context Attention uses the masked regional pooling described below to form the placement interaction representation; the dynamic update recomputes this representation at the revised body location.
+ 
+ \subsection{VGGT-Ω, NLF, and Baseline Boundaries}
+ 
+@@ -145,6 +153,17 @@
+ 
+ The human depth buffer stores the nearest projected human and its instance identity. A scene sample is associated with that human when the depth difference lies within the configured tolerance. Self-surface and environment observations are pooled separately in each support domain, producing eight tokens. Other-human samples are excluded from both pooling channels and retained as an interference ratio. Region validity requires a positive center depth, a valid person, and sufficient support in at least one pooled channel. The spatial configuration uses a minimum support ratio of $0.25$, 16D probe tokens, a 32D anatomical embedding, and a 256D regional representation.
+ 
++Let $\mathbf e_{ri}^{(k)}$ encode sample $i$ relative to body region $r$ at iteration $k$, and let $\mathcal N_{rsc}^{(k)}$ denote valid samples in support $s\in\{\mathcal W_3,\mathcal W_7,\mathcal W_{\mathrm{adp}},\mathcal W_{\mathrm{ann}}\}$ and channel $c\in\{\mathrm{self},\mathrm{env}\}$. Masked attention pooling is
++\begin{equation}
++\mathbf u_{rsc}^{(k)}=
++\sum_{i\in\mathcal N_{rsc}^{(k)}}
++\frac{\exp\!\left(a(\mathbf e_{ri}^{(k)})\right)}
++{\sum_{j\in\mathcal N_{rsc}^{(k)}}\exp\!\left(a(\mathbf e_{rj}^{(k)})\right)}
++\mathbf e_{ri}^{(k)},
++\label{eq:placement-conditioned-attention}
++\end{equation}
++where $a$ is a learned scalar score. Empty sample sets return zero tokens. The eight pooled tokens are fused with region geometry, anatomical embeddings, support ratios, and interference statistics to form $\mathbf z_r^{\mathrm{place},(k)}$. Both the sample relations and their valid sets change with body placement; the attention is conditioned on this geometry through its inputs and sampling support.
++
+ \begin{equation}
+ \begin{aligned}
+ \alpha_r&=m_rg_r\exp(-\ell_r),\qquad
+@@ -164,7 +183,7 @@
+ \centering
+ % Previous method artwork is retired; replacement panels will be drawn by the author.
+ \fbox{\parbox[c][2.1cm][c]{0.94\linewidth}{\centering\textit{Architecture details to be redrawn.}}}
+-\caption{\textbf{Query-based calibration and placement-conditioned attention.} (a) Human-surface depth ratios initialize scene scale; Metric Alignment Query uses 24 geometrically conditioned body anchors to read local scene features and predict residual scale and bias. (b) Placement-Conditioned Interaction Attention pools self-surface and environmental evidence across four supports around 96 body regions. Reliable regional proposals update whole-body translation; reprojecting and resampling at the revised placement closes the two-step refinement loop. Pose and shape are preserved.}
++\caption{\textbf{Interaction representations and geometric readouts.} (a) Human-surface depth ratios initialize scene scale; Body-Anchored Scene Query relates 24 body anchors to local scene features, forming a metric interaction representation for residual scale and bias prediction. (b) Hierarchical Context Attention pools self-surface and environmental evidence across four supports around 96 body regions, forming regional interaction representations for whole-body translation proposals. Reprojecting and resampling after an update recomputes the relations for the next placement readout. Pose and shape are preserved.}
+ \label{fig:method-detail}
+ \end{figure}
+ 

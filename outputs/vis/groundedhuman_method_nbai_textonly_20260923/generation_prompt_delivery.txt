@@ -1,0 +1,29 @@
+Create a finished scientific architecture figure for a computer vision paper, landscape 3072x1024, white background. Professional clean CVPR figure with beautiful small 3D technical illustrations and exceptionally clear English typography. SINGLE HORIZONTAL ROW: tall input card, two stacked encoder cards, two large equally sized dashed blue module panels, tall output card. No extra panels underneath. Consistent thin dark arrows, generous whitespace, navy text. All text large and legible. NEVER add captions or words beyond the exact short labels listed below. No duplicated labels, no pseudo-text. Prioritize simplicity and correct text over decoration.
+
+Layout widths: input 8%, stacked encoders 14%, first module 28%, second module 28%, output 13%, rest for gaps. Center all cards vertically. Module titles above dashed frames. Color code: coral human evidence, lavender scene evidence, teal interaction representations and readouts. Token arrays and illustrations should look polished, not hand sketched.
+
+INPUT card: exact label "Monocular video" above three small frames showing one fully clothed adult in a room. Fork a single arrow to both encoders.
+TOP ENCODER: exact label "VGGT-Ω"; below it a miniature depth map, camera frustum, lavender token row. No other words.
+BOTTOM ENCODER: exact label "NLF"; below it a neutral fully clothed technical human avatar, joint markers, coral token row. No other words.
+
+FIRST MODULE title above frame: "Body-Anchored" on line one, "Metric Calibration" on line two.
+Inside this panel use THREE CLEAR HORIZONTAL TIERS connected top-to-bottom:
+TOP TIER: coral body joint/token illustration labeled "Q" at left, lavender scene patch grid labeled "K, V" at right. Incoming encoder arrows feed the respective token sets. A small separate badge "Analytic scale" sits above these tokens. Clean connecting lines visualize attention between human queries and scene tokens.
+MIDDLE TIER: attention outputs converge on ONE horizontal row of teal latent tokens. Below the tokens write exactly "Interaction representation". The coral and lavender associations must visibly lead to this representation.
+BOTTOM TIER: a clear arrow from the representation to a small rounded box "Metric readout", followed by a badge "Scale + bias". Small but legible text "Temporal aggregation" under the badge.
+At the very bottom inside frame, one broad strip with the exact mechanism name "Body-Anchored Scene Query", on two lines if necessary. Print this name ONCE.
+An arrow from the FIRST module to SECOND module is labeled "Metric scene".
+
+SECOND MODULE title above frame: "Dynamic Interaction" on line one, "Grounding" on line two.
+Inside this panel also use THREE CLEAR HORIZONTAL TIERS:
+TOP TIER: small clothed technical human with colored body regions and nested sampling windows near the foot/floor, labeled "Body regions". Beside it, two compact token rows with EXACT labels "Self surface" and "Environment". Both feed a simple attention association graphic.
+MIDDLE TIER: associations converge on ONE horizontal row of teal latent tokens, visually matching the first module. Below the tokens write exactly "Interaction representation".
+BOTTOM TIER: arrow from representation to a rounded box "Placement readout", then a badge "Root translation".
+Represent dynamic iteration using ONE simple horizontal badge beneath Root translation: "Resample + update ×2". This means the complete sampling-attention-translation step is performed twice with refreshed context. DO NOT draw ANY feedback line, curved loop, vertical side arrow or return arrow. Keep the entire module a clean top-to-bottom flow.
+At very bottom inside frame, one broad strip with exact mechanism name "Hierarchical Context Attention", on two lines if necessary. Print this name ONCE.
+
+OUTPUT card: exact label "Metric reconstruction" above a high-quality isometric miniature room with floor, sofa, fully clothed adult, sparse point-cloud dots and camera frustums. One arrow from second module to output. No further text.
+
+Scientific meaning to express VISUALLY: human-conditioned scene queries encode an implicit interaction representation, then a metric readout calibrates scale; body-region attention encodes a separate interaction representation, then a placement readout moves the body. Two successive stages, two relation representations, two geometric readouts. Updating placement changes the scene sampling for the next step. Keep module and mechanism names exact. No contact classifier, no temporal stability branch, no pose refinement. No unrelated symbols or text. Clean deliberate geometry, excellent typesetting, readable at paper width.
+
+STRICT: Text is horizontal. Each label appears once, except Interaction representation which appears once in EACH module. Metric scene appears once. All arrows INSIDE panels point DOWN. Two independent evidence branches Self surface and Environment both join Interaction representation; do not connect Self surface to Environment in sequence. Add a clear arrow from each readout box down to its output badge. No extra K outside K,V. No words other than the specified labels. No feedback arrows: the horizontal Resample + update ×2 badge conveys iterative refinement. Scientific visual clarity matters more than density.

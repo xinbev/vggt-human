@@ -1,0 +1,1406 @@
+perl: warning: Setting locale failed.
+perl: warning: Please check that your locale settings:
+	LC_ALL = "C.UTF-8",
+	LC_CTYPE = "C.UTF-8",
+	LC_NUMERIC = (unset),
+	LC_COLLATE = (unset),
+	LC_TIME = (unset),
+	LC_MONETARY = (unset),
+	LANG = "C.UTF-8"
+    are supported and installed on your system.
+perl: warning: Falling back to the system default locale ("Chinese (Simplified)_China.936").
+Initial Win CP for (console input, console output, system): (CP936, CP65001, CP936)
+I changed them all to CP936
+Rc files read (in order):
+  NONE
+Latexmk: This is Latexmk, John Collins, 9 March 2026. Version 4.88.
+No existing .aux file, so I'll make a simple one, and require run of *latex.
+Latexmk: applying rule 'xelatex'...
+Rule 'xelatex':  Reasons for rerun
+Category 'other':
+  Rerun of 'xelatex' forced or previously required:
+    Reason or flag: 'Initial setup'
+
+------------
+Run number 1 of rule 'xelatex'
+------------
+------------
+Running 'xelatex -no-pdf -interaction=nonstopmode -halt-on-error -file-line-error -recorder -output-directory="C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923"  "main.tex"'
+------------
+This is XeTeX, Version 3.141592653-2.6-0.999997 (MiKTeX 25.12) (preloaded format=xelatex.fmt)
+ restricted \write18 enabled.
+entering extended mode
+(main.tex
+LaTeX2e <2025-11-01>
+L3 programming layer <2025-12-24>
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/base\article.cls
+Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/base\size10.clo))
+(iclr2027_conference.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/eso-pic\eso-pic.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\keyval.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/xcolor\xcolor.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\color.cfg)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics-def\xetex.def)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\mathcolor.ltx)))
+ (fancyhdr.sty) (natbib.sty))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\times.sty)
+(math_commands.tex
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsmath.sty
+For additional information on amsmath, use the `?' option.
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amstext.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsgen.sty))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsbsy.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsopn.sty))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amsfonts.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/tools\bm.sty))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspec.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/l3packages/xparse\xparse.
+sty (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/l3kernel\expl3.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/l3backend\l3backend-xetex
+.def)))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspec-xetex.s
+ty (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/base\fontenc.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspec.cfg)))Running miktex-makemf.exe...
+
+
+Sorry, but miktex-makemf did not succeed.
+
+
+
+The log file hopefully contains the information to get MiKTeX going again:
+
+
+
+  C:\Users\ROG\AppData\Local\MiKTeX\miktex\log\miktex-makemf.log
+
+Running miktex-hbf2gf.exe...
+Couldn't open `TeX Gyre Term.cfg'
+
+
+
+hbf2gf (CJK ver. 4.8.4)
+
+
+
+
+Sorry, but miktex-maketfm did not succeed.
+
+The log file hopefully contains the information to get MiKTeX going again:
+
+  C:\Users\ROG\AppData\Local\MiKTeX\miktex\log\miktex-maketfm.log
+Running miktex-makemf.exe...
+
+
+Sorry, but miktex-makemf did not succeed.
+
+
+
+The log file hopefully contains the information to get MiKTeX going again:
+
+
+
+  C:\Users\ROG\AppData\Local\MiKTeX\miktex\log\miktex-makemf.log
+
+Running miktex-hbf2gf.exe...
+Couldn't open `TeX Gyre Her.cfg'
+
+
+
+hbf2gf (CJK ver. 4.8.4)
+
+
+
+
+Sorry, but miktex-maketfm did not succeed.
+
+The log file hopefully contains the information to get MiKTeX going again:
+
+  C:\Users\ROG\AppData\Local\MiKTeX\miktex\log\miktex-maketfm.log
+
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphicx.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphics.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\trig.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\graphics.cfg
+))) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/wrapfig\wrapfig.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/float\float.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/booktabs\booktabs.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/tools\array.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/tools\tabularx.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/multirow\multirow.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amssymb.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hyperref.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/iftex\iftex.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/kvsetkeys\kvsetkeys.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/kvdefinekeys\kvdefineke
+ys.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/pdfescape\pdfescape.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/ltxcmds\ltxcmds.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/pdftexcmds\pdftexcmds.s
+ty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/infwarerr\infwarerr.sty
+))) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hycolor\hycolor.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\nameref.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/refcount\refcount.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/gettitlestring\gettitle
+string.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/kvoptions\kvoptions.sty))
+) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/etoolbox\etoolbox.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/stringenc\stringenc.sty
+) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\pd1enc.def)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/intcalc\intcalc.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\puenc.def)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/url\url.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/bitset\bitset.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/bigintcalc\bigintcalc.s
+ty))) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hxetex.def
+
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/rerunfilecheck\rerunfilec
+heck.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/uniquecounter\uniquecou
+nter.sty)))
+(C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current
+_review_20260923\main.aux)
+
+Package hyperref Warning: Rerun to get /PageLabels entry.
+
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd)
+(tex/00_abs.tex) (tex/01_intro.tex
+
+Package natbib Warning: Citation `chen2026human3r' on page 1 undefined on input
+ line 3.
+
+
+Package natbib Warning: Citation `li2026unish' on page 1 undefined on input lin
+e 3.
+
+
+Package natbib Warning: Citation `liu2026josh' on page 1 undefined on input lin
+e 3.
+
+[1]
+
+Package natbib Warning: Citation `wang2025vggt' on page 2 undefined on input li
+ne 5.
+
+
+Package natbib Warning: Citation `wang2026vggtomega' on page 2 undefined on inp
+ut line 5.
+
+
+Package natbib Warning: Citation `sarandi2024nlf' on page 2 undefined on input 
+line 5.
+
+
+Package natbib Warning: Citation `chen2026human3r' on page 2 undefined on input
+ line 7.
+
+
+Package natbib Warning: Citation `li2026unish' on page 2 undefined on input lin
+e 7.
+
+
+Package natbib Warning: Citation `sur2026unicon3r' on page 2 undefined on input
+ line 7.
+
+
+Package natbib Warning: Citation `ym2026graft' on page 2 undefined on input lin
+e 7.
+
+[2]) (tex/02_relatedwork.tex [3]
+
+Package natbib Warning: Citation `wang2024dust3r' on page 4 undefined on input 
+line 6.
+
+
+Package natbib Warning: Citation `leroy2024mast3r' on page 4 undefined on input
+ line 6.
+
+
+Package natbib Warning: Citation `wang2025vggt' on page 4 undefined on input li
+ne 6.
+
+
+Package natbib Warning: Citation `wang2025pi3' on page 4 undefined on input lin
+e 6.
+
+
+Package natbib Warning: Citation `zhang2024monst3r' on page 4 undefined on inpu
+t line 6.
+
+
+Package natbib Warning: Citation `wang2025cut3r' on page 4 undefined on input l
+ine 6.
+
+
+Package natbib Warning: Citation `wang2026vggtomega' on page 4 undefined on inp
+ut line 6.
+
+
+Package natbib Warning: Citation `loper2023smpl' on page 4 undefined on input l
+ine 9.
+
+
+Package natbib Warning: Citation `pavlakos2019smplx' on page 4 undefined on inp
+ut line 9.
+
+
+Package natbib Warning: Citation `goel2023humans4d' on page 4 undefined on inpu
+t line 9.
+
+
+Package natbib Warning: Citation `baradel2024multihmr' on page 4 undefined on i
+nput line 9.
+
+
+Package natbib Warning: Citation `sarandi2024nlf' on page 4 undefined on input 
+line 9.
+
+
+Package natbib Warning: Citation `yuan2022glamr' on page 4 undefined on input l
+ine 9.
+
+
+Package natbib Warning: Citation `ye2023slahmr' on page 4 undefined on input li
+ne 9.
+
+
+Package natbib Warning: Citation `wang2024tram' on page 4 undefined on input li
+ne 9.
+
+
+Package natbib Warning: Citation `shin2024wham' on page 4 undefined on input li
+ne 9.
+
+
+Package natbib Warning: Citation `shen2024gvhmr' on page 4 undefined on input l
+ine 9.
+
+
+Package natbib Warning: Citation `wang2026duomo' on page 4 undefined on input l
+ine 9.
+
+
+Package natbib Warning: Citation `zhao2024synchmr' on page 4 undefined on input
+ line 12.
+
+
+Package natbib Warning: Citation `song2026metrichmsr' on page 4 undefined on in
+put line 12.
+
+
+Package natbib Warning: Citation `liu2026josh' on page 4 undefined on input lin
+e 12.
+
+
+Package natbib Warning: Citation `rojas2025hamst3r' on page 4 undefined on inpu
+t line 12.
+
+
+Package natbib Warning: Citation `chen2026human3r' on page 4 undefined on input
+ line 12.
+
+
+Package natbib Warning: Citation `li2026unish' on page 4 undefined on input lin
+e 12.
+
+
+Package natbib Warning: Citation `sur2026unicon3r' on page 4 undefined on input
+ line 12.
+
+
+Package natbib Warning: Citation `ym2026graft' on page 4 undefined on input lin
+e 12.
+
+) (tex/03_method_v7.tex [4]
+
+LaTeX Warning: Reference `fig:method-overview' on page 5 undefined on input lin
+e 13.
+
+
+LaTeX Warning: Reference `app:architecture' on page 5 undefined on input line 4
+4.
+
+[5]
+
+LaTeX Warning: Reference `app:architecture' on page 6 undefined on input line 6
+0.
+
+
+LaTeX Warning: Reference `app:architecture' on page 6 undefined on input line 8
+2.
+
+[6]
+
+LaTeX Warning: Reference `app:architecture' on page 7 undefined on input line 9
+7.
+
+
+LaTeX Warning: Reference `app:coordinates' on page 7 undefined on input line 10
+3.
+
+
+Underfull \hbox (badness 1394) in paragraph at lines 118--119
+[]\TU/TimesNewRoman(0)/m/n/10 With calibration fixed, Dynamic Interaction Groun
+ding is trained on clean, scale-perturbed,
+
+LaTeX Warning: Reference `app:training' on page 7 undefined on input line 128.
+
+) (tex/04_exp.tex [7]
+
+LaTeX Warning: Reference `app:training' on page 8 undefined on input line 10.
+
+
+LaTeX Warning: Reference `tab:global-motion' on page 8 undefined on input line 
+48.
+
+
+LaTeX Warning: Reference `fig:temporal-4d' on page 8 undefined on input line 50
+.
+
+
+LaTeX Warning: Reference `sec:scale-calibration' on page 8 undefined on input l
+ine 68.
+
+
+LaTeX Warning: Reference `sec:scale-calibration' on page 8 undefined on input l
+ine 68.
+
+[8]
+
+LaTeX Warning: Reference `fig:general-reconstruction' on page 9 undefined on in
+put line 73.
+
+
+LaTeX Warning: Reference `fig:general-reconstruction' on page 9 undefined on in
+put line 76.
+
+
+LaTeX Warning: Reference `sec:scale-calibration' on page 9 undefined on input l
+ine 76.
+
+[9]
+
+LaTeX Warning: Reference `tab:local-hmr' on page 10 undefined on input line 81.
+
+
+
+Package natbib Warning: Citation `sur2026unicon3r' on page 10 undefined on inpu
+t line 112.
+
+
+LaTeX Warning: Reference `tab:body-region-ablation' on page 10 undefined on inp
+ut line 112.
+
+
+Package natbib Warning: Citation `sur2026unicon3r' on page 10 undefined on inpu
+t line 130.
+
+
+Package natbib Warning: Citation `sur2026unicon3r' on page 10 undefined on inpu
+t line 130.
+
+
+LaTeX Warning: Reference `fig:human-scene-interaction' on page 10 undefined on 
+input line 137.
+
+[10]
+
+LaTeX Warning: Reference `fig:metric-measurement' on page 11 undefined on input
+ line 157.
+
+
+Underfull \hbox (badness 1142) in paragraph at lines 156--158
+\TU/TimesNewRoman(0)/m/n/10 sions with reference measurements and MapA-
+) (tex/05_conclusion.tex [11]
+
+LaTeX Warning: Reference `app:limitations' on page 12 undefined on input line 2
+0.
+
+)
+No file main.bbl.
+[12] (appendix_en.tex
+
+LaTeX Warning: Reference `sec:experiments' on page 13 undefined on input line 4
+.
+
+
+LaTeX Warning: Reference `sec:scale-calibration' on page 13 undefined on input 
+line 8.
+
+
+LaTeX Warning: Reference `tab:bonn-length' on page 13 undefined on input line 1
+0.
+
+
+LaTeX Warning: Reference `tab:tum-camera' on page 13 undefined on input line 37
+.
+
+
+Package natbib Warning: Citation `chen2026human3r' on page 13 undefined on inpu
+t line 37.
+
+
+LaTeX Warning: Reference `fig:general-reconstruction' on page 13 undefined on i
+nput line 59.
+
+
+LaTeX Warning: Reference `sec:scene-reconstruction' on page 13 undefined on inp
+ut line 59.
+
+
+LaTeX Warning: Reference `app:coordinates' on page 13 undefined on input line 6
+4.
+
+
+LaTeX Warning: Reference `app:architecture' on page 13 undefined on input line 
+64.
+
+
+LaTeX Warning: Reference `app:training' on page 13 undefined on input line 64.
+
+
+LaTeX Warning: Reference `app:evaluation' on page 13 undefined on input line 64
+.
+
+
+LaTeX Warning: Reference `app:limitations' on page 13 undefined on input line 6
+4.
+
+[13]
+
+LaTeX Warning: Reference `eq:temporal-calibration' on page 14 undefined on inpu
+t line 68.
+
+
+LaTeX Warning: Reference `sec:scale-calibration' on page 14 undefined on input 
+line 111.
+
+
+LaTeX Warning: Reference `sec:translation-refinement' on page 14 undefined on i
+nput line 111.
+
+[14]
+
+LaTeX Warning: Reference `eq:scale-initialization' on page 15 undefined on inpu
+t line 121.
+
+
+LaTeX Warning: Reference `eq:temporal-calibration' on page 15 undefined on inpu
+t line 146.
+
+[15]
+
+LaTeX Warning: Reference `eq:temporal-calibration' on page 16 undefined on inpu
+t line 148.
+
+
+LaTeX Warning: Reference `eq:appendix-trstr-update' on page 16 undefined on inp
+ut line 178.
+
+
+Underfull \vbox (badness 10000) has occurred while \output is active [16]
+[17]
+
+Package natbib Warning: Citation `chen2026human3r' on page 18 undefined on inpu
+t line 276.
+
+
+LaTeX Warning: Reference `fig:temporal-4d' on page 18 undefined on input line 3
+00.
+
+
+LaTeX Warning: Reference `fig:human-scene-interaction' on page 18 undefined on 
+input line 300.
+
+
+LaTeX Warning: Reference `fig:metric-measurement' on page 18 undefined on input
+ line 300.
+
+
+LaTeX Warning: Reference `fig:general-reconstruction' on page 18 undefined on i
+nput line 300.
+
+
+LaTeX Warning: Reference `sec:scene-reconstruction' on page 18 undefined on inp
+ut line 300.
+
+[18])
+
+Package natbib Warning: There were undefined citations.
+
+[19]
+(C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current
+_review_20260923\main.aux)
+
+LaTeX Warning: There were undefined references.
+
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
+
+Package rerunfilecheck Warning: File `main.out' has changed.
+(rerunfilecheck)                Rerun to get outlines right
+(rerunfilecheck)                or use package `bookmark'.
+
+ )
+(see the transcript file for additional information)
+Output written on C:/Users\ROG\PycharmProjects\vggt-omega\outputs\paper\grounde
+dhuman_v1_current_review_20260923\main.xdv (19 pages, 567420 bytes).
+Transcript written on C:/Users\ROG\PycharmProjects\vggt-omega\outputs\paper\gro
+undedhuman_v1_current_review_20260923\main.log.
+Latexmk: Getting log file 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.log'
+Latexmk: Examining 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.fls'
+Latexmk: Examining 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.log'
+Latexmk: References changed.
+Latexmk: Missing bbl file 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.bbl' in following:
+ No file main.bbl.
+Latexmk: References changed.
+Latexmk: References changed.
+Latexmk: Log file says output to 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.xdv'
+Latexmk: Using bibtex to make bibliography file(s).
+  ===Source file 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.bbl' for 'xelatex'
+Create bibtex C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main
+Latexmk: Found bibliography file(s):
+  ./references.bib
+Latexmk: applying rule 'bibtex C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main'...
+Rule 'bibtex C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main':  Reasons for rerun
+Category 'other':
+  Rerun of 'bibtex C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main' forced or previously required:
+    Reason or flag: 'Initial set up of rule'
+
+------------
+Run number 1 of rule 'bibtex C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main'
+------------
+Latexmk: Change directory to 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/'.
+To assist finding of files in document directory, I set
+  BIBINPUTS='C:/Users/ROG/PycharmProjects/vggt-omega/.paper/my_paper/versions/v1;C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923;'
+  BSTINPUTS='C:/Users/ROG/PycharmProjects/vggt-omega/.paper/my_paper/versions/v1;'.
+------------
+Running 'bibtex  "main.aux"'
+------------
+This is BibTeX, Version 0.99e (MiKTeX 25.12)
+The top-level auxiliary file: main.aux
+The style file: iclr2027_conference.bst
+Database file #1: references.bib
+Warning--string name "iccv" is undefined
+--line 4 of file references.bib
+Warning--string name "eccv" is undefined
+--line 10 of file references.bib
+Warning--string name "cvpr" is undefined
+--line 16 of file references.bib
+Warning--empty booktitle in baradel2024multihmr
+Warning--empty booktitle in goel2023humans4d
+Warning--empty booktitle in ye2023slahmr
+(There were 6 warnings)
+Latexmk: Change directory back to 'C:/Users/ROG/PycharmProjects/vggt-omega/.paper/my_paper/versions/v1'
+Latexmk: applying rule 'xelatex'...
+Rule 'xelatex':  Reasons for rerun
+Changed files or newly in use/created:
+  C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.aux
+  C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.bbl
+  C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.out
+
+------------
+Run number 2 of rule 'xelatex'
+------------
+------------
+Running 'xelatex -no-pdf -interaction=nonstopmode -halt-on-error -file-line-error -recorder -output-directory="C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923"  "main.tex"'
+------------
+This is XeTeX, Version 3.141592653-2.6-0.999997 (MiKTeX 25.12) (preloaded format=xelatex.fmt)
+ restricted \write18 enabled.
+entering extended mode
+(main.tex
+LaTeX2e <2025-11-01>
+L3 programming layer <2025-12-24>
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/base\article.cls
+Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/base\size10.clo))
+(iclr2027_conference.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/eso-pic\eso-pic.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\keyval.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/xcolor\xcolor.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\color.cfg)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics-def\xetex.def)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\mathcolor.ltx)))
+ (fancyhdr.sty) (natbib.sty))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\times.sty)
+(math_commands.tex
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsmath.sty
+For additional information on amsmath, use the `?' option.
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amstext.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsgen.sty))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsbsy.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsopn.sty))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amsfonts.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/tools\bm.sty))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspec.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/l3packages/xparse\xparse.
+sty (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/l3kernel\expl3.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/l3backend\l3backend-xetex
+.def)))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspec-xetex.s
+ty (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/base\fontenc.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspec.cfg)))Running miktex-makemf.exe...
+
+
+Sorry, but miktex-makemf did not succeed.
+
+
+
+The log file hopefully contains the information to get MiKTeX going again:
+
+
+
+  C:\Users\ROG\AppData\Local\MiKTeX\miktex\log\miktex-makemf.log
+
+Running miktex-hbf2gf.exe...
+Couldn't open `TeX Gyre Term.cfg'
+
+
+
+hbf2gf (CJK ver. 4.8.4)
+
+
+
+
+Sorry, but miktex-maketfm did not succeed.
+
+The log file hopefully contains the information to get MiKTeX going again:
+
+  C:\Users\ROG\AppData\Local\MiKTeX\miktex\log\miktex-maketfm.log
+Running miktex-makemf.exe...
+
+
+Sorry, but miktex-makemf did not succeed.
+
+
+
+The log file hopefully contains the information to get MiKTeX going again:
+
+
+
+  C:\Users\ROG\AppData\Local\MiKTeX\miktex\log\miktex-makemf.log
+
+Couldn't open `TeX Gyre Her.cfg'
+Running miktex-hbf2gf.exe...
+
+
+
+hbf2gf (CJK ver. 4.8.4)
+
+
+
+
+Sorry, but miktex-maketfm did not succeed.
+
+The log file hopefully contains the information to get MiKTeX going again:
+
+  C:\Users\ROG\AppData\Local\MiKTeX\miktex\log\miktex-maketfm.log
+
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphicx.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphics.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\trig.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\graphics.cfg
+))) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/wrapfig\wrapfig.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/float\float.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/booktabs\booktabs.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/tools\array.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/tools\tabularx.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/multirow\multirow.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amssymb.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hyperref.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/iftex\iftex.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/kvsetkeys\kvsetkeys.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/kvdefinekeys\kvdefineke
+ys.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/pdfescape\pdfescape.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/ltxcmds\ltxcmds.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/pdftexcmds\pdftexcmds.s
+ty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/infwarerr\infwarerr.sty
+))) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hycolor\hycolor.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\nameref.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/refcount\refcount.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/gettitlestring\gettitle
+string.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/kvoptions\kvoptions.sty))
+) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/etoolbox\etoolbox.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/stringenc\stringenc.sty
+) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\pd1enc.def)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/intcalc\intcalc.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\puenc.def)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/url\url.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/bitset\bitset.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/bigintcalc\bigintcalc.s
+ty))) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hxetex.def
+
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/rerunfilecheck\rerunfilec
+heck.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/uniquecounter\uniquecou
+nter.sty)))
+(C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current
+_review_20260923\main.aux)
+(C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current
+_review_20260923\main.out)
+(C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current
+_review_20260923\main.out)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd)
+(tex/00_abs.tex) (tex/01_intro.tex
+
+Package natbib Warning: Citation `chen2026human3r' on page 1 undefined on input
+ line 3.
+
+
+Package natbib Warning: Citation `li2026unish' on page 1 undefined on input lin
+e 3.
+
+
+Package natbib Warning: Citation `liu2026josh' on page 1 undefined on input lin
+e 3.
+
+[1]
+
+Package natbib Warning: Citation `wang2025vggt' on page 2 undefined on input li
+ne 5.
+
+
+Package natbib Warning: Citation `wang2026vggtomega' on page 2 undefined on inp
+ut line 5.
+
+
+Package natbib Warning: Citation `sarandi2024nlf' on page 2 undefined on input 
+line 5.
+
+
+Package natbib Warning: Citation `chen2026human3r' on page 2 undefined on input
+ line 7.
+
+
+Package natbib Warning: Citation `li2026unish' on page 2 undefined on input lin
+e 7.
+
+
+Package natbib Warning: Citation `sur2026unicon3r' on page 2 undefined on input
+ line 7.
+
+
+Package natbib Warning: Citation `ym2026graft' on page 2 undefined on input lin
+e 7.
+
+[2]) (tex/02_relatedwork.tex [3]
+
+Package natbib Warning: Citation `wang2024dust3r' on page 4 undefined on input 
+line 6.
+
+
+Package natbib Warning: Citation `leroy2024mast3r' on page 4 undefined on input
+ line 6.
+
+
+Package natbib Warning: Citation `wang2025vggt' on page 4 undefined on input li
+ne 6.
+
+
+Package natbib Warning: Citation `wang2025pi3' on page 4 undefined on input lin
+e 6.
+
+
+Package natbib Warning: Citation `zhang2024monst3r' on page 4 undefined on inpu
+t line 6.
+
+
+Package natbib Warning: Citation `wang2025cut3r' on page 4 undefined on input l
+ine 6.
+
+
+Package natbib Warning: Citation `wang2026vggtomega' on page 4 undefined on inp
+ut line 6.
+
+
+Package natbib Warning: Citation `loper2023smpl' on page 4 undefined on input l
+ine 9.
+
+
+Package natbib Warning: Citation `pavlakos2019smplx' on page 4 undefined on inp
+ut line 9.
+
+
+Package natbib Warning: Citation `goel2023humans4d' on page 4 undefined on inpu
+t line 9.
+
+
+Package natbib Warning: Citation `baradel2024multihmr' on page 4 undefined on i
+nput line 9.
+
+
+Package natbib Warning: Citation `sarandi2024nlf' on page 4 undefined on input 
+line 9.
+
+
+Package natbib Warning: Citation `yuan2022glamr' on page 4 undefined on input l
+ine 9.
+
+
+Package natbib Warning: Citation `ye2023slahmr' on page 4 undefined on input li
+ne 9.
+
+
+Package natbib Warning: Citation `wang2024tram' on page 4 undefined on input li
+ne 9.
+
+
+Package natbib Warning: Citation `shin2024wham' on page 4 undefined on input li
+ne 9.
+
+
+Package natbib Warning: Citation `shen2024gvhmr' on page 4 undefined on input l
+ine 9.
+
+
+Package natbib Warning: Citation `wang2026duomo' on page 4 undefined on input l
+ine 9.
+
+
+Package natbib Warning: Citation `zhao2024synchmr' on page 4 undefined on input
+ line 12.
+
+
+Package natbib Warning: Citation `song2026metrichmsr' on page 4 undefined on in
+put line 12.
+
+
+Package natbib Warning: Citation `liu2026josh' on page 4 undefined on input lin
+e 12.
+
+
+Package natbib Warning: Citation `rojas2025hamst3r' on page 4 undefined on inpu
+t line 12.
+
+
+Package natbib Warning: Citation `chen2026human3r' on page 4 undefined on input
+ line 12.
+
+
+Package natbib Warning: Citation `li2026unish' on page 4 undefined on input lin
+e 12.
+
+
+Package natbib Warning: Citation `sur2026unicon3r' on page 4 undefined on input
+ line 12.
+
+
+Package natbib Warning: Citation `ym2026graft' on page 4 undefined on input lin
+e 12.
+
+) (tex/03_method_v7.tex [4] [5] [6]
+Underfull \hbox (badness 1394) in paragraph at lines 118--119
+[]\TU/TimesNewRoman(0)/m/n/10 With calibration fixed, Dynamic Interaction Groun
+ding is trained on clean, scale-perturbed,
+) (tex/04_exp.tex [7] [8] [9]
+
+Package natbib Warning: Citation `sur2026unicon3r' on page 10 undefined on inpu
+t line 112.
+
+
+Package natbib Warning: Citation `sur2026unicon3r' on page 10 undefined on inpu
+t line 130.
+
+
+Package natbib Warning: Citation `sur2026unicon3r' on page 10 undefined on inpu
+t line 130.
+
+[10]) (tex/05_conclusion.tex [11])
+(C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current
+_review_20260923\main.bbl [12] [13]) [14] (appendix_en.tex
+
+Package natbib Warning: Citation `chen2026human3r' on page 15 undefined on inpu
+t line 37.
+
+[15] [16] [17]
+Underfull \vbox (badness 10000) has occurred while \output is active [18]
+[19]
+
+Package natbib Warning: Citation `chen2026human3r' on page 20 undefined on inpu
+t line 276.
+
+[20])
+
+Package natbib Warning: There were undefined citations.
+
+[21]
+(C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current
+_review_20260923\main.aux
+
+Package natbib Warning: Citation(s) may have changed.
+(natbib)                Rerun to get citations correct.
+
+)
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
+ )
+(see the transcript file for additional information)
+Output written on C:/Users\ROG\PycharmProjects\vggt-omega\outputs\paper\grounde
+dhuman_v1_current_review_20260923\main.xdv (21 pages, 640696 bytes).
+Transcript written on C:/Users\ROG\PycharmProjects\vggt-omega\outputs\paper\gro
+undedhuman_v1_current_review_20260923\main.log.
+Latexmk: Getting log file 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.log'
+Latexmk: Examining 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.fls'
+Latexmk: Examining 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.log'
+Latexmk: Found input bbl file 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.bbl'
+Latexmk: References changed.
+Latexmk: References changed.
+Latexmk: Log file says output to 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.xdv'
+Latexmk: Using bibtex to make bibliography file(s).
+  ===Source file 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.bbl' for 'xelatex'
+Latexmk: Found bibliography file(s):
+  ./references.bib
+Latexmk: applying rule 'bibtex C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main'...
+Rule 'bibtex C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main':  Reasons for rerun
+Changed files or newly in use/created:
+  C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.aux
+
+------------
+Run number 2 of rule 'bibtex C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main'
+------------
+Latexmk: Change directory to 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/'.
+To assist finding of files in document directory, I set
+  BIBINPUTS='C:/Users/ROG/PycharmProjects/vggt-omega/.paper/my_paper/versions/v1;C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923;'
+  BSTINPUTS='C:/Users/ROG/PycharmProjects/vggt-omega/.paper/my_paper/versions/v1;'.
+------------
+Running 'bibtex  "main.aux"'
+------------
+This is BibTeX, Version 0.99e (MiKTeX 25.12)
+The top-level auxiliary file: main.aux
+The style file: iclr2027_conference.bst
+Database file #1: references.bib
+Warning--string name "iccv" is undefined
+--line 4 of file references.bib
+Warning--string name "eccv" is undefined
+--line 10 of file references.bib
+Warning--string name "cvpr" is undefined
+--line 16 of file references.bib
+Warning--empty booktitle in baradel2024multihmr
+Warning--empty booktitle in goel2023humans4d
+Warning--empty booktitle in ye2023slahmr
+(There were 6 warnings)
+Latexmk: Change directory back to 'C:/Users/ROG/PycharmProjects/vggt-omega/.paper/my_paper/versions/v1'
+Latexmk: applying rule 'xelatex'...
+Rule 'xelatex':  Reasons for rerun
+Changed files or newly in use/created:
+  C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.aux
+
+------------
+Run number 3 of rule 'xelatex'
+------------
+------------
+Running 'xelatex -no-pdf -interaction=nonstopmode -halt-on-error -file-line-error -recorder -output-directory="C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923"  "main.tex"'
+------------
+This is XeTeX, Version 3.141592653-2.6-0.999997 (MiKTeX 25.12) (preloaded format=xelatex.fmt)
+ restricted \write18 enabled.
+entering extended mode
+(main.tex
+LaTeX2e <2025-11-01>
+L3 programming layer <2025-12-24>
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/base\article.cls
+Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/base\size10.clo))
+(iclr2027_conference.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/eso-pic\eso-pic.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\keyval.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/xcolor\xcolor.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\color.cfg)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics-def\xetex.def)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\mathcolor.ltx)))
+ (fancyhdr.sty) (natbib.sty))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\times.sty)
+(math_commands.tex
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsmath.sty
+For additional information on amsmath, use the `?' option.
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amstext.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsgen.sty))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsbsy.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsopn.sty))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amsfonts.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/tools\bm.sty))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspec.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/l3packages/xparse\xparse.
+sty (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/l3kernel\expl3.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/l3backend\l3backend-xetex
+.def)))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspec-xetex.s
+ty (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/base\fontenc.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspec.cfg)))Running miktex-makemf.exe...
+
+
+Sorry, but miktex-makemf did not succeed.
+
+
+
+The log file hopefully contains the information to get MiKTeX going again:
+
+
+
+  C:\Users\ROG\AppData\Local\MiKTeX\miktex\log\miktex-makemf.log
+
+Running miktex-hbf2gf.exe...
+Couldn't open `TeX Gyre Term.cfg'
+
+
+
+hbf2gf (CJK ver. 4.8.4)
+
+
+
+
+Sorry, but miktex-maketfm did not succeed.
+
+The log file hopefully contains the information to get MiKTeX going again:
+
+  C:\Users\ROG\AppData\Local\MiKTeX\miktex\log\miktex-maketfm.log
+Running miktex-makemf.exe...
+
+
+Sorry, but miktex-makemf did not succeed.
+
+
+
+The log file hopefully contains the information to get MiKTeX going again:
+
+
+
+  C:\Users\ROG\AppData\Local\MiKTeX\miktex\log\miktex-makemf.log
+
+Running miktex-hbf2gf.exe...
+Couldn't open `TeX Gyre Her.cfg'
+
+
+
+hbf2gf (CJK ver. 4.8.4)
+
+
+
+
+Sorry, but miktex-maketfm did not succeed.
+
+The log file hopefully contains the information to get MiKTeX going again:
+
+  C:\Users\ROG\AppData\Local\MiKTeX\miktex\log\miktex-maketfm.log
+
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphicx.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphics.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\trig.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\graphics.cfg
+))) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/wrapfig\wrapfig.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/float\float.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/booktabs\booktabs.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/tools\array.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/tools\tabularx.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/multirow\multirow.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amssymb.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hyperref.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/iftex\iftex.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/kvsetkeys\kvsetkeys.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/kvdefinekeys\kvdefineke
+ys.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/pdfescape\pdfescape.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/ltxcmds\ltxcmds.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/pdftexcmds\pdftexcmds.s
+ty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/infwarerr\infwarerr.sty
+))) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hycolor\hycolor.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\nameref.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/refcount\refcount.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/gettitlestring\gettitle
+string.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/kvoptions\kvoptions.sty))
+) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/etoolbox\etoolbox.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/stringenc\stringenc.sty
+) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\pd1enc.def)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/intcalc\intcalc.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\puenc.def)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/url\url.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/bitset\bitset.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/bigintcalc\bigintcalc.s
+ty))) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hxetex.def
+
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/rerunfilecheck\rerunfilec
+heck.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/uniquecounter\uniquecou
+nter.sty)))
+(C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current
+_review_20260923\main.aux)
+(C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current
+_review_20260923\main.out)
+(C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current
+_review_20260923\main.out)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd)
+(tex/00_abs.tex) (tex/01_intro.tex [1]
+Underfull \vbox (badness 10000) has occurred while \output is active [2])
+(tex/02_relatedwork.tex [3]) (tex/03_method_v7.tex
+Underfull \vbox (badness 10000) has occurred while \output is active [4]
+[5] [6]
+Underfull \hbox (badness 1394) in paragraph at lines 118--119
+[]\TU/TimesNewRoman(0)/m/n/10 With calibration fixed, Dynamic Interaction Groun
+ding is trained on clean, scale-perturbed,
+) (tex/04_exp.tex [7] [8] [9] [10]) (tex/05_conclusion.tex [11])
+(C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current
+_review_20260923\main.bbl [12] [13]) [14] (appendix_en.tex [15] [16] [17]
+Underfull \vbox (badness 10000) has occurred while \output is active [18]
+[19] [20]) [21]
+(C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current
+_review_20260923\main.aux)
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
+ )
+(see the transcript file for additional information)
+Output written on C:/Users\ROG\PycharmProjects\vggt-omega\outputs\paper\grounde
+dhuman_v1_current_review_20260923\main.xdv (21 pages, 658572 bytes).
+Transcript written on C:/Users\ROG\PycharmProjects\vggt-omega\outputs\paper\gro
+undedhuman_v1_current_review_20260923\main.log.
+Latexmk: Getting log file 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.log'
+Latexmk: Examining 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.fls'
+Latexmk: Examining 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.log'
+Latexmk: Found input bbl file 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.bbl'
+Latexmk: References changed.
+Latexmk: Log file says output to 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.xdv'
+Latexmk: Using bibtex to make bibliography file(s).
+  ===Source file 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.bbl' for 'xelatex'
+Latexmk: Found bibliography file(s):
+  ./references.bib
+Latexmk: applying rule 'bibtex C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main'...
+Rule 'bibtex C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main':  Reasons for rerun
+Changed files or newly in use/created:
+  C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.aux
+
+------------
+Run number 3 of rule 'bibtex C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main'
+------------
+Latexmk: Change directory to 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/'.
+To assist finding of files in document directory, I set
+  BIBINPUTS='C:/Users/ROG/PycharmProjects/vggt-omega/.paper/my_paper/versions/v1;C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923;'
+  BSTINPUTS='C:/Users/ROG/PycharmProjects/vggt-omega/.paper/my_paper/versions/v1;'.
+------------
+Running 'bibtex  "main.aux"'
+------------
+This is BibTeX, Version 0.99e (MiKTeX 25.12)
+The top-level auxiliary file: main.aux
+The style file: iclr2027_conference.bst
+Database file #1: references.bib
+Warning--string name "iccv" is undefined
+--line 4 of file references.bib
+Warning--string name "eccv" is undefined
+--line 10 of file references.bib
+Warning--string name "cvpr" is undefined
+--line 16 of file references.bib
+Warning--empty booktitle in baradel2024multihmr
+Warning--empty booktitle in goel2023humans4d
+Warning--empty booktitle in ye2023slahmr
+(There were 6 warnings)
+Latexmk: Change directory back to 'C:/Users/ROG/PycharmProjects/vggt-omega/.paper/my_paper/versions/v1'
+Latexmk: applying rule 'xelatex'...
+Rule 'xelatex':  Reasons for rerun
+Changed files or newly in use/created:
+  C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.aux
+
+------------
+Run number 4 of rule 'xelatex'
+------------
+------------
+Running 'xelatex -no-pdf -interaction=nonstopmode -halt-on-error -file-line-error -recorder -output-directory="C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923"  "main.tex"'
+------------
+This is XeTeX, Version 3.141592653-2.6-0.999997 (MiKTeX 25.12) (preloaded format=xelatex.fmt)
+ restricted \write18 enabled.
+entering extended mode
+(main.tex
+LaTeX2e <2025-11-01>
+L3 programming layer <2025-12-24>
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/base\article.cls
+Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/base\size10.clo))
+(iclr2027_conference.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/eso-pic\eso-pic.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\keyval.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/xcolor\xcolor.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\color.cfg)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics-def\xetex.def)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\mathcolor.ltx)))
+ (fancyhdr.sty) (natbib.sty))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\times.sty)
+(math_commands.tex
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsmath.sty
+For additional information on amsmath, use the `?' option.
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amstext.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsgen.sty))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsbsy.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsopn.sty))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amsfonts.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/tools\bm.sty))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspec.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/l3packages/xparse\xparse.
+sty (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/l3kernel\expl3.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/l3backend\l3backend-xetex
+.def)))
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspec-xetex.s
+ty (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/base\fontenc.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspec.cfg)))Running miktex-makemf.exe...
+
+
+Sorry, but miktex-makemf did not succeed.
+
+
+
+The log file hopefully contains the information to get MiKTeX going again:
+
+
+
+  C:\Users\ROG\AppData\Local\MiKTeX\miktex\log\miktex-makemf.log
+
+Running miktex-hbf2gf.exe...
+Couldn't open `TeX Gyre Term.cfg'
+
+
+
+hbf2gf (CJK ver. 4.8.4)
+
+
+
+
+Sorry, but miktex-maketfm did not succeed.
+
+The log file hopefully contains the information to get MiKTeX going again:
+
+  C:\Users\ROG\AppData\Local\MiKTeX\miktex\log\miktex-maketfm.log
+Running miktex-makemf.exe...
+
+
+Sorry, but miktex-makemf did not succeed.
+
+
+
+The log file hopefully contains the information to get MiKTeX going again:
+
+
+
+  C:\Users\ROG\AppData\Local\MiKTeX\miktex\log\miktex-makemf.log
+
+Running miktex-hbf2gf.exe...
+Couldn't open `TeX Gyre Her.cfg'
+
+
+
+hbf2gf (CJK ver. 4.8.4)
+
+
+
+
+Sorry, but miktex-maketfm did not succeed.
+
+The log file hopefully contains the information to get MiKTeX going again:
+
+  C:\Users\ROG\AppData\Local\MiKTeX\miktex\log\miktex-maketfm.log
+
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphicx.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphics.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics\trig.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\graphics.cfg
+))) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/wrapfig\wrapfig.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/float\float.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/booktabs\booktabs.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/tools\array.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/tools\tabularx.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/multirow\multirow.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amssymb.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hyperref.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/iftex\iftex.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/kvsetkeys\kvsetkeys.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/kvdefinekeys\kvdefineke
+ys.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/pdfescape\pdfescape.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/ltxcmds\ltxcmds.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/pdftexcmds\pdftexcmds.s
+ty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/infwarerr\infwarerr.sty
+))) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hycolor\hycolor.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\nameref.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/refcount\refcount.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/gettitlestring\gettitle
+string.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/kvoptions\kvoptions.sty))
+) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/etoolbox\etoolbox.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/stringenc\stringenc.sty
+) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\pd1enc.def)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/intcalc\intcalc.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\puenc.def)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/url\url.sty)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/bitset\bitset.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/bigintcalc\bigintcalc.s
+ty))) (C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hxetex.def
+
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/rerunfilecheck\rerunfilec
+heck.sty
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/generic/uniquecounter\uniquecou
+nter.sty)))
+(C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current
+_review_20260923\main.aux)
+(C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current
+_review_20260923\main.out)
+(C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current
+_review_20260923\main.out)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd)
+(C:\Users\ROG\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd)
+(tex/00_abs.tex) (tex/01_intro.tex [1]
+Underfull \vbox (badness 10000) has occurred while \output is active [2])
+(tex/02_relatedwork.tex [3]) (tex/03_method_v7.tex
+Underfull \vbox (badness 10000) has occurred while \output is active [4]
+[5] [6]
+Underfull \hbox (badness 1394) in paragraph at lines 118--119
+[]\TU/TimesNewRoman(0)/m/n/10 With calibration fixed, Dynamic Interaction Groun
+ding is trained on clean, scale-perturbed,
+) (tex/04_exp.tex [7] [8] [9] [10]) (tex/05_conclusion.tex [11])
+(C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current
+_review_20260923\main.bbl [12] [13]) [14] (appendix_en.tex [15] [16] [17]
+Underfull \vbox (badness 10000) has occurred while \output is active [18]
+[19] [20]) [21]
+(C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current
+_review_20260923\main.aux) )
+(see the transcript file for additional information)
+Output written on C:/Users\ROG\PycharmProjects\vggt-omega\outputs\paper\grounde
+dhuman_v1_current_review_20260923\main.xdv (21 pages, 658572 bytes).
+Transcript written on C:/Users\ROG\PycharmProjects\vggt-omega\outputs\paper\gro
+undedhuman_v1_current_review_20260923\main.log.
+Latexmk: Getting log file 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.log'
+Latexmk: Examining 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.fls'
+Latexmk: Examining 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.log'
+Latexmk: Found input bbl file 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.bbl'
+Latexmk: Log file says output to 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.xdv'
+Latexmk: Using bibtex to make bibliography file(s).
+  ===Source file 'C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.bbl' for 'xelatex'
+Latexmk: Found bibliography file(s):
+  ./references.bib
+Latexmk: applying rule 'xdvipdfmx'...
+Rule 'xdvipdfmx':  Reasons for rerun
+Changed files or newly in use/created:
+  C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.xdv
+Category 'changed_source_rules':
+  xelatex
+Category 'no_dest':
+  xdvipdfmx
+
+------------
+Run number 1 of rule 'xdvipdfmx'
+------------
+------------
+Running 'xdvipdfmx -E -o "C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.pdf"  "C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.xdv"'
+------------
+C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.xdv -> C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.pdf
+[1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21]
+5507616 bytes written
+Latexmk: All targets (C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.xdv C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_current_review_20260923/main.pdf) are up-to-date
+
+Reverting Windows console CPs to (in,out) = (936,65001)

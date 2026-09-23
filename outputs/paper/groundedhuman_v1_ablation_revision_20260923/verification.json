@@ -1,0 +1,18 @@
+{
+  "pdf_pages": 21,
+  "experimental_table_numbers_unchanged": true,
+  "closed_audit_sections_removed": true,
+  "closed_C2_removed": true,
+  "B5_still_pending": true,
+  "changed_audited_paper_files": [
+    "tex\\04_exp.tex"
+  ],
+  "online_category_unchanged": true,
+  "undefined_references_or_citations": false,
+  "overfull_boxes": false,
+  "visual_review_pages": [
+    8,
+    10
+  ],
+  "visual_review": "Contact Control header/caption and ablation labels, numbers, wrapping checked; no clipping or overlap observed."
+}

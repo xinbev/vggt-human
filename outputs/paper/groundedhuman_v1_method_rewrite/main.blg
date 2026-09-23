@@ -1,0 +1,58 @@
+This is BibTeX, Version 0.99e
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: C:/Users/ROG/PycharmProjects/vggt-omega/outputs/paper/groundedhuman_v1_method_rewrite/main.aux
+Reallocating 'name_of_file' (item size: 1) to 11 items.
+Reallocating 'name_of_file' (item size: 1) to 20 items.
+The style file: iclr2027_conference.bst
+Database file #1: references.bib
+Warning--string name "iccv" is undefined
+--line 4 of file references.bib
+Warning--string name "eccv" is undefined
+--line 10 of file references.bib
+Warning--string name "cvpr" is undefined
+--line 16 of file references.bib
+Warning--empty booktitle in baradel2024multihmr
+Warning--empty booktitle in goel2023humans4d
+Warning--empty booktitle in ye2023slahmr
+You've used 26 entries,
+            2773 wiz_defined-function locations,
+            703 strings with 10715 characters,
+and the built_in function-call counts, 16876 in all, are:
+= -- 1323
+> -- 1554
+< -- 7
++ -- 522
+- -- 492
+* -- 1504
+:= -- 2644
+add.period$ -- 81
+call.type$ -- 26
+change.case$ -- 242
+chr.to.int$ -- 22
+cite$ -- 55
+duplicate$ -- 647
+empty$ -- 1056
+format.name$ -- 520
+if$ -- 3462
+int.to.chr$ -- 5
+int.to.str$ -- 1
+missing$ -- 26
+newline$ -- 140
+num.names$ -- 104
+pop$ -- 542
+preamble$ -- 1
+purify$ -- 216
+quote$ -- 0
+skip$ -- 563
+stack$ -- 0
+substring$ -- 292
+swap$ -- 111
+text.length$ -- 6
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 286
+warning$ -- 3
+while$ -- 96
+width$ -- 0
+write$ -- 327
+(There were 6 warnings)

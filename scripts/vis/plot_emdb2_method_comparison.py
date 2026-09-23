@@ -17,10 +17,10 @@ from typing import Iterable
 
 
 METRIC_PRESETS = {
-    "wa_mpjpe_mm": ("WA-MPJPE (mm)", "min"),
+    "wa_mpjpe_mm": (r"WA-MPJPE$_{100}$ (mm)", "min"),
     "w_mpjpe_mm": ("W-MPJPE (mm)", "min"),
     "rte_percent": ("RTE (%)", "min"),
-    "fps": ("Run-Time Efficiency (FPS)", "max"),
+    "fps": ("Inference Speed (FPS)", "max"),
     "latency_s": ("Latency (s)", "min"),
     "gpu_memory_gb": ("GPU Memory (GB)", "min"),
     "params_m": ("Parameters (M)", "min"),
@@ -31,12 +31,65 @@ COLORS = {
     "ours": "#D9573F",
 }
 
+STYLE_PRESETS = {
+    "baseline_ff": {
+        "c": "#159A8C",
+        "marker": "o",
+        "s": 105,
+        "edgecolors": "#202020",
+        "linewidths": 0.7,
+        "zorder": 3,
+    },
+    "baseline_tto": {
+        "c": "#D9573F",
+        "marker": "o",
+        "s": 105,
+        "edgecolors": "#202020",
+        "linewidths": 0.7,
+        "zorder": 3,
+    },
+    "unicon_ff": {
+        "c": "#159A8C",
+        "marker": "o",
+        "s": 105,
+        "edgecolors": "#202020",
+        "linewidths": 0.7,
+        "zorder": 4,
+    },
+    "unicon_tto": {
+        "c": "#D9573F",
+        "marker": "*",
+        "s": 230,
+        "edgecolors": "#202020",
+        "linewidths": 0.7,
+        "zorder": 4,
+    },
+    "ours_base": {
+        "c": "#4472C4",
+        "marker": "*",
+        "s": 320,
+        "edgecolors": "#202020",
+        "linewidths": 0.9,
+        "zorder": 5,
+    },
+    "ours_hsi": {
+        "c": "#E68632",
+        "marker": "*",
+        "s": 320,
+        "edgecolors": "#202020",
+        "linewidths": 0.9,
+        "zorder": 5,
+    },
+}
+
 
 @dataclass(frozen=True)
 class Record:
     method: str
     group: str
     is_ours: bool
+    plot_style: str
+    link_group: str
     values: dict[str, float | None]
     label_dx: float
     label_dy: float
@@ -84,7 +137,7 @@ def read_records(path: Path) -> tuple[list[Record], list[str]]:
         if missing:
             raise ValueError(f"{path} is missing required columns: {sorted(missing)}")
 
-        reserved = required | {"label_dx", "label_dy"}
+        reserved = required | {"plot_style", "link_group", "label_dx", "label_dy"}
         metric_fields = [field for field in fields if field not in reserved]
         records = []
         for row_number, row in enumerate(reader, start=2):
@@ -96,11 +149,14 @@ def read_records(path: Path) -> tuple[list[Record], list[str]]:
                 raise ValueError(f"{path}:{row_number}: invalid is_ours={raw_is_ours!r}")
             parsed_label_dx = optional_float(row.get("label_dx"))
             parsed_label_dy = optional_float(row.get("label_dy"))
+            is_ours = raw_is_ours in {"1", "true", "yes"}
             records.append(
                 Record(
                     method=method,
                     group=(row.get("group") or "Baseline").strip(),
-                    is_ours=raw_is_ours in {"1", "true", "yes"},
+                    is_ours=is_ours,
+                    plot_style=(row.get("plot_style") or ("ours_base" if is_ours else "baseline_ff")).strip(),
+                    link_group=(row.get("link_group") or "").strip(),
                     values={field: optional_float(row.get(field)) for field in metric_fields},
                     label_dx=6.0 if parsed_label_dx is None else parsed_label_dx,
                     label_dy=6.0 if parsed_label_dy is None else parsed_label_dy,
@@ -136,51 +192,88 @@ def require_metric(records: Iterable[Record], fields: list[str], metric: str) ->
 
 
 def style_for(record: Record) -> dict[str, object]:
-    if record.is_ours:
-        return {
-            "c": COLORS["ours"],
-            "marker": "*",
-            "s": 260,
-            "edgecolors": "#202020",
-            "linewidths": 0.8,
-            "zorder": 4,
-        }
-    return {
-        "c": COLORS["baseline"],
-        "marker": "o",
-        "s": 105,
-        "edgecolors": "#202020",
-        "linewidths": 0.7,
-        "zorder": 3,
-    }
+    try:
+        return STYLE_PRESETS[record.plot_style]
+    except KeyError as error:
+        choices = ", ".join(sorted(STYLE_PRESETS))
+        raise ValueError(
+            f"unknown plot_style {record.plot_style!r} for {record.method}; choose from: {choices}"
+        ) from error
 
 
-def add_legend(axis) -> None:
+def add_legend(axis, records: list[Record]) -> None:
     from matplotlib.lines import Line2D
 
-    handles = [
-        Line2D(
-            [0],
-            [0],
-            marker="o",
-            color="none",
-            markerfacecolor=COLORS["baseline"],
-            markeredgecolor="#202020",
-            markersize=8,
-            label="Compared methods",
-        ),
-        Line2D(
-            [0],
-            [0],
-            marker="*",
-            color="none",
-            markerfacecolor=COLORS["ours"],
-            markeredgecolor="#202020",
-            markersize=13,
-            label="Ours",
-        ),
-    ]
-    axis.legend(handles=handles, loc="best", frameon=True, framealpha=0.96, edgecolor="#B8B8B8")
+    legend_labels = {
+        "baseline_ff": "Unified Feed-Forward",
+        "baseline_tto": "Test-Time Optimization",
+        "unicon_ff": "UniCon3R",
+        "unicon_tto": "UniCon3R*",
+        "ours_base": "Ours",
+        "ours_hsi": "Ours + HSI",
+    }
+    present_styles = {record.plot_style for record in records}
+    handles = []
+    for style_name, label in legend_labels.items():
+        if style_name not in present_styles:
+            continue
+        style = STYLE_PRESETS[style_name]
+        handles.append(
+            Line2D(
+                [0],
+                [0],
+                marker=str(style["marker"]),
+                color="none",
+                markerfacecolor=str(style["c"]),
+                markeredgecolor="#202020",
+                markersize=11 if style["marker"] == "*" else 7,
+                label=label,
+            )
+        )
+    axis.legend(
+        handles=handles,
+        loc="upper right",
+        fontsize=8.5,
+        frameon=True,
+        framealpha=0.96,
+        edgecolor="#B8B8B8",
+    )
+
+
+def draw_variant_links(axis, records: list[Record], x_metric: str, y_metric: str) -> None:
+    groups: dict[str, list[Record]] = {}
+    for record in records:
+        if record.link_group:
+            groups.setdefault(record.link_group, []).append(record)
+
+    for linked_records in groups.values():
+        if len(linked_records) < 2:
+            continue
+        for first, second in zip(linked_records, linked_records[1:]):
+            x0 = float(first.values[x_metric])
+            y0 = float(first.values[y_metric])
+            x1 = float(second.values[x_metric])
+            y1 = float(second.values[y_metric])
+            curve_x = []
+            curve_y = []
+            log_y0 = math.log(y0)
+            log_y1 = math.log(y1)
+            for index in range(41):
+                t = index / 40.0
+                curve_x.append(
+                    (1.0 - t) * x0
+                    + t * x1
+                    - 0.10 * abs(x1 - x0) * math.sin(math.pi * t)
+                )
+                curve_y.append(math.exp((1.0 - t) * log_y0 + t * log_y1))
+            axis.plot(
+                curve_x,
+                curve_y,
+                color="#9A9A9A",
+                linestyle="--",
+                linewidth=1.05,
+                zorder=1,
+            )
 
 
 def pareto_frontier(
@@ -243,6 +336,7 @@ def draw_tradeoff(
     y_direction: str,
     show_pareto: bool,
 ) -> None:
+    draw_variant_links(axis, records, x_metric, y_metric)
     if show_pareto:
         frontier = pareto_frontier(records, x_metric, y_metric, x_direction, y_direction)
         axis.plot(
@@ -266,7 +360,9 @@ def draw_tradeoff(
             xytext=(record.label_dx, record.label_dy),
             textcoords="offset points",
             fontsize=10.5,
-            fontweight="bold" if record.is_ours else "normal",
+            fontweight="bold"
+            if record.is_ours or record.group.lower() == "unicon3r"
+            else "normal",
             ha="left" if record.label_dx >= 0 else "right",
             va="bottom" if record.label_dy >= 0 else "top",
             zorder=5,
@@ -317,7 +413,10 @@ def main() -> None:
     figure, axis = plt.subplots(figsize=(6.35, 4.5), constrained_layout=True)
     axis.set_axisbelow(True)
     axis.grid(True, which="major", color="#D7D7D7", linestyle=":", linewidth=0.7)
-    axis.spines[["top", "right"]].set_visible(False)
+    for spine in axis.spines.values():
+        spine.set_visible(True)
+        spine.set_color("#303030")
+        spine.set_linewidth(0.8)
     axis.set_xscale(args.x_scale)
 
     if args.y_metric:
@@ -334,6 +433,10 @@ def main() -> None:
             y_direction,
             args.show_pareto,
         )
+        if args.y_metric == "fps" and args.y_scale == "log":
+            fps_ticks = [0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0]
+            axis.set_yticks(fps_ticks)
+            axis.set_yticklabels(["0.1", "0.2", "0.5", "1.0", "2.0", "5.0", "10.0"])
         output_name = args.output_name or f"{args.x_metric}_vs_{args.y_metric}"
     else:
         draw_single_metric(axis, records, args.x_metric, x_label)
@@ -341,7 +444,7 @@ def main() -> None:
 
     if args.title:
         axis.set_title(args.title, pad=10)
-    add_legend(axis)
+    add_legend(axis, records)
 
     formats = [item.strip().lower() for item in args.formats.split(",") if item.strip()]
     if not formats:

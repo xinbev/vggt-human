@@ -1,0 +1,44 @@
+Create a polished, publication-quality scientific method figure for the computer vision paper GroundedHuman. Use the attached image STRICTLY as the composition reference: one wide horizontal row with a tall narrow input card, two stacked backbone cards, two equally prominent large dashed rounded panels side by side, and a human-in-scene reconstruction image on the far right. Replace all empty blue shapes and "XXX Att" placeholders with the architecture specified below. Ignore and REMOVE the gray screenshot/browser edge. Preserve the right-end motif of a seated pink human mesh aligned to a light sofa in a bright room, as a conceptual reconstruction illustration.
+
+FORMAT AND STYLE:
+Generate at 3072x1024, but arrange the complete actual figure in a very wide approximately 4.1:1 horizontal band, vertically centered with white margins. Everything fits inside the canvas. Clean PURE WHITE background. Crisp scientific vector-like drawing, thin charcoal arrows with arrowheads, beautiful restrained cobalt blue dashed module boundaries with rounded corners, muted lavender scene tokens, muted coral/pink body tokens, subtle teal highlights for calibrated geometry. Typography is refined black sans serif, exceptionally clean, large and legible. Use generous whitespace, pale color fills, consistent stroke weights. Academic CVPR/ICLR paper aesthetic. No decorative giant headline. NO title page, no thick shadows, no infographic clip-art clutter, no paragraphs, no extra panels underneath. Use original black English labels exactly as specified. It is a method figure, not a poster.
+
+LEFT TO RIGHT COMPOSITION:
+A. INPUT (x=2%-9%):
+Tall pale-blue rounded rectangle containing three small vertically offset realistic RGB video frames of a person sitting down beside/on a light couch in a bright room. Short label below: "Monocular video". The three frames should suggest temporal sequence. Split thin arrows to two stacked encoders.
+
+B. TWO BACKBONES (x=11%-24%):
+Upper pale-lavender rounded card labeled "VGGT-Ω". Inside use a tiny depth-map tile, a small camera icon, and a short row of lavender feature tokens. Small output label "Scene geometry + features".
+Lower pale-coral rounded card labeled "NLF". Inside show a small pink 3D body mesh and a short row of pink tokens. Small output label "Metric human prior".
+Both are upstream frozen observers; subtle snowflake icons are optional. The upper and lower streams feed stage 1. Keep these cards compact.
+
+C. FIRST BIG DASHED PANEL (x=27%-52%):
+Above the panel in bold, two lines: "Body-Anchored" / "Metric Calibration".
+Within the panel create a visually clear left-to-right mini architecture:
+- At left, a standing stylized 3D body silhouette with blue anchor dots, a small local scene patch token grid, and labels "Body anchors" and "Scene tokens".
+- Show a short strip "Analytic scale initialization" using a tiny body-depth / scene-depth ratio pictogram near the top of this panel.
+- Body anchor tokens labeled "Q", scene patch tokens labeled "K, V", converging through a simple clean cross-attention association motif (a few connecting lines or a small attention matrix). The body token row can have a small self-attention curved link.
+- Attention yields a CLEAR highlighted compact token stack labeled "Interaction representation". This latent relation representation is the central visual idea, MUST be visible and labeled.
+- A simple small readout arrow ends at a badge labeled "Scale + bias". Below the badge: "Temporal aggregation" in small but readable type.
+- At the bottom INSIDE the dashed panel, bold mechanism label "Body-Anchored Scene Query".
+From panel 1 to panel 2 a single clear right-pointing arrow labeled "Metric scene". Visually indicate shared scale affects both depth and camera translation with tiny depth/camera icons if room allows. No complicated formula.
+
+D. SECOND BIG DASHED PANEL (x=55%-80%):
+Above the panel in bold, two lines: "Dynamic Interaction" / "Grounding".
+Inside create a left-to-right mini architecture:
+- At left a small pink body silhouette with colored anatomical regions, and three nested neighborhood windows around a foot/hip near a scene surface, indicating multi-scale scene sampling.
+- Two clean evidence-token rows, one coral and one teal, with concise labels "Self surface" and "Environment". Distinguish these two sources. Do not use contact labels.
+- The two token rows converge through a small attention motif into a highlighted compact token stack labeled "Interaction representation", visually consistent with the first panel's representation.
+- A short arrow to a translation-vector badge labeled "Root translation". A small confidence-weighted arrows motif can convey regional votes.
+- CRITICAL: draw ONE thin teal curved feedback arrow entirely inside this panel, from the translated body/update back toward the region sampling, labeled "Update → resample" with tiny "×2". This expresses two spatial refinement steps sharing parameters, not a temporal-attention module.
+- At the bottom INSIDE this dashed panel, bold mechanism label "Hierarchical Context Attention".
+
+E. OUTPUT (x=84%-98%):
+A clear bright living-room reconstruction vignette featuring a pink SMPL-style mesh person sitting plausibly on a cream sofa. Feet/seat should be spatially consistent, no floating. Subtle 3D grid or point-cloud overlay on the environment can indicate reconstructed scene. Three tiny camera frustums may appear beside the vignette. Below, label "Metric human–scene reconstruction". A small secondary line "Scene • Cameras • Humans".
+Single arrow from panel 2 to this vignette.
+
+SEMANTIC CONSISTENCY:
+The two dashed panels are the only proposed modules. The two types of latent interaction representation are stage-specific, NOT a third block or a shared single latent network. The first reads out metric calibration; the second reads out whole-body placement. Keep the body pose/shape unchanged through the second module; only whole-body translation is refined. No contact classification, no temporal stabilizer, no pose correction, no tracking head, no losses, no new modules. Geometry is calibrated first and remains fixed during the local translation loop. A thin unobtrusive connector from the NLF prior to the second panel's body regions may run beneath the main forward path if it improves clarity and does not cross text.
+
+DELIVERABLE:
+A single finished diagram using the reference's recognizable horizontal structure, not multiple alternative designs. Label accuracy, hierarchy, clean arrows, whitespace, and readable representation/readout pathways matter more than decorative detail. Maintain the repeated visual grammar "human + scene evidence → interaction representation → geometric correction" inside both central panels.

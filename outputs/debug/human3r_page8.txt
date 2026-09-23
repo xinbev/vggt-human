@@ -1,0 +1,80 @@
+Published as a conference paper at ICLR 2026
+
+
+
+
+Figure 8: Qualitative 4D human-scene reconstruction results. Given video captured from a single camera, Human3R performs online
+reasoning about global human motion, the surrounding environment, and camera poses all at once. Check our website for video results.
+
+                      Absolute Trajectory Error (ATE)                                   Absolute Relative Error                                     Threshold Accuracy ( < 1.25)
+                   Human3R
+                                                 OOM                       0.16
+          0.175    TTT3R                                                   0.15                                                        0.94
+          0.150
+                   CUT3R
+                   Point3R                                                 0.14
+          0.125    StreamVGGT                                                                                                          0.92
+                                                                           0.13
+ATE (m)
+
+
+
+
+                   VGGT (offline)
+
+
+
+
+                                                                                                                              < 1.25
+                                                                 Abs Rel
+
+
+
+
+          0.100
+                                                                           0.12
+                                                                                                                                       0.90
+          0.075
+                                                                           0.11
+          0.050        OOM                                                 0.10                                                        0.88
+
+          0.025
+                                                                           0.09
+                       OOM                                                                                                             0.86
+          0.000
+                     200        400     600         800   1000                    100     200         300         400   500                   100        200        300         400   500
+                            Number of Input Views                                        Number of Input Views                                          Number of Input Views
+                  (a) Camera pose estimation.                                                       (b) Video depth estimation in metric scale.
+ Figure 9: Evaluation of generic 3D reconstruction with camera pose estimation on TUM-D [86] and video depth estimation on Bonn [61].
+
+
+
+4.3               G ENERIC 3D R ECONSTRUCTION
+
+Camera Pose Estimation. Following prior works [12, 97], we evaluate camera pose estimation
+accuracy on TUM dynamics [86] dataset with dynamic humans. We report the Absolute Translation
+Error (ATE) after applying the Sim(3) alignment [92] on the estimated camera trajectory to the ground-
+truth. We compare with current leading 3D reconstruction foundation models [12, 96, 97, 104, 117].
+We include VGGT, an offline method utilizing full attention, as an upper bound for online approaches,
+since it retains complete historical context without forgetting. VGGT and StreamVGGT rely on full
+attention, making them relatively slow and prone to running out of memory (OOM). In contrast,
+CUT3R maintains consistently low GPU usage and enables online inference, but struggles to remem-
+ber long sequences, resulting in less accurate pose estimation. TTT3R [12] introduces a closed-form
+state transition rule as a training-free intervention to mitigate the catastrophic forgetting observed in
+CUT3R. As shown in Fig. 9a, integrating TTT3R with Human3R leads to further improvements in
+camera pose estimation after human prompt tuning compared to the original TTT3R.
+Video Depth Estimation. Following common practice [12, 97], we evaluate video depth estimation
+on Bonn [61] datasets with dynamic humans. We use Absolute Relative Error and δ<1.25 (percentage
+of predicted depths within a 1.25-factor of true depth) as metrics. Metric scale video depth estimation
+evaluates per-frame depth quality and inter-frame depth consistency without per-sequence scale
+or shift alignment, which measures the absolute depth accuracy. Fig. 9b presents the quantitative
+comparison between our method and the online baselines, and still Human3R+TTT3R achieves more
+acccurate depth estimation over naive TTT3R. We do not plot VGGT [96] and StreamVGGT [117]
+for the evaluation of the metric depth, as they can only predict the relative depth without metric scale.
+By integrating TTT3R and fine-tuning with human prompt tuning on human-scene 4D datasets, our
+approach achieves SOTA human mesh recovery and also slightly improves generic 3D reconstruction.
+This highlights the mutual benefits of jointly reasoning about humans and scenes.
+
+
+                                                                                                8
+

@@ -1,0 +1,51 @@
+{
+  "changed_files": [
+    "tex/03_method_v7.tex",
+    "tex/00_abs.tex",
+    "tex/01_intro.tex",
+    "tex/05_conclusion.tex",
+    "appendix_en.tex"
+  ],
+  "unchanged_files": [
+    "main.tex"
+  ],
+  "sources": {
+    "tex/03_method_v7.tex": "d1e010da2dbe775fc1ac7bbbfc35274fac2fb94724b31ffa9b656134c9409250",
+    "tex/00_abs.tex": "89e626c972d3c202c2a1508654393a41f314f68e685204e0ed9d167d2583f6d5",
+    "tex/01_intro.tex": "5789a817c21546f60beb210ab744448b3ef0b4bf5c994652ab4df504275a59ab",
+    "tex/05_conclusion.tex": "85ea23acf3c37ac8a90f0b41c78b64871ced27050c07b248de345716450cf4a4",
+    "main.tex": "d0ad01f134cbdbca21635bf8d5a8feeead5e6f4ba7a8372be3a2f8399a5faa0b",
+    "appendix_en.tex": "b587cba7ef5a4ca84609ad2aeaec22ab47334a8496fc272d087aff1a4752df22"
+  },
+  "missing_references": [],
+  "duplicate_labels": [],
+  "retired_artwork_references": [],
+  "old_module_name_active": false,
+  "unresolved_latex_references": false,
+  "overfull_boxes": [],
+  "full_pdf_pages": 21,
+  "method_page_range": [
+    5,
+    7
+  ],
+  "note": "New preview filename avoids overwriting the previous excerpt while it is open in another application.",
+  "existing_bibtex_warnings": "Undefined venue abbreviations iccv/eccv/cvpr; empty booktitle in three pre-existing references. Bibliography was not changed.",
+  "figure_status": "Main and appendix method figures are placeholders pending author redraw.",
+  "rerun_required": false,
+  "compilation": "XeLaTeX relation pass 3: success; reference labels stable.",
+  "visual_check": "Rendered and inspected all three method pages (5–7). Concept schematic and original equation 2 are legible; no clipping or overlaps.",
+  "revision": "Implicit interaction representations, restored paragraph names and compact original equation 2",
+  "retired_module_names_active": [],
+  "method_numbered_equations": 7,
+  "method_subheadings": [
+    "Initial observations.",
+    "Analytic Scale Initialization.",
+    "Body-Anchored Scene Query.",
+    "Temporal Aggregation.",
+    "Hierarchical Context Attention.",
+    "Interaction-Aware Placement.",
+    "Translation Refinement."
+  ],
+  "equation2_matches_original": true,
+  "current_method_preview": "outputs/paper/groundedhuman_v1_method_rewrite/method_interaction_revision.pdf"
+}

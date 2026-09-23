@@ -1,0 +1,22 @@
+data:
+  # HS-V/HS-CF are frame-wise; length 1 evaluates every frame exactly once and
+  # avoids overlapping-window weighting.
+  sequence_length: 1
+  image_size: 518
+  image_resolution: 512
+  resize_mode: balanced
+  max_humans: 1
+
+human_scene_evaluation:
+  branches: [refined]
+  mask_source: gt_smpl_projection
+  percentile_trims: [5, 10]
+  visibility_backend: pytorch3d
+  invalid_policy: show_zero
+  compute_paper_audit: false
+  depth_conf_threshold: 0.05
+  scene_point_stride: 1
+  distance_chunk_size: 2048
+  min_body_points: 1
+  min_scene_points: 1
+  min_points_for_percentile: 20
