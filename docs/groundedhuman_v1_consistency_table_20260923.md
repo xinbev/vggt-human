@@ -1,5 +1,13 @@
 # v1：新增 Human–Scene Consistency 实验
 
+## 2026-09-24 最新数值更新
+
+按作者最新数据，Table 3 本方法行改为 **Ours**：3DPW 为 **0.0155 / 0.0181 / 4.99 / 4.86**，EMDB-1 为 **0.0102 / 0.0181 / 3.75 / 3.67**，依次对应 HS-V5、HS-V10、HS-CF5、HS-CF10。此前留白及旧 EMDB-1 数值已被替换，下文为新增表格时的历史记录。
+
+已重新计算八列最优/次优标记，并同步 §4 实验概述及 §4.4 的双数据集分析：Ours 在两数据集全部指标上优于 UniSH；3DPW 全部指标优于 SHOW；EMDB-1 的 HS-V10 略高于 SHOW（0.0181 vs 0.017），其余三项更低。Human3R 仍在两数据集 HS-CF 上最优。消融 Table 4 不变。
+
+当前 PDF：`outputs/paper/groundedhuman_v1_table3_values_20260924/main.pdf`。修改前备份与数值/排名验证：`outputs/debug/groundedhuman_v1_table3_values_20260924/`。本轮未重新运行实验。
+
 来源：用户提供两张结果截图，以及本地 `.paper/base_pdf/SHOW.pdf` 第 6 页 Table 3 和 §4.2 指标定义。用户所写路径在本地未找到，已通过文件检索定位到该 PDF。
 
 本轮仅使用参考论文的指标定义、公开比较数值及引用信息，属于论文内容适配，不涉及参考代码移植或模型、训练框架变更。VGGT baseline 不变，不新增模型配置。继续以 v1 为唯一论文工作版本，附录未修改。

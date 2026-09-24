@@ -232,7 +232,7 @@ def add_legend(axis, records: list[Record]) -> None:
         )
     axis.legend(
         handles=handles,
-        loc="upper right",
+        loc="lower right",
         fontsize=8.5,
         frameon=True,
         framealpha=0.96,
@@ -434,9 +434,9 @@ def main() -> None:
             args.show_pareto,
         )
         if args.y_metric == "fps" and args.y_scale == "log":
-            fps_ticks = [0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0]
+            fps_ticks = [0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0]
             axis.set_yticks(fps_ticks)
-            axis.set_yticklabels(["0.1", "0.2", "0.5", "1.0", "2.0", "5.0", "10.0"])
+            axis.set_yticklabels(["0.1", "0.2", "0.5", "1.0", "2.0", "5.0", "10.0", "20.0"])
         output_name = args.output_name or f"{args.x_metric}_vs_{args.y_metric}"
     else:
         draw_single_metric(axis, records, args.x_metric, x_label)
