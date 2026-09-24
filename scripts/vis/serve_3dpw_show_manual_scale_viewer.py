@@ -32,7 +32,16 @@ from scripts.vis.serve_stage2_viewer_cache import (  # noqa: E402
 from vggt_omega.evaluation import HumanSceneConsistencyConfig, compute_human_scene_consistency, render_mesh_silhouette  # noqa: E402
 
 
-CACHE_FORMAT = "vggt_omega_show_hmr4d_manual_scale_cache_v1"
+CACHE_FORMATS = {
+    "vggt_omega_show_hmr4d_manual_scale_cache_v1",
+    "vggt_omega_show_3dpw_manual_scale_cache_v3",
+    "vggt_omega_show_3dpw_manual_scale_cache_v2",
+}
+SCALE_FILE_FORMATS = {
+    "vggt_omega_show_hmr4d_manual_scale_selections_v1",
+    "vggt_omega_show_3dpw_manual_scale_selections_v3",
+    "vggt_omega_show_3dpw_manual_scale_selections_v2",
+}
 SCALE_FILE_FORMAT = "vggt_omega_show_hmr4d_manual_scale_selections_v1"
 
 
@@ -56,10 +65,16 @@ class ShowManualScaleViewer:
         self.cache_dir = Path(args.cache_dir).expanduser().resolve()
         self.manifest_path = self.cache_dir / "manifest.json"
         manifest = json.loads(self.manifest_path.read_text(encoding="utf-8"))
-        if manifest.get("format") != CACHE_FORMAT:
+        if manifest.get("format") not in CACHE_FORMATS:
             raise ValueError(f"Unsupported cache manifest: {self.manifest_path}")
         self.manifest = manifest
-        self.windows = list(manifest.get("sequences", []))
+        self.windows = list(manifest.get("sequences", manifest.get("windows", [])))
+        for index, record in enumerate(self.windows):
+            # v2/v3 already used sequence records in most generated caches;
+            # normalize the older window names without rewriting the cache.
+            if "sequence_id" not in record:
+                record["sequence_id"] = str(record.get("window_id", f"sequence_{index:04d}"))
+            record.setdefault("sequence_index", index)
         if not self.windows:
             raise RuntimeError("The cache contains no sequences")
         self.faces = np.load(self.cache_dir / str(manifest["faces_file"]), allow_pickle=False).astype(np.int32)
@@ -78,7 +93,7 @@ class ShowManualScaleViewer:
     def _load_selections(self) -> dict[str, Any]:
         if self.scale_file.is_file():
             payload = json.loads(self.scale_file.read_text(encoding="utf-8"))
-            if payload.get("format") != SCALE_FILE_FORMAT:
+            if payload.get("format") not in SCALE_FILE_FORMATS:
                 raise ValueError(f"Unsupported scale file: {self.scale_file}")
             return payload
         return {"format": SCALE_FILE_FORMAT, "cache_manifest": str(self.manifest_path), "sequences": {}}

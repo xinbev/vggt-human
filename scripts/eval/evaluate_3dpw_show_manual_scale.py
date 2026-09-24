@@ -22,7 +22,16 @@ from scripts.eval.evaluate_show_human_scene_3dpw import resolve_output_dir  # no
 from vggt_omega.evaluation import HumanSceneConsistencyConfig, compute_human_scene_consistency, render_mesh_silhouette  # noqa: E402
 
 
-CACHE_FORMAT = "vggt_omega_show_hmr4d_manual_scale_cache_v1"
+CACHE_FORMATS = {
+    "vggt_omega_show_hmr4d_manual_scale_cache_v1",
+    "vggt_omega_show_3dpw_manual_scale_cache_v3",
+    "vggt_omega_show_3dpw_manual_scale_cache_v2",
+}
+SCALE_FILE_FORMATS = {
+    "vggt_omega_show_hmr4d_manual_scale_selections_v1",
+    "vggt_omega_show_3dpw_manual_scale_selections_v3",
+    "vggt_omega_show_3dpw_manual_scale_selections_v2",
+}
 SCALE_FILE_FORMAT = "vggt_omega_show_hmr4d_manual_scale_selections_v1"
 
 
@@ -31,9 +40,13 @@ def main() -> None:
     cache_dir = Path(args.cache_dir).expanduser().resolve()
     manifest_path = cache_dir / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if manifest.get("format") != CACHE_FORMAT:
+    if manifest.get("format") not in CACHE_FORMATS:
         raise ValueError(f"Unsupported cache manifest: {manifest_path}")
-    windows = list(manifest.get("sequences", []))
+    windows = list(manifest.get("sequences", manifest.get("windows", [])))
+    for index, record in enumerate(windows):
+        if "sequence_id" not in record:
+            record["sequence_id"] = str(record.get("window_id", f"sequence_{index:04d}"))
+        record.setdefault("sequence_index", index)
     if not windows:
         raise ValueError("Cache contains no sequences")
     scale_file = Path(args.scale_file).expanduser().resolve() if args.scale_file else cache_dir / "manual_scales.json"
@@ -116,9 +129,9 @@ def load_scales(path: Path, windows: list[dict[str, Any]], *, mode: str, allow_m
     if not path.is_file():
         raise FileNotFoundError(f"Manual scale file not found: {path}")
     payload = json.loads(path.read_text(encoding="utf-8"))
-    if payload.get("format") != SCALE_FILE_FORMAT:
+    if payload.get("format") not in SCALE_FILE_FORMATS:
         raise ValueError(f"Unsupported scale file: {path}")
-    records = payload.get("sequences", {})
+    records = payload.get("sequences", payload.get("windows", {}))
     out: dict[str, float] = {}
     missing = []
     for row in windows:
