@@ -1,0 +1,43 @@
+开始评估，作业 ID: 16114
+当前环境: zhw_env
+分配的 GPU: 0
+[show-cache] 1 windows=1 vid=downtown_arguing_00_0 start=0 frames=200
+[show-cache] 2 windows=2 vid=downtown_arguing_00_0 start=200 frames=200
+[show-cache] 3 windows=3 vid=downtown_arguing_00_0 start=400 frames=200
+[show-cache] 4 windows=4 vid=downtown_arguing_00_0 start=600 frames=200
+[show-cache] 5 windows=5 vid=downtown_arguing_00_0 start=800 frames=98
+[show-cache] 6 windows=6 vid=downtown_arguing_00_1 start=0 frames=200
+[show-cache] 7 windows=7 vid=downtown_arguing_00_1 start=200 frames=200
+[show-cache] 8 windows=8 vid=downtown_arguing_00_1 start=400 frames=200
+[show-cache] 9 windows=9 vid=downtown_arguing_00_1 start=600 frames=200
+[show-cache] 10 windows=10 vid=downtown_arguing_00_1 start=800 frames=98
+[show-cache] 11 windows=11 vid=downtown_bar_00_0 start=0 frames=200
+[show-cache] 12 windows=12 vid=downtown_bar_00_0 start=200 frames=200
+[show-cache] 13 windows=13 vid=downtown_bar_00_0 start=400 frames=200
+[show-cache] 14 windows=14 vid=downtown_bar_00_0 start=600 frames=200
+[show-cache] 15 windows=15 vid=downtown_bar_00_0 start=800 frames=200
+[show-cache] 16 windows=16 vid=downtown_bar_00_0 start=1000 frames=200
+[show-cache] 17 windows=17 vid=downtown_bar_00_0 start=1200 frames=200
+[show-cache] 18 windows=18 vid=downtown_bar_00_0 start=1400 frames=3
+[show-cache] 19 windows=19 vid=downtown_bar_00_1 start=0 frames=200
+[show-cache] 20 windows=20 vid=downtown_bar_00_1 start=200 frames=200
+[show-cache] 21 windows=21 vid=downtown_bar_00_1 start=400 frames=200
+[show-cache] 22 windows=22 vid=downtown_bar_00_1 start=600 frames=200
+[show-cache] 23 windows=23 vid=downtown_bar_00_1 start=800 frames=200
+[show-cache] 24 windows=24 vid=downtown_bar_00_1 start=1000 frames=200
+[show-cache] 25 windows=25 vid=downtown_bar_00_1 start=1200 frames=200
+[show-cache] 26 windows=26 vid=downtown_bar_00_1 start=1400 frames=3
+[show-cache] 27 windows=27 vid=downtown_bus_00_0 start=0 frames=200
+[show-cache] 28 windows=28 vid=downtown_bus_00_0 start=200 frames=200
+[show-cache] 29 windows=29 vid=downtown_bus_00_0 start=400 frames=200
+[show-cache] 30 windows=30 vid=downtown_bus_00_0 start=600 frames=200
+[show-cache] 31 windows=31 vid=downtown_bus_00_0 start=800 frames=200
+[show-cache] 32 windows=32 vid=downtown_bus_00_0 start=1000 frames=200
+[show-cache] 33 windows=33 vid=downtown_bus_00_0 start=1200 frames=200
+[show-cache] 34 windows=34 vid=downtown_bus_00_0 start=1400 frames=200
+[show-cache] 35 windows=35 vid=downtown_bus_00_0 start=1600 frames=200
+[show-cache] 36 windows=36 vid=downtown_bus_00_0 start=1800 frames=200
+[show-cache] 37 windows=37 vid=downtown_bus_00_0 start=2000 frames=178
+[show-cache] 38 windows=38 vid=downtown_bus_00_1 start=0 frames=200
+[show-cache] 39 windows=39 vid=downtown_bus_00_1 start=200 frames=200
+[show-cache] 40 windows=40 vid=downtown_bus_00_1 start=400 frames=200

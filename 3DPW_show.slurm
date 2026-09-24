@@ -20,12 +20,16 @@ echo "开始评估，作业 ID: ${SLURM_JOB_ID}"
 echo "当前环境: ${CONDA_DEFAULT_ENV}"
 echo "分配的 GPU: ${CUDA_VISIBLE_DEVICES}"
 
-
 cd /home/zhw/lab_users/xyb/home/projects/vggt-human
 
-DATASET=3dpw \
 CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt \
 SCALE_CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt \
+SUPPORT_ROOT=/home/zhw/xyb_space/3DPW/hmr4d_support \
+FRAMES_ROOT=/home/zhw/xyb_space/3DPW/imageFiles \
+OUTPUT_DIR=outputs/eval/show_3dpw_manual_scale_gtmatch_v3 \
+WINDOW_SIZE=200 \
+MAX_HUMANS=8 \
+TARGET_MIN_IOU=0.30 \
 DEVICE=cuda:0 \
-MAX_WINDOWS=8 \
-bash scripts/eval/evaluate_show_human_scene_hmr4d.sh
+bash scripts/eval/prepare_3dpw_show_manual_scale_cache.sh
+echo "已完成！"

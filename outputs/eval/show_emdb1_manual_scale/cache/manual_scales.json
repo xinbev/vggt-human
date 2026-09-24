@@ -1,0 +1,109 @@
+{
+  "format": "vggt_omega_show_hmr4d_manual_scale_selections_v1",
+  "cache_manifest": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/show_emdb1_manual_scale/cache/manifest.json",
+  "sequences": {
+    "emdb1_P1_14_outdoor_climb": {
+      "scale_multiplier": 0.9440608762859234,
+      "vid": "P1_14_outdoor_climb",
+      "sequence_index": 0,
+      "saved_at": "2026-09-24T08:39:29.021458+00:00"
+    },
+    "emdb1_P2_23_outdoor_hug_tree": {
+      "scale_multiplier": 1.2735030810166617,
+      "vid": "P2_23_outdoor_hug_tree",
+      "sequence_index": 1,
+      "saved_at": "2026-09-24T08:40:01.715139+00:00"
+    },
+    "emdb1_P3_31_outdoor_workout": {
+      "scale_multiplier": 1.0,
+      "vid": "P3_31_outdoor_workout",
+      "sequence_index": 2,
+      "saved_at": "2026-09-24T08:40:19.767100+00:00"
+    },
+    "emdb1_P3_32_outdoor_soccer_warmup_a": {
+      "scale_multiplier": 1.0,
+      "vid": "P3_32_outdoor_soccer_warmup_a",
+      "sequence_index": 3,
+      "saved_at": "2026-09-24T08:40:22.971450+00:00"
+    },
+    "emdb1_P3_33_outdoor_soccer_warmup_b": {
+      "scale_multiplier": 1.566751070108149,
+      "vid": "P3_33_outdoor_soccer_warmup_b",
+      "sequence_index": 4,
+      "saved_at": "2026-09-24T08:40:39.056082+00:00"
+    },
+    "emdb1_P5_42_indoor_dancing": {
+      "scale_multiplier": 0.9660508789898133,
+      "vid": "P5_42_indoor_dancing",
+      "sequence_index": 5,
+      "saved_at": "2026-09-24T08:40:58.351349+00:00"
+    },
+    "emdb1_P5_44_indoor_rom": {
+      "scale_multiplier": 0.9120108393559098,
+      "vid": "P5_44_indoor_rom",
+      "sequence_index": 6,
+      "saved_at": "2026-09-24T08:41:12.459618+00:00"
+    },
+    "emdb1_P6_49_outdoor_big_stairs_down": {
+      "scale_multiplier": 1.2302687708123816,
+      "vid": "P6_49_outdoor_big_stairs_down",
+      "sequence_index": 7,
+      "saved_at": "2026-09-24T08:41:23.955235+00:00"
+    },
+    "emdb1_P6_50_outdoor_workout": {
+      "scale_multiplier": 0.954992586021436,
+      "vid": "P6_50_outdoor_workout",
+      "sequence_index": 8,
+      "saved_at": "2026-09-24T08:41:33.116840+00:00"
+    },
+    "emdb1_P6_51_outdoor_dancing": {
+      "scale_multiplier": 0.9120108393559098,
+      "vid": "P6_51_outdoor_dancing",
+      "sequence_index": 9,
+      "saved_at": "2026-09-24T08:41:40.675188+00:00"
+    },
+    "emdb1_P7_57_outdoor_rock_chair": {
+      "scale_multiplier": 0.8912509381337456,
+      "vid": "P7_57_outdoor_rock_chair",
+      "sequence_index": 10,
+      "saved_at": "2026-09-24T08:41:53.866599+00:00"
+    },
+    "emdb1_P7_59_outdoor_rom": {
+      "scale_multiplier": 0.9015711376059569,
+      "vid": "P7_59_outdoor_rom",
+      "sequence_index": 11,
+      "saved_at": "2026-09-24T08:42:02.775625+00:00"
+    },
+    "emdb1_P7_60_outdoor_workout": {
+      "scale_multiplier": 0.8912509381337456,
+      "vid": "P7_60_outdoor_workout",
+      "sequence_index": 12,
+      "saved_at": "2026-09-24T08:42:09.311931+00:00"
+    },
+    "emdb1_P8_64_outdoor_skateboard": {
+      "scale_multiplier": 0.9225714271547631,
+      "vid": "P8_64_outdoor_skateboard",
+      "sequence_index": 13,
+      "saved_at": "2026-09-24T08:42:23.136827+00:00"
+    },
+    "emdb1_P8_68_outdoor_handstand": {
+      "scale_multiplier": 0.881048873008014,
+      "vid": "P8_68_outdoor_handstand",
+      "sequence_index": 14,
+      "saved_at": "2026-09-24T08:42:31.094421+00:00"
+    },
+    "emdb1_P8_69_outdoor_cartwheel": {
+      "scale_multiplier": 0.9225714271547631,
+      "vid": "P8_69_outdoor_cartwheel",
+      "sequence_index": 15,
+      "saved_at": "2026-09-24T08:42:36.161967+00:00"
+    },
+    "emdb1_P9_76_outdoor_sitting": {
+      "scale_multiplier": 0.8912509381337456,
+      "vid": "P9_76_outdoor_sitting",
+      "sequence_index": 16,
+      "saved_at": "2026-09-24T08:42:51.046718+00:00"
+    }
+  },
+  "updated_at": "2026-09-24T08:42:51.046829+00:00"
+}

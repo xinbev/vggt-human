@@ -1,0 +1,229 @@
+{
+  "format": "vggt_omega_show_hmr4d_manual_scale_selections_v1",
+  "cache_manifest": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/show_3dpw_manual_scale_gtmatch_v3/cache/manifest.json",
+  "sequences": {
+    "3dpw_downtown_arguing_00_0": {
+      "scale_multiplier": 1.216186000646368,
+      "vid": "downtown_arguing_00_0",
+      "sequence_index": 0,
+      "saved_at": "2026-09-24T08:13:22.194457+00:00"
+    },
+    "3dpw_downtown_arguing_00_1": {
+      "scale_multiplier": 1.216186000646368,
+      "vid": "downtown_arguing_00_1",
+      "sequence_index": 1,
+      "saved_at": "2026-09-24T08:14:16.770046+00:00"
+    },
+    "3dpw_downtown_bar_00_0": {
+      "scale_multiplier": 0.9660508789898133,
+      "vid": "downtown_bar_00_0",
+      "sequence_index": 2,
+      "saved_at": "2026-09-24T08:15:05.717507+00:00"
+    },
+    "3dpw_downtown_bar_00_1": {
+      "scale_multiplier": 1.0715193052376064,
+      "vid": "downtown_bar_00_1",
+      "sequence_index": 3,
+      "saved_at": "2026-09-24T08:16:18.734772+00:00"
+    },
+    "3dpw_downtown_bus_00_0": {
+      "scale_multiplier": 1.135010815672315,
+      "vid": "downtown_bus_00_0",
+      "sequence_index": 4,
+      "saved_at": "2026-09-24T08:17:49.849442+00:00"
+    },
+    "3dpw_downtown_bus_00_1": {
+      "scale_multiplier": 1.135010815672315,
+      "vid": "downtown_bus_00_1",
+      "sequence_index": 5,
+      "saved_at": "2026-09-24T08:18:15.086955+00:00"
+    },
+    "3dpw_downtown_cafe_00_0": {
+      "scale_multiplier": 1.135010815672315,
+      "vid": "downtown_cafe_00_0",
+      "sequence_index": 6,
+      "saved_at": "2026-09-24T08:20:53.769867+00:00"
+    },
+    "3dpw_downtown_cafe_00_1": {
+      "scale_multiplier": 1.1885022274370185,
+      "vid": "downtown_cafe_00_1",
+      "sequence_index": 7,
+      "saved_at": "2026-09-24T08:22:09.230507+00:00"
+    },
+    "3dpw_downtown_car_00_0": {
+      "scale_multiplier": 0.8709635899560807,
+      "vid": "downtown_car_00_0",
+      "sequence_index": 8,
+      "saved_at": "2026-09-24T08:22:32.313034+00:00"
+    },
+    "3dpw_downtown_car_00_1": {
+      "scale_multiplier": 0.881048873008014,
+      "vid": "downtown_car_00_1",
+      "sequence_index": 9,
+      "saved_at": "2026-09-24T08:22:41.897805+00:00"
+    },
+    "3dpw_downtown_crossStreets_00_0": {
+      "scale_multiplier": 0.9015711376059569,
+      "vid": "downtown_crossStreets_00_0",
+      "sequence_index": 10,
+      "saved_at": "2026-09-24T08:23:05.881849+00:00"
+    },
+    "3dpw_downtown_crossStreets_00_1": {
+      "scale_multiplier": 0.9772372209558107,
+      "vid": "downtown_crossStreets_00_1",
+      "sequence_index": 11,
+      "saved_at": "2026-09-24T08:23:29.796463+00:00"
+    },
+    "3dpw_downtown_downstairs_00_0": {
+      "scale_multiplier": 1.0,
+      "vid": "downtown_downstairs_00_0",
+      "sequence_index": 12,
+      "saved_at": "2026-09-24T08:23:44.863237+00:00"
+    },
+    "3dpw_downtown_enterShop_00_0": {
+      "scale_multiplier": 1.0,
+      "vid": "downtown_enterShop_00_0",
+      "sequence_index": 13,
+      "saved_at": "2026-09-24T08:23:51.537722+00:00"
+    },
+    "3dpw_downtown_rampAndStairs_00_0": {
+      "scale_multiplier": 1.0,
+      "vid": "downtown_rampAndStairs_00_0",
+      "sequence_index": 14,
+      "saved_at": "2026-09-24T08:24:05.529165+00:00"
+    },
+    "3dpw_downtown_rampAndStairs_00_1": {
+      "scale_multiplier": 1.0592537251772889,
+      "vid": "downtown_rampAndStairs_00_1",
+      "sequence_index": 15,
+      "saved_at": "2026-09-24T08:24:56.006498+00:00"
+    },
+    "3dpw_downtown_runForBus_00_0": {
+      "scale_multiplier": 1.0,
+      "vid": "downtown_runForBus_00_0",
+      "sequence_index": 16,
+      "saved_at": "2026-09-24T08:25:07.239477+00:00"
+    },
+    "3dpw_downtown_runForBus_00_1": {
+      "scale_multiplier": 1.0471285480508996,
+      "vid": "downtown_runForBus_00_1",
+      "sequence_index": 17,
+      "saved_at": "2026-09-24T08:25:52.356412+00:00"
+    },
+    "3dpw_downtown_runForBus_01_0": {
+      "scale_multiplier": 0.9660508789898133,
+      "vid": "downtown_runForBus_01_0",
+      "sequence_index": 18,
+      "saved_at": "2026-09-24T08:26:14.481527+00:00"
+    },
+    "3dpw_downtown_runForBus_01_1": {
+      "scale_multiplier": 0.9660508789898133,
+      "vid": "downtown_runForBus_01_1",
+      "sequence_index": 19,
+      "saved_at": "2026-09-24T08:26:36.460846+00:00"
+    },
+    "3dpw_downtown_sitOnStairs_00_0": {
+      "scale_multiplier": 1.1748975549395295,
+      "vid": "downtown_sitOnStairs_00_0",
+      "sequence_index": 20,
+      "saved_at": "2026-09-24T08:27:00.910460+00:00"
+    },
+    "3dpw_downtown_sitOnStairs_00_1": {
+      "scale_multiplier": 1.1885022274370185,
+      "vid": "downtown_sitOnStairs_00_1",
+      "sequence_index": 21,
+      "saved_at": "2026-09-24T08:27:31.035422+00:00"
+    },
+    "3dpw_downtown_stairs_00_0": {
+      "scale_multiplier": 1.0471285480508996,
+      "vid": "downtown_stairs_00_0",
+      "sequence_index": 22,
+      "saved_at": "2026-09-24T08:27:57.377115+00:00"
+    },
+    "3dpw_downtown_upstairs_00_0": {
+      "scale_multiplier": 1.2302687708123816,
+      "vid": "downtown_upstairs_00_0",
+      "sequence_index": 23,
+      "saved_at": "2026-09-24T08:28:28.376166+00:00"
+    },
+    "3dpw_downtown_walkBridge_01_0": {
+      "scale_multiplier": 1.0839269140212036,
+      "vid": "downtown_walkBridge_01_0",
+      "sequence_index": 24,
+      "saved_at": "2026-09-24T08:29:02.132128+00:00"
+    },
+    "3dpw_downtown_walkUphill_00_0": {
+      "scale_multiplier": 1.035142166679344,
+      "vid": "downtown_walkUphill_00_0",
+      "sequence_index": 25,
+      "saved_at": "2026-09-24T08:29:55.806002+00:00"
+    },
+    "3dpw_downtown_walking_00_0": {
+      "scale_multiplier": 1.0,
+      "vid": "downtown_walking_00_0",
+      "sequence_index": 26,
+      "saved_at": "2026-09-24T08:30:14.368969+00:00"
+    },
+    "3dpw_downtown_walking_00_1": {
+      "scale_multiplier": 1.0,
+      "vid": "downtown_walking_00_1",
+      "sequence_index": 27,
+      "saved_at": "2026-09-24T08:30:25.496062+00:00"
+    },
+    "3dpw_downtown_warmWelcome_00_0": {
+      "scale_multiplier": 0.8128305161640993,
+      "vid": "downtown_warmWelcome_00_0",
+      "sequence_index": 28,
+      "saved_at": "2026-09-24T08:31:33.637739+00:00"
+    },
+    "3dpw_downtown_warmWelcome_00_1": {
+      "scale_multiplier": 1.1885022274370185,
+      "vid": "downtown_warmWelcome_00_1",
+      "sequence_index": 29,
+      "saved_at": "2026-09-24T08:32:05.701268+00:00"
+    },
+    "3dpw_downtown_weeklyMarket_00_0": {
+      "scale_multiplier": 1.035142166679344,
+      "vid": "downtown_weeklyMarket_00_0",
+      "sequence_index": 30,
+      "saved_at": "2026-09-24T08:32:31.007731+00:00"
+    },
+    "3dpw_downtown_windowShopping_00_0": {
+      "scale_multiplier": 1.0,
+      "vid": "downtown_windowShopping_00_0",
+      "sequence_index": 31,
+      "saved_at": "2026-09-24T08:32:43.925445+00:00"
+    },
+    "3dpw_flat_guitar_01_0": {
+      "scale_multiplier": 0.9440608762859234,
+      "vid": "flat_guitar_01_0",
+      "sequence_index": 32,
+      "saved_at": "2026-09-24T08:33:03.555294+00:00"
+    },
+    "3dpw_flat_packBags_00_0": {
+      "scale_multiplier": 1.3489628825916535,
+      "vid": "flat_packBags_00_0",
+      "sequence_index": 33,
+      "saved_at": "2026-09-24T08:33:24.480732+00:00"
+    },
+    "3dpw_office_phoneCall_00_0": {
+      "scale_multiplier": 1.4621771744567182,
+      "vid": "office_phoneCall_00_0",
+      "sequence_index": 34,
+      "saved_at": "2026-09-24T08:33:41.357811+00:00"
+    },
+    "3dpw_office_phoneCall_00_1": {
+      "scale_multiplier": 1.4621771744567182,
+      "vid": "office_phoneCall_00_1",
+      "sequence_index": 35,
+      "saved_at": "2026-09-24T08:33:52.865928+00:00"
+    },
+    "3dpw_outdoors_fencing_01_0": {
+      "scale_multiplier": 1.0,
+      "vid": "outdoors_fencing_01_0",
+      "sequence_index": 36,
+      "saved_at": "2026-09-24T08:34:09.319625+00:00"
+    }
+  },
+  "updated_at": "2026-09-24T08:34:09.319672+00:00"
+}

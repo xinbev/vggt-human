@@ -1,0 +1,23 @@
+{
+  "format": "vggt_omega_show_hmr4d_manual_scale_selections_v1",
+  "mode": "manual",
+  "sequences": {
+    "emdb1_P1_14_outdoor_climb": 0.9440608762859234,
+    "emdb1_P2_23_outdoor_hug_tree": 1.2735030810166617,
+    "emdb1_P3_31_outdoor_workout": 1.0,
+    "emdb1_P3_32_outdoor_soccer_warmup_a": 1.0,
+    "emdb1_P3_33_outdoor_soccer_warmup_b": 1.566751070108149,
+    "emdb1_P5_42_indoor_dancing": 0.9660508789898133,
+    "emdb1_P5_44_indoor_rom": 0.9120108393559098,
+    "emdb1_P6_49_outdoor_big_stairs_down": 1.2302687708123816,
+    "emdb1_P6_50_outdoor_workout": 0.954992586021436,
+    "emdb1_P6_51_outdoor_dancing": 0.9120108393559098,
+    "emdb1_P7_57_outdoor_rock_chair": 0.8912509381337456,
+    "emdb1_P7_59_outdoor_rom": 0.9015711376059569,
+    "emdb1_P7_60_outdoor_workout": 0.8912509381337456,
+    "emdb1_P8_64_outdoor_skateboard": 0.9225714271547631,
+    "emdb1_P8_68_outdoor_handstand": 0.881048873008014,
+    "emdb1_P8_69_outdoor_cartwheel": 0.9225714271547631,
+    "emdb1_P9_76_outdoor_sitting": 0.8912509381337456
+  }
+}

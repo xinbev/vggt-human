@@ -1,0 +1,45 @@
+开始评估，作业 ID: 16115
+当前环境: zhw_env
+分配的 GPU: 0
+[show-cache] sequences=1 vid=downtown_arguing_00_0 sampled=200/898 frames
+[show-cache] sequences=2 vid=downtown_arguing_00_1 sampled=200/898 frames
+[show-cache] sequences=3 vid=downtown_bar_00_0 sampled=200/1403 frames
+[show-cache] sequences=4 vid=downtown_bar_00_1 sampled=200/1403 frames
+[show-cache] sequences=5 vid=downtown_bus_00_0 sampled=200/2178 frames
+[show-cache] sequences=6 vid=downtown_bus_00_1 sampled=200/2178 frames
+[show-cache] sequences=7 vid=downtown_cafe_00_0 sampled=200/1201 frames
+[show-cache] sequences=8 vid=downtown_cafe_00_1 sampled=200/1201 frames
+[show-cache] sequences=9 vid=downtown_car_00_0 sampled=200/1020 frames
+[show-cache] sequences=10 vid=downtown_car_00_1 sampled=200/1020 frames
+[show-cache] sequences=11 vid=downtown_crossStreets_00_0 sampled=200/588 frames
+[show-cache] sequences=12 vid=downtown_crossStreets_00_1 sampled=200/588 frames
+[show-cache] sequences=13 vid=downtown_downstairs_00_0 sampled=200/857 frames
+[show-cache] sequences=14 vid=downtown_enterShop_00_0 sampled=200/1449 frames
+[show-cache] sequences=15 vid=downtown_rampAndStairs_00_0 sampled=200/984 frames
+[show-cache] sequences=16 vid=downtown_rampAndStairs_00_1 sampled=200/984 frames
+[show-cache] sequences=17 vid=downtown_runForBus_00_0 sampled=200/731 frames
+[show-cache] sequences=18 vid=downtown_runForBus_00_1 sampled=200/731 frames
+[show-cache] sequences=19 vid=downtown_runForBus_01_0 sampled=200/783 frames
+[show-cache] sequences=20 vid=downtown_runForBus_01_1 sampled=200/783 frames
+[show-cache] sequences=21 vid=downtown_sitOnStairs_00_0 sampled=200/1337 frames
+[show-cache] sequences=22 vid=downtown_sitOnStairs_00_1 sampled=200/1337 frames
+[show-cache] sequences=23 vid=downtown_stairs_00_0 sampled=200/1240 frames
+[show-cache] sequences=24 vid=downtown_upstairs_00_0 sampled=200/845 frames
+[show-cache] sequences=25 vid=downtown_walkBridge_01_0 sampled=200/1372 frames
+[show-cache] sequences=26 vid=downtown_walkUphill_00_0 sampled=200/388 frames
+[show-cache] sequences=27 vid=downtown_walking_00_0 sampled=200/1387 frames
+[show-cache] sequences=28 vid=downtown_walking_00_1 sampled=200/1387 frames
+[show-cache] sequences=29 vid=downtown_warmWelcome_00_0 sampled=200/589 frames
+[show-cache] sequences=30 vid=downtown_warmWelcome_00_1 sampled=200/589 frames
+[show-cache] sequences=31 vid=downtown_weeklyMarket_00_0 sampled=200/1193 frames
+[show-cache] sequences=32 vid=downtown_windowShopping_00_0 sampled=200/1948 frames
+[show-cache] sequences=33 vid=flat_guitar_01_0 sampled=200/748 frames
+[show-cache] sequences=34 vid=flat_packBags_00_0 sampled=200/1279 frames
+[show-cache] sequences=35 vid=office_phoneCall_00_0 sampled=200/880 frames
+[show-cache] sequences=36 vid=office_phoneCall_00_1 sampled=200/880 frames
+[show-cache] sequences=37 vid=outdoors_fencing_01_0 sampled=200/942 frames
+{
+  "manifest": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/show_3dpw_manual_scale/cache/manifest.json",
+  "sequences": 37
+}
+已完成！

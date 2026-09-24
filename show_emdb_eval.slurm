@@ -23,13 +23,8 @@ echo "分配的 GPU: ${CUDA_VISIBLE_DEVICES}"
 
 cd /home/zhw/lab_users/xyb/home/projects/vggt-human
 
-CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt \
-SCALE_CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt \
-SUPPORT_ROOT=/home/zhw/xyb_space/emdb/hmr4d_support \
-FRAMES_ROOT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/hmr4d_eval_frames \
-WINDOW_SIZE=200 \
-MAX_HUMANS=8 \
-TARGET_MIN_IOU=0.30 \
+CACHE_DIR=outputs/eval/show_emdb1_manual_scale/cache \
+SCALE_MODE=manual \
 DEVICE=cuda:0 \
-bash scripts/eval/prepare_emdb1_show_manual_scale_cache.sh
+bash scripts/eval/evaluate_emdb1_show_manual_scale.sh
 echo "分配的 GPU: ${CUDA_VISIBLE_DEVICES}"

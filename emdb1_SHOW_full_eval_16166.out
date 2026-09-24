@@ -1,0 +1,25 @@
+开始评估，作业 ID: 16166
+当前环境: zhw_env
+分配的 GPU: 0
+[show-cache] sequences=1 vid=P1_14_outdoor_climb sampled=200/1299 GT-box=200 matched=186 mean-IoU=0.434
+[show-cache] sequences=2 vid=P2_23_outdoor_hug_tree sampled=200/1277 GT-box=200 matched=138 mean-IoU=0.403
+[show-cache] sequences=3 vid=P3_31_outdoor_workout sampled=200/1216 GT-box=200 matched=110 mean-IoU=0.305
+[show-cache] sequences=4 vid=P3_32_outdoor_soccer_warmup_a sampled=200/1084 GT-box=200 matched=58 mean-IoU=0.290
+[show-cache] sequences=5 vid=P3_33_outdoor_soccer_warmup_b sampled=200/1433 GT-box=200 matched=21 mean-IoU=0.263
+[show-cache] sequences=6 vid=P5_42_indoor_dancing sampled=200/1291 GT-box=200 matched=197 mean-IoU=0.438
+[show-cache] sequences=7 vid=P5_44_indoor_rom sampled=200/1381 GT-box=200 matched=106 mean-IoU=0.315
+[show-cache] sequences=8 vid=P6_49_outdoor_big_stairs_down sampled=200/1559 GT-box=200 matched=127 mean-IoU=0.362
+[show-cache] sequences=9 vid=P6_50_outdoor_workout sampled=200/1532 GT-box=200 matched=163 mean-IoU=0.435
+[show-cache] sequences=10 vid=P6_51_outdoor_dancing sampled=200/1427 GT-box=200 matched=131 mean-IoU=0.343
+[show-cache] sequences=11 vid=P7_57_outdoor_rock_chair sampled=200/1558 GT-box=200 matched=154 mean-IoU=0.407
+[show-cache] sequences=12 vid=P7_59_outdoor_rom sampled=200/1839 GT-box=200 matched=95 mean-IoU=0.336
+[show-cache] sequences=13 vid=P7_60_outdoor_workout sampled=200/1693 GT-box=200 matched=183 mean-IoU=0.435
+[show-cache] sequences=14 vid=P8_64_outdoor_skateboard sampled=200/1704 GT-box=200 matched=195 mean-IoU=0.474
+[show-cache] sequences=15 vid=P8_68_outdoor_handstand sampled=200/1606 GT-box=200 matched=144 mean-IoU=0.378
+[show-cache] sequences=16 vid=P8_69_outdoor_cartwheel sampled=200/656 GT-box=200 matched=197 mean-IoU=0.437
+[show-cache] sequences=17 vid=P9_76_outdoor_sitting sampled=200/1768 GT-box=200 matched=185 mean-IoU=0.426
+{
+  "manifest": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/show_emdb1_manual_scale/cache/manifest.json",
+  "sequences": 17
+}
+分配的 GPU: 0

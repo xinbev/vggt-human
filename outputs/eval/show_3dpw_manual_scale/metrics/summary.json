@@ -1,0 +1,43 @@
+{
+  "dataset": "3dpw",
+  "cache_manifest": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/show_3dpw_manual_scale_gtmatch_v3/cache/manifest.json",
+  "scale_file": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/show_3dpw_manual_scale_gtmatch_v3/cache/manual_scales.json",
+  "scale_mode": "manual",
+  "scale_scope": "one shared manual multiplier per sequence",
+  "sampling_protocol": "first min(200, N) frames from every sequence",
+  "aggregation_protocol": "sequence sampled means weighted by original sequence length N",
+  "aggregation_formula": "sum_i(original_frame_count_i * sampled_sequence_mean_i) / sum_i(original_frame_count_i)",
+  "sample_frames_per_sequence": 200,
+  "num_sequences": 37,
+  "num_sampled_frames": 7400,
+  "num_evaluated_sampled_frames": 3412,
+  "effective_original_frames": 40219,
+  "valid_sampled_frames": 3412,
+  "association_invalid_sampled_frames": 3882,
+  "mask_source": "gt_smpl_projection",
+  "branch": "refined",
+  "visibility_backend": "torch_triangle",
+  "table3": {
+    "hs_v5": 0.015495208078752787,
+    "hs_v10": 0.01810363392012967,
+    "hs_cf5": 8.801418883710367,
+    "hs_cf10": 8.376161605591006
+  },
+  "weighted_means": {
+    "hs_v5": 0.015495208078752787,
+    "hs_v10": 0.01810363392012967,
+    "hs_cf5": 8.801418883710367,
+    "hs_cf10": 8.376161605591006
+  },
+  "unweighted_sampled_frame_means": {
+    "hs_v5": 0.015092661995225087,
+    "hs_v10": 0.017545695234022395,
+    "hs_cf5": 7.486592642674692,
+    "hs_cf10": 7.083129876121826
+  },
+  "files": {
+    "per_frame": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/show_3dpw_manual_scale/metrics/per_frame.csv",
+    "per_sequence": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/show_3dpw_manual_scale/metrics/per_sequence.csv",
+    "applied_scales": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/show_3dpw_manual_scale/metrics/applied_scales.json"
+  }
+}

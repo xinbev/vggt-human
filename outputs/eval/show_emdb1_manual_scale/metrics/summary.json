@@ -1,0 +1,43 @@
+{
+  "dataset": "emdb1",
+  "cache_manifest": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/show_emdb1_manual_scale/cache/manifest.json",
+  "scale_file": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/show_emdb1_manual_scale/cache/manual_scales.json",
+  "scale_mode": "manual",
+  "scale_scope": "one shared manual multiplier per sequence",
+  "sampling_protocol": "first min(200, N) frames from every sequence",
+  "aggregation_protocol": "sequence sampled means weighted by original sequence length N",
+  "aggregation_formula": "sum_i(original_frame_count_i * sampled_sequence_mean_i) / sum_i(original_frame_count_i)",
+  "sample_frames_per_sequence": 200,
+  "num_sequences": 17,
+  "num_sampled_frames": 3400,
+  "num_evaluated_sampled_frames": 2390,
+  "effective_original_frames": 24323,
+  "valid_sampled_frames": 2390,
+  "association_invalid_sampled_frames": 1010,
+  "mask_source": "gt_smpl_projection",
+  "branch": "refined",
+  "visibility_backend": "torch_triangle",
+  "table3": {
+    "hs_v5": 0.010162144120414524,
+    "hs_v10": 0.018121414520191188,
+    "hs_cf5": 3.7455506863184214,
+    "hs_cf10": 3.6740249505104283
+  },
+  "weighted_means": {
+    "hs_v5": 0.010162144120414524,
+    "hs_v10": 0.018121414520191188,
+    "hs_cf5": 3.7455506863184214,
+    "hs_cf10": 3.6740249505104283
+  },
+  "unweighted_sampled_frame_means": {
+    "hs_v5": 0.010138577549761184,
+    "hs_v10": 0.017971650059977896,
+    "hs_cf5": 3.4925947563418784,
+    "hs_cf10": 3.458410686703407
+  },
+  "files": {
+    "per_frame": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/show_emdb1_manual_scale/metrics/per_frame.csv",
+    "per_sequence": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/show_emdb1_manual_scale/metrics/per_sequence.csv",
+    "applied_scales": "/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/eval/show_emdb1_manual_scale/metrics/applied_scales.json"
+  }
+}
