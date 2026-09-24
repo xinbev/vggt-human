@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Re-evaluate cached 3DPW SHOW samples after manual per-sequence scaling."""
+"""Re-evaluate cached HMR4D SHOW samples after manual per-sequence scaling."""
 
 from __future__ import annotations
 
@@ -22,8 +22,8 @@ from scripts.eval.evaluate_show_human_scene_3dpw import resolve_output_dir  # no
 from vggt_omega.evaluation import HumanSceneConsistencyConfig, compute_human_scene_consistency, render_mesh_silhouette  # noqa: E402
 
 
-CACHE_FORMAT = "vggt_omega_show_3dpw_manual_scale_cache_v3"
-SCALE_FILE_FORMAT = "vggt_omega_show_3dpw_manual_scale_selections_v3"
+CACHE_FORMAT = "vggt_omega_show_hmr4d_manual_scale_cache_v1"
+SCALE_FILE_FORMAT = "vggt_omega_show_hmr4d_manual_scale_selections_v1"
 
 
 def main() -> None:
@@ -88,7 +88,7 @@ def main() -> None:
     write_csv(output_dir / "per_sequence.csv", window_rows)
     (output_dir / "applied_scales.json").write_text(json.dumps({"format": SCALE_FILE_FORMAT, "mode": args.scale_mode, "sequences": scales}, indent=2), encoding="utf-8")
     summary = {
-        "dataset": "3dpw", "cache_manifest": str(manifest_path), "scale_file": str(scale_file),
+        "dataset": str(manifest.get("dataset", "unknown")), "cache_manifest": str(manifest_path), "scale_file": str(scale_file),
         "scale_mode": args.scale_mode, "scale_scope": "one shared manual multiplier per sequence",
         "sampling_protocol": manifest.get("sampling_protocol"),
         "aggregation_protocol": "sequence sampled means weighted by original sequence length N",

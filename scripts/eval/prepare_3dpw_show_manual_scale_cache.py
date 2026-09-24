@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the 3DPW SHOW cascade once and cache the first 200 frames per sequence.
+"""Run the SHOW cascade once and cache the first 200 frames per HMR4D sequence.
 
 The cache deliberately stores the selected prediction mesh and metric depth,
 not model activations.  Manual calibration therefore never runs inference a
@@ -47,7 +47,7 @@ from vggt_omega.models.smpl_layer import SMPLLayer  # noqa: E402
 from vggt_omega.training.config import require_path  # noqa: E402
 
 
-CACHE_FORMAT = "vggt_omega_show_3dpw_manual_scale_cache_v3"
+CACHE_FORMAT = "vggt_omega_show_hmr4d_manual_scale_cache_v1"
 MANIFEST_NAME = "manifest.json"
 FACES_NAME = "smpl_faces.npy"
 INCOMPLETE_NAME = ".incomplete"
@@ -59,7 +59,7 @@ def main() -> None:
     if int(args.batch_size) != 1:
         raise ValueError("SHOW manual-scale cache requires --batch-size=1")
     if int(args.max_humans) < 2:
-        raise ValueError("3DPW multi-person GT association requires --max-humans >= 2; use 8 by default")
+        raise ValueError("Multi-person GT association requires --max-humans >= 2; use 8 by default")
     if not 0.0 <= float(args.target_min_iou) <= 1.0:
         raise ValueError(f"--target-min-iou must be within [0,1], got {args.target_min_iou}")
     device = torch.device(args.device if args.device else ("cuda" if torch.cuda.is_available() else "cpu"))
@@ -116,7 +116,7 @@ def main() -> None:
         match_count = sum(bool(frame.get("match_valid", False)) for frame in frames)
         if gt_box_count == 0:
             raise RuntimeError(
-                "3DPW target association has no GT boxes. The cache would fall back to the most "
+                f"{args.dataset} target association has no GT boxes. The cache would fall back to the most "
                 f"confident person and may switch identity: vid={batch['meta']['vid'][0]}"
             )
         valid_ious = [float(frame["target_iou"]) for frame in frames if bool(frame.get("gt_box_valid", False)) and np.isfinite(float(frame["target_iou"]))]
@@ -127,7 +127,7 @@ def main() -> None:
         original_length = int(meta["original_sequence_length"][0])
         sampled_length = int(meta["sampled_sequence_length"][0])
         source_video = str(next(item for item in dataset.records if item.vid == vid).label.get("vname", vid.rsplit("_", 1)[0]))
-        sequence_id = f"3dpw_{safe_name(vid)}"
+        sequence_id = f"{safe_name(args.dataset)}_{safe_name(vid)}"
         frame_file = sequences_dir / f"{sequence_id}.pkl"
         with frame_file.open("wb") as file:
             pickle.dump(frames, file, protocol=pickle.HIGHEST_PROTOCOL)
@@ -156,7 +156,7 @@ def main() -> None:
     manifest = {
         "format": CACHE_FORMAT,
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "dataset": "3dpw", "split": args.split, "sample_frames_per_sequence": int(args.sequence_length or config.get("data", {}).get("sequence_length", 200)),
+        "dataset": args.dataset, "split": args.split, "sample_frames_per_sequence": int(args.sequence_length or config.get("data", {}).get("sequence_length", 200)),
         "branch": "refined", "mask_source": mask_source,
         "checkpoint": str(args.checkpoint), "scale_checkpoint": str(args.scale_checkpoint),
         "checkpoint_model_config": checkpoint_report, "checkpoint_load": checkpoint_audit,
@@ -165,7 +165,7 @@ def main() -> None:
         "sampling_protocol": f"first min({int(args.sequence_length)}, N) frames from every sequence",
         "aggregation_protocol": "each sampled sequence mean is weighted by its original sequence length N",
         "scale_scope": "one shared manual multiplier per sequence",
-        "target_association": "one HMR4D 3DPW person-track record; per-frame maximum IoU among detector candidates",
+        "target_association": "one HMR4D target person-track record; per-frame maximum IoU among detector candidates",
         "target_min_iou": float(args.target_min_iou),
     }
     manifest_path = cache_dir / MANIFEST_NAME
@@ -238,6 +238,7 @@ def safe_name(value: str) -> str:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--dataset", choices=("3dpw", "emdb1"), default="3dpw")
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--scale-checkpoint", required=True)
     parser.add_argument("--path-config", default="configs/path.yaml")
@@ -255,8 +256,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--stride", type=int, default=1)
     parser.add_argument("--max-sequences", type=int, default=0)
     parser.add_argument("--split", default="test")
-    # The shared HMR4D builder uses this field to select the support labels.
-    parser.set_defaults(dataset="3dpw", one_window_per_sequence=True)
+    parser.set_defaults(one_window_per_sequence=True)
     parser.add_argument("--override", action="append", default=[])
     return parser.parse_args()
 

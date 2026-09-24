@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Viser replay viewer for cached 3DPW SHOW per-sequence samples."""
+"""Viser replay viewer for cached HMR4D SHOW per-sequence samples."""
 
 from __future__ import annotations
 
@@ -32,8 +32,8 @@ from scripts.vis.serve_stage2_viewer_cache import (  # noqa: E402
 from vggt_omega.evaluation import HumanSceneConsistencyConfig, compute_human_scene_consistency, render_mesh_silhouette  # noqa: E402
 
 
-CACHE_FORMAT = "vggt_omega_show_3dpw_manual_scale_cache_v3"
-SCALE_FILE_FORMAT = "vggt_omega_show_3dpw_manual_scale_selections_v3"
+CACHE_FORMAT = "vggt_omega_show_hmr4d_manual_scale_cache_v1"
+SCALE_FILE_FORMAT = "vggt_omega_show_hmr4d_manual_scale_selections_v1"
 
 
 def parse_args() -> argparse.Namespace:

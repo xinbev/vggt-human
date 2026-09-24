@@ -1,4 +1,4 @@
-# 3DPW SHOW 人工 scale 评测流程
+# 3DPW / EMDB-1 SHOW 人工 scale 评测流程
 
 这套流程把推理与人工校准解耦。每条 3DPW 序列只取前 `min(200, N)` 帧，其中 `N` 是原始序列长度；不做均匀采样，也不继续评测第 201 帧之后的内容。缓存阶段复用当前 HMR4D 3DPW 适配器和可视化脚本使用的 analytic-coarse + residual-scale + Stage-2 cascade；缓存完成后，Viser 不再加载模型或 checkpoint。
 
@@ -59,4 +59,41 @@ bash scripts/eval/evaluate_3dpw_show_manual_scale.sh
 - `applied_scales.json`：实际采用的 scale 映射。
 
 正式 manual 评测要求所有序列都有保存的 scale。若只想检查未校准基线，可使用 `SCALE_MODE=base`；若只做中途诊断，可显式设置 `ALLOW_MISSING_MANUAL_SCALES=true`，缺失序列按 1.0 处理。
+
+## EMDB-1：同一套前 200 帧协议
+
+EMDB-1 使用完全相同的缓存字段、GT bbox 人物匹配、人工 scale 语义和按原始长度 `N` 加权方式。区别仅为数据集与输出目录。
+
+生成缓存：
+
+```bash
+CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_nlf_stage2_human_scene_align_full/checkpoint_latest.pt \
+SCALE_CHECKPOINT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/train/smpl_hsi_coarse_residual_stratified_v3/checkpoint_top_train_epoch_0005_loss_total_0.009242.pt \
+SUPPORT_ROOT=/home/zhw/xyb_space/emdb/hmr4d_support \
+FRAMES_ROOT=/home/zhw/lab_users/xyb/home/projects/vggt-human/outputs/preprocess/hmr4d_eval_frames \
+WINDOW_SIZE=200 \
+MAX_HUMANS=8 \
+TARGET_MIN_IOU=0.30 \
+DEVICE=cuda:0 \
+bash scripts/eval/prepare_emdb1_show_manual_scale_cache.sh
+```
+
+启动 Viser：
+
+```bash
+CACHE_DIR=outputs/eval/show_emdb1_manual_scale/cache \
+PORT=8080 \
+bash scripts/vis/serve_emdb1_show_manual_scale_viewer.sh
+```
+
+保存完 17 条序列的 scale 后评测：
+
+```bash
+CACHE_DIR=outputs/eval/show_emdb1_manual_scale/cache \
+SCALE_MODE=manual \
+DEVICE=cuda:0 \
+bash scripts/eval/evaluate_emdb1_show_manual_scale.sh
+```
+
+结果写入 `outputs/eval/show_emdb1_manual_scale/metrics/`。
 
