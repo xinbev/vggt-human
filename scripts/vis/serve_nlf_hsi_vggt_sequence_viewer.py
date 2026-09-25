@@ -1555,9 +1555,11 @@ def decode_people(
         transl = predictions[transl_key].detach()
         shape = poses.shape[:3]
         with torch.no_grad():
-            vertices, _ = smpl(poses.reshape(-1, 72).float(), betas.reshape(-1, betas.shape[-1]).float())
+            vertices, joints = smpl(poses.reshape(-1, 72).float(), betas.reshape(-1, betas.shape[-1]).float())
         vertices = vertices.reshape(*shape, vertices.shape[-2], 3).to(device=device, dtype=transl.dtype) + transl[..., None, :]
+        joints = joints.reshape(*shape, joints.shape[-2], 3).to(device=device, dtype=transl.dtype) + transl[..., None, :]
         out[f"{prefix}_vertices_cam"] = vertices.detach()
+        out[f"{prefix}_joints_cam"] = joints.detach()
     return out
 
 
@@ -1736,6 +1738,14 @@ def select_frame_people(
                 mesh_cam = decoded[key][0, frame_index, query_idx].detach().float().cpu().numpy()
                 item[f"{prefix}_vertices_cam"] = mesh_cam.astype(np.float32, copy=False)
                 item[f"{prefix}_vertices"] = camera_points_to_world_np(mesh_cam, extrinsic)
+            joints_key = f"{prefix}_joints_cam"
+            if joints_key in decoded:
+                joints_cam = decoded[joints_key][0, frame_index, query_idx].detach().float().cpu().numpy()
+                if joints_cam.ndim == 2 and joints_cam.shape[0] > 0:
+                    root_cam = joints_cam[0]
+                    item[f"{prefix}_root_position"] = camera_points_to_world_np(
+                        root_cam.reshape(1, 3), extrinsic
+                    )[0].astype(np.float32, copy=False)
         people.append(item)
     return people
 
@@ -2095,6 +2105,13 @@ class SequenceViewer:
         self._syncing_pinned_frame_controls = False
         self.pinned_frame_button_groups: list[dict[str, Any]] = []
         self.pinned_frame_indices_value: set[int] = set()
+        self.pinned_root_color_value = (255, 210, 0)
+        self.pinned_root_node_size_value = 0.035
+        self.pinned_root_line_width_value = 4.0
+        self.pinned_root_trajectory_enabled_initial = bool(
+            getattr(args, "show_pinned_root_trajectory_initial", False)
+        )
+        self.pinned_root_trajectory_handles: dict[str, list[Any]] = {"base": [], "hsi": []}
         self.id_edit_history: list[list[dict[str, Any]]] = []
         self.track_color_by_id: dict[int, tuple[int, int, int]] = {}
         self.original_track_color_by_id: dict[int, tuple[int, int, int]] = {}
@@ -2803,6 +2820,10 @@ class SequenceViewer:
         bind_update(self.camera_size, self._on_camera_size_update)
         bind_update(self.smpl_opacity, self._on_smpl_opacity_update)
         bind_update(self.smpl_color, self._on_smpl_color_update)
+        bind_update(self.show_pinned_root_trajectory, self._on_pinned_root_trajectory_update)
+        bind_update(self.pinned_root_color, self._update_pinned_root_trajectory_style)
+        bind_update(self.pinned_root_node_size, self._update_pinned_root_trajectory_style)
+        bind_update(self.pinned_root_line_width, self._update_pinned_root_trajectory_style)
         bind_update(self.selected_smpl, self._on_selected_smpl_update)
         bind_update(self.smpl_edit_scope, self._on_smpl_offset_slider_update)
         bind_update(self.smpl_edit_dx, self._on_smpl_offset_slider_update)
@@ -2891,6 +2912,175 @@ class SequenceViewer:
                 )
             bind_click(self.pin_current_smpl_frame, self._pin_current_smpl_frame)
             bind_click(self.clear_pinned_smpl_frames, self._clear_pinned_smpl_frames)
+            self.show_pinned_root_trajectory = add_checkbox(
+                self.server,
+                "Show Pinned Root Trajectory",
+                self.pinned_root_trajectory_enabled_initial,
+            )
+            self.pinned_root_color = add_rgb(
+                self.server,
+                "Root Trajectory Color",
+                self.pinned_root_color_value,
+            )
+            self.pinned_root_node_size = add_slider(
+                self.server,
+                "Root Node Size",
+                0.005,
+                0.15,
+                0.005,
+                self.pinned_root_node_size_value,
+            )
+            self.pinned_root_line_width = add_slider(
+                self.server,
+                "Root Line Width",
+                1.0,
+                10.0,
+                0.5,
+                self.pinned_root_line_width_value,
+            )
+            self.pinned_root_info = add_text(
+                self.server,
+                "Root Trajectory Status",
+                "Off | pin two frames to define a sequence range",
+            )
+            set_handle_disabled(self.pinned_root_info, True)
+            if self.pinned_root_trajectory_enabled_initial:
+                self._rebuild_pinned_root_trajectory()
+
+    def _root_position_from_person(
+        self,
+        person: dict[str, Any],
+        branch: str,
+    ) -> np.ndarray | None:
+        """Return a world-space SMPL root, with a geometry fallback for old caches."""
+        root = person.get(f"{branch}_root_position")
+        if root is None:
+            root = person.get("root_position")
+        if root is not None:
+            root_np = np.asarray(root, dtype=np.float32).reshape(-1)
+            if root_np.size == 3 and bool(np.isfinite(root_np).all()):
+                return root_np.copy()
+        vertices = person.get(f"{branch}_vertices")
+        if vertices is None:
+            vertices = person.get("hsi_vertices", person.get("base_vertices"))
+        if vertices is None:
+            return None
+        vertices_np = np.asarray(vertices, dtype=np.float32).reshape(-1, 3)
+        finite = np.isfinite(vertices_np).all(axis=1)
+        if not bool(finite.any()):
+            return None
+        valid = vertices_np[finite]
+        # Old full caches contain mesh vertices only. Estimate the pelvis by
+        # centering x/z and taking the lower-torso band along the SMPL y axis.
+        y_low, y_high = np.quantile(valid[:, 1], [0.35, 0.65])
+        torso = valid[(valid[:, 1] >= y_low) & (valid[:, 1] <= y_high)]
+        if torso.shape[0] == 0:
+            torso = valid
+        root_np = torso.mean(axis=0).astype(np.float32, copy=False)
+        return root_np if bool(np.isfinite(root_np).all()) else None
+
+    def _rebuild_pinned_root_trajectory(self) -> None:
+        for handles in self.pinned_root_trajectory_handles.values():
+            for handle in handles:
+                remove_handle(handle)
+        self.pinned_root_trajectory_handles = {"base": [], "hsi": []}
+        if not bool(getattr(self.show_pinned_root_trajectory, "value", False)):
+            set_text_value(self.pinned_root_info, "Off | enable the checkbox to show root nodes")
+            return
+        pinned = sorted(self._pinned_frame_indices())
+        if len(pinned) < 2:
+            set_text_value(self.pinned_root_info, "Pin at least two frames to define a root trajectory range")
+            return
+        start, end = max(0, pinned[0]), min(len(self.scene["frames"]) - 1, pinned[-1])
+        branch_node_counts: dict[str, int] = {}
+        for branch in ("base", "hsi"):
+            previous_by_track: dict[int, np.ndarray] = {}
+            segments: list[np.ndarray] = []
+            nodes: list[np.ndarray] = []
+            for frame_index in range(start, end + 1):
+                frame = self.scene["frames"][frame_index]
+                for person in frame.get("people", []):
+                    root = self._root_position_from_person(person, branch)
+                    if root is None:
+                        continue
+                    track_id = int(person.get("track_id", -1))
+                    query_index = int(person.get("query_index", -1))
+                    entry = self.human_entry_by_key.get(
+                        human_entry_key(frame_index, branch, track_id, query_index)
+                    )
+                    if entry is not None:
+                        root = root + np.asarray(entry["offset"], dtype=np.float32)
+                    if branch == "hsi":
+                        root = root + self._hsi_camera_visual_offset(frame_index)
+                    nodes.append(root)
+                    previous = previous_by_track.get(track_id)
+                    if previous is not None:
+                        segments.append(np.stack([previous, root], axis=0))
+                    previous_by_track[track_id] = root
+            if not nodes:
+                continue
+            node_points = np.asarray(nodes, dtype=np.float32).reshape(-1, 3)
+            branch_node_counts[branch] = int(node_points.shape[0])
+            node_colors = np.repeat(
+                np.asarray(self.pinned_root_color_value, dtype=np.uint8)[None, :],
+                node_points.shape[0],
+                axis=0,
+            )
+            handles: list[Any] = [
+                add_point_cloud(
+                    self.server,
+                    f"/pinned_root_trajectory/{branch}/nodes",
+                    node_points,
+                    node_colors,
+                    float(self.pinned_root_node_size_value),
+                )
+            ]
+            if segments:
+                handles.append(
+                    add_line_segments(
+                        self.server,
+                        f"/pinned_root_trajectory/{branch}/lines",
+                        np.asarray(segments, dtype=np.float32),
+                        color=self.pinned_root_color_value,
+                        line_width=float(self.pinned_root_line_width_value),
+                    )
+                )
+            self.pinned_root_trajectory_handles[branch] = handles
+        total_nodes = sum(branch_node_counts.values())
+        track_count = len(
+            {
+                int(person.get("track_id", -1))
+                for frame_index in range(start, end + 1)
+                for person in self.scene["frames"][frame_index].get("people", [])
+                if self._root_position_from_person(person, "hsi") is not None
+                or self._root_position_from_person(person, "base") is not None
+            }
+        )
+        set_text_value(
+            self.pinned_root_info,
+            f"Frames {start:04d}-{end:04d} | {track_count} track(s) | "
+            f"{total_nodes} root node(s)",
+        )
+
+    def _update_pinned_root_trajectory_style(self, _: Any = None) -> None:
+        self.pinned_root_color_value = tuple(int(value) for value in self.pinned_root_color.value)
+        self.pinned_root_node_size_value = float(self.pinned_root_node_size.value)
+        self.pinned_root_line_width_value = float(self.pinned_root_line_width.value)
+        self._rebuild_pinned_root_trajectory()
+
+    def _update_pinned_root_trajectory_visibility(self) -> None:
+        if not bool(getattr(self.show_pinned_root_trajectory, "value", False)):
+            for handles in self.pinned_root_trajectory_handles.values():
+                set_group_visible(handles, False)
+            return
+        active_branch = "hsi" if bool(self.show_hsi.value) else "base"
+        for branch, handles in self.pinned_root_trajectory_handles.items():
+            set_group_visible(handles, branch == active_branch)
+
+    def _on_pinned_root_trajectory_update(self, _: Any = None) -> None:
+        if bool(self.show_pinned_root_trajectory.value):
+            self._rebuild_pinned_root_trajectory()
+        self._update_pinned_root_trajectory_visibility()
 
     def _pinned_frame_indices(self) -> set[int]:
         return set(self.pinned_frame_indices_value)
@@ -2914,6 +3104,7 @@ class SequenceViewer:
         else:
             self.pinned_frame_indices_value.add(frame_index)
         self._refresh_pinned_frame_buttons()
+        self._rebuild_pinned_root_trajectory()
         self._update_visibility()
 
     def _refresh_pinned_frame_buttons(self) -> None:
@@ -2932,11 +3123,13 @@ class SequenceViewer:
         if 0 <= frame_index < len(self.scene["frames"]):
             self.pinned_frame_indices_value.add(frame_index)
         self._refresh_pinned_frame_buttons()
+        self._rebuild_pinned_root_trajectory()
         self._update_visibility()
 
     def _clear_pinned_smpl_frames(self, _: Any = None) -> None:
         self.pinned_frame_indices_value.clear()
         self._refresh_pinned_frame_buttons()
+        self._rebuild_pinned_root_trajectory()
         self._update_visibility()
 
     def _register_clients(self) -> None:
@@ -3885,6 +4078,9 @@ class SequenceViewer:
                     label_handle,
                     np.asarray(label_base, dtype=np.float32) + self._human_visual_translation(entry),
                 )
+        root_toggle = getattr(self, "show_pinned_root_trajectory", None)
+        if root_toggle is not None and bool(root_toggle.value):
+            self._rebuild_pinned_root_trajectory()
 
     def _sync_transform_controls_to_entry(self, entry: dict[str, Any]) -> None:
         if self.transform_controls is None:
@@ -4368,6 +4564,9 @@ class SequenceViewer:
         for handle in frame_handles.get("cameras_hsi", []):
             set_handle_position(handle, scaled_camera["position"])
         self._sync_hsi_human_visual_transform()
+        root_toggle = getattr(self, "show_pinned_root_trajectory", None)
+        if root_toggle is not None and bool(root_toggle.value):
+            self._rebuild_pinned_root_trajectory()
 
     def _rebuild_hsi_visual_geometry(self) -> None:
         if bool(getattr(self.args, "tracking_only", False)):
@@ -4392,6 +4591,9 @@ class SequenceViewer:
                 set_handle_position(handle, scaled_camera["position"])
 
         self._sync_hsi_human_visual_transform()
+        root_toggle = getattr(self, "show_pinned_root_trajectory", None)
+        if root_toggle is not None and bool(root_toggle.value):
+            self._rebuild_pinned_root_trajectory()
 
         for handle in self.global_handles.get("camera_trajectory_hsi", []):
             remove_handle(handle)
@@ -4625,6 +4827,7 @@ class SequenceViewer:
                 f"indices: {pinned_preview or '<none>'} | click a visible pinned mesh to edit"
             ),
         )
+        self._update_pinned_root_trajectory_visibility()
         self._update_smpl_scale_info()
         self._update_info_text(current)
 
@@ -5045,8 +5248,13 @@ def add_line_segments(
                 line_width=float(line_width),
                 **transform_kwargs,
             )
-    start, end = points_np[0]
-    line_points = np.linspace(start, end, 64, dtype=np.float32)
+    line_points = np.concatenate(
+        [
+            np.linspace(start, end, 32, dtype=np.float32)
+            for start, end in points_np
+        ],
+        axis=0,
+    )
     line_colors = np.repeat(np.asarray(color_int, dtype=np.uint8)[None, :], line_points.shape[0], axis=0)
     return add_point_cloud(server, name, line_points, line_colors, max(float(line_width) * 0.002, 0.006))
 

@@ -22,6 +22,18 @@ Hybrid 模式行为：
 
 固定帧选择属于当前 Viewer 运行状态，不写回模型结果，也不写入 cache。重新启动 Viewer 后所有帧按钮恢复为未固定状态。
 
+## 固定帧 SMPL Root 轨迹
+
+`Pinned SMPL Frames` 面板新增 `Show Pinned Root Trajectory` 复选框。固定至少两帧后，最小和最大固定帧定义轨迹区间；区间内每个 track 的 SMPL root/pelvis 节点按 track ID 连线。Base 和 HSI 分支分别维护轨迹，并跟随当前 `Show Base SMPL` / `Show HSI SMPL` 分支显示。
+
+同一面板提供 `Root Trajectory Color`、`Root Node Size` 和 `Root Line Width` 控件。轨迹只存在于当前 Viewer 会话，不写回模型输出或 cache。由旧 cache 读取时若没有保存 root joint，则使用 SMPL 顶点的下躯干几何中心作为兼容 fallback；新生成的 scene 会保存解码出的 SMPL root/pelvis 位置。
+
+启动时可用 `SHOW_PINNED_ROOT_TRAJECTORY=1` 让该复选框初始打开：
+
+```bash
+SHOW_PINNED_ROOT_TRAJECTORY=1 bash scripts/vis/serve_full_sequence_viewer_cache.sh
+```
+
 ## SMPL Track ID 重分配
 
 `SMPL ID Reassignment` 用于修正 Viewer 中的错配 Track ID：

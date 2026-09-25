@@ -10,6 +10,7 @@ POINT_SIZE="${POINT_SIZE:-}"
 HUMAN_MASK_DILATION_PX="${HUMAN_MASK_DILATION_PX:-}"
 FILTER_HUMAN_POINTS="${FILTER_HUMAN_POINTS:-}"
 SHOW_GT_SMPL="${SHOW_GT_SMPL:-0}"
+SHOW_PINNED_ROOT_TRAJECTORY="${SHOW_PINNED_ROOT_TRAJECTORY:-0}"
 RICH_SEQUENCE="${RICH_SEQUENCE:-}"
 RICH_SUPPORT_ROOT="${RICH_SUPPORT_ROOT:-/home/zhw/xyb_space/RICH/hmr4d_support}"
 SMPLX_MODEL_DIR="${SMPLX_MODEL_DIR:-${REPO_ROOT}/checkpoints/body_models/smplx}"
@@ -50,6 +51,11 @@ case "${SHOW_GT_SMPL}" in
   0|false|FALSE|False|no|NO|No|off|OFF|Off|"") GT_ENABLED=0 ;;
   *) echo "[ERROR] SHOW_GT_SMPL must be a boolean, got: ${SHOW_GT_SMPL}" >&2; exit 1 ;;
 esac
+case "${SHOW_PINNED_ROOT_TRAJECTORY}" in
+  1|true|TRUE|True|yes|YES|Yes|on|ON|On) ARGS+=(--show-pinned-root-trajectory) ;;
+  0|false|FALSE|False|no|NO|No|off|OFF|Off|"") ARGS+=(--no-show-pinned-root-trajectory) ;;
+  *) echo "[ERROR] SHOW_PINNED_ROOT_TRAJECTORY must be a boolean, got: ${SHOW_PINNED_ROOT_TRAJECTORY}" >&2; exit 1 ;;
+esac
 if [[ "${GT_ENABLED}" -eq 1 ]]; then
   ARGS+=(
     --rich-support-root "${RICH_SUPPORT_ROOT}"
@@ -72,6 +78,7 @@ echo "Point size : ${POINT_SIZE:-<cached value>}"
 echo "Mask pixels: ${HUMAN_MASK_DILATION_PX:-<cached value>}"
 echo "Filter     : ${FILTER_HUMAN_POINTS:-<cached value>}"
 echo "GT SMPL    : ${SHOW_GT_SMPL} (${RICH_SEQUENCE:-auto sequence}, source=${GT_COORDINATE_SOURCE})"
+echo "Root path  : ${SHOW_PINNED_ROOT_TRAJECTORY} (pin-panel checkbox initial state)"
 echo "GPU        : ${CUDA_VISIBLE_DEVICES_VALUE:-<default>}"
 
 python scripts/vis/serve_full_sequence_viewer_cache.py "${ARGS[@]}"

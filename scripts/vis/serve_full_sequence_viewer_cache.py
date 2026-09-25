@@ -69,6 +69,8 @@ def main() -> None:
         if not 0.1 <= float(cli_args.smpl_visual_scale) <= 10.0:
             raise ValueError("--smpl-visual-scale must be within [0.1, 10.0]")
         viewer_args.smpl_visual_scale = float(cli_args.smpl_visual_scale)
+    if cli_args.show_pinned_root_trajectory is not None:
+        viewer_args.show_pinned_root_trajectory_initial = bool(cli_args.show_pinned_root_trajectory)
 
     server = viser.ViserServer(port=int(cli_args.port))
     if hasattr(server, "scene") and hasattr(server.scene, "set_up_direction"):
@@ -89,6 +91,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--smpl-edit-output", default="")
     parser.add_argument("--smpl-visual-scale", type=float, default=None)
+    parser.add_argument(
+        "--show-pinned-root-trajectory",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Initial state of the pin-panel SMPL root trajectory checkbox.",
+    )
     parser.add_argument("--point-size", type=float, default=None)
     parser.add_argument("--human-mask-dilation-px", type=int, default=None)
     parser.add_argument("--filter-human-points", action=argparse.BooleanOptionalAction, default=None)
