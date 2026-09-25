@@ -121,6 +121,7 @@ def save_frame_masks(path: Path, masks: dict[int, np.ndarray], prefix: str = "pe
 
 
 def _bgr_to_rgb(frame_bgr: np.ndarray) -> np.ndarray:
+    frame_bgr = np.ascontiguousarray(frame_bgr)
     if cv2 is not None:
         return cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
     return np.ascontiguousarray(frame_bgr[..., ::-1])

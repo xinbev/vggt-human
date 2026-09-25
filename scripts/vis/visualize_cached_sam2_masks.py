@@ -202,7 +202,10 @@ def render_record(
             }
         )
 
-    masks, mask_meta = predictor.predict_for_detections(image_rgb[..., ::-1], detections)
+    # OpenCV/SAM2 expects a contiguous image.  A channel-reversed NumPy view
+    # has negative strides and can crash some native OpenCV builds.
+    image_bgr = np.ascontiguousarray(image_rgb[..., ::-1])
+    masks, mask_meta = predictor.predict_for_detections(image_bgr, detections)
     union = np.zeros((image.height, image.width), dtype=np.bool_)
     overlay = image.convert("RGBA")
     overlay_array = np.asarray(overlay, dtype=np.uint8).copy()

@@ -24,10 +24,15 @@ MASK_ALPHA="${MASK_ALPHA:-105}"
 DRAW_BOXES="${DRAW_BOXES:-false}"
 SINGLE_MASK="${SINGLE_MASK:-false}"
 CUDA_VISIBLE_DEVICES_VALUE="${CUDA_VISIBLE_DEVICES_VALUE:-}"
+DISABLE_CV2="${DISABLE_CV2:-false}"
 
 cd "${REPO_ROOT}"
 if [[ -n "${CUDA_VISIBLE_DEVICES_VALUE}" ]]; then
   export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_VALUE}"
+fi
+export PYTHONFAULTHANDLER="${PYTHONFAULTHANDLER:-1}"
+if [[ "${DISABLE_CV2}" == "true" ]]; then
+  export VGGT_OMEGA_DISABLE_CV2=1
 fi
 [[ -f "${CACHE_DIR}/manifest.json" ]] || { echo "[ERROR] Missing cache manifest: ${CACHE_DIR}/manifest.json" >&2; exit 1; }
 [[ -d "${SAM2_ROOT}" ]] || { echo "[ERROR] Missing SAM2 root: ${SAM2_ROOT}" >&2; exit 1; }
@@ -66,4 +71,5 @@ echo "Image root : ${IMAGE_ROOT:-<cache source paths>}"
 echo "SAM2       : ${SAM2_CHECKPOINT}"
 echo "Prompt     : projected ${MESH_SOURCE} SMPL vertices (${CAMERA_SOURCE} camera)"
 echo "Output     : ${OUTPUT_DIR}"
+echo "Disable cv2: ${DISABLE_CV2}"
 python scripts/vis/visualize_cached_sam2_masks.py "${ARGS[@]}"
