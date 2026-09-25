@@ -64,6 +64,9 @@ def main() -> None:
         "resize_mode": args.resize_mode,
         "image_resolution": int(args.image_resolution),
         "patch_size": int(args.patch_size),
+        "render_scale": int(args.render_scale),
+        "fill_alpha": int(args.fill_alpha),
+        "wireframe": bool(args.wireframe),
         "results": results,
     }
     summary_path = output_dir / "projection_summary.json"
@@ -86,8 +89,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--patch-size", type=int, default=16)
     parser.add_argument("--face-stride", type=int, default=1, help="Draw every Nth face; 1 keeps the full mesh")
     parser.add_argument("--line-width", type=int, default=1)
-    parser.add_argument("--fill-alpha", type=int, default=92)
+    parser.add_argument("--fill-alpha", type=int, default=225, help="Mesh opacity, 255 is opaque")
     parser.add_argument("--edge-alpha", type=int, default=235)
+    parser.add_argument("--render-scale", type=int, default=2, help="Supersampling factor for smooth boundaries")
+    parser.add_argument("--wireframe", action="store_true", help="Draw dark triangle edges over the shaded mesh")
     parser.add_argument("--no-fill", action="store_true")
     return parser.parse_args()
 
@@ -165,24 +170,42 @@ def render_record(record: dict[str, Any], cache: dict[str, Any], args: argparse.
     )
     projected_intrinsic, mapping = intrinsic_to_original(intrinsic, orig_hw, processed_hw, geometry)
     people = load_people(frame, cache, args)
-    overlay = Image.new("RGBA", image.size, (0, 0, 0, 0))
+    render_scale = max(1, int(args.render_scale))
+    render_hw = (int(image.height) * render_scale, int(image.width) * render_scale)
+    mesh_rgb = np.zeros((render_hw[0], render_hw[1], 3), dtype=np.uint8)
+    mesh_alpha = np.zeros((render_hw[0], render_hw[1]), dtype=np.uint8)
+    mesh_depth = np.full((render_hw[0], render_hw[1]), np.inf, dtype=np.float32)
     render_reports = []
     for person_index, person in enumerate(people):
         vertices, coordinate_source = choose_vertices(person, args, extrinsic)
         uv, valid = project_vertices(vertices, projected_intrinsic)
-        report = draw_mesh(
-            overlay,
+        report = rasterize_smooth_mesh(
+            mesh_rgb,
+            mesh_alpha,
+            mesh_depth,
             uv,
+            vertices,
             vertices[:, 2],
             valid,
             cache["faces"],
             color=PALETTE[person_index % len(PALETTE)],
-            line_width=max(1, int(args.line_width)),
             fill_alpha=int(args.fill_alpha),
-            edge_alpha=int(args.edge_alpha),
             face_stride=max(1, int(args.face_stride)),
             draw_fill=not args.no_fill,
+            render_scale=render_scale,
         )
+        if args.wireframe:
+            report["wireframe_edges"] = draw_wireframe(
+                mesh_rgb,
+                mesh_alpha,
+                uv,
+                valid,
+                cache["faces"],
+                color=PALETTE[person_index % len(PALETTE)],
+                line_width=max(1, int(args.line_width)),
+                edge_alpha=int(args.edge_alpha),
+                render_scale=render_scale,
+            )
         report.update(
             {
                 "person_index": person_index,
@@ -194,7 +217,11 @@ def render_record(record: dict[str, Any], cache: dict[str, Any], args: argparse.
         )
         render_reports.append(report)
 
-    composited = Image.alpha_composite(image.convert("RGBA"), overlay).convert("RGB")
+    mesh_rgba = np.concatenate((mesh_rgb, mesh_alpha[..., None]), axis=-1)
+    mesh_layer = Image.fromarray(mesh_rgba, mode="RGBA")
+    if render_scale != 1:
+        mesh_layer = mesh_layer.resize(image.size, Image.Resampling.LANCZOS)
+    composited = Image.alpha_composite(image.convert("RGBA"), mesh_layer).convert("RGB")
     frame_id = str(record.get("frame_id", record.get("position", "frame")))
     output_image = output_dir / f"{frame_id}_smpl_overlay.png"
     composited.save(output_image)
@@ -209,6 +236,11 @@ def render_record(record: dict[str, Any], cache: dict[str, Any], args: argparse.
         "intrinsic_original": projected_intrinsic.tolist(),
         "extrinsic": extrinsic.tolist(),
         "pixel_mapping": mapping,
+        "render": {
+            "render_scale": int(args.render_scale),
+            "fill_alpha": int(args.fill_alpha),
+            "wireframe": bool(args.wireframe),
+        },
         "people": render_reports,
         "output_image": str(output_image),
     }
@@ -360,43 +392,125 @@ def project_vertices(vertices: np.ndarray, intrinsic: np.ndarray) -> tuple[np.nd
     return uv, valid
 
 
-def draw_mesh(
-    overlay: Image.Image,
+def rasterize_smooth_mesh(
+    mesh_rgb: np.ndarray,
+    mesh_alpha: np.ndarray,
+    mesh_depth: np.ndarray,
     uv: np.ndarray,
+    vertices: np.ndarray,
     depth: np.ndarray,
     valid_vertices: np.ndarray,
     faces: np.ndarray,
     color: tuple[int, int, int],
-    line_width: int,
     fill_alpha: int,
-    edge_alpha: int,
     face_stride: int,
     draw_fill: bool,
+    render_scale: int,
 ) -> dict[str, int]:
-    width, height = overlay.size
-    candidates = faces[::face_stride]
-    valid_faces = []
-    for face in candidates:
+    """Software rasterizer with a z-buffer and interpolated vertex normals."""
+    height, width = mesh_depth.shape
+    scale = max(1, int(render_scale))
+    scaled_uv = uv * float(scale)
+    normals = vertex_normals(vertices, faces, valid_vertices)
+    valid_faces = 0
+    for face in faces[::face_stride]:
         if not valid_vertices[face].all():
             continue
-        points = uv[face]
+        points = scaled_uv[face]
         if not np.isfinite(points).all():
             continue
         if max(points[:, 0]) < 0 or min(points[:, 0]) >= width or max(points[:, 1]) < 0 or min(points[:, 1]) >= height:
             continue
-        valid_faces.append((float(np.mean(depth[face])), face))
-    valid_faces.sort(key=lambda item: item[0], reverse=True)
-    draw = ImageDraw.Draw(overlay, "RGBA")
-    fill = (*color, max(0, min(255, int(fill_alpha))))
-    # A darker outline keeps the individual SMPL triangles visible over the fill.
-    edge_color = tuple(max(0, int(channel * 0.42)) for channel in color)
-    edge = (*edge_color, max(0, min(255, int(edge_alpha))))
-    for _, face in valid_faces:
-        points = [(int(round(uv[index, 0])), int(round(uv[index, 1]))) for index in face]
-        if draw_fill:
-            draw.polygon(points, fill=fill)
-        draw.line(points + [points[0]], fill=edge, width=max(1, int(line_width)), joint="curve")
-    return {"faces_drawn": len(valid_faces), "vertices_valid": int(valid_vertices.sum())}
+        x0 = max(0, int(np.floor(np.min(points[:, 0]))))
+        x1 = min(width - 1, int(np.ceil(np.max(points[:, 0]))))
+        y0 = max(0, int(np.floor(np.min(points[:, 1]))))
+        y1 = min(height - 1, int(np.ceil(np.max(points[:, 1]))))
+        if x1 < x0 or y1 < y0:
+            continue
+        p0, p1, p2 = points.astype(np.float32)
+        denominator = (p1[1] - p2[1]) * (p0[0] - p2[0]) + (p2[0] - p1[0]) * (p0[1] - p2[1])
+        if abs(float(denominator)) < 1e-6:
+            continue
+        grid_x, grid_y = np.meshgrid(
+            np.arange(x0, x1 + 1, dtype=np.float32) + 0.5,
+            np.arange(y0, y1 + 1, dtype=np.float32) + 0.5,
+        )
+        w0 = ((p1[1] - p2[1]) * (grid_x - p2[0]) + (p2[0] - p1[0]) * (grid_y - p2[1])) / denominator
+        w1 = ((p2[1] - p0[1]) * (grid_x - p2[0]) + (p0[0] - p2[0]) * (grid_y - p2[1])) / denominator
+        w2 = 1.0 - w0 - w1
+        inside = (w0 >= -1e-4) & (w1 >= -1e-4) & (w2 >= -1e-4)
+        if not bool(inside.any()):
+            continue
+        z = w0 * depth[face[0]] + w1 * depth[face[1]] + w2 * depth[face[2]]
+        closer = inside & (z < mesh_depth[y0 : y1 + 1, x0 : x1 + 1])
+        if not bool(closer.any()):
+            continue
+        normal = (
+            w0[..., None] * normals[face[0]]
+            + w1[..., None] * normals[face[1]]
+            + w2[..., None] * normals[face[2]]
+        )
+        normal /= np.maximum(np.linalg.norm(normal, axis=-1, keepdims=True), 1e-6)
+        light = np.asarray([0.25, -0.35, 0.90], dtype=np.float32)
+        light /= np.linalg.norm(light)
+        diffuse = np.abs(np.sum(normal * light, axis=-1))
+        # Ambient + diffuse + a restrained camera-facing highlight gives the
+        # dense SMPL surface a continuous purple material instead of flat blocks.
+        brightness = 0.38 + 0.62 * diffuse
+        shaded = np.clip(np.asarray(color, dtype=np.float32)[None, None, :] * brightness[..., None], 0.0, 255.0)
+        target_rgb = mesh_rgb[y0 : y1 + 1, x0 : x1 + 1]
+        target_alpha = mesh_alpha[y0 : y1 + 1, x0 : x1 + 1]
+        target_depth = mesh_depth[y0 : y1 + 1, x0 : x1 + 1]
+        target_depth[closer] = z[closer]
+        target_rgb[closer] = shaded[closer].astype(np.uint8)
+        target_alpha[closer] = max(0, min(255, int(fill_alpha))) if draw_fill else 0
+        valid_faces += 1
+    return {"faces_drawn": int(valid_faces), "vertices_valid": int(valid_vertices.sum())}
+
+
+def vertex_normals(vertices: np.ndarray, faces: np.ndarray, valid_vertices: np.ndarray) -> np.ndarray:
+    normals = np.zeros_like(vertices, dtype=np.float32)
+    for face in faces:
+        if not valid_vertices[face].all():
+            continue
+        p0, p1, p2 = vertices[face]
+        normal = np.cross(p1 - p0, p2 - p0).astype(np.float32)
+        length = float(np.linalg.norm(normal))
+        if length > 1e-8:
+            normal /= length
+            normals[face] += normal
+    lengths = np.linalg.norm(normals, axis=1, keepdims=True)
+    normals /= np.maximum(lengths, 1e-6)
+    normals[~valid_vertices] = np.asarray([0.0, 0.0, 1.0], dtype=np.float32)
+    return normals
+
+
+def draw_wireframe(
+    mesh_rgb: np.ndarray,
+    mesh_alpha: np.ndarray,
+    uv: np.ndarray,
+    valid_vertices: np.ndarray,
+    faces: np.ndarray,
+    color: tuple[int, int, int],
+    line_width: int,
+    edge_alpha: int,
+    render_scale: int,
+) -> int:
+    """Optional diagnostic wireframe; smooth shading remains the default."""
+    image = Image.fromarray(np.concatenate((mesh_rgb, mesh_alpha[..., None]), axis=-1), mode="RGBA")
+    draw = ImageDraw.Draw(image, "RGBA")
+    edge_color = tuple(max(0, int(channel * 0.35)) for channel in color) + (max(0, min(255, int(edge_alpha))),)
+    drawn = 0
+    for face in faces:
+        if not valid_vertices[face].all() or not np.isfinite(uv[face]).all():
+            continue
+        points = [(int(round(float(uv[index, 0]) * render_scale)), int(round(float(uv[index, 1]) * render_scale))) for index in face]
+        draw.line(points + [points[0]], fill=edge_color, width=max(1, int(line_width) * int(render_scale)), joint="curve")
+        drawn += 1
+    updated = np.asarray(image, dtype=np.uint8)
+    mesh_rgb[...] = updated[..., :3]
+    mesh_alpha[...] = updated[..., 3]
+    return drawn
 
 
 def finite_float(value: Any) -> float | None:

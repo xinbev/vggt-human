@@ -16,8 +16,10 @@ IMAGE_RESOLUTION="${IMAGE_RESOLUTION:-512}"
 PATCH_SIZE="${PATCH_SIZE:-16}"
 FACE_STRIDE="${FACE_STRIDE:-1}"
 LINE_WIDTH="${LINE_WIDTH:-1}"
-FILL_ALPHA="${FILL_ALPHA:-92}"
+FILL_ALPHA="${FILL_ALPHA:-225}"
 EDGE_ALPHA="${EDGE_ALPHA:-235}"
+RENDER_SCALE="${RENDER_SCALE:-2}"
+WIREFRAME="${WIREFRAME:-false}"
 
 cd "${REPO_ROOT}"
 [[ -f "${CACHE_DIR}/manifest.json" ]] || { echo "[ERROR] Missing cache manifest: ${CACHE_DIR}/manifest.json" >&2; exit 1; }
@@ -34,6 +36,7 @@ ARGS=(
   --line-width "${LINE_WIDTH}"
   --fill-alpha "${FILL_ALPHA}"
   --edge-alpha "${EDGE_ALPHA}"
+  --render-scale "${RENDER_SCALE}"
 )
 if [[ -n "${IMAGE_ROOT}" ]]; then ARGS+=(--image-root "${IMAGE_ROOT}"); fi
 if [[ -n "${FRAME_ID}" ]]; then
@@ -43,6 +46,7 @@ elif [[ "${RENDER_ALL}" == "true" ]]; then
 else
   ARGS+=(--frame-index "${FRAME_INDEX}")
 fi
+if [[ "${WIREFRAME}" == "true" ]]; then ARGS+=(--wireframe); fi
 
 echo "========== Cached SMPL RGB projection =========="
 echo "Cache       : ${CACHE_DIR}"

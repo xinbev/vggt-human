@@ -40,7 +40,7 @@ FRAME_ID=image_00042 bash scripts/vis/project_cached_smpl_on_rgb.sh
 
 输出写入 `outputs/vis/cached_smpl_projection/`（或 `OUTPUT_DIR` 指定的目录）：
 
-- `*_smpl_overlay.png`：原图上的半透明彩色 SMPL 面片与网格边线；
+- `*_smpl_overlay.png`：原图上的平滑光照 SMPL 表面；默认使用 2 倍超采样抗锯齿，不画线框；
 - `*_smpl_overlay.json`：原图尺寸、处理后尺寸、映射后的内参、外参、坐标来源和绘制统计；
 - `projection_summary.json`：本次选择与输出汇总。
 
@@ -48,6 +48,6 @@ FRAME_ID=image_00042 bash scripts/vis/project_cached_smpl_on_rgb.sh
 
 推理输入可能经过长宽比 crop、resize 和 batch padding。脚本默认按项目的 `balanced/512/patch=16` 复原这段几何，并将缓存内参映射到原图像素坐标。如果生成 cache 时使用了其他设置，需同步设置 `RESIZE_MODE`、`IMAGE_RESOLUTION` 和 `PATCH_SIZE`，否则网格会出现整体缩放或偏移。
 
-`MESH_SOURCE=hsi`、`CAMERA_SOURCE=hsi` 是当前 HSI viewer cache 的默认组合；若要查看 baseline 几何，可改为 `MESH_SOURCE=base CAMERA_SOURCE=raw`。`FACE_STRIDE=1` 保留完整网格，显存/CPU 时间紧张时可增大为 2 或 4。
+`MESH_SOURCE=hsi`、`CAMERA_SOURCE=hsi` 是当前 HSI viewer cache 的默认组合；若要查看 baseline 几何，可改为 `MESH_SOURCE=base CAMERA_SOURCE=raw`。`RENDER_SCALE=2` 使用超采样平滑轮廓；CPU 时间紧张时可改成 `RENDER_SCALE=1`。如果需要检查三角拓扑，可设置 `WIREFRAME=true`，但论文/展示图建议保持默认关闭。`FACE_STRIDE=1` 保留完整网格，CPU 时间紧张时可增大为 2 或 4。
 
 由于 Windows 本地没有服务器 ckpt、依赖和完整图片树，本次只做了静态语法检查与已有缓存格式检查；正式投影请在 Linux 服务器执行上述 `.sh` 脚本。 
