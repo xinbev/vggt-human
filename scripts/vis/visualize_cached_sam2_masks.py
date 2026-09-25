@@ -269,6 +269,7 @@ def render_record(
     metadata_path.write_text(json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8")
     return {
         "frame_id": frame_id,
+        "position": int(record.get("position", 0)),
         "output_image": str(output_image),
         "union_mask": str(union_path),
         "masks_npz": str(masks_path),
@@ -292,7 +293,8 @@ def export_sam2_full_cache(cache: dict[str, Any], args: argparse.Namespace, resu
     shutil.copy2(source_root / metadata_name, output_root / metadata_name)
     shutil.copy2(source_root / faces_name, output_root / faces_name)
     records = manifest.get("frames", [])
-    if len(records) != len(result_by_position):
+    expected_positions = set(range(len(records)))
+    if set(result_by_position) != expected_positions:
         raise ValueError("SAM2 export result count does not match the full cache frame count")
     for position, record in enumerate(records):
         source_frame_path = source_root / str(record["file"])
