@@ -1,0 +1,19 @@
+# Fdb version 4
+["xdvipdfmx"] 0 "$out/main.xdv" "$out/main.pdf" "$out/main" 0 -1
+  "$out/main.xdv" 0 -1 0 "xelatex"
+  (generated)
+  "$out/main.pdf"
+  (rewritten before read)
+["xelatex"] 1790286170.98816 ".paper/my_paper/versions/v2/main.tex" "$out/main.xdv" "main" 1790286171.81282 2
+  "$out/iclr2027_conference.sty" 0 -1 0 ""
+  "$out/main.aux" 1790286162 32 3985256e7290058c681f74d7a3565a19 "xelatex"
+  ".paper/my_paper/versions/v2/main.tex" 1790243156 1992 740e54c9d8aaf166d9a7d8e7134e7c2f ""
+  "C:/Users/ROG/AppData/Local/MiKTeX/miktex/data/le/xetex/xelatex.fmt" 1788882844 27175842 186bf160c312f3011f3063be23b4b7da ""
+  "C:/Users/ROG/AppData/Local/Programs/MiKTeX/tex/latex/base/article.cls" 1761900684 20144 b966087dda3b194755eb460d32e2ef75 ""
+  "C:/Users/ROG/AppData/Local/Programs/MiKTeX/tex/latex/base/size10.clo" 1761900684 8448 686612a86f0e04f41ea577f5ec7e83d8 ""
+  "iclr2027_conference.sty" 0 -1 0 ""
+  (generated)
+  "$out/main.aux"
+  "$out/main.log"
+  "$out/main.xdv"
+  (rewritten before read)

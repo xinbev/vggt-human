@@ -96,6 +96,20 @@ def hsi_visual_slider_to_scale(value: float) -> float:
     return min(HSI_VISUAL_SCALE_MAX, max(HSI_VISUAL_SCALE_MIN, scale))
 
 
+def scale_smpl_vertices_about_center(vertices: np.ndarray, scale: float) -> np.ndarray:
+    """Scale one SMPL mesh around its own center without changing its placement."""
+    vertices_np = np.asarray(vertices, dtype=np.float32).reshape(-1, 3)
+    if vertices_np.size == 0:
+        return vertices_np.copy()
+    finite = np.isfinite(vertices_np).all(axis=1)
+    if not bool(finite.any()):
+        return vertices_np.copy()
+    center = vertices_np[finite].mean(axis=0, dtype=np.float32)
+    scaled = vertices_np.copy()
+    scaled[finite] = center + (vertices_np[finite] - center) * np.float32(scale)
+    return scaled
+
+
 def sync_if_cuda(device: torch.device | None = None) -> None:
     if torch.cuda.is_available() and (device is None or device.type == "cuda"):
         torch.cuda.synchronize(device)
@@ -133,6 +147,11 @@ def main() -> None:
         raise ValueError(
             f"--hsi-visual-scale must be finite and within "
             f"[{HSI_VISUAL_SCALE_MIN}, {HSI_VISUAL_SCALE_MAX}], got {args.hsi_visual_scale}"
+        )
+    if not np.isfinite(args.smpl_visual_scale) or not HSI_VISUAL_SCALE_MIN <= float(args.smpl_visual_scale) <= HSI_VISUAL_SCALE_MAX:
+        raise ValueError(
+            f"--smpl-visual-scale must be finite and within "
+            f"[{HSI_VISUAL_SCALE_MIN}, {HSI_VISUAL_SCALE_MAX}], got {args.smpl_visual_scale}"
         )
     if not HUMAN_MASK_DILATION_MIN_PX <= int(args.human_mask_dilation_px) <= HUMAN_MASK_DILATION_MAX_PX:
         raise ValueError(
@@ -362,6 +381,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--viewer-mode", choices=["4D current frame", "3D accumulate", "Hybrid"], default="4D current frame", help="Initial Viser playback mode.")
     parser.add_argument("--environment-display", choices=["points", "mesh", "both"], default="points", help="Initial environment rendering mode. The Viser GUI can still toggle this live.")
     parser.add_argument("--hsi-visual-scale", type=float, default=1.0, help="Initial viewer-only multiplier for HSI environment points and HSI camera positions.")
+    parser.add_argument("--smpl-visual-scale", type=float, default=1.0, help="Initial viewer-only multiplier for SMPL meshes, applied around each mesh center.")
     parser.add_argument("--human-mask-dilation-px", type=int, default=HUMAN_MASK_DILATION_DEFAULT_PX, help="Pixel dilation around the projected SMPL silhouette when removing human depth points in normal display mode.")
     parser.add_argument("--filter-human-points", action=argparse.BooleanOptionalAction, default=True, help="Initial Viser state for projected-SMPL human point filtering.")
     parser.add_argument("--env-mesh-depth-edge-rtol", type=float, default=0.15, help="Relative depth discontinuity threshold for environment surface mesh faces.")
@@ -2002,6 +2022,13 @@ class SequenceViewer:
             HSI_VISUAL_SCALE_MAX,
             max(HSI_VISUAL_SCALE_MIN, float(args.hsi_visual_scale)),
         )
+        requested_smpl_visual_scale = getattr(args, "smpl_visual_scale", 1.0)
+        if requested_smpl_visual_scale is None:
+            requested_smpl_visual_scale = 1.0
+        self.smpl_visual_scale_value = min(
+            HSI_VISUAL_SCALE_MAX,
+            max(HSI_VISUAL_SCALE_MIN, float(requested_smpl_visual_scale)),
+        )
         self.smpl_opacity_value = 1.0
         self.max_people_per_frame = max(
             1,
@@ -2025,6 +2052,9 @@ class SequenceViewer:
         self.human_mask_dilation_px_value = int(args.human_mask_dilation_px)
         self.trstr_active = bool(scene.get("trstr_active", False))
         self.trstr_correction_enabled_value = self.trstr_active
+        self.gt_smpl_available = any(
+            "gt_vertices" in frame for frame in scene.get("frames", [])
+        )
         self.env_mesh_depth_edge_rtol = float(getattr(args, "env_mesh_depth_edge_rtol", 0.08))
         self.env_mesh_color_groups = max(1, int(getattr(args, "env_mesh_color_groups", 216)))
         self.env_mesh_color_mode = str(getattr(args, "env_mesh_color_mode", "point_overlay"))
@@ -2035,6 +2065,7 @@ class SequenceViewer:
         self._switching_hsi_calibration = False
         self._hsi_calibration_restore_state: dict[str, Any] = {}
         self.global_handles: dict[str, list[Any]] = {}
+        self.smpl_mesh_specs: list[dict[str, Any]] = []
         self.measurement_points: list[np.ndarray] = []
         self.measurement_sources: list[str] = []
         self.measurement_handles: list[Any] = []
@@ -2098,6 +2129,100 @@ class SequenceViewer:
         except KeyboardInterrupt:
             print("[viewer] stopped", flush=True)
 
+    def _scaled_smpl_vertices(self, vertices: np.ndarray) -> np.ndarray:
+        return scale_smpl_vertices_about_center(vertices, self.smpl_visual_scale_value)
+
+    def _register_smpl_mesh_spec(
+        self,
+        *,
+        kind: str,
+        frame_index: int,
+        name: str,
+        vertices: np.ndarray,
+        faces: np.ndarray,
+        color: tuple[int, int, int],
+        handle: Any,
+        groups: list[list[Any]],
+        human_entry_key_value: str | None = None,
+        query_index: int | None = None,
+    ) -> None:
+        self.smpl_mesh_specs.append(
+            {
+                "kind": str(kind),
+                "frame_index": int(frame_index),
+                "query_index": None if query_index is None else int(query_index),
+                "name": str(name),
+                "vertices": np.asarray(vertices, dtype=np.float32).reshape(-1, 3).copy(),
+                "faces": np.asarray(faces, dtype=np.int64).reshape(-1, 3).copy(),
+                "color": tuple(int(v) for v in color),
+                "handle": handle,
+                "groups": groups,
+                "human_entry_key": human_entry_key_value,
+            }
+        )
+
+    def _rebuild_smpl_visual_geometry(self) -> None:
+        """Recreate SMPL meshes so scaling is centered on each body, not world zero."""
+        for spec in self.smpl_mesh_specs:
+            old_handle = spec.get("handle")
+            remove_handle(old_handle)
+            entry_key = spec.get("human_entry_key")
+            entry = (
+                self.human_entry_by_key.get(str(entry_key))
+                if entry_key is not None
+                else None
+            )
+            if entry is None and str(spec.get("kind")) in {"base", "hsi"}:
+                entry = next(
+                    (
+                        candidate
+                        for candidate in self.human_entries
+                        if int(candidate["frame_index"]) == int(spec["frame_index"])
+                        and str(candidate["kind"]) == str(spec["kind"])
+                        and int(candidate["query_index"]) == int(spec["query_index"])
+                    ),
+                    None,
+                )
+            mesh_color = tuple(int(v) for v in spec["color"])
+            if entry is not None:
+                mesh_color = tuple(
+                    int(v)
+                    for v in (
+                        entry["color_override"]
+                        if entry.get("color_override") is not None
+                        else entry["base_color"]
+                    )
+                )
+            handle = add_mesh(
+                self.server,
+                str(spec["name"]),
+                self._scaled_smpl_vertices(spec["vertices"]),
+                spec["faces"],
+                mesh_color,
+                self.smpl_opacity_value,
+            )
+            set_handle_scale(handle, 1.0)
+            for group in spec["groups"]:
+                for index, current in enumerate(group):
+                    if current is old_handle:
+                        group[index] = handle
+                        break
+            if entry is not None:
+                entry["handle"] = handle
+                spec["human_entry_key"] = str(entry["key"])
+                bind_click(
+                    handle,
+                    lambda event=None, selected_entry=entry: self._on_human_mesh_click(
+                        selected_entry["key"], event
+                    ),
+                )
+                set_handle_position(handle, self._human_visual_translation(entry))
+            spec["color"] = mesh_color
+            spec["handle"] = handle
+        if self.recolor_mode_enabled:
+            self._on_recolor_enabled_update()
+        self._update_visibility()
+
     def _build_scene(self) -> None:
         tracking_only = bool(getattr(self.args, "tracking_only", False))
         for frame in self.scene["frames"]:
@@ -2109,6 +2234,7 @@ class SequenceViewer:
                 "hsi_mesh": [],
                 "base_humans": [],
                 "hsi_humans": [],
+                "gt_humans": [],
                 "track_labels": [],
                 "people": [],
                 "cameras_raw": [],
@@ -2147,7 +2273,15 @@ class SequenceViewer:
                     "query_index": query_idx,
                 }
                 if "base_vertices" in person:
-                    handle = add_mesh(self.server, f"/frames/{idx:04d}/human_base_t{track_id}_q{query_idx}", person["base_vertices"], person["faces"], color, self.smpl_opacity_value)
+                    base_name = f"/frames/{idx:04d}/human_base_t{track_id}_q{query_idx}"
+                    handle = add_mesh(
+                        self.server,
+                        base_name,
+                        self._scaled_smpl_vertices(person["base_vertices"]),
+                        person["faces"],
+                        color,
+                        self.smpl_opacity_value,
+                    )
                     set_handle_scale(handle, 1.0)
                     frame_handles["base_humans"].append(handle)
                     person_handles["base_humans"].append(handle)
@@ -2163,8 +2297,28 @@ class SequenceViewer:
                         label_base_position=None,
                         color=color,
                     )
+                    self._register_smpl_mesh_spec(
+                        kind="base",
+                        frame_index=idx,
+                        name=base_name,
+                        vertices=person["base_vertices"],
+                        faces=person["faces"],
+                        color=color,
+                        handle=handle,
+                        groups=[frame_handles["base_humans"], person_handles["base_humans"]],
+                        human_entry_key_value=human_entry_key(idx, "base", track_id, query_idx),
+                        query_index=query_idx,
+                    )
                 if "hsi_vertices" in person:
-                    handle = add_mesh(self.server, f"/frames/{idx:04d}/human_hsi_t{track_id}_q{query_idx}", person["hsi_vertices"], person["faces"], color, self.smpl_opacity_value)
+                    hsi_name = f"/frames/{idx:04d}/human_hsi_t{track_id}_q{query_idx}"
+                    handle = add_mesh(
+                        self.server,
+                        hsi_name,
+                        self._scaled_smpl_vertices(person["hsi_vertices"]),
+                        person["faces"],
+                        color,
+                        self.smpl_opacity_value,
+                    )
                     set_handle_scale(handle, 1.0)
                     set_handle_position(handle, self._hsi_camera_visual_offset(idx))
                     frame_handles["hsi_humans"].append(handle)
@@ -2180,6 +2334,18 @@ class SequenceViewer:
                         label_handle=None,
                         label_base_position=None,
                         color=color,
+                    )
+                    self._register_smpl_mesh_spec(
+                        kind="hsi",
+                        frame_index=idx,
+                        name=hsi_name,
+                        vertices=person["hsi_vertices"],
+                        faces=person["faces"],
+                        color=color,
+                        handle=handle,
+                        groups=[frame_handles["hsi_humans"], person_handles["hsi_humans"]],
+                        human_entry_key_value=human_entry_key(idx, "hsi", track_id, query_idx),
+                        query_index=query_idx,
                     )
                 label_vertices = person.get("hsi_vertices", person.get("base_vertices"))
                 if label_vertices is not None:
@@ -2200,6 +2366,28 @@ class SequenceViewer:
                             entry["label_handle"] = label_handle
                             entry["label_base_position"] = label_base_position.astype(np.float32, copy=False)
                 frame_handles["people"].append(person_handles)
+            if "gt_vertices" in frame:
+                gt_name = f"/frames/{idx:04d}/human_gt_smpl"
+                gt_handle = add_mesh(
+                    self.server,
+                    gt_name,
+                    self._scaled_smpl_vertices(frame["gt_vertices"]),
+                    frame["gt_faces"],
+                    tuple(int(v) for v in frame.get("gt_color", (64, 192, 255))),
+                    self.smpl_opacity_value,
+                )
+                set_handle_scale(gt_handle, 1.0)
+                frame_handles["gt_humans"].append(gt_handle)
+                self._register_smpl_mesh_spec(
+                    kind="gt",
+                    frame_index=idx,
+                    name=gt_name,
+                    vertices=frame["gt_vertices"],
+                    faces=frame["gt_faces"],
+                    color=tuple(int(v) for v in frame.get("gt_color", (64, 192, 255))),
+                    handle=gt_handle,
+                    groups=[frame_handles["gt_humans"]],
+                )
             frame_handles["cameras_raw"].append(add_camera(self.server, self.transforms, f"/frames/{idx:04d}/camera_raw_vggt", frame["raw_camera"], self.camera_scale_value, (255, 255, 255)))
             if not tracking_only:
                 frame_handles["cameras_hsi"].append(add_camera(self.server, self.transforms, f"/frames/{idx:04d}/camera_hsi_scaled", self._scaled_hsi_camera(frame), self.camera_scale_value, (255, 176, 0)))
@@ -2441,6 +2629,19 @@ class SequenceViewer:
             self.reset_hsi_visual_scale = add_button(self.server, "Reset Scale to 1.0")
             if tracking_only:
                 set_handle_disabled(self.hsi_calibration_mode, True)
+        with add_folder(self.server, "SMPL Scale Controls"):
+            self.smpl_visual_result_info = add_text(self.server, "Applied / Pending", "")
+            set_handle_disabled(self.smpl_visual_result_info, True)
+            self.smpl_visual_scale = add_slider(
+                self.server,
+                "SMPL Visual Scale Multiplier (log10)",
+                HSI_VISUAL_SCALE_SLIDER_MIN,
+                HSI_VISUAL_SCALE_SLIDER_MAX,
+                0.01,
+                hsi_visual_scale_to_slider(self.smpl_visual_scale_value),
+            )
+            self.apply_smpl_visual_scale = add_button(self.server, "Apply SMPL Scale")
+            self.reset_smpl_visual_scale = add_button(self.server, "Reset SMPL Scale to 1.0")
         self.point_size = add_slider(self.server, "Point Size", 0.0005, 0.08, 0.0005, self.point_size_value)
         self.density_preset = add_dropdown(self.server, "Point Density Preset", ["custom", "dense stride 1", "balanced stride 2", "fast stride 4", "full sequence stride 6"], "custom")
         self.depth_point_stride = add_slider(self.server, "Depth Point Stride", 1, 64, 1, self.depth_point_stride_value)
@@ -2448,6 +2649,13 @@ class SequenceViewer:
         self.camera_size = add_slider(self.server, "Camera Size", 0.01, 1.00, 0.01, self.camera_scale_value)
         self.show_hsi = add_checkbox(self.server, "Show HSI SMPL", not tracking_only)
         self.show_base = add_checkbox(self.server, "Show Base SMPL", tracking_only)
+        self.show_gt_smpl = add_checkbox(
+            self.server,
+            "Show GT SMPL",
+            bool(getattr(self.args, "show_gt_smpl", False)) and self.gt_smpl_available,
+        )
+        if not self.gt_smpl_available:
+            set_handle_disabled(self.show_gt_smpl, True)
         self.apply_trstr_correction = add_checkbox(
             self.server,
             "Apply TRSTR Translation",
@@ -2561,6 +2769,7 @@ class SequenceViewer:
             self.environment_display,
             self.show_hsi,
             self.show_base,
+            self.show_gt_smpl,
             self.show_track_ids,
             self.display_people,
             self.smpl_sampling_mode,
@@ -2579,6 +2788,7 @@ class SequenceViewer:
         bind_update(self.depth_point_stride, self._on_depth_sampling_update)
         bind_update(self.max_scene_depth, self._on_depth_sampling_update)
         bind_update(self.hsi_visual_scale, self._on_hsi_visual_scale_pending)
+        bind_update(self.smpl_visual_scale, self._on_smpl_visual_scale_pending)
         bind_update(self.hsi_calibration_mode, self._on_hsi_calibration_mode_update)
         bind_update(self.filter_human_points, self._on_filter_human_points_update)
         bind_update(self.human_filter_dilation, self._on_human_filter_dilation_pending)
@@ -2606,6 +2816,8 @@ class SequenceViewer:
         bind_click(self.save_smpl_edits, self._save_smpl_edit_offsets)
         bind_click(self.apply_hsi_visual_scale, self._apply_hsi_visual_scale)
         bind_click(self.reset_hsi_visual_scale, self._reset_hsi_visual_scale)
+        bind_click(self.apply_smpl_visual_scale, self._apply_smpl_visual_scale)
+        bind_click(self.reset_smpl_visual_scale, self._reset_smpl_visual_scale)
         bind_click(self.apply_human_filter_dilation, self._apply_human_filter_dilation)
         bind_click(self.reset_human_filter_dilation, self._reset_human_filter_dilation)
         bind_click(self.clear_measurement, self._clear_current_measurement)
@@ -4001,6 +4213,41 @@ class SequenceViewer:
     def _requested_hsi_visual_scale(self) -> float:
         return hsi_visual_slider_to_scale(float(self.hsi_visual_scale.value))
 
+    def _requested_smpl_visual_scale(self) -> float:
+        return hsi_visual_slider_to_scale(float(self.smpl_visual_scale.value))
+
+    def _update_smpl_scale_info(self) -> None:
+        pending = self._requested_smpl_visual_scale()
+        applied = float(self.smpl_visual_scale_value)
+        message = f"x{applied:.3f} applied; scale about each mesh center"
+        if abs(pending - applied) > 1e-7:
+            message += f" | pending x{pending:.3f}: click Apply SMPL Scale"
+        set_text_value(self.smpl_visual_result_info, message)
+
+    def _on_smpl_visual_scale_pending(self, _: Any = None) -> None:
+        self._update_smpl_scale_info()
+
+    def _apply_smpl_visual_scale(self, _: Any = None) -> None:
+        with self._scene_rebuild_lock:
+            if self._rebuilding_points:
+                return
+            requested = self._requested_smpl_visual_scale()
+            if abs(requested - self.smpl_visual_scale_value) <= 1e-7:
+                self._update_smpl_scale_info()
+                return
+            self.smpl_visual_scale_value = requested
+            self._rebuild_smpl_visual_geometry()
+            self._update_smpl_scale_info()
+
+    def _reset_smpl_visual_scale(self, _: Any = None) -> None:
+        with self._scene_rebuild_lock:
+            if self._rebuilding_points:
+                return
+            self.smpl_visual_scale.value = hsi_visual_scale_to_slider(1.0)
+            self.smpl_visual_scale_value = 1.0
+            self._rebuild_smpl_visual_geometry()
+            self._update_smpl_scale_info()
+
     def _on_hsi_calibration_mode_update(self, _: Any = None) -> None:
         if self._switching_hsi_calibration:
             return
@@ -4247,7 +4494,11 @@ class SequenceViewer:
 
     def _on_smpl_opacity_update(self, _: Any = None) -> None:
         self.smpl_opacity_value = float(self.smpl_opacity.value)
-        self._set_handle_attr(["base_humans", "hsi_humans"], "opacity", self.smpl_opacity_value)
+        self._set_handle_attr(
+            ["base_humans", "hsi_humans", "gt_humans"],
+            "opacity",
+            self.smpl_opacity_value,
+        )
 
     def _on_smpl_color_update(self, _: Any = None) -> None:
         color = tuple(int(np.clip(value, 0, 255)) for value in self.smpl_color.value)
@@ -4330,6 +4581,10 @@ class SequenceViewer:
                     person_handles["track_labels"],
                     show_person and bool(self.show_track_ids.value),
                 )
+            set_group_visible(
+                frame_handles["gt_humans"],
+                show_humans and show_decimated_smpl and bool(self.show_gt_smpl.value),
+            )
             set_group_visible(frame_handles["cameras_raw"], bool(self.show_cameras.value) and show_raw_camera and show_camera_frame and show_decimated_camera)
             set_group_visible(frame_handles["cameras_hsi"], bool(self.show_cameras.value) and show_hsi_camera and show_camera_frame and show_decimated_camera)
         if mode == "3D accumulate" and use_smpl_target_count:
@@ -4370,6 +4625,7 @@ class SequenceViewer:
                 f"indices: {pinned_preview or '<none>'} | click a visible pinned mesh to edit"
             ),
         )
+        self._update_smpl_scale_info()
         self._update_info_text(current)
 
     def _ensure_depth_meshes_for_frame(self, frame: dict[str, Any], frame_handles: dict[str, Any], idx: int, depth_source: str) -> None:

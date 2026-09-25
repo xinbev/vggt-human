@@ -179,6 +179,17 @@ def metric_spec(metric: str, label: str | None, direction: str | None) -> tuple[
     return resolved_label, resolved_direction
 
 
+def display_x_value(metric: str, value: float) -> float:
+    """Compress the empty middle and expand the dense high-error region."""
+    if metric != "wa_mpjpe_mm":
+        return value
+    if value <= 75.0:
+        return value
+    if value < 110.0:
+        return 75.0 + 0.04 * (value - 75.0)
+    return 76.4 + 4.0 * (value - 110.0)
+
+
 def require_metric(records: Iterable[Record], fields: list[str], metric: str) -> None:
     if metric not in fields:
         raise ValueError(f"unknown metric {metric!r}; available columns: {', '.join(fields)}")
@@ -210,7 +221,7 @@ def add_legend(axis, records: list[Record]) -> None:
         "unicon_ff": "UniCon3R",
         "unicon_tto": "UniCon3R*",
         "ours_base": "Ours",
-        "ours_hsi": "Ours + HSI",
+        "ours_hsi": "Ours",
     }
     present_styles = {record.plot_style for record in records}
     handles = []
@@ -250,9 +261,9 @@ def draw_variant_links(axis, records: list[Record], x_metric: str, y_metric: str
         if len(linked_records) < 2:
             continue
         for first, second in zip(linked_records, linked_records[1:]):
-            x0 = float(first.values[x_metric])
+            x0 = display_x_value(x_metric, float(first.values[x_metric]))
             y0 = float(first.values[y_metric])
-            x1 = float(second.values[x_metric])
+            x1 = display_x_value(x_metric, float(second.values[x_metric]))
             y1 = float(second.values[y_metric])
             curve_x = []
             curve_y = []
@@ -340,7 +351,7 @@ def draw_tradeoff(
     if show_pareto:
         frontier = pareto_frontier(records, x_metric, y_metric, x_direction, y_direction)
         axis.plot(
-            [record.values[x_metric] for record in frontier],
+            [display_x_value(x_metric, float(record.values[x_metric])) for record in frontier],
             [record.values[y_metric] for record in frontier],
             color="#8A8A8A",
             linestyle="--",
@@ -353,10 +364,11 @@ def draw_tradeoff(
         x_value = record.values[x_metric]
         y_value = record.values[y_metric]
         assert x_value is not None and y_value is not None
-        axis.scatter(x_value, y_value, **style_for(record))
+        x_plot = display_x_value(x_metric, float(x_value))
+        axis.scatter(x_plot, y_value, **style_for(record))
         axis.annotate(
             record.method,
-            (x_value, y_value),
+            (x_plot, y_value),
             xytext=(record.label_dx, record.label_dy),
             textcoords="offset points",
             fontsize=10.5,
@@ -437,6 +449,10 @@ def main() -> None:
             fps_ticks = [0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0]
             axis.set_yticks(fps_ticks)
             axis.set_yticklabels(["0.1", "0.2", "0.5", "1.0", "2.0", "5.0", "10.0", "20.0"])
+        if args.x_metric == "wa_mpjpe_mm" and args.x_scale == "linear":
+            x_ticks = [50.0, 60.0, 70.0, 110.0, 115.0, 120.0]
+            axis.set_xticks([display_x_value(args.x_metric, value) for value in x_ticks])
+            axis.set_xticklabels(["50", "60", "70", "110", "115", "120"])
         output_name = args.output_name or f"{args.x_metric}_vs_{args.y_metric}"
     else:
         draw_single_metric(axis, records, args.x_metric, x_label)
