@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import pickle
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -29,7 +30,7 @@ def export_single_frame_scene(
     target.mkdir(exist_ok=False)
     incomplete = target / ".incomplete"
     incomplete.write_text("Single-frame export is in progress.\n", encoding="utf-8")
-    files: dict[str, Any] = {"environment": {}, "environment_meshes": {}, "people": []}
+    files: dict[str, Any] = {"environment": {}, "environment_meshes": {}}
     for source, (points, colors) in clouds.items():
         filename = f"environment_{source}.ply"
         write_point_ply(target / filename, points, colors)
@@ -40,37 +41,43 @@ def export_single_frame_scene(
         files["environment_meshes"][source] = {
             "file": filename, "vertex_count": int(len(vertices)), "face_count": int(len(faces))
         }
+    smpl_people = []
     for mesh in meshes:
-        filename = str(mesh["name"]) + ".obj"
-        write_mesh_obj(target / filename, mesh["vertices"], mesh["faces"], mesh["color"],
-                       mesh.get("opacity", 1.0))
-        files["people"].append({
-            "file": filename,
-            "material_file": Path(filename).with_suffix(".mtl").name,
+        vertices = np.asarray(mesh["vertices"], dtype=np.float32).reshape(-1, 3)
+        faces = np.asarray(mesh["faces"], dtype=np.int32).reshape(-1, 3)
+        if not np.isfinite(vertices).all() or (faces.size and (faces.min() < 0 or faces.max() >= len(vertices))):
+            raise ValueError(f"Invalid SMPL mesh: {mesh['name']}")
+        smpl_people.append({
+            "name": str(mesh["name"]),
             "kind": str(mesh["kind"]),
             "track_id": mesh.get("track_id"),
             "query_index": mesh.get("query_index"),
+            "vertices_world": vertices,
+            "faces": faces,
+            "color_rgb": np.asarray(mesh["color"], dtype=np.uint8).reshape(3),
             "opacity": float(mesh.get("opacity", 1.0)),
-            "vertex_count": int(len(mesh["vertices"])),
-            "face_count": int(len(mesh["faces"])),
         })
+    with (target / "smpl.pkl").open("wb") as file:
+        pickle.dump({"people": smpl_people}, file, protocol=pickle.HIGHEST_PROTOCOL)
+    files["smpl"] = {"file": "smpl.pkl", "person_count": len(smpl_people)}
     camera_payload = {
-        "coordinate_convention": "Same world XYZ as exported PLY/OBJ. Camera local +Z is forward, +X right, +Y down. w2c maps world to camera. Matrices use column vectors.",
+        "coordinate_convention": "Same world XYZ as exported PLY/SMPL. Camera local +Z is forward, +X right, +Y down. w2c maps world to camera. Matrices use column vectors.",
         "image_hw": [int(v) for v in np.asarray(frame.get("rgb_chw")).shape[-2:]] if frame.get("rgb_chw") is not None else None,
-        "intrinsic_3x3": _jsonable(frame["intrinsic"]),
+        "intrinsic_3x3": np.asarray(frame["intrinsic"], dtype=np.float32).reshape(3, 3),
         "cameras": {name: _camera_record(camera) for name, camera in cameras.items()},
-        "viewport": _jsonable(viewport),
+        "viewport": viewport,
     }
-    (target / "cameras.json").write_text(json.dumps(camera_payload, indent=2), encoding="utf-8")
+    with (target / "cameras.pkl").open("wb") as file:
+        pickle.dump(camera_payload, file, protocol=pickle.HIGHEST_PROTOCOL)
     manifest = {
-        "format": "vggt_omega_single_frame_scene_v1",
+        "format": "vggt_omega_single_frame_scene_v2",
         "frame_index": frame_index,
         "source_frame_index": int(frame.get("source_frame_index", -1)),
         "frame_id": str(frame.get("frame_id", frame_index)),
         "source_image": str(frame.get("image", "")),
         "world_units": "VGGT viewer world units; metric scale is not guaranteed",
         "settings": _jsonable(settings),
-        "files": {**files, "cameras": "cameras.json"},
+        "files": {**files, "cameras": "cameras.pkl"},
     }
     (target / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     incomplete.unlink()
@@ -88,7 +95,7 @@ def finalize_sequence_scene_export(
         if not manifest.is_file() or (manifest.parent / ".incomplete").exists():
             raise RuntimeError(f"Incomplete exported frame: {manifest}")
     payload = {
-        "format": "vggt_omega_sequence_scene_export_v1",
+        "format": "vggt_omega_sequence_scene_export_v2",
         "num_frames": len(records),
         "viewport_at_export": _jsonable(viewport),
         "frames": records,
@@ -119,26 +126,6 @@ def write_point_ply(path: Path, points: np.ndarray, colors: np.ndarray) -> None:
     with path.open("wb") as file:
         file.write(header.encode("ascii"))
         packed.tofile(file)
-
-
-def write_mesh_obj(path: Path, vertices: np.ndarray, faces: np.ndarray, color: Any,
-                   opacity: float = 1.0) -> None:
-    xyz = np.asarray(vertices, dtype=np.float32).reshape(-1, 3)
-    triangles = np.asarray(faces, dtype=np.int64).reshape(-1, 3)
-    if not np.isfinite(xyz).all() or (triangles.size and (triangles.min() < 0 or triangles.max() >= len(xyz))):
-        raise ValueError(f"Invalid mesh for {path.name}")
-    rgb = np.asarray(color, dtype=np.uint8).reshape(3)
-    with path.open("w", encoding="ascii", newline="\n") as file:
-        file.write(f"mtllib {path.stem}.mtl\no {path.stem}\nusemtl smpl_color\n")
-        for x, y, z in xyz:
-            file.write(f"v {x:.9g} {y:.9g} {z:.9g}\n")
-        for a, b, c in triangles + 1:
-            file.write(f"f {a} {b} {c}\n")
-    (path.with_suffix(".mtl")).write_text(
-        "newmtl smpl_color\nKd " + " ".join(f"{value / 255:.6f}" for value in rgb)
-        + f"\nd {float(opacity):.6f}\n",
-        encoding="ascii",
-    )
 
 
 def write_triangle_ply(path: Path, vertices: np.ndarray, colors: np.ndarray, faces: np.ndarray) -> None:
@@ -177,10 +164,10 @@ def _camera_record(camera: dict[str, Any]) -> dict[str, Any]:
     c2w[:3, 3] = position
     w2c = np.linalg.inv(c2w)
     return {
-        "position_xyz": position.tolist(),
-        "rotation_c2w_3x3": rotation.tolist(),
-        "camera_to_world_4x4": c2w.tolist(),
-        "world_to_camera_4x4": w2c.tolist(),
+        "position_xyz": position.astype(np.float32),
+        "rotation_c2w_3x3": rotation.astype(np.float32),
+        "camera_to_world_4x4": c2w.astype(np.float32),
+        "world_to_camera_4x4": w2c.astype(np.float32),
         "fov_y_radians": float(camera["fov"]),
         "aspect": float(camera["aspect"]),
     }

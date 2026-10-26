@@ -20,10 +20,10 @@ bash scripts/vis/serve_full_sequence_viewer_cache.sh
 - 每个 `frame_XXXX/` 都有独立的 `manifest.json`、几何文件和相机文件，可以单独复制到其他项目使用；序列根目录的 `manifest.json` 给出全部帧的索引。
 - `environment_raw.ply` / `environment_hsi.ply`：当前 Depth Source 设置应用于每帧后的 RGB 点云。过滤、擦除和 HSI Visual Scale 已烘焙。
 - `environment_*_mesh.ply`：当 Environment Display 为 `mesh` 或 `both` 时额外导出带顶点色的三角网格，与 viewer 的网格路径一致。viewer 的网格路径本身不应用点云擦除和人物点过滤；导出的点云与网格也保持这一差异。
-- `person_*.obj` + 同名 `.mtl`：当前可见的人物分支，已烘焙 SMPL Visual Scale、位移、HSI 相机位置补偿和颜色。重新指定的 ID 反映在文件名和 manifest 中。若开启 GT SMPL，也会导出。
-- `cameras.json`：每帧原始 raw 与调整后 HSI 相机的 3×3 内参、4×4 camera-to-world/world-to-camera 位姿、FOV。若 Viser 点击事件带客户端信息，点击时的浏览视角记录在序列根目录 `manifest.json` 的 `viewport_at_export`。
+- `smpl.pkl`：`people` 列表，每人包含 `vertices_world`（float32，`[V,3]`）、`faces`（int32，`[F,3]`）、分支、track ID、query index、RGB 颜色和透明度。顶点已烘焙 SMPL Visual Scale、位移和 HSI 相机位置补偿；重设的 ID 也已保存。若开启 GT SMPL，也会包含在列表中。
+- `cameras.pkl`：`intrinsic_3x3`（float32）、`cameras.raw` / `cameras.hsi` 中的相机位置、旋转、4×4 camera-to-world/world-to-camera 位姿和 FOV。若 Viser 点击事件带客户端信息，点击时的浏览视角记录在序列根目录 `manifest.json` 的 `viewport_at_export`。
 - `manifest.json`：帧索引、原图路径、viewer 设置和文件清单。`point_size` 只是 viewer 显示参数，PLY 本身没有点半径。
 
-PLY、OBJ 与相机使用同一 viewer 世界坐标。相机局部 +Z 朝前、+X 向右、+Y 向下，4×4 矩阵按列向量使用。HSI Visual Scale 是 viewer 展示变换，导出的位姿与几何已一起变换；世界单位不保证为米。每个子目录只含对应的一帧，积累模式也不会把其他帧混入该帧。OBJ/PLY 可直接导入 Blender、Open3D、MeshLab 等；其他程序按 `cameras.json` 读取内参与位姿。
+环境 PLY、SMPL PKL 与相机 PKL 使用同一 viewer 世界坐标。相机局部 +Z 朝前、+X 向右、+Y 向下，4×4 矩阵按列向量使用。HSI Visual Scale 是 viewer 展示变换，导出的位姿与几何已一起变换；世界单位不保证为米。每个子目录只含对应的一帧，积累模式也不会把其他帧混入该帧。PLY 可导入 Blender、Open3D、MeshLab 等；PKL 用 Python 的 `pickle.load` 读取，且只应加载可信来源的文件。
 
 这仅扩展可视化导出，不修改 VGGT/SMPL 预测、缓存或 baseline。未使用 `.paper/` 参考代码。服务器上可运行 `bash scripts/smoke/check_sequence_scene_export.sh` 检查文件格式和全序列索引；仍需用真实缓存人工确认界面按钮及目标软件的坐标方向。

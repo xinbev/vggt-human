@@ -2782,7 +2782,7 @@ class SequenceViewer:
         self.reset_smpl_edit = add_button(self.server, "Reset SMPL Offset")
         self.save_smpl_edits = add_button(self.server, "Save Viewer Edits")
         with add_folder(self.server, "Sequence Export"):
-            self.export_frame_info = add_text(self.server, "Export Status", "One click exports every cached frame as PLY, OBJ and camera JSON.")
+            self.export_frame_info = add_text(self.server, "Export Status", "One click exports every cached frame: environment PLY, SMPL PKL, camera PKL.")
             set_handle_disabled(self.export_frame_info, True)
             self.export_all_frames = add_button(self.server, "Export All Frames")
         self.transform_controls = add_transform_controls(

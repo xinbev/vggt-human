@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import pickle
 import sys
 import tempfile
 from pathlib import Path
@@ -54,12 +55,23 @@ def main() -> None:
         mesh_header, mesh_payload = mesh_ply.split(b"end_header\n", 1)
         assert b"element vertex 3" in mesh_header and b"element face 1" in mesh_header
         assert len(mesh_payload) == 3 * 15 + 13
-        obj = (target / "person_hsi_t3_q0.obj").read_text(encoding="ascii")
-        assert "f 1 2 3\n" in obj and obj.count("\nv ") == 3
-        assert "d 0.650000" in (target / "person_hsi_t3_q0.mtl").read_text(encoding="ascii")
-        cameras = json.loads((target / "cameras.json").read_text(encoding="utf-8"))
-        c2w = np.asarray(cameras["cameras"]["hsi"]["camera_to_world_4x4"])
-        w2c = np.asarray(cameras["cameras"]["hsi"]["world_to_camera_4x4"])
+        assert manifest["files"]["smpl"]["file"] == "smpl.pkl"
+        assert manifest["files"]["cameras"] == "cameras.pkl"
+        assert manifest["format"] == "vggt_omega_single_frame_scene_v2"
+        assert not list(target.glob("*.obj")) and not list(target.glob("*.mtl"))
+        with (target / "smpl.pkl").open("rb") as file:
+            smpl = pickle.load(file)
+        person = smpl["people"][0]
+        assert person["vertices_world"].shape == (3, 3)
+        assert person["vertices_world"].dtype == np.float32
+        assert np.array_equal(person["faces"], [[0, 1, 2]])
+        assert person["track_id"] == 3 and person["opacity"] == 0.65
+        with (target / "cameras.pkl").open("rb") as file:
+            cameras = pickle.load(file)
+        assert cameras["intrinsic_3x3"].shape == (3, 3)
+        assert cameras["intrinsic_3x3"].dtype == np.float32
+        c2w = cameras["cameras"]["hsi"]["camera_to_world_4x4"]
+        w2c = cameras["cameras"]["hsi"]["world_to_camera_4x4"]
         assert np.allclose(c2w @ w2c, np.eye(4)) and np.allclose(c2w[:3, 3], [1, 2, 3])
         next_frame = {**frame, "frame_index": 8}
         second = export_single_frame_scene(batch, next_frame, {"hsi": (points, colors)},
@@ -71,6 +83,7 @@ def main() -> None:
         sequence_manifest = finalize_sequence_scene_export(batch, records, None)
         sequence = json.loads(sequence_manifest.read_text(encoding="utf-8"))
         assert sequence["num_frames"] == 2 and len(sequence["frames"]) == 2
+        assert sequence["format"] == "vggt_omega_sequence_scene_export_v2"
         assert not (batch / ".incomplete").exists()
     print("[ok] sequence scene export formats and index")
 
