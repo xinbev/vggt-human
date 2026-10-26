@@ -16,6 +16,7 @@ import threading
 import time
 from contextlib import nullcontext
 from dataclasses import replace
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +31,10 @@ if str(ROOT) not in sys.path:
 
 from scripts.train.train_smpl import apply_overrides, build_model, load_yaml_config  # noqa: E402
 from scripts.vis.full_viewer_cache_io import export_full_sequence_viewer_cache  # noqa: E402
+from scripts.vis.sequence_scene_export import (  # noqa: E402
+    export_single_frame_scene,
+    finalize_sequence_scene_export,
+)
 from scripts.vis.sequence_sampling import (  # noqa: E402
     LONG_SEQUENCE_FRAME_LIMIT,
     select_frame_candidates,
@@ -2120,6 +2125,10 @@ class SequenceViewer:
         self.track_visibility_handles: dict[int, Any] = {}
         self._syncing_track_color_controls = False
         self.smpl_edit_output = resolve_smpl_edit_output(args)
+        self.sequence_export_dir = resolve_project_path(
+            str(getattr(args, "sequence_export_dir", "outputs/vis/sequence_scene_exports"))
+        )
+        self._batch_export_thread: threading.Thread | None = None
         self.transform_controls = None
         if bool(getattr(args, "rebuild_human_filter_on_start", False)):
             print(
@@ -2772,6 +2781,10 @@ class SequenceViewer:
         self.smpl_edit_dz = add_slider(self.server, "SMPL dZ", -5.0, 5.0, 0.01, 0.0)
         self.reset_smpl_edit = add_button(self.server, "Reset SMPL Offset")
         self.save_smpl_edits = add_button(self.server, "Save Viewer Edits")
+        with add_folder(self.server, "Sequence Export"):
+            self.export_frame_info = add_text(self.server, "Export Status", "One click exports every cached frame as PLY, OBJ and camera JSON.")
+            set_handle_disabled(self.export_frame_info, True)
+            self.export_all_frames = add_button(self.server, "Export All Frames")
         self.transform_controls = add_transform_controls(
             self.server,
             "/viewer_controls/selected_smpl_translation",
@@ -2835,6 +2848,7 @@ class SequenceViewer:
         bind_click(self.fps_buttons, self._set_fps_preset)
         bind_click(self.reset_smpl_edit, self._reset_selected_smpl_offset)
         bind_click(self.save_smpl_edits, self._save_smpl_edit_offsets)
+        bind_click(self.export_all_frames, self._export_all_frames)
         bind_click(self.apply_hsi_visual_scale, self._apply_hsi_visual_scale)
         bind_click(self.reset_hsi_visual_scale, self._reset_hsi_visual_scale)
         bind_click(self.apply_smpl_visual_scale, self._apply_smpl_visual_scale)
@@ -4094,6 +4108,167 @@ class SequenceViewer:
             return
         self._apply_smpl_offset(entry, np.zeros(3, dtype=np.float32), scope=str(self.smpl_edit_scope.value))
         self._sync_smpl_edit_controls_from_selection()
+
+    def _export_all_frames(self, event: Any = None) -> None:
+        """Start one background export for every frame in the loaded cache."""
+        if self._batch_export_thread is not None and self._batch_export_thread.is_alive():
+            return
+        self.play.value = False
+        viewport = None
+        camera = getattr(getattr(event, "client", None), "camera", None)
+        if camera is not None:
+            try:
+                viewport = {
+                    "position_xyz": np.asarray(camera.position, dtype=np.float64).tolist(),
+                    "wxyz": np.asarray(camera.wxyz, dtype=np.float64).tolist(),
+                    "fov_y_radians": float(camera.fov),
+                }
+            except (AttributeError, TypeError, ValueError):
+                viewport = None
+        set_handle_disabled(self.export_all_frames, True)
+        set_text_value(self.export_frame_info, "Exporting all frames; keep viewer edits unchanged until completion.")
+        self._batch_export_thread = threading.Thread(
+            target=self._export_all_frames_worker, args=(viewport,), daemon=True
+        )
+        self._batch_export_thread.start()
+
+    def _export_all_frames_worker(self, viewport: dict[str, Any] | None) -> None:
+        frame_count = len(self.scene["frames"])
+        batch_dir = None
+        try:
+            self.sequence_export_dir.mkdir(parents=True, exist_ok=True)
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S_%fZ")
+            batch_dir = self.sequence_export_dir / f"sequence_{stamp}"
+            batch_dir.mkdir(exist_ok=False)
+            incomplete = batch_dir / ".incomplete"
+            incomplete.write_text("Sequence export is in progress.\n", encoding="utf-8")
+            records = []
+            for position in range(frame_count):
+                target = self._export_frame(
+                    frame_index=position,
+                    output_root=batch_dir,
+                    folder_name=f"frame_{position:04d}",
+                )
+                frame = self.scene["frames"][position]
+                records.append({
+                    "position": position,
+                    "frame_index": int(frame["frame_index"]),
+                    "frame_id": str(frame.get("frame_id", position)),
+                    "directory": target.name,
+                    "manifest": f"{target.name}/manifest.json",
+                })
+                if (position + 1) % 10 == 0 or position + 1 == frame_count:
+                    set_text_value(self.export_frame_info, f"Exporting {position + 1}/{frame_count}: {batch_dir}")
+                    print(f"[viewer] sequence export {position + 1}/{frame_count}", flush=True)
+            finalize_sequence_scene_export(batch_dir, records, viewport)
+            set_text_value(self.export_frame_info, f"Exported all {frame_count} frames: {batch_dir}")
+            print(f"[viewer] sequence export ready: {batch_dir}", flush=True)
+        except Exception as exc:
+            set_text_value(self.export_frame_info, f"Sequence export failed: {exc}; partial output: {batch_dir}")
+            print(f"[viewer] sequence export failed: {exc}", flush=True)
+        finally:
+            set_handle_disabled(self.export_all_frames, False)
+
+    def _export_frame(
+        self, *, frame_index: int, output_root: Path, folder_name: str
+    ) -> Path:
+        """Bake one frame's viewer edits into portable world-space assets."""
+        try:
+            with self._scene_rebuild_lock:
+                frame = self.scene["frames"][frame_index]
+                depth_source = str(self.depth_source.value)
+                clouds = {}
+                if depth_source in {"raw_depth", "both"}:
+                    clouds["raw"] = (self._raw_display_points(frame).copy(), self._raw_display_colors(frame).copy())
+                if depth_source in {"hsi_depth", "both"} and not bool(getattr(self.args, "tracking_only", False)):
+                    clouds["hsi"] = (self._scaled_hsi_points(frame).copy(), self._hsi_point_colors(frame).copy())
+                environment_meshes = {}
+                if str(self.environment_display.value) in {"mesh", "both"}:
+                    for source in clouds:
+                        if f"{source}_mesh_vertices" in frame:
+                            vertices = np.asarray(frame[f"{source}_mesh_vertices"], dtype=np.float32).copy()
+                            colors = np.asarray(frame[f"{source}_mesh_colors"], dtype=np.uint8).copy()
+                            faces = np.asarray(frame[f"{source}_mesh_faces"], dtype=np.int32).copy()
+                        else:
+                            vertices, colors, faces, _ = build_depth_mesh_for_frame(
+                                frame,
+                                depth_key=f"{source}_depth_map",
+                                extrinsic_key=f"{source}_extrinsic",
+                                depth_point_stride=self.depth_point_stride_value,
+                                max_scene_depth=self.max_scene_depth_value,
+                                depth_edge_rtol=self.env_mesh_depth_edge_rtol,
+                            )
+                        if source == "hsi":
+                            vertices = vertices * np.float32(self.hsi_visual_scale_value)
+                        environment_meshes[source] = (vertices, colors, faces)
+
+                if self.trstr_active and not self.hsi_calibration_active:
+                    show_base = not self.trstr_correction_enabled_value
+                    show_hsi = self.trstr_correction_enabled_value
+                else:
+                    show_base = bool(self.show_base.value)
+                    show_hsi = bool(self.show_hsi.value)
+                people_limit = int(self.display_people.value)
+                visible_queries = {
+                    int(person["query_index"])
+                    for person in frame["people"][:people_limit]
+                    if self.track_visibility_by_id.get(int(person["track_id"]), True)
+                }
+                meshes = []
+                for spec in self.smpl_mesh_specs:
+                    if int(spec["frame_index"]) != frame_index:
+                        continue
+                    kind = str(spec["kind"])
+                    if kind == "gt":
+                        if not bool(self.show_gt_smpl.value):
+                            continue
+                        entry = None
+                    else:
+                        if (kind == "base" and not show_base) or (kind == "hsi" and not show_hsi):
+                            continue
+                        if int(spec["query_index"]) not in visible_queries:
+                            continue
+                        entry = self.human_entry_by_key.get(str(spec["human_entry_key"]))
+                        if entry is None or not self.track_visibility_by_id.get(int(entry["track_id"]), True):
+                            continue
+                    vertices = self._scaled_smpl_vertices(spec["vertices"])
+                    if entry is not None:
+                        vertices = vertices + self._human_visual_translation(entry)[None, :]
+                    color = tuple(spec["color"]) if entry is None else tuple(
+                        entry["color_override"] if entry["color_override"] is not None else entry["base_color"]
+                    )
+                    track_id = None if entry is None else int(entry["track_id"])
+                    query_index = None if entry is None else int(entry["query_index"])
+                    name = "person_gt" if entry is None else f"person_{kind}_t{track_id}_q{query_index}"
+                    meshes.append({"name": name, "kind": kind, "vertices": vertices.copy(),
+                                   "faces": spec["faces"].copy(), "color": color,
+                                   "opacity": float(self.smpl_opacity_value),
+                                   "track_id": track_id, "query_index": query_index})
+
+                cameras = {"raw": frame["raw_camera"], "hsi": self._scaled_hsi_camera(frame)}
+                settings = {
+                    "depth_source": depth_source,
+                    "environment_display": str(self.environment_display.value),
+                    "camera_source": str(self.camera_source.value),
+                    "hsi_visual_scale": float(self.hsi_visual_scale_value),
+                    "smpl_visual_scale": float(self.smpl_visual_scale_value),
+                    "smpl_opacity": float(self.smpl_opacity_value),
+                    "filter_human_points": bool(self.filter_human_points_value),
+                    "human_mask_dilation_px": int(self.human_mask_dilation_px_value),
+                    "depth_point_stride": int(self.depth_point_stride_value),
+                    "max_scene_depth": float(self.max_scene_depth_value),
+                    "point_size": float(self.point_size_value),
+                    "camera_frustum_scale": float(self.camera_scale_value),
+                    "note": "Environment points are always exported; surface mesh is additionally exported when enabled. Current-frame assets only; accumulated frames are excluded.",
+                }
+            target = export_single_frame_scene(
+                output_root, frame, clouds, meshes, cameras, settings,
+                environment_meshes=environment_meshes,
+                folder_name=folder_name,
+            )
+            return target
+        except Exception as exc:
+            raise RuntimeError(f"frame {frame_index} export failed: {exc}") from exc
 
     def _save_smpl_edit_offsets(self, _: Any = None) -> None:
         rows = []

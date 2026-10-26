@@ -65,6 +65,10 @@ def main() -> None:
         viewer_args.display_people = int(cli_args.display_people)
     if cli_args.smpl_edit_output:
         viewer_args.smpl_edit_output = str(resolve_path(cli_args.smpl_edit_output))
+    frame_export_dir = resolve_path(cli_args.sequence_export_dir)
+    if not frame_export_dir.is_relative_to(ROOT / "outputs"):
+        raise ValueError(f"--sequence-export-dir must be under {ROOT / 'outputs'}")
+    viewer_args.sequence_export_dir = str(frame_export_dir)
     if cli_args.smpl_visual_scale is not None:
         if not 0.1 <= float(cli_args.smpl_visual_scale) <= 10.0:
             raise ValueError("--smpl-visual-scale must be within [0.1, 10.0]")
@@ -90,6 +94,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cache-dir", required=True)
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--smpl-edit-output", default="")
+    parser.add_argument("--sequence-export-dir", default="outputs/vis/sequence_scene_exports")
     parser.add_argument("--smpl-visual-scale", type=float, default=None)
     parser.add_argument(
         "--show-pinned-root-trajectory",

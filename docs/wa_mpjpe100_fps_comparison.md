@@ -4,13 +4,13 @@
 
 本图统一使用 EMDB-2 的 WA-MPJPE，并保留当前方法的单个 Ours 点：
 
-| Method | WA-MPJPE100 (mm) ↓ | FPS ↑ | 图中含义 |
-|---|---:|---:|---|
-| Human3R | 118.2 | 2.41 | EMDB-2 unified feed-forward baseline |
-| UniSH | 118.5 | 2.00 | EMDB-2 unified feed-forward baseline |
-| JOSH | 68.9 | 0.8 | EMDB-2 result; JOSH optimization variant |
-| UniCon3R | 113.7 | 2.40 | EMDB-2 default feed-forward path |
-| Ours | 58.468 | 5.285 | `VGGT + NLF + HSI scale` |
+| Method | Dataset | WA-MPJPE100 (mm) ↓ | FPS ↑ | 图中含义 |
+|---|---|---:|---:|---|
+| Human3R | EMDB-2 | 118.2 | 2.41 | unified feed-forward baseline |
+| UniSH | EMDB-2 | 118.5 | 2.00 | unified feed-forward baseline |
+| JOSH | EMDB-2 | 68.9 | 0.8 | optimization variant |
+| UniCon3R | EMDB-2 | 113.7 | 2.40 | default feed-forward path |
+| Ours | EMDB-2 | 58.468 | 5.285 | `VGGT + NLF + HSI scale` |
 
 Ours 的 WA-MPJPE 按用户指定使用 58.468 mm，原始基础评测结果见
 `outputs/eval/emdb2_global_chunk100/metrics/stage_metrics.csv`。FPS 是 100 帧输入上的
@@ -31,8 +31,9 @@ EMDB-2 表格报告其 Ours 为 WA=109.1 mm；当前图按照用户指定的本�
 
 ## 重要口径限制
 
-当前横坐标均改为 **EMDB-2**。baseline FPS 是既有论文报告值，Ours FPS 是本项目实测值；
-不同方法的硬件和计时协议仍可能不同，因此本图不应直接表述为严格硬件归一化的速度排名。
+当前横坐标统一使用 **EMDB-2**。baseline FPS 是既有论文报告值，Ours FPS 是本项目
+实测值；不同方法的硬件和计时协议仍可能不同，因此本图不应直接表述为严格硬件归一化
+的速度排名。
 
 正式论文版本应采用以下二者之一：
 

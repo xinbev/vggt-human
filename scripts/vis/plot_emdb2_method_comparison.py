@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw a publication-style EMDB-2 method comparison.
+"""Draw a publication-style method comparison for EMDB-2 or RICH.
 
 With only ``--x-metric`` the script produces a one-dimensional dot plot. Once
 the CSV contains a second metric, add ``--y-metric`` to produce a two-dimensional
@@ -35,7 +35,7 @@ STYLE_PRESETS = {
     "baseline_ff": {
         "c": "#159A8C",
         "marker": "o",
-        "s": 105,
+        "s": 280,
         "edgecolors": "#202020",
         "linewidths": 0.7,
         "zorder": 3,
@@ -43,7 +43,7 @@ STYLE_PRESETS = {
     "baseline_tto": {
         "c": "#D9573F",
         "marker": "o",
-        "s": 105,
+        "s": 280,
         "edgecolors": "#202020",
         "linewidths": 0.7,
         "zorder": 3,
@@ -51,7 +51,7 @@ STYLE_PRESETS = {
     "unicon_ff": {
         "c": "#159A8C",
         "marker": "o",
-        "s": 105,
+        "s": 280,
         "edgecolors": "#202020",
         "linewidths": 0.7,
         "zorder": 4,
@@ -59,15 +59,23 @@ STYLE_PRESETS = {
     "unicon_tto": {
         "c": "#D9573F",
         "marker": "*",
-        "s": 230,
+        "s": 520,
         "edgecolors": "#202020",
         "linewidths": 0.7,
+        "zorder": 4,
+    },
+    "unicon_paper_ff": {
+        "c": "#159A8C",
+        "marker": "*",
+        "s": 520,
+        "edgecolors": "#202020",
+        "linewidths": 0.8,
         "zorder": 4,
     },
     "ours_base": {
         "c": "#4472C4",
         "marker": "*",
-        "s": 320,
+        "s": 680,
         "edgecolors": "#202020",
         "linewidths": 0.9,
         "zorder": 5,
@@ -75,7 +83,7 @@ STYLE_PRESETS = {
     "ours_hsi": {
         "c": "#E68632",
         "marker": "*",
-        "s": 320,
+        "s": 680,
         "edgecolors": "#202020",
         "linewidths": 0.9,
         "zorder": 5,
@@ -110,6 +118,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--y-direction", choices=("min", "max"), default=None)
     parser.add_argument("--x-scale", choices=("linear", "log"), default="linear")
     parser.add_argument("--y-scale", choices=("linear", "log"), default="linear")
+    parser.add_argument(
+        "--wa-layout",
+        choices=("compressed", "linear"),
+        default="compressed",
+        help="Display transform for WA-MPJPE. Use linear for a conventional RICH plot.",
+    )
     parser.add_argument("--title", default=None)
     parser.add_argument("--show-pareto", action="store_true")
     parser.add_argument("--output-dir", type=Path, required=True)
@@ -179,9 +193,9 @@ def metric_spec(metric: str, label: str | None, direction: str | None) -> tuple[
     return resolved_label, resolved_direction
 
 
-def display_x_value(metric: str, value: float) -> float:
+def display_x_value(metric: str, value: float, wa_layout: str = "compressed") -> float:
     """Compress the empty middle and expand the dense high-error region."""
-    if metric != "wa_mpjpe_mm":
+    if metric != "wa_mpjpe_mm" or wa_layout == "linear":
         return value
     if value <= 75.0:
         return value
@@ -212,16 +226,17 @@ def style_for(record: Record) -> dict[str, object]:
         ) from error
 
 
-def add_legend(axis, records: list[Record]) -> None:
+def add_legend(axis, records: list[Record], location: str = "lower right") -> None:
     from matplotlib.lines import Line2D
 
     legend_labels = {
         "baseline_ff": "Unified Feed-Forward",
         "baseline_tto": "Test-Time Optimization",
         "unicon_ff": "UniCon3R",
+        "unicon_paper_ff": "UniCon3R",
         "unicon_tto": "UniCon3R*",
-        "ours_base": "Ours",
-        "ours_hsi": "Ours",
+        "ours_base": "UnifiedFeed-Forward(Ours)",
+        "ours_hsi": "UnifiedFeed-Forward(Ours)",
     }
     present_styles = {record.plot_style for record in records}
     handles = []
@@ -237,21 +252,23 @@ def add_legend(axis, records: list[Record]) -> None:
                 color="none",
                 markerfacecolor=str(style["c"]),
                 markeredgecolor="#202020",
-                markersize=11 if style["marker"] == "*" else 7,
+                markersize=18 if style["marker"] == "*" else 13,
                 label=label,
             )
         )
     axis.legend(
         handles=handles,
-        loc="lower right",
-        fontsize=8.5,
+        loc=location,
+        fontsize=13,
         frameon=True,
         framealpha=0.96,
         edgecolor="#B8B8B8",
     )
 
 
-def draw_variant_links(axis, records: list[Record], x_metric: str, y_metric: str) -> None:
+def draw_variant_links(
+    axis, records: list[Record], x_metric: str, y_metric: str, wa_layout: str
+) -> None:
     groups: dict[str, list[Record]] = {}
     for record in records:
         if record.link_group:
@@ -261,9 +278,9 @@ def draw_variant_links(axis, records: list[Record], x_metric: str, y_metric: str
         if len(linked_records) < 2:
             continue
         for first, second in zip(linked_records, linked_records[1:]):
-            x0 = display_x_value(x_metric, float(first.values[x_metric]))
+            x0 = display_x_value(x_metric, float(first.values[x_metric]), wa_layout)
             y0 = float(first.values[y_metric])
-            x1 = display_x_value(x_metric, float(second.values[x_metric]))
+            x1 = display_x_value(x_metric, float(second.values[x_metric]), wa_layout)
             y1 = float(second.values[y_metric])
             curve_x = []
             curve_y = []
@@ -346,12 +363,16 @@ def draw_tradeoff(
     x_direction: str,
     y_direction: str,
     show_pareto: bool,
+    wa_layout: str,
 ) -> None:
-    draw_variant_links(axis, records, x_metric, y_metric)
+    draw_variant_links(axis, records, x_metric, y_metric, wa_layout)
     if show_pareto:
         frontier = pareto_frontier(records, x_metric, y_metric, x_direction, y_direction)
         axis.plot(
-            [display_x_value(x_metric, float(record.values[x_metric])) for record in frontier],
+            [
+                display_x_value(x_metric, float(record.values[x_metric]), wa_layout)
+                for record in frontier
+            ],
             [record.values[y_metric] for record in frontier],
             color="#8A8A8A",
             linestyle="--",
@@ -364,17 +385,15 @@ def draw_tradeoff(
         x_value = record.values[x_metric]
         y_value = record.values[y_metric]
         assert x_value is not None and y_value is not None
-        x_plot = display_x_value(x_metric, float(x_value))
+        x_plot = display_x_value(x_metric, float(x_value), wa_layout)
         axis.scatter(x_plot, y_value, **style_for(record))
         axis.annotate(
             record.method,
             (x_plot, y_value),
             xytext=(record.label_dx, record.label_dy),
             textcoords="offset points",
-            fontsize=10.5,
-            fontweight="bold"
-            if record.is_ours or record.group.lower() == "unicon3r"
-            else "normal",
+            fontsize=16,
+            fontweight="bold" if record.is_ours else "normal",
             ha="left" if record.label_dx >= 0 else "right",
             va="bottom" if record.label_dy >= 0 else "top",
             zorder=5,
@@ -393,9 +412,9 @@ def configure_matplotlib() -> None:
             "font.family": "serif",
             "font.serif": ["Times New Roman", "DejaVu Serif"],
             "mathtext.fontset": "dejavuserif",
-            "font.size": 11,
-            "axes.labelsize": 12.5,
-            "axes.titlesize": 13,
+            "font.size": 16,
+            "axes.labelsize": 18,
+            "axes.titlesize": 18,
             "axes.linewidth": 0.8,
             "xtick.direction": "out",
             "ytick.direction": "out",
@@ -444,15 +463,24 @@ def main() -> None:
             x_direction,
             y_direction,
             args.show_pareto,
+            args.wa_layout,
         )
         if args.y_metric == "fps" and args.y_scale == "log":
-            fps_ticks = [0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0]
+            max_fps = max(float(record.values[args.y_metric]) for record in records)
+            fps_ticks = [0.1, 0.2, 0.5, 1.0, 2.0, 5.0]
+            if max_fps > 5.0:
+                fps_ticks.extend([10.0, 20.0])
             axis.set_yticks(fps_ticks)
-            axis.set_yticklabels(["0.1", "0.2", "0.5", "1.0", "2.0", "5.0", "10.0", "20.0"])
+            axis.set_yticklabels([f"{value:.1f}" for value in fps_ticks])
         if args.x_metric == "wa_mpjpe_mm" and args.x_scale == "linear":
-            x_ticks = [50.0, 60.0, 70.0, 110.0, 115.0, 120.0]
-            axis.set_xticks([display_x_value(args.x_metric, value) for value in x_ticks])
-            axis.set_xticklabels(["50", "60", "70", "110", "115", "120"])
+            if args.wa_layout == "linear":
+                x_ticks = [60.0, 70.0, 80.0, 90.0, 100.0, 110.0, 120.0, 130.0]
+            else:
+                x_ticks = [50.0, 60.0, 70.0, 110.0, 115.0, 120.0]
+            axis.set_xticks(
+                [display_x_value(args.x_metric, value, args.wa_layout) for value in x_ticks]
+            )
+            axis.set_xticklabels([f"{value:g}" for value in x_ticks])
         output_name = args.output_name or f"{args.x_metric}_vs_{args.y_metric}"
     else:
         draw_single_metric(axis, records, args.x_metric, x_label)
@@ -460,7 +488,8 @@ def main() -> None:
 
     if args.title:
         axis.set_title(args.title, pad=10)
-    add_legend(axis, records)
+    legend_location = "center right" if args.wa_layout == "linear" else "lower right"
+    add_legend(axis, records, legend_location)
 
     formats = [item.strip().lower() for item in args.formats.split(",") if item.strip()]
     if not formats:

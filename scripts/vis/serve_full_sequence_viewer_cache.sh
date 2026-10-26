@@ -5,6 +5,7 @@ REPO_ROOT="${REPO_ROOT:-/home/zhw/lab_users/xyb/home/projects/vggt-human}"
 CACHE_DIR="${CACHE_DIR:-${REPO_ROOT}/outputs/vis/stage2_walking_coarse_residual_v3/full_viewer_cache}"
 PORT="${PORT:-8080}"
 SMPL_EDIT_OUTPUT="${SMPL_EDIT_OUTPUT:-}"
+SEQUENCE_EXPORT_DIR="${SEQUENCE_EXPORT_DIR:-${REPO_ROOT}/outputs/vis/sequence_scene_exports}"
 SMPL_VISUAL_SCALE="${SMPL_VISUAL_SCALE:-}"
 POINT_SIZE="${POINT_SIZE:-}"
 HUMAN_MASK_DILATION_PX="${HUMAN_MASK_DILATION_PX:-}"
@@ -28,6 +29,7 @@ fi
 ARGS=(
   --cache-dir "${CACHE_DIR}"
   --port "${PORT}"
+  --sequence-export-dir "${SEQUENCE_EXPORT_DIR}"
 )
 if [[ -n "${SMPL_EDIT_OUTPUT}" ]]; then
   ARGS+=(--smpl-edit-output "${SMPL_EDIT_OUTPUT}")
@@ -73,6 +75,7 @@ echo "========== Full cached SequenceViewer: no inference =========="
 echo "Cache      : ${CACHE_DIR}"
 echo "Port       : ${PORT}"
 echo "SMPL edits : ${SMPL_EDIT_OUTPUT:-<cached output setting>}"
+echo "Export dir : ${SEQUENCE_EXPORT_DIR}"
 echo "SMPL scale : ${SMPL_VISUAL_SCALE:-1.0} (viewer-only, mesh-centered)"
 echo "Point size : ${POINT_SIZE:-<cached value>}"
 echo "Mask pixels: ${HUMAN_MASK_DILATION_PX:-<cached value>}"

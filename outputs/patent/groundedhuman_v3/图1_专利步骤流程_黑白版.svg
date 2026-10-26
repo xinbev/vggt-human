@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="850" height="950" viewBox="0 0 850 950">
+<rect width="850" height="950" fill="white"/>
+<rect x="60.0" y="65" width="590" height="82" fill="white" stroke="black" stroke-width="2"/>
+<text x="355" y="90" text-anchor="middle" dominant-baseline="central" font-family="SimSun,宋体,serif" font-size="24" fill="black">输入单目视频，获取场景深度、相机参数和特征</text>
+<text x="355" y="121" text-anchor="middle" dominant-baseline="central" font-family="SimSun,宋体,serif" font-size="24" fill="black">以及人体姿态、形状、初始位置与置信度</text>
+<polyline points="650.0,65 735,35" fill="none" stroke="black" stroke-width="1"/>
+<text x="748" y="36" font-family="Arial,sans-serif" font-size="26" fill="black">S1</text>
+<polyline points="355,147 355,178" fill="none" stroke="black" stroke-width="2"/>
+<polygon points="355,188 348,177 362,177" fill="black"/>
+<rect x="60.0" y="188" width="590" height="82" fill="white" stroke="black" stroke-width="2"/>
+<text x="355" y="213" text-anchor="middle" dominant-baseline="central" font-family="SimSun,宋体,serif" font-size="24" fill="black">投影可见人体表面，建立同射线人景深度对应</text>
+<text x="355" y="244" text-anchor="middle" dominant-baseline="central" font-family="SimSun,宋体,serif" font-size="24" fill="black">估计场景初始尺度</text>
+<polyline points="650.0,188 735,158" fill="none" stroke="black" stroke-width="1"/>
+<text x="748" y="159" font-family="Arial,sans-serif" font-size="26" fill="black">S2</text>
+<polyline points="355,270 355,301" fill="none" stroke="black" stroke-width="2"/>
+<polygon points="355,311 348,300 362,300" fill="black"/>
+<rect x="75.0" y="311" width="560" height="82" fill="white" stroke="black" stroke-width="2"/>
+<text x="355" y="336" text-anchor="middle" dominant-baseline="central" font-family="SimSun,宋体,serif" font-size="24" fill="black">以人体锚点查询局部场景特征</text>
+<text x="355" y="367" text-anchor="middle" dominant-baseline="central" font-family="SimSun,宋体,serif" font-size="24" fill="black">预测残余尺度修正与深度偏置</text>
+<polyline points="635.0,311 735,281" fill="none" stroke="black" stroke-width="1"/>
+<text x="748" y="282" font-family="Arial,sans-serif" font-size="26" fill="black">S3</text>
+<polyline points="355,393 355,424" fill="none" stroke="black" stroke-width="2"/>
+<polygon points="355,434 348,423 362,423" fill="black"/>
+<rect x="60.0" y="434" width="590" height="82" fill="white" stroke="black" stroke-width="2"/>
+<text x="355" y="459" text-anchor="middle" dominant-baseline="central" font-family="SimSun,宋体,serif" font-size="24" fill="black">融合多人、多帧估计，获得视频共享尺度</text>
+<text x="355" y="490" text-anchor="middle" dominant-baseline="central" font-family="SimSun,宋体,serif" font-size="24" fill="black">同步校准场景深度与相机平移</text>
+<polyline points="650.0,434 735,404" fill="none" stroke="black" stroke-width="1"/>
+<text x="748" y="405" font-family="Arial,sans-serif" font-size="26" fill="black">S4</text>
+<polyline points="355,516 355,547" fill="none" stroke="black" stroke-width="2"/>
+<polygon points="355,557 348,546 362,546" fill="black"/>
+<rect x="50.0" y="557" width="610" height="82" fill="white" stroke="black" stroke-width="2"/>
+<text x="355" y="582" text-anchor="middle" dominant-baseline="central" font-family="SimSun,宋体,serif" font-size="24" fill="black">划分人体表面区域，检索多级场景证据</text>
+<text x="355" y="613" text-anchor="middle" dominant-baseline="central" font-family="SimSun,宋体,serif" font-size="24" fill="black">区分本人表面、环境与他人干扰</text>
+<polyline points="660.0,557 735,527" fill="none" stroke="black" stroke-width="1"/>
+<text x="748" y="528" font-family="Arial,sans-serif" font-size="26" fill="black">S5</text>
+<polyline points="355,639 355,670" fill="none" stroke="black" stroke-width="2"/>
+<polygon points="355,680 348,669 362,669" fill="black"/>
+<rect x="50.0" y="680" width="610" height="82" fill="white" stroke="black" stroke-width="2"/>
+<text x="355" y="705" text-anchor="middle" dominant-baseline="central" font-family="SimSun,宋体,serif" font-size="24" fill="black">预测区域位移与可靠性，聚合根平移校正</text>
+<text x="355" y="736" text-anchor="middle" dominant-baseline="central" font-family="SimSun,宋体,serif" font-size="24" fill="black">更新人体位置并重新查询场景证据</text>
+<polyline points="660.0,680 735,650" fill="none" stroke="black" stroke-width="1"/>
+<text x="748" y="651" font-family="Arial,sans-serif" font-size="26" fill="black">S6</text>
+<polyline points="355,762 355,793" fill="none" stroke="black" stroke-width="2"/>
+<polygon points="355,803 348,792 362,792" fill="black"/>
+<rect x="65.0" y="803" width="580" height="82" fill="white" stroke="black" stroke-width="2"/>
+<text x="355" y="828" text-anchor="middle" dominant-baseline="central" font-family="SimSun,宋体,serif" font-size="24" fill="black">将人体与场景变换到同一世界坐标系</text>
+<text x="355" y="859" text-anchor="middle" dominant-baseline="central" font-family="SimSun,宋体,serif" font-size="24" fill="black">输出三维场景、相机轨迹和人体运动</text>
+<polyline points="645.0,803 735,773" fill="none" stroke="black" stroke-width="1"/>
+<text x="748" y="774" font-family="Arial,sans-serif" font-size="26" fill="black">S7</text>
+</svg>
